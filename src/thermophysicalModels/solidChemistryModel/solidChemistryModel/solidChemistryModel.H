@@ -127,10 +127,7 @@ public:
         inline const PtrList<Reaction<SolidThermo> >& reactions() const;
 
         //- The number of reactions
-        virtual label nReaction() const;
-
-         //- The number of species
-        virtual label nSpecie() const;
+        inline label nReaction() const;
 
 
         //- dc/dt = omega, rate of change in concentration, for each species

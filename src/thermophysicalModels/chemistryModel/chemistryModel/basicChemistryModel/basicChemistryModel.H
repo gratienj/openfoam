@@ -154,15 +154,6 @@ public:
                 ) const = 0;
 
 
-            // Chemistry data
-
-                //- Return number of reactions
-                virtual label nReaction() const = 0;
-
-                //- Return number of species
-                virtual label nSpecie() const = 0;
-
-
             // Chemistry solution
 
                 //- Calculates the reaction rates

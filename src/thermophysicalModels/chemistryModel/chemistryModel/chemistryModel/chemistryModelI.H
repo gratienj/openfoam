@@ -53,6 +53,22 @@ Foam::chemistryModel<CompType, ThermoType>::specieThermo() const
 
 
 template<class CompType, class ThermoType>
+inline Foam::label
+Foam::chemistryModel<CompType, ThermoType>::nSpecie() const
+{
+    return nSpecie_;
+}
+
+
+template<class CompType, class ThermoType>
+inline Foam::label
+Foam::chemistryModel<CompType, ThermoType>::nReaction() const
+{
+    return nReaction_;
+}
+
+
+template<class CompType, class ThermoType>
 inline const Foam::DimensionedField<Foam::scalar, Foam::volMesh>&
 Foam::chemistryModel<CompType, ThermoType>::RR
 (

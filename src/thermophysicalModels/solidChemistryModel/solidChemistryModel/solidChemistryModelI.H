@@ -43,6 +43,15 @@ Foam::solidChemistryModel<CompType, SolidThermo>::reactions() const
 
 
 template<class CompType, class SolidThermo>
+inline Foam::label
+Foam::solidChemistryModel<CompType, SolidThermo>::
+nReaction() const
+{
+    return nReaction_;
+}
+
+
+template<class CompType, class SolidThermo>
 inline const Foam::DimensionedField<Foam::scalar, Foam::volMesh>&
 Foam::solidChemistryModel<CompType, SolidThermo>::RRs
 (

@@ -670,76 +670,38 @@ Foam::chemistryModel<CompType, ThermoType>::calculateRR
 
     DimensionedField<scalar, volMesh>& RR = tRR();
 
-    const Reaction<ThermoType>& R = reactions_[reactionI];
+    const scalarField& T = this->thermo().T();
+    const scalarField& p = this->thermo().p();
 
-    bool speciePresent = false;
-    bool consumed = false;
-
-    forAll(R.lhs(), s)
+    forAll(rho, celli)
     {
-        if (R.lhs()[s].index == specieI)
+        const scalar rhoi = rho[celli];
+        const scalar Ti = T[celli];
+        const scalar pi = p[celli];
+
+        scalarField c(nSpecie_, 0.0);
+        for (label i=0; i<nSpecie_; i++)
         {
-            consumed = true;
-            speciePresent = true;
+            const scalar Yi = Y_[i][celli];
+            c[i] = rhoi*Yi/specieThermo_[i].W();
         }
-    }
 
-    forAll(R.rhs(), s)
-    {
-        if (R.rhs()[s].index == specieI)
-        {
-            speciePresent = true;
-        }
-    }
+        const scalar w = omegaI
+        (
+            reactionI,
+            c,
+            Ti,
+            pi,
+            pf,
+            cf,
+            lRef,
+            pr,
+            cr,
+            rRef
+        );
 
-    if (speciePresent)
-    {
-        const scalarField& T = this->thermo().T();
-        const scalarField& p = this->thermo().p();
+        RR[celli] = w*specieThermo_[specieI].W();
 
-        forAll(rho, celli)
-        {
-            const scalar rhoi = rho[celli];
-            const scalar Ti = T[celli];
-            const scalar pi = p[celli];
-
-            scalarField c(nSpecie_, 0.0);
-            for (label i=0; i<nSpecie_; i++)
-            {
-                const scalar Yi = Y_[i][celli];
-                c[i] = rhoi*Yi/specieThermo_[i].W();
-            }
-
-            const scalar w = omegaI
-            (
-                reactionI,
-                c,
-                Ti,
-                pi,
-                pf,
-                cf,
-                lRef,
-                pr,
-                cr,
-                rRef
-            );
-
-            if (w > 0.0)
-            {
-                if (consumed)
-                {
-                    const scalar sl = R.lhs()[specieI].stoichCoeff;
-                    RR[celli] = -sl*w;
-                }
-                else
-                {
-                    const scalar sr = R.rhs()[specieI].stoichCoeff;
-                    RR[celli] = sr*w;
-                }
-
-                RR[celli] *= specieThermo_[specieI].W();
-            }
-        }
     }
 
     return tRR;
@@ -913,18 +875,5 @@ void Foam::chemistryModel<CompType, ThermoType>::solve
     );
 }
 
-
-template<class CompType, class ThermoType>
-Foam::label Foam::chemistryModel<CompType, ThermoType>::nReaction() const
-{
-    return nReaction_;
-}
-
-
-template<class CompType, class ThermoType>
-Foam::label Foam::chemistryModel<CompType, ThermoType>::nSpecie() const
-{
-    return nSpecie_;
-}
 
 // ************************************************************************* //
