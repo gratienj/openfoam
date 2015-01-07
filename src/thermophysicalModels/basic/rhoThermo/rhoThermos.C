@@ -205,6 +205,18 @@ makeThermo
     rhoThermo,
     heRhoThermo,
     pureMixture,
+    sutherlandTransport,
+    sensibleEnthalpy,
+    janafThermo,
+    PengRobinsonGas,
+    specie
+);
+
+makeThermo
+(
+    rhoThermo,
+    heRhoThermo,
+    pureMixture,
     polynomialTransport,
     sensibleEnthalpy,
     janafThermo,
