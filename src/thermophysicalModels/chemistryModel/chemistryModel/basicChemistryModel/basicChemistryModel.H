@@ -153,6 +153,12 @@ public:
                     const label specieI
                 ) const = 0;
 
+                //- Return number of reactions
+                virtual label nReaction() const = 0;
+
+                //- Return number of species
+                virtual label nSpecie() const = 0;
+
 
             // Chemistry solution
 
