@@ -68,50 +68,45 @@ void Foam::SprayParcel<ParcelType>::calc
     const CompositionModel<reactingCloudType>& composition =
         td.cloud().composition();
 
-    // Check if parcel belongs to liquid core
+    // check if parcel belongs to liquid core
     if (liquidCore() > 0.5)
     {
-        // Liquid core parcels should not experience coupled forces
+        // liquid core parcels should not experience coupled forces
         td.cloud().forces().setCalcCoupled(false);
     }
 
-    // Get old mixture composition
-    const scalarField& Y0(this->Y());
+    // get old mixture composition
+    const scalarField Y0(composition.globalY(0, this->Y()));
     scalarField X0(composition.liquids().X(Y0));
 
-    // Check if we have critical or boiling conditions
+    // check if we have critical or boiling conditions
     scalar TMax = composition.liquids().Tc(X0);
     const scalar T0 = this->T();
     const scalar pc0 = this->pc_;
     if (composition.liquids().pv(pc0, T0, X0) >= pc0*0.999)
     {
-        // Set TMax to boiling temperature
+        // set TMax to boiling temperature
         TMax = composition.liquids().pvInvert(pc0, X0);
     }
 
-    // Set the maximum temperature limit
+    // set the maximum temperature limit
     td.cloud().constProps().setTMax(TMax);
 
-    // Store the parcel properties
+    // store the parcel properties
     this->Cp() = composition.liquids().Cp(pc0, T0, X0);
     sigma_ = composition.liquids().sigma(pc0, T0, X0);
-    const scalar rho0 = composition.liquids().rho(pc0, T0, X0);
+    scalar rho0 = composition.liquids().rho(pc0, T0, X0);
     this->rho() = rho0;
-    const scalar mass0 = this->mass();
     mu_ = composition.liquids().mu(pc0, T0, X0);
 
     ParcelType::calc(td, dt, cellI);
 
     if (td.keepParticle)
     {
-        // Reduce the stripped parcel mass due to evaporation
-        // assuming the number of particles remains unchanged
-        this->ms() -= this->ms()*(mass0 - this->mass())/mass0;
-
-        // Update Cp, sigma, density and diameter due to change in temperature
+        // update Cp, sigma, density and diameter due to change in temperature
         // and/or composition
         scalar T1 = this->T();
-        const scalarField& Y1(this->Y());
+        const scalarField Y1(composition.globalY(0, this->Y()));
         scalarField X1(composition.liquids().X(Y1));
 
         this->Cp() = composition.liquids().Cp(this->pc_, T1, X1);
@@ -130,7 +125,7 @@ void Foam::SprayParcel<ParcelType>::calc
         {
             calcAtomization(td, dt, cellI);
 
-            // Preserve the total mass/volume by increasing the number of
+            // preserve the total mass/volume by increasing the number of
             // particles in parcels due to breakup
             scalar d2 = this->d();
             this->nParticle() *= pow3(d1/d2);
@@ -141,7 +136,7 @@ void Foam::SprayParcel<ParcelType>::calc
         }
     }
 
-    // Restore coupled forces
+    // restore coupled forces
     td.cloud().forces().setCalcCoupled(true);
 }
 
@@ -168,7 +163,7 @@ void Foam::SprayParcel<ParcelType>::calcAtomization
     scalar R = specie::RR/Wc;
     scalar Tav = atomization.Taverage(this->T(), this->Tc());
 
-    // Calculate average gas density based on average temperature
+    // calculate average gas density based on average temperature
     scalar rhoAv = this->pc()/(R*Tav);
 
     scalar soi = td.cloud().injectors().timeStart();
@@ -176,14 +171,14 @@ void Foam::SprayParcel<ParcelType>::calcAtomization
     const vector& pos = this->position();
     const vector& injectionPos = this->position0();
 
-    // Disregard the continous phase when calculating the relative velocity
+    // disregard the continous phase when calculating the relative velocity
     // (in line with the deactivated coupled assumption)
     scalar Urel = mag(this->U());
 
     scalar t0 = max(0.0, currentTime - this->age() - soi);
     scalar t1 = min(t0 + dt, td.cloud().injectors().timeEnd() - soi);
 
-    // This should be the vol flow rate from when the parcel was injected
+    // this should be the vol flow rate from when the parcel was injected
     scalar volFlowRate = td.cloud().injectors().volumeToInject(t0, t1)/dt;
 
     scalar chi = 0.0;
@@ -239,7 +234,7 @@ void Foam::SprayParcel<ParcelType>::calcBreakup
     scalar R = specie::RR/Wc;
     scalar Tav = td.cloud().atomization().Taverage(this->T(), this->Tc());
 
-    // Calculate average gas density based on average temperature
+    // calculate average gas density based on average temperature
     scalar rhoAv = this->pc()/(R*Tav);
     scalar muAv = this->muc();
     vector Urel = this->U() - this->Uc();
@@ -253,7 +248,7 @@ void Foam::SprayParcel<ParcelType>::calcBreakup
 
     const vector g = td.cloud().g().value();
 
-    scalar parcelMassChild = 0.0;
+    scalar massChild = 0.0;
     scalar dChild = 0.0;
     if
     (
@@ -279,32 +274,30 @@ void Foam::SprayParcel<ParcelType>::calcBreakup
             Urmag,
             this->tMom(),
             dChild,
-            parcelMassChild
+            massChild
         )
     )
     {
         scalar Re = rhoAv*Urmag*dChild/muAv;
+        this->mass0() -= massChild;
 
         // Add child parcel as copy of parent
         SprayParcel<ParcelType>* child = new SprayParcel<ParcelType>(*this);
-        child->d() = dChild;
-        child->d0() = dChild;
-        const scalar massChild = child->mass();
         child->mass0() = massChild;
-        child->nParticle() = parcelMassChild/massChild;
+        child->d() = dChild;
+        child->nParticle() = massChild/(this->rho()*this->volume(dChild));
 
         const forceSuSp Fcp =
             forces.calcCoupled(*child, dt, massChild, Re, muAv);
         const forceSuSp Fncp =
             forces.calcNonCoupled(*child, dt, massChild, Re, muAv);
 
-        child->age() = 0.0;
         child->liquidCore() = 0.0;
         child->KHindex() = 1.0;
         child->y() = td.cloud().breakup().y0();
         child->yDot() = td.cloud().breakup().yDot0();
-        child->tc() = 0.0;
-        child->ms() = -GREAT;
+        child->tc() = -GREAT;
+        child->ms() = 0.0;
         child->injector() = this->injector();
         child->tMom() = massChild/(Fcp.Sp() + Fncp.Sp());
         child->user() = 0.0;
@@ -323,7 +316,7 @@ Foam::scalar Foam::SprayParcel<ParcelType>::chi
     const scalarField& X
 ) const
 {
-    // Modifications to take account of the flash boiling on primary break-up
+    // modifications to take account of the flash boiling on primary break-up
 
     typedef typename TrackData::cloudType::reactingCloudType reactingCloudType;
     const CompositionModel<reactingCloudType>& composition =
@@ -340,13 +333,13 @@ Foam::scalar Foam::SprayParcel<ParcelType>::chi
     {
         if (pv >= 0.999*pAmb)
         {
-            // Liquid is boiling - calc boiling temperature
+            // liquid is boiling - calc boiling temperature
 
             const liquidProperties& liq = composition.liquids().properties()[i];
             scalar TBoil = liq.pvInvert(p0);
 
             scalar hl = liq.hl(pAmb, TBoil);
-            scalar iTp = liq.h(pAmb, T0) - pAmb/liq.rho(pAmb, T0);
+            scalar iTp = liq.h(pAmb, T0) - liq.rho(pAmb, T0);
             scalar iTb = liq.h(pAmb, TBoil) - pAmb/liq.rho(pAmb, TBoil);
 
             chi += X[i]*(iTp - iTb)/hl;
@@ -375,10 +368,10 @@ void Foam::SprayParcel<ParcelType>::solveTABEq
     scalar r2 = r*r;
     scalar r3 = r*r2;
 
-    // Inverse of characteristic viscous damping time
+    // inverse of characteristic viscous damping time
     scalar rtd = 0.5*TABCmu*mu_/(this->rho()*r2);
 
-    // Oscillation frequency (squared)
+    // oscillation frequency (squared)
     scalar omega2 = TABComega*sigma_/(this->rho()*r3) - rtd*rtd;
 
     if (omega2 > 0)
@@ -390,7 +383,7 @@ void Foam::SprayParcel<ParcelType>::solveTABEq
         scalar y1 = this->y() - We;
         scalar y2 = this->yDot()/omega;
 
-        // Update distortion parameters
+        // update distortion parameters
         scalar c = cos(omega*dt);
         scalar s = sin(omega*dt);
         scalar e = exp(-rtd*dt);
@@ -409,7 +402,7 @@ void Foam::SprayParcel<ParcelType>::solveTABEq
     }
     else
     {
-        // Reset distortion parameters
+        // reset distortion parameters
         this->y() = 0;
         this->yDot() = 0;
     }
