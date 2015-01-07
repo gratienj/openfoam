@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -127,7 +127,10 @@ public:
         inline const PtrList<Reaction<SolidThermo> >& reactions() const;
 
         //- The number of reactions
-        inline label nReaction() const;
+        virtual label nReaction() const;
+
+         //- The number of species
+        virtual label nSpecie() const;
 
 
         //- dc/dt = omega, rate of change in concentration, for each species

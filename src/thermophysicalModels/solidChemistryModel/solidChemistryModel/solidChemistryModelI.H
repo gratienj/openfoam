@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -39,15 +39,6 @@ inline const Foam::PtrList<Foam::Reaction<SolidThermo> >&
 Foam::solidChemistryModel<CompType, SolidThermo>::reactions() const
 {
     return reactions_;
-}
-
-
-template<class CompType, class SolidThermo>
-inline Foam::label
-Foam::solidChemistryModel<CompType, SolidThermo>::
-nReaction() const
-{
-    return nReaction_;
 }
 
 

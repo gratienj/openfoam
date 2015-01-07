@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -200,6 +200,21 @@ void Foam::solidChemistryModel<CompType, SolidThermo>::setCellReacting
 )
 {
     reactingCells_[cellI] = active;
+}
+
+
+template<class CompType, class SolidThermo>
+Foam::label Foam::solidChemistryModel<CompType, SolidThermo>::
+nReaction() const
+{
+    return nReaction_;
+}
+
+template<class CompType, class SolidThermo>
+Foam::label Foam::solidChemistryModel<CompType, SolidThermo>::
+nSpecie() const
+{
+    return nSolids_;
 }
 
 // ************************************************************************* //
