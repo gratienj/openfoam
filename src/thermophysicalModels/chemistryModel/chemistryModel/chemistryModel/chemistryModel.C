@@ -672,7 +672,6 @@ Foam::chemistryModel<CompType, ThermoType>::calculateRR
 
     const Reaction<ThermoType>& R = reactions_[reactionI];
 
-    bool speciePresent = false;
     bool consumed = false;
 
     label sIndex = -1;
@@ -682,7 +681,6 @@ Foam::chemistryModel<CompType, ThermoType>::calculateRR
         if (R.lhs()[s].index == specieI)
         {
             consumed = true;
-            speciePresent = true;
             sIndex = s;
         }
     }
@@ -691,13 +689,12 @@ Foam::chemistryModel<CompType, ThermoType>::calculateRR
     {
         if (R.rhs()[s].index == specieI)
         {
-            speciePresent = true;
             sIndex = s;
         }
     }
 
 
-    if (speciePresent)
+    if (sIndex != -1)
     {
         const scalarField& T = this->thermo().T();
         const scalarField& p = this->thermo().p();
