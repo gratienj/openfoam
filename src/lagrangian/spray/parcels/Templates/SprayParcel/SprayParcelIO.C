@@ -104,7 +104,7 @@ Foam::SprayParcel<ParcelType>::SprayParcel
     (
         "SprayParcel<ParcelType>::SprayParcel"
         "("
-            "const polyMesh, "
+            "const polyMesh&, "
             "Istream&, "
             "bool"
         ")"
