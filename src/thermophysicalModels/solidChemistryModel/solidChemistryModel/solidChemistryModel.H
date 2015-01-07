@@ -129,10 +129,6 @@ public:
         //- The number of reactions
         virtual label nReaction() const;
 
-        //- The number of reactions
-        virtual label nSpecie() const;
-
-
         //- dc/dt = omega, rate of change in concentration, for each species
         virtual scalarField omega
         (

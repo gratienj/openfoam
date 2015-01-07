@@ -153,6 +153,7 @@ pyrolysisChemistryModel
     Info<< "pyrolysisChemistryModel: " << nl;
     Info<< indent << "Number of solids = " << this->nSolids_ << nl;
     Info<< indent << "Number of gases = " << nGases_ << nl;
+
     forAll(this->reactions_, i)
     {
         Info<< dynamic_cast<const solidReaction<SolidThermo>& >
@@ -672,5 +673,12 @@ void Foam::pyrolysisChemistryModel<CompType, SolidThermo, GasThermo>::solve
     );
 }
 
+
+template<class CompType, class SolidThermo,  class GasThermo>
+Foam::label Foam::pyrolysisChemistryModel<CompType, SolidThermo, GasThermo>::
+nSpecie() const
+{
+    return nComponents_;
+}
 
 // ************************************************************************* //

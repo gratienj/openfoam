@@ -210,11 +210,4 @@ nReaction() const
     return nReaction_;
 }
 
-
-template<class CompType, class SolidThermo>
-Foam::label Foam::solidChemistryModel<CompType, SolidThermo>::nSpecie() const
-{
-    return nSolids_;
-}
-
 // ************************************************************************* //
