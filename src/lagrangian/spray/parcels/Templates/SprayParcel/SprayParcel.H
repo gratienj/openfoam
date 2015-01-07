@@ -95,7 +95,7 @@ public:
                 const label parcelTypeId,
                 const scalar rhoMin,
                 const scalar rho0,
-                const scalar minParcelMass,
+                const scalar minParticleMass,
                 const scalar youngsModulus,
                 const scalar poissonsRatio,
                 const scalar T0,
@@ -173,11 +173,27 @@ public:
 
     // Static data members
 
-        //- String representation of properties
-        static string propHeader;
-
         //- Runtime type information
         TypeName("SprayParcel");
+
+        //- String representation of properties
+        AddToPropertyList
+        (
+            ParcelType,
+          + " d0"
+          + " position0"
+          + " sigma"
+          + " mu"
+          + " liquidCore"
+          + " KHindex"
+          + " y"
+          + " yDot"
+          + " tc"
+          + " ms"
+          + " injector"
+          + " tMom"
+          + " user"
+        );
 
 
     // Constructors
