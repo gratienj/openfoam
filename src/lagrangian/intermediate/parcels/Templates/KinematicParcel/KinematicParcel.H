@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -137,7 +137,7 @@ public:
             //- Return const access to the particle density
             inline scalar rho0() const;
 
-            //- Return const access to the minimum particle mass
+            //- Return const access to the minimum parcel mass
             inline scalar minParcelMass() const;
     };
 
@@ -218,8 +218,12 @@ public:
     };
 
 
-    //- Number of particle tracking attempts before we assume that it stalls
-    static label maxTrackAttempts;
+private:
+
+    // Private static data members
+
+        //- Number of particle tracking attempts before we assume that it stalls
+        static label maxTrackAttempts;
 
 
 protected:
