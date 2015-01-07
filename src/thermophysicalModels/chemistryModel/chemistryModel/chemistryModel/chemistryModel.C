@@ -675,15 +675,12 @@ Foam::chemistryModel<CompType, ThermoType>::calculateRR
     bool speciePresent = false;
     bool consumed = false;
 
-    label sIndex = -1;
-
     forAll(R.lhs(), s)
     {
         if (R.lhs()[s].index == specieI)
         {
             consumed = true;
             speciePresent = true;
-            sIndex = s;
         }
     }
 
@@ -692,10 +689,8 @@ Foam::chemistryModel<CompType, ThermoType>::calculateRR
         if (R.rhs()[s].index == specieI)
         {
             speciePresent = true;
-            sIndex = s;
         }
     }
-
 
     if (speciePresent)
     {
@@ -729,18 +724,21 @@ Foam::chemistryModel<CompType, ThermoType>::calculateRR
                 rRef
             );
 
-            if (consumed)
+            if (w > 0.0)
             {
-                const scalar sl = R.lhs()[sIndex].stoichCoeff;
-                RR[celli] = -sl*w;
-            }
-            else
-            {
-                const scalar sr = R.rhs()[sIndex].stoichCoeff;
-                RR[celli] = sr*w;
-            }
+                if (consumed)
+                {
+                    const scalar sl = R.lhs()[specieI].stoichCoeff;
+                    RR[celli] = -sl*w;
+                }
+                else
+                {
+                    const scalar sr = R.rhs()[specieI].stoichCoeff;
+                    RR[celli] = sr*w;
+                }
 
-            RR[celli] *= specieThermo_[specieI].W();
+                RR[celli] *= specieThermo_[specieI].W();
+            }
         }
     }
 
