@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -39,7 +39,7 @@ pyrolysisChemistryModel
     pyrolisisGases_(this->reactions_[0].gasSpecies()),
     gasThermo_(pyrolisisGases_.size()),
     nGases_(pyrolisisGases_.size()),
-    nSpecie_(this->Ys_.size() + nGases_),
+    nComponents_(this->Ys_.size() + nGases_),
     RRg_(nGases_),
     Ys0_(this->nSolids_),
     cellCounter_(0)
@@ -245,11 +245,11 @@ Foam::pyrolysisChemistryModel<CompType, SolidThermo, GasThermo>::omega
     label& rRef
 ) const
 {
-    scalarField c1(nSpecie_, 0.0);
+    scalarField c1(nComponents_, 0.0);
 
     label cellI = cellCounter_;
 
-    for (label i=0; i<nSpecie_; i++)
+    for (label i=0; i<nComponents_; i++)
     {
         c1[i] = max(0.0, c[i]);
     }
@@ -304,8 +304,8 @@ derivatives
     scalarField& dcdt
 ) const
 {
-    const scalar T = c[nSpecie_];
-    const scalar p = c[nSpecie_ + 1];
+    const scalar T = c[nComponents_];
+    const scalar p = c[nComponents_ + 1];
 
     dcdt = 0.0;
 
@@ -330,10 +330,10 @@ derivatives
 
     scalar dTdt = newhi/newCp;
     scalar dtMag = min(500.0, mag(dTdt));
-    dcdt[nSpecie_] = dTdt*dtMag/(mag(dTdt) + 1.0e-10);
+    dcdt[nComponents_] = dTdt*dtMag/(mag(dTdt) + 1.0e-10);
 
     // dp/dt = ...
-    dcdt[nSpecie_ + 1] = 0.0;
+    dcdt[nComponents_ + 1] = 0.0;
 }
 
 
@@ -347,10 +347,10 @@ jacobian
     scalarSquareMatrix& dfdc
 ) const
 {
-    const scalar T = c[nSpecie_];
-    const scalar p = c[nSpecie_ + 1];
+    const scalar T = c[nComponents_];
+    const scalar p = c[nComponents_ + 1];
 
-    scalarField c2(nSpecie_, 0.0);
+    scalarField c2(nComponents_, 0.0);
 
     for (label i=0; i<this->nSolids_; i++)
     {
@@ -428,7 +428,7 @@ jacobian
 
     for (label i=0; i<nEqns(); i++)
     {
-        dfdc[i][nSpecie_] = 0.5*(dcdT1[i] - dcdT0[i])/delta;
+        dfdc[i][nComponents_] = 0.5*(dcdT1[i] - dcdT0[i])/delta;
     }
 
 }
@@ -439,7 +439,7 @@ Foam::label Foam::
 pyrolysisChemistryModel<CompType, SolidThermo, GasThermo>::nEqns() const
 {
     // nEqns = number of solids + gases + temperature + pressure
-    return (nSpecie_ + 2);
+    return (nComponents_ + 2);
 }
 
 
@@ -488,7 +488,7 @@ calculate()
             scalar Ti = this->solidThermo().T()[celli];
             scalar pi = this->solidThermo().p()[celli];
 
-            scalarField c(nSpecie_, 0.0);
+            scalarField c(nComponents_, 0.0);
             for (label i=0; i<this->nSolids_; i++)
             {
                 c[i] = rhoi*this->Ys_[i][celli]*delta;
@@ -550,9 +550,9 @@ Foam::pyrolysisChemistryModel<CompType, SolidThermo, GasThermo>::solve
     const scalarField& T = this->solidThermo().T();
     const scalarField& p = this->solidThermo().p();
 
-    scalarField c(nSpecie_, 0.0);
-    scalarField c0(nSpecie_, 0.0);
-    scalarField dc(nSpecie_, 0.0);
+    scalarField c(nComponents_, 0.0);
+    scalarField c0(nComponents_, 0.0);
+    scalarField dc(nComponents_, 0.0);
     scalarField delta(this->mesh().V());
 
     forAll(rho, celli)
@@ -671,4 +671,6 @@ void Foam::pyrolysisChemistryModel<CompType, SolidThermo, GasThermo>::solve
         ") const"
     );
 }
+
+
 // ************************************************************************* //
