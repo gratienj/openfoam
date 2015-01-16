@@ -337,13 +337,15 @@ Foam::InjectionModel<CloudType>::InjectionModel
     {
         this->coeffDict().lookup("massTotal") >> massTotal_;
         this->coeffDict().lookup("SOI") >> SOI_;
-        SOI_ = owner.db().time().userTimeToTime(SOI_);
     }
     else
     {
         massFlowRate_.reset(this->coeffDict());
         massTotal_ = massFlowRate_.value(owner.db().time().value());
+        this->coeffDict().readIfPresent("SOI", SOI_);
     }
+
+    SOI_ = owner.db().time().userTimeToTime(SOI_);
 
     const word parcelBasisType = this->coeffDict().lookup("parcelBasisType");
 
@@ -625,6 +627,13 @@ void Foam::InjectionModel<CloudType>::injectSteadyState
 )
 {
     if (!this->active())
+    {
+        return;
+    }
+
+    const scalar time = this->owner().db().time().value();
+
+    if (time < SOI_)
     {
         return;
     }
