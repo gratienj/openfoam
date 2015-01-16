@@ -129,11 +129,11 @@ Foam::codedFunctionObject::codedFunctionObject
     functionObject(name),
     codedBase(),
     time_(time),
-    dict_(dict)
+    dict_(dictionary::null)
 {
     if (readNow)
     {
-        read(dict_);
+        read(dict);
     }
 }
 
@@ -195,6 +195,8 @@ bool Foam::codedFunctionObject::timeSet()
 
 bool Foam::codedFunctionObject::read(const dictionary& dict)
 {
+    dict_ = dict;
+
     dict.lookup("redirectType") >> redirectType_;
 
     const entry* dataPtr = dict.lookupEntryPtr
