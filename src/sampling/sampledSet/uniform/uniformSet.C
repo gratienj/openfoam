@@ -276,6 +276,8 @@ void Foam::uniformSet::calcSamples
         // (or is along edge)
         // Set points and cell/face labels to empty lists
 
+        const_cast<polyMesh&>(mesh()).moving(oldMoving);
+
         return;
     }
 

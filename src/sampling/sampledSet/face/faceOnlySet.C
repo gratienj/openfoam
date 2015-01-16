@@ -169,6 +169,7 @@ void Foam::faceOnlySet::calcSamples
         // Set points and cell/face labels to empty lists
         //Info<< "calcSamples : Both start_ and end_ outside domain"
         //    << endl;
+        const_cast<polyMesh&>(mesh()).moving(oldMoving);
 
         return;
     }
