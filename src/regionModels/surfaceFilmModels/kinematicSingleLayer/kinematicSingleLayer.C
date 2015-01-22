@@ -233,7 +233,7 @@ void kinematicSingleLayer::continuityCheck()
                 fvc::domainIntegrate(mag(mass - magSf()*deltaRho0))/totalMass
             ).value();
 
-       const scalar globalContErr =
+        const scalar globalContErr =
             (
                 fvc::domainIntegrate(mass - magSf()*deltaRho0)/totalMass
             ).value();
@@ -300,8 +300,8 @@ tmp<Foam::fvVectorMatrix> kinematicSingleLayer::solveMomentum
       + fvm::div(phi_, U_)
      ==
       - USp_
-//      - fvm::SuSp(rhoSp_, U_)
-      - rhoSp_*U_
+      - fvm::SuSp(rhoSp_, U_)
+//      - rhoSp_*U_
       + forces_.correct(U_)
       + turbulence_->Su(U_)
     );
@@ -420,6 +420,9 @@ void kinematicSingleLayer::solveThickness
     U_ -= nHat()*(nHat() & U_);
 
     U_.correctBoundaryConditions();
+
+    // Update film wall and surface velocities
+    updateSurfaceVelocities();
 
     // Continuity check
     continuityCheck();
@@ -794,6 +797,8 @@ kinematicSingleLayer::kinematicSingleLayer
 
         correctThermoFields();
 
+        updateSurfaceVelocities();
+
         deltaRho_ == delta_*rho_;
 
         surfaceScalarField phi0
@@ -881,9 +886,6 @@ void kinematicSingleLayer::evolveRegion()
 
     // Update film coverage indicator
     correctAlpha();
-
-    // Update film wall and surface velocities
-    updateSurfaceVelocities();
 
     // Update sub-models to provide updated source contributions
     updateSubmodels();

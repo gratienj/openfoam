@@ -286,8 +286,6 @@ void thermoSingleLayer::solveEnergy()
         Info<< "thermoSingleLayer::solveEnergy()" << endl;
     }
 
-    updateSurfaceTemperatures();
-
     solve
     (
         fvm::ddt(deltaRho_, hs_)
@@ -296,14 +294,17 @@ void thermoSingleLayer::solveEnergy()
       - hsSp_
       + q(hs_)
       + radiation_->Shs()
-//      - fvm::SuSp(rhoSp_, hs_)
-      - rhoSp_*hs_
+      - fvm::SuSp(rhoSp_, hs_)
+//      - rhoSp_*hs_
     );
 
     correctThermoFields();
 
     // evaluate viscosity from user-model
     viscosity_->correct(pPrimary_, T_);
+
+    // Update film wall and surface temperatures
+    updateSurfaceTemperatures();
 }
 
 
@@ -552,6 +553,10 @@ thermoSingleLayer::thermoSingleLayer
 
         correctThermoFields();
 
+        updateSurfaceVelocities();
+
+        updateSurfaceTemperatures();
+
         // Update derived fields
         hs_ == hs(T_);
 
@@ -642,12 +647,6 @@ void thermoSingleLayer::evolveRegion()
 
     // Update film coverage indicator
     correctAlpha();
-
-    // Update film wall and surface velocities
-    updateSurfaceVelocities();
-
-    // Update film wall and surface temperatures
-    updateSurfaceTemperatures();
 
     // Update sub-models to provide updated source contributions
     updateSubmodels();
