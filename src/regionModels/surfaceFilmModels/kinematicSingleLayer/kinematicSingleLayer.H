@@ -504,6 +504,9 @@ public:
             //- Evolve the film equations
             virtual void evolveRegion();
 
+            //- Post-evolve film hook
+            virtual void postEvolveRegion();
+
 
         // Source fields
 

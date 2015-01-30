@@ -869,6 +869,10 @@ void kinematicSingleLayer::preEvolveRegion()
 
     transferPrimaryRegionSourceFields();
 
+    updateSurfaceVelocities();
+
+    correctAlpha();
+
     // Reset transfer fields
 //    availableMass_ = mass();
     availableMass_ = netMass();
@@ -883,9 +887,6 @@ void kinematicSingleLayer::evolveRegion()
     {
         Info<< "kinematicSingleLayer::evolveRegion()" << endl;
     }
-
-    // Update film coverage indicator
-    correctAlpha();
 
     // Update sub-models to provide updated source contributions
     updateSubmodels();
@@ -914,6 +915,15 @@ void kinematicSingleLayer::evolveRegion()
 
     // Update deltaRho_ with new delta_
     deltaRho_ == delta_*rho_;
+}
+
+
+void kinematicSingleLayer::postEvolveRegion()
+{
+    if (debug)
+    {
+        Info<< "kinematicSingleLayer::postEvolveRegion()" << endl;
+    }
 
     // Reset source terms for next time integration
     resetPrimaryRegionSourceTerms();

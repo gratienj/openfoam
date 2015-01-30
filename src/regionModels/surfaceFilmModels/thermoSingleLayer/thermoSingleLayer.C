@@ -546,10 +546,6 @@ thermoSingleLayer::thermoSingleLayer
 
         correctThermoFields();
 
-        updateSurfaceVelocities();
-
-        updateSurfaceTemperatures();
-
         // Update derived fields
         hs_ == hs(T_);
 
@@ -621,9 +617,9 @@ void thermoSingleLayer::preEvolveRegion()
         Info<< "thermoSingleLayer::preEvolveRegion()" << endl;
     }
 
-//    correctHsForMappedT();
-
     kinematicSingleLayer::preEvolveRegion();
+
+    updateSurfaceTemperatures();
 
     // Update phase change
     primaryMassPCTrans_ == dimensionedScalar("zero", dimMass, 0.0);
@@ -637,9 +633,6 @@ void thermoSingleLayer::evolveRegion()
     {
         Info<< "thermoSingleLayer::evolveRegion()" << endl;
     }
-
-    // Update film coverage indicator
-    correctAlpha();
 
     // Update sub-models to provide updated source contributions
     updateSubmodels();
@@ -674,9 +667,6 @@ void thermoSingleLayer::evolveRegion()
 
     // Update temperature using latest hs_
     T_ == T(hs_);
-
-    // Reset source terms for next time integration
-    resetPrimaryRegionSourceTerms();
 }
 
 
