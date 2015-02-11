@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -29,6 +29,8 @@ License
 #include "dictionary.H"
 #include "zeroGradientFvPatchFields.H"
 #include "fvcSurfaceIntegrate.H"
+#include "fvcCellReduce.H"
+#include "surfaceInterpolate.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -87,7 +89,8 @@ Foam::CourantNo::CourantNo
     obr_(obr),
     active_(true),
     phiName_("phi"),
-    rhoName_("rho")
+    rhoName_("rho"),
+    faceBased_(false)
 {
     // Check if the available mesh is an fvMesh, otherwise deactivate
     if (!isA<fvMesh>(obr_))
@@ -149,6 +152,8 @@ void Foam::CourantNo::read(const dictionary& dict)
     {
         phiName_ = dict.lookupOrDefault<word>("phiName", "phi");
         rhoName_ = dict.lookupOrDefault<word>("rhoName", "rho");
+
+        dict.readIfPresent("faceBased", faceBased_);
     }
 }
 
@@ -170,13 +175,27 @@ void Foam::CourantNo::execute()
 
         scalarField& iField = CourantNo.internalField();
 
-        const scalarField sumPhi
-        (
-            fvc::surfaceSum(mag(phi))().internalField()
-           /rho(phi)().internalField()
-        );
+        if (faceBased_)
+        {
+            surfaceScalarField Cof
+            (
+                "Cof",
+                mesh.time().deltaT()*mesh.deltaCoeffs()
+               *mag(phi)/fvc::interpolate(rho(phi))/mesh.magSf()
+            );
 
-        iField = 0.5*sumPhi/mesh.V().field()*mesh.time().deltaTValue();
+            iField = fvc::cellReduce(Cof, maxEqOp<scalar>());
+        }
+        else
+        {
+            const scalarField sumPhi
+            (
+                fvc::surfaceSum(mag(phi))().internalField()
+               /rho(phi)().internalField()
+            );
+
+            iField = 0.5*sumPhi/mesh.V().field()*mesh.time().deltaTValue();
+        }
 
         CourantNo.correctBoundaryConditions();
     }
