@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,7 +30,7 @@ Group
 Description
     This function object calculates and outputs the blendingFactor as used by
     the bended convection schemes.  The output is a volume field (cells) whose
-    value is calculated via the maximum blending factor for any cell face.
+    value is calculated via the minimum blending factor for any cell face.
 
 
 SourceFiles

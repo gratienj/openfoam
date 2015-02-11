@@ -111,7 +111,7 @@ void Foam::blendingFactor::calc()
 
     // convert into vol field whose values represent the local face maxima
     volScalarField& factor = this->factor(field);
-    factor = fvc::cellReduce(factorf, maxEqOp<scalar>());
+    factor = fvc::cellReduce(factorf, minEqOp<scalar>(), GREAT);
     factor.correctBoundaryConditions();
 }
 
