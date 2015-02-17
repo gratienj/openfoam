@@ -11,8 +11,10 @@
         (fvc::interpolate(HbyA) & mesh.Sf())
       + fvc::interpolate(rho*rAU)*fvc::ddtCorr(U, phi)
     );
-    adjustPhi(phiHbyA, U, p_rgh);
+
     fvOptions.makeRelative(phiHbyA);
+    adjustPhi(phiHbyA, U, p_rgh);
+
 
     surfaceScalarField phig
     (
