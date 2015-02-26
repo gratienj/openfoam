@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -46,6 +46,44 @@ volField
 (
     const Foam::fvMeshSubset&,
     const Foam::GeometricField<Type, Foam::fvPatchField, Foam::volMesh>& vf
+);
+
+
+//- Ensight component ordering (different for symmTensor)
+template<class Type>
+class ensightTraits
+{
+
+public:
+
+    static Foam::labelList initOrder()
+    {
+        return Foam::identity(Foam::pTraits<Type>::nComponents);
+    }
+
+    static const Foam::labelList order;
+};
+
+
+template<>
+Foam::labelList ensightTraits<Foam::symmTensor>::initOrder()
+{
+    Foam::labelList order(6);
+    // Ensight order for symmTensor is xx yy zz xy xz yz
+    order[0] = 0;
+    order[1] = 3;
+    order[2] = 5;
+    order[3] = 1;
+    order[4] = 2;
+    order[5] = 4;
+    return order;
+}
+
+
+template<class Type>
+const Foam::labelList ensightTraits<Type>::order
+(
+    ensightTraits<Type>::initOrder()
 );
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -100,12 +100,16 @@ void writeField
 {
     if (returnReduce(vf.size(), sumOp<label>()) > 0)
     {
+        const labelList& order = ensightTraits<Type>::order;
+
         if (Pstream::master())
         {
             ensightFile.write(key);
 
-            for (direction cmpt=0; cmpt<pTraits<Type>::nComponents; cmpt++)
+            forAll(order, i)
             {
+                label cmpt = order[i];
+
                 ensightFile.write(vf.component(cmpt));
 
                 for (int slave=1; slave<Pstream::nProcs(); slave++)
@@ -118,8 +122,9 @@ void writeField
         }
         else
         {
-            for (direction cmpt=0; cmpt<pTraits<Type>::nComponents; cmpt++)
+            forAll(order, i)
             {
+                label cmpt = order[i];
                 OPstream toMaster(Pstream::scheduled, Pstream::masterNo());
                 toMaster<< vf.component(cmpt);
             }

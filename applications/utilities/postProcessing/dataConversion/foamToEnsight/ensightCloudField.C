@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -95,6 +95,9 @@ void ensightCloudField
         ensightFile.setf(ios_base::scientific, ios_base::floatfield);
         ensightFile.precision(5);
 
+        const labelList& order = ensightTraits<Type>::order;
+
+
         label count = 0;
         forAll(vf, i)
         {
@@ -105,8 +108,10 @@ void ensightCloudField
                 v = pTraits<Type>::zero;
             }
 
-            for (direction cmpt=0; cmpt<pTraits<Type>::nComponents; cmpt++)
+            forAll(order, i)
             {
+                direction cmpt = order[i];
+
                 ensightFile << setw(12) << component(v, cmpt);
                 if (++count % 6 == 0)
                 {
