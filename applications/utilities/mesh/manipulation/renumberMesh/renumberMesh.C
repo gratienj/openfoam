@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anispulation  |
 -------------------------------------------------------------------------------
 License
@@ -863,6 +863,23 @@ int main(int argc, char *argv[])
 
     PtrList<surfaceTensorField> stFlds;
     ReadFields(mesh, objects, stFlds);
+
+    // Read point fields.
+
+    PtrList<pointScalarField> psFlds;
+    ReadFields(pointMesh::New(mesh), objects, psFlds);
+
+    PtrList<pointVectorField> pvFlds;
+    ReadFields(pointMesh::New(mesh), objects, pvFlds);
+
+    PtrList<pointSphericalTensorField> pstFlds;
+    ReadFields(pointMesh::New(mesh), objects, pstFlds);
+
+    PtrList<pointSymmTensorField> psymtFlds;
+    ReadFields(pointMesh::New(mesh), objects, psymtFlds);
+
+    PtrList<pointTensorField> ptFlds;
+    ReadFields(pointMesh::New(mesh), objects, ptFlds);
 
     Info<< endl;
 
