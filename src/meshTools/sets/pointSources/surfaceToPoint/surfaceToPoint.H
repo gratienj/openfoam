@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -65,16 +65,16 @@ class surfaceToPoint
         static addToUsageTable usage_;
 
         //- Name of surface file
-        fileName surfName_;
+        const fileName surfName_;
 
-        //- if > 0 : include points with distance to surface less than nearDist.
-        scalar nearDist_;
+        //- If > 0 : include points with distance to surface less than nearDist.
+        const scalar nearDist_;
 
-        //- include all points on opposite sign of normal on nearest surface.
-        bool includeInside_;
+        //- Include all points on opposite sign of normal on nearest surface.
+        const bool includeInside_;
 
-        //- include all points on this sign of normal on nearest surface.
-        bool includeOutside_;
+        //- Include all points on this sign of normal on nearest surface.
+        const bool includeOutside_;
 
 
     // Private Member Functions
