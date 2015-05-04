@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -57,6 +57,8 @@ Description
         D            | Darcy coefficient       | yes         |
         I            | inertial coefficient    | yes         |
         L            | porous media length in the flow direction | yes |
+        uniformJump  | applies a uniform pressure drop on the patch based on the
+                       net velocity across the baffle | no | no
     \endtable
 
     Example of the boundary condition specification:
@@ -69,6 +71,7 @@ Description
         I               1000000;
         D               0.001;
         L               0.1;
+        uniformJump     false;
         value           uniform 0;
     }
     \endverbatim
@@ -110,6 +113,9 @@ class porousBafflePressureFvPatchField
 
         //- Porous media length
         scalar length_;
+
+        //- Aplies uniform pressure drop
+        bool uniformJump_;
 
 
 public:

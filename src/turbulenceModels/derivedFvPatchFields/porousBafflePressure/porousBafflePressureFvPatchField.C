@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,7 +37,8 @@ Foam::porousBafflePressureFvPatchField<Type>::porousBafflePressureFvPatchField
     fixedJumpFvPatchField<Type>(p, iF),
     D_(0),
     I_(0),
-    length_(0)
+    length_(0),
+    uniformJump_(false)
 {}
 
 
@@ -53,7 +54,8 @@ Foam::porousBafflePressureFvPatchField<Type>::porousBafflePressureFvPatchField
     fixedJumpFvPatchField<Type>(ptf, p, iF, mapper),
     D_(ptf.D_),
     I_(ptf.I_),
-    length_(ptf.length_)
+    length_(ptf.length_),
+    uniformJump_(ptf.uniformJump_)
 {}
 
 
@@ -68,7 +70,8 @@ Foam::porousBafflePressureFvPatchField<Type>::porousBafflePressureFvPatchField
     fixedJumpFvPatchField<Type>(p, iF),
     D_(readScalar(dict.lookup("D"))),
     I_(readScalar(dict.lookup("I"))),
-    length_(readScalar(dict.lookup("length")))
+    length_(readScalar(dict.lookup("length"))),
+    uniformJump_(dict.lookupOrDefault<bool>("uniformJump", false))
 {
     fvPatchField<Type>::operator=
     (
@@ -87,7 +90,8 @@ Foam::porousBafflePressureFvPatchField<Type>::porousBafflePressureFvPatchField
     fixedJumpFvPatchField<Type>(ptf),
     D_(ptf.D_),
     I_(ptf.I_),
-    length_(ptf.length_)
+    length_(ptf.length_),
+    uniformJump_(ptf.uniformJump_)
 {}
 
 
@@ -101,7 +105,8 @@ Foam::porousBafflePressureFvPatchField<Type>::porousBafflePressureFvPatchField
     fixedJumpFvPatchField<Type>(ptf, iF),
     D_(ptf.D_),
     I_(ptf.I_),
-    length_(ptf.length_)
+    length_(ptf.length_),
+    uniformJump_(ptf.uniformJump_)
 {}
 
 
@@ -115,6 +120,8 @@ void Foam::porousBafflePressureFvPatchField<Type>::write(Ostream& os) const
     os.writeKeyword("D") << D_ << token::END_STATEMENT << nl;
     os.writeKeyword("I") << I_ << token::END_STATEMENT << nl;
     os.writeKeyword("length") << length_ << token::END_STATEMENT << nl;
+    os.writeKeyword("uniformJump") << uniformJump_
+        << token::END_STATEMENT << nl;
 }
 
 

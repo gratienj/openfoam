@@ -64,7 +64,20 @@ void Foam::porousBafflePressureFvPatchField<Foam::scalar>::updateCoeffs()
     const fvsPatchField<scalar>& phip =
         patch().patchField<surfaceScalarField, scalar>(phi);
 
-    scalarField Un(phip/patch().magSf());
+    const scalarField& magSf = patch().magSf();
+
+    scalarField magUn(patch().size());
+    scalarField Un(phip/magSf);
+
+    if (!uniformJump_)
+    {
+        magUn = mag(Un);
+    }
+    else
+    {
+        Un = gSum(phip*magSf)/gSum(magSf);
+        magUn = mag(Un);
+    }
 
     if (phi.dimensions() == dimensionSet(0, 3, -1, 0, 0))
     {
@@ -75,8 +88,6 @@ void Foam::porousBafflePressureFvPatchField<Foam::scalar>::updateCoeffs()
             );
 
         const scalarField nu = turbModel.nu()().boundaryField()[patchI];
-
-        scalarField magUn(mag(Un));
 
         jump_ = -sign(Un)*(D_*nu + I_*0.5*magUn)*magUn*length_;
     }
@@ -93,10 +104,7 @@ void Foam::porousBafflePressureFvPatchField<Foam::scalar>::updateCoeffs()
         const scalarField rhow =
             patch().lookupPatchField<volScalarField, scalar>("rho");
 
-        Un /= rhow;
-        scalarField magUn(mag(Un));
-
-        jump_ = -sign(Un)*(D_*mu + I_*0.5*rhow*magUn)*magUn*length_;
+        jump_ = -sign(Un)*(D_*mu + I_*0.5*magUn)*magUn*rhow*length_;
     }
 
     if (debug)
