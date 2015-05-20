@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -540,6 +540,7 @@ private:
             //  either side.
             labelList freeStandingBaffleFaces
             (
+                const labelList& surfaceToCellZone,
                 const labelList& namedSurfaceIndex,
                 const labelList& cellToZone,
                 const labelList& neiCellZone
@@ -571,7 +572,7 @@ private:
                 const labelList& nMasterFaces,
                 const labelList& faceToZone,
                 const Map<label>& zoneToOrientation,
-                boolList& meshFlipMap
+                PackedBoolList& meshFlipMap
             ) const;
 
 

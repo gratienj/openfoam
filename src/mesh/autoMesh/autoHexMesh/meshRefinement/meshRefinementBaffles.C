@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -1833,6 +1833,7 @@ void Foam::meshRefinement::handleSnapProblems
 
 Foam::labelList Foam::meshRefinement::freeStandingBaffleFaces
 (
+    const labelList& surfaceToCellZone,
     const labelList& namedSurfaceIndex,
     const labelList& cellToZone,
     const labelList& neiCellZone
@@ -1850,10 +1851,15 @@ Foam::labelList Foam::meshRefinement::freeStandingBaffleFaces
         label surfI = namedSurfaceIndex[faceI];
         if (surfI != -1)
         {
-            // Free standing baffle?
-            label ownZone = cellToZone[faceOwner[faceI]];
-            label neiZone = cellToZone[faceNeighbour[faceI]];
-            if (max(ownZone, neiZone) == -1)
+            if
+            (
+                surfaceToCellZone[surfI] == -1
+            ||  max
+                (
+                    cellToZone[faceOwner[faceI]],
+                    cellToZone[faceNeighbour[faceI]]
+                ) == -1
+            )
             {
                 faceLabels.append(faceI);
             }
@@ -1869,10 +1875,15 @@ Foam::labelList Foam::meshRefinement::freeStandingBaffleFaces
             label surfI = namedSurfaceIndex[faceI];
             if (surfI != -1)
             {
-                // Free standing baffle?
-                label ownZone = cellToZone[faceOwner[faceI]];
-                label neiZone = neiCellZone[faceI-mesh_.nInternalFaces()];
-                if (max(ownZone, neiZone) == -1)
+                if
+                (
+                    surfaceToCellZone[surfI] == -1
+                ||  max
+                    (
+                        cellToZone[faceOwner[faceI]],
+                        neiCellZone[faceI-mesh_.nInternalFaces()]
+                    ) == -1
+                )
                 {
                     faceLabels.append(faceI);
                 }
@@ -2081,7 +2092,7 @@ void Foam::meshRefinement::consistentOrientation
     const labelList& nMasterFacesPerEdge,
     const labelList& faceToZone,
     const Map<label>& zoneToOrientation,
-    boolList& meshFlipMap
+    PackedBoolList& meshFlipMap
 ) const
 {
     const polyBoundaryMesh& bm = mesh_.boundaryMesh();
@@ -3204,7 +3215,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
     //      - do a consistent orientation
     //      - check number of faces with consistent orientation
     //      - if <0 flip the whole patch
-    boolList meshFlipMap(mesh_.nFaces(), false);
+    PackedBoolList meshFlipMap(mesh_.nFaces(), false);
     {
         // Collect all data on zone faces without cellZones on either side.
         const indirectPrimitivePatch patch
@@ -3214,6 +3225,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
                 mesh_.faces(),
                 freeStandingBaffleFaces
                 (
+                    surfaceToCellZone,
                     namedSurfaceIndex,
                     cellToZone,
                     neiCellZone
@@ -3249,7 +3261,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
             }
 
             // Make orientations consistent in a topological way. This just
-            // checks  the first face per zone for whether nPosOrientation
+            // checks the first face per zone for whether nPosOrientation
             // is negative (which it never is at this point)
             consistentOrientation
             (
@@ -3325,26 +3337,34 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
 
         if (surfI != -1)
         {
-            // Orient face zone to have slave cells in max cell zone.
-            label ownZone = cellToZone[faceOwner[faceI]];
-            label neiZone = cellToZone[faceNeighbour[faceI]];
-
             bool flip;
 
-            label maxZone = max(ownZone, neiZone);
-
-            if (maxZone == -1)
+            if (surfaceToCellZone[surfI] == -1)
             {
-                // free-standing face. Use geometrically derived orientation
+                // Surface with faceZone only (= freestanding faceZone).
+                // Use geometrically derived orientation
                 flip = meshFlipMap[faceI];
-            }
-            else if (ownZone == maxZone)
-            {
-                flip = false;
             }
             else
             {
-                flip = true;
+                // Orient face zone to have slave cells in max cell zone.
+                label ownZone = cellToZone[faceOwner[faceI]];
+                label neiZone = cellToZone[faceNeighbour[faceI]];
+                label maxZone = max(ownZone, neiZone);
+
+                if (maxZone == -1)
+                {
+                    // free-standing face. Use geometrically derived orientation
+                    flip = meshFlipMap[faceI];
+                }
+                else if (ownZone == maxZone)
+                {
+                    flip = false;
+                }
+                else
+                {
+                    flip = true;
+                }
             }
 
             meshMod.setAction
@@ -3379,31 +3399,40 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
 
             if (surfI != -1)
             {
-                label ownZone = cellToZone[faceOwner[faceI]];
-                label neiZone = neiCellZone[faceI-mesh_.nInternalFaces()];
-
                 bool flip;
 
-                label maxZone = max(ownZone, neiZone);
-
-                if (maxZone == -1)
+                if (surfaceToCellZone[surfI] == -1)
                 {
-                    // free-standing face. Use geometrically derived orientation
+                    // Surface with faceZone only (= freestanding faceZone).
+                    // Use geometrically derived orientation
                     flip = meshFlipMap[faceI];
-                }
-                else if (ownZone == neiZone)
-                {
-                    // Free-standing zone face or coupled boundary. Keep master
-                    // face unflipped.
-                    flip = !isMasterFace[faceI];
-                }
-                else if (neiZone == maxZone)
-                {
-                    flip = true;
                 }
                 else
                 {
-                    flip = false;
+                    label ownZone = cellToZone[faceOwner[faceI]];
+                    label neiZone = neiCellZone[faceI-mesh_.nInternalFaces()];
+                    label maxZone = max(ownZone, neiZone);
+
+                    if (maxZone == -1)
+                    {
+                        // Surface with faceZone only (= freestanding faceZone)
+                        // Use geometrically derived orientation
+                        flip = meshFlipMap[faceI];
+                    }
+                    else if (ownZone == neiZone)
+                    {
+                        // Free-standing zone face or coupled boundary.
+                        // Keep masterface unflipped.
+                        flip = !isMasterFace[faceI];
+                    }
+                    else if (neiZone == maxZone)
+                    {
+                        flip = true;
+                    }
+                    else
+                    {
+                        flip = false;
+                    }
                 }
 
                 meshMod.setAction
