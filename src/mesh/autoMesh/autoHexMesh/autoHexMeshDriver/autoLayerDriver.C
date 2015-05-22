@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -967,40 +967,142 @@ void Foam::autoLayerDriver::growNoExtrusion
 }
 
 
+//void Foam::autoLayerDriver::determineSidePatches
+//(
+//    const globalIndex& globalFaces,
+//    const labelListList& edgeGlobalFaces,
+//    const indirectPrimitivePatch& pp,
+//
+//    labelList& sidePatchID
+//)
+//{
+//    // Sometimes edges-to-be-extruded are on more than 2 processors.
+//    // Work out which 2 hold the faces to be extruded and thus which procpatch
+//    // the side-face should be in. As an additional complication this might
+//    // mean that 2 procesors that were only edge-connected now suddenly need
+//    // to become face-connected i.e. have a processor patch between them.
+//
+//    fvMesh& mesh = meshRefiner_.mesh();
+//
+//    // Determine sidePatchID. Any additional processor boundary gets added to
+//    // patchToNbrProc,nbrProcToPatch and nPatches gets set to the new number
+//    // of patches.
+//    label nPatches;
+//    Map<label> nbrProcToPatch;
+//    Map<label> patchToNbrProc;
+//    addPatchCellLayer::calcSidePatch
+//    (
+//        mesh,
+//        globalFaces,
+//        edgeGlobalFaces,
+//        pp,
+//
+//        sidePatchID,
+//        nPatches,
+//        nbrProcToPatch,
+//        patchToNbrProc
+//    );
+//
+//    label nOldPatches = mesh.boundaryMesh().size();
+//    label nAdded = returnReduce(nPatches-nOldPatches, sumOp<label>());
+//    Info<< nl << "Adding in total " << nAdded/2 << " inter-processor patches to"
+//        << " handle extrusion of non-manifold processor boundaries."
+//        << endl;
+//
+//    if (nAdded > 0)
+//    {
+//        // We might not add patches in same order as in patchToNbrProc
+//        // so prepare to renumber sidePatchID
+//        Map<label> wantedToAddedPatch;
+//
+//        for (label patchI = nOldPatches; patchI < nPatches; patchI++)
+//        {
+//            label nbrProcI = patchToNbrProc[patchI];
+//            word name =
+//                    "procBoundary"
+//                  + Foam::name(Pstream::myProcNo())
+//                  + "to"
+//                  + Foam::name(nbrProcI);
+//
+//            dictionary patchDict;
+//            patchDict.add("type", processorPolyPatch::typeName);
+//            patchDict.add("myProcNo", Pstream::myProcNo());
+//            patchDict.add("neighbProcNo", nbrProcI);
+//            patchDict.add("nFaces", 0);
+//            patchDict.add("startFace", mesh.nFaces());
+//
+//            //Pout<< "Adding patch " << patchI
+//            //    << " name:" << name
+//            //    << " between " << Pstream::myProcNo()
+//            //    << " and " << nbrProcI << endl;
+//
+//            label procPatchI = meshRefiner_.appendPatch
+//            (
+//                mesh,
+//                mesh.boundaryMesh().size(), // new patch index
+//                name,
+//                patchDict
+//            );
+//            wantedToAddedPatch.insert(patchI, procPatchI);
+//        }
+//
+//        // Renumber sidePatchID
+//        forAll(sidePatchID, i)
+//        {
+//            label patchI = sidePatchID[i];
+//            Map<label>::const_iterator fnd = wantedToAddedPatch.find(patchI);
+//            if (fnd != wantedToAddedPatch.end())
+//            {
+//                sidePatchID[i] = fnd();
+//            }
+//        }
+//
+//        mesh.clearOut();
+//        const_cast<polyBoundaryMesh&>(mesh.boundaryMesh()).updateMesh();
+//    }
+//}
 void Foam::autoLayerDriver::determineSidePatches
 (
     const globalIndex& globalFaces,
     const labelListList& edgeGlobalFaces,
     const indirectPrimitivePatch& pp,
 
-    labelList& sidePatchID
+    labelList& edgePatchID,
+    labelList& edgeZoneID,
+    boolList& edgeFlip,
+    labelList& inflateFaceID
 )
 {
     // Sometimes edges-to-be-extruded are on more than 2 processors.
     // Work out which 2 hold the faces to be extruded and thus which procpatch
-    // the side-face should be in. As an additional complication this might
+    // the edge-face should be in. As an additional complication this might
     // mean that 2 procesors that were only edge-connected now suddenly need
     // to become face-connected i.e. have a processor patch between them.
 
     fvMesh& mesh = meshRefiner_.mesh();
 
-    // Determine sidePatchID. Any additional processor boundary gets added to
+    // Determine edgePatchID. Any additional processor boundary gets added to
     // patchToNbrProc,nbrProcToPatch and nPatches gets set to the new number
     // of patches.
     label nPatches;
     Map<label> nbrProcToPatch;
     Map<label> patchToNbrProc;
-    addPatchCellLayer::calcSidePatch
+    addPatchCellLayer::calcExtrudeInfo
     (
+        true,           // zoneFromAnyFace
+
         mesh,
         globalFaces,
         edgeGlobalFaces,
         pp,
 
-        sidePatchID,
+        edgePatchID,
         nPatches,
         nbrProcToPatch,
-        patchToNbrProc
+        patchToNbrProc,
+        edgeZoneID,
+        edgeFlip,
+        inflateFaceID
     );
 
     label nOldPatches = mesh.boundaryMesh().size();
@@ -1012,7 +1114,7 @@ void Foam::autoLayerDriver::determineSidePatches
     if (nAdded > 0)
     {
         // We might not add patches in same order as in patchToNbrProc
-        // so prepare to renumber sidePatchID
+        // so prepare to renumber edgePatchID
         Map<label> wantedToAddedPatch;
 
         for (label patchI = nOldPatches; patchI < nPatches; patchI++)
@@ -1046,14 +1148,14 @@ void Foam::autoLayerDriver::determineSidePatches
             wantedToAddedPatch.insert(patchI, procPatchI);
         }
 
-        // Renumber sidePatchID
-        forAll(sidePatchID, i)
+        // Renumber edgePatchID
+        forAll(edgePatchID, i)
         {
-            label patchI = sidePatchID[i];
+            label patchI = edgePatchID[i];
             Map<label>::const_iterator fnd = wantedToAddedPatch.find(patchI);
             if (fnd != wantedToAddedPatch.end())
             {
-                sidePatchID[i] = fnd();
+                edgePatchID[i] = fnd();
             }
         }
 
@@ -2922,14 +3024,29 @@ void Foam::autoLayerDriver::addLayers
     // Determine patches for extruded boundary edges. Calculates if any
     // additional processor patches need to be constructed.
 
-    labelList sidePatchID;
+    //labelList sidePatchID;
+    //determineSidePatches
+    //(
+    //    globalFaces,
+    //    edgeGlobalFaces,
+    //    pp,
+    //
+    //    sidePatchID
+    //);
+    labelList edgePatchID;
+    labelList edgeZoneID;
+    boolList edgeFlip;
+    labelList inflateFaceID;
     determineSidePatches
     (
         globalFaces,
         edgeGlobalFaces,
         pp,
 
-        sidePatchID
+        edgePatchID,
+        edgeZoneID,
+        edgeFlip,
+        inflateFaceID
     );
 
 
@@ -3314,7 +3431,12 @@ void Foam::autoLayerDriver::addLayers
 
             invExpansionRatio,
             pp(),
-            sidePatchID,        // boundary patch for extruded boundary edges
+
+            edgePatchID,    // boundary patch for extruded boundary edges
+            edgeZoneID,     // zone for extruded edges
+            edgeFlip,
+            inflateFaceID,
+
             labelList(0),       // exposed patchIDs, not used for adding layers
             nPatchFaceLayers,   // layers per face
             nPatchPointLayers,  // layers per point
