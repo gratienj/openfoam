@@ -2516,6 +2516,24 @@ void Foam::meshRefinement::baffleAndSplitMesh
                 globalToSlavePatch
             );
 
+            Info<< nl
+                << "Remove unreachable sections of mesh" << nl
+                << "-----------------------------------" << nl
+                << endl;
+
+            if (debug)
+            {
+                runTime++;
+            }
+
+            splitMeshRegions
+            (
+                globalToMasterPatch,
+                globalToSlavePatch,
+                keepPoint
+            );
+
+
             if (debug)
             {
                 // Debug:test all is still synced across proc patches
