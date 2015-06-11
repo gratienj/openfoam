@@ -100,8 +100,7 @@ public:
         {
             FACEPLANES,     // cell bound by planes of faces
             FACECENTRETETS, // tet decomposition using facectr and cellctr
-            FACEDIAGTETS,   // tet decomposition using face diagonal and cellctr
-            CELL_TETS       // Cell decomposed into tets
+            FACEDIAGTETS    // tet decomposition using face diagonal and cellctr
         };
 
 
@@ -694,14 +693,14 @@ public:
             (
                 const point&,
                 label cellI,
-                const cellRepresentation = CELL_TETS
+                const cellRepresentation = FACEDIAGTETS
             ) const;
 
             //- Find cell enclosing this location (-1 if not in mesh)
             label findCell
             (
                 const point&,
-                const cellRepresentation = CELL_TETS
+                const cellRepresentation = FACEDIAGTETS
             ) const;
 };
 

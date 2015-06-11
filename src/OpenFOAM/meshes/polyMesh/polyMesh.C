@@ -1371,10 +1371,8 @@ bool Foam::polyMesh::pointInCell
 
         case FACECENTRETETS:
         {
-            // only test that point is on inside of plane defined by cell face
-            // triangles
+            const point& cc = cellCentres()[cellI];
             const cell& cFaces = cells()[cellI];
-
             forAll(cFaces, cFaceI)
             {
                 label faceI = cFaces[cFaceI];
@@ -1398,66 +1396,26 @@ bool Foam::polyMesh::pointInCell
                         nextPointI = f[fp];
                     }
 
-                    triPointRef faceTri
+                    if
                     (
-                        points()[pointI],
-                        points()[nextPointI],
-                        fc
-                    );
-
-                    vector proj = p - faceTri.centre();
-
-                    if ((faceTri.normal() & proj) > 0)
+                        tetPointRef
+                        (
+                            points()[nextPointI],
+                            points()[pointI],
+                            fc,
+                            cc
+                        ).inside(p)
+                    )
                     {
-                        return false;
+                        return true;
                     }
                 }
             }
-            return true;
+            return false;
         }
         break;
 
         case FACEDIAGTETS:
-        {
-            // only test that point is on inside of plane defined by cell face
-            // triangles
-            const cell& cFaces = cells()[cellI];
-
-            forAll(cFaces, cFaceI)
-            {
-                label faceI = cFaces[cFaceI];
-                const face& f = faces_[faceI];
-
-                for (label tetPtI = 1; tetPtI < f.size() - 1; tetPtI++)
-                {
-                    // Get tetIndices of face triangle
-                    tetIndices faceTetIs
-                    (
-                        polyMeshTetDecomposition::triangleTetIndices
-                        (
-                            *this,
-                            faceI,
-                            cellI,
-                            tetPtI
-                        )
-                    );
-
-                    triPointRef faceTri = faceTetIs.faceTri(*this);
-
-                    vector proj = p - faceTri.centre();
-
-                    if ((faceTri.normal() & proj) > 0)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-        break;
-
-        case CELL_TETS:
         {
             label tetFacei;
             label tetPti;
