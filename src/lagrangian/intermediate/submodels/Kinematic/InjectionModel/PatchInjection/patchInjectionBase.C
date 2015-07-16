@@ -210,7 +210,7 @@ void Foam::patchInjectionBase::setPositionAndCell
             const point pf(tri.randomPoint(rnd));
 
             // Position perturbed away from face (into domain)
-            const scalar a = rnd.position(scalar(0.1), scalar(0.5));
+            const scalar a = rnd.position(scalar(0.1), scalar(0.3));
             const vector& pc = mesh.cellCentres()[cellOwner];
             const vector d = mag(pf - pc)*patchNormal_[faceI];
 
@@ -228,13 +228,13 @@ void Foam::patchInjectionBase::setPositionAndCell
             // This function finds both cellOwner and tetFaceI. The particle
             // was injected in a non-boundary cell and the tracking function
             // could not find the cellOwner
-             mesh.findTetFacePt
-             (
-                 cellOwner,
-                 position,
-                 tetFaceI,
-                 tetPtI
-             );
+            mesh.findCellFacePt
+            (
+                position,
+                cellOwner,
+                tetFaceI,
+                tetPtI
+            );
         }
         else
         {
