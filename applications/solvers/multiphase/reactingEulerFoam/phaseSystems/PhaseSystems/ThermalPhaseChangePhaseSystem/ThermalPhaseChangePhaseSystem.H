@@ -73,14 +73,6 @@ protected:
         // Mass transfer enabled
         Switch massTransfer_;
 
-        //- Interfacial Mass transfer rate
-        HashPtrTable<volScalarField, phasePairKey, phasePairKey::hash>
-            iDmdt_;
-
-        //- Wall Mass transfer rate
-        HashPtrTable<volScalarField, phasePairKey, phasePairKey::hash>
-            wDmdt_;
-
 
 public:
 

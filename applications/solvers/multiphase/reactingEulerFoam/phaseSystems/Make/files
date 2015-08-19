@@ -21,4 +21,6 @@ BlendedInterfacialModel/blendingMethods/hyperbolic/hyperbolic.C
 
 reactionThermo/hRefConstThermos.C
 
-LIB = $(FOAM_LIBBIN)/libreactingPhaseSystem
+reactionThermo/hRefConstThermos.C
+
+LIB = $(FOAM_LIBBIN)/libreactingTwoPhaseSystem
