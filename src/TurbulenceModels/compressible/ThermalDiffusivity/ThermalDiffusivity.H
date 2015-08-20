@@ -36,6 +36,8 @@ SourceFiles
 #ifndef ThermalDiffusivity_H
 #define ThermalDiffusivity_H
 
+#include "CompressibleTurbulenceModel.H"
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -45,7 +47,7 @@ namespace Foam
                Class ThermalDiffusivity Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class BasicTurbulenceModel>
+template<class TransportModel>
 class ThermalDiffusivity
 :
     public BasicTurbulenceModel
@@ -75,18 +77,6 @@ public:
 
 
     // Selectors
-
-        //- Return a reference to the selected turbulence model
-        static autoPtr<ThermalDiffusivity> New
-        (
-            const alphaField& alpha,
-            const volScalarField& rho,
-            const volVectorField& U,
-            const surfaceScalarField& phi,
-            const transportModel& trasportModel,
-            const word& propertiesName = turbulenceModel::propertiesName
-        );
-
 
         //- Return a reference to the selected turbulence model
         static autoPtr<ThermalDiffusivity> New

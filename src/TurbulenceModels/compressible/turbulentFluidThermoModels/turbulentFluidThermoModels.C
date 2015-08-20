@@ -43,18 +43,17 @@ makeBaseTurbulenceModel
     geometricOneField,
     volScalarField,
     compressibleTurbulenceModel,
-    CompressibleTurbulenceModel,
     ThermalDiffusivity,
     fluidThermo
 );
 
 #define makeRASModel(Type)                                                     \
     makeTemplatedTurbulenceModel                                               \
-    (fluidThermoCompressibleTurbulenceModel, RAS, Type)
+    (fluidThermoThermalDiffusivity, RAS, Type)
 
 #define makeLESModel(Type)                                                     \
     makeTemplatedTurbulenceModel                                               \
-    (fluidThermoCompressibleTurbulenceModel, LES, Type)
+    (fluidThermoThermalDiffusivity, LES, Type)
 
 
 // -------------------------------------------------------------------------- //

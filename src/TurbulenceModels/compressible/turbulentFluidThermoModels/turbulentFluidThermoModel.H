@@ -55,8 +55,7 @@ namespace Foam
 {
     namespace compressible
     {
-        typedef ThermalDiffusivity<CompressibleTurbulenceModel<fluidThermo> >
-            turbulenceModel;
+        typedef ThermalDiffusivity<fluidThermo> turbulenceModel;
 
         typedef SpecificCompressibleTurbulenceModel
         <

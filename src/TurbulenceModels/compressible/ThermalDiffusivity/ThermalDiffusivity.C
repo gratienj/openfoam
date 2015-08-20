@@ -27,8 +27,8 @@ License
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-template<class BasicTurbulenceModel>
-Foam::ThermalDiffusivity<BasicTurbulenceModel>::ThermalDiffusivity
+template<class TransportModel>
+Foam::ThermalDiffusivity<TransportModel>::ThermalDiffusivity
 (
     const word& type,
     const alphaField& alpha,
@@ -56,37 +56,9 @@ Foam::ThermalDiffusivity<BasicTurbulenceModel>::ThermalDiffusivity
 
 // * * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * //
 
-template<class BasicTurbulenceModel>
-Foam::autoPtr<Foam::ThermalDiffusivity<BasicTurbulenceModel> >
-Foam::ThermalDiffusivity<BasicTurbulenceModel>::New
-(
-    const alphaField& alpha,
-    const volScalarField& rho,
-    const volVectorField& U,
-    const surfaceScalarField& phi,
-    const transportModel& transport,
-    const word& propertiesName
-)
-{
-    return autoPtr<ThermalDiffusivity>
-    (
-        static_cast<ThermalDiffusivity*>(
-        BasicTurbulenceModel::New
-        (
-            alpha,
-            rho,
-            U,
-            phi,
-            transport,
-            propertiesName
-        ).ptr())
-    );
-}
-
-
-template<class BasicTurbulenceModel>
-Foam::autoPtr<Foam::ThermalDiffusivity<BasicTurbulenceModel> >
-Foam::ThermalDiffusivity<BasicTurbulenceModel>::New
+template<class TransportModel>
+Foam::autoPtr<Foam::ThermalDiffusivity<TransportModel> >
+Foam::ThermalDiffusivity<TransportModel>::New
 (
     const volScalarField& rho,
     const volVectorField& U,
@@ -98,7 +70,7 @@ Foam::ThermalDiffusivity<BasicTurbulenceModel>::New
     return autoPtr<ThermalDiffusivity>
     (
         static_cast<ThermalDiffusivity*>(
-        BasicTurbulenceModel::New
+        CompressibleTurbulenceModel<transportModel>::New
         (
             rho,
             U,
