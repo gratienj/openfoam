@@ -36,8 +36,6 @@ SourceFiles
 #ifndef ThermalDiffusivity_H
 #define ThermalDiffusivity_H
 
-#include "CompressibleTurbulenceModel.H"
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -47,7 +45,7 @@ namespace Foam
                Class ThermalDiffusivity Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class TransportModel>
+template<class BasicTurbulenceModel>
 class ThermalDiffusivity
 :
     public BasicTurbulenceModel
