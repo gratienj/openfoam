@@ -88,34 +88,6 @@ Foam::EddyDiffusivity<BasicTurbulenceModel>::EddyDiffusivity
 {}
 
 
-// * * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * //
-
-template<class BasicTurbulenceModel>
-Foam::autoPtr<Foam::EddyDiffusivity<BasicTurbulenceModel> >
-Foam::EddyDiffusivity<BasicTurbulenceModel>::New
-(
-    const volScalarField& rho,
-    const volVectorField& U,
-    const surfaceScalarField& phi,
-    const transportModel& transport,
-    const word& propertiesName
-)
-{
-    return autoPtr<EddyDiffusivity>
-    (
-        static_cast<EddyDiffusivity*>(
-        BasicTurbulenceModel::New
-        (
-            rho,
-            U,
-            phi,
-            transport,
-            propertiesName
-        ).ptr())
-    );
-}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>

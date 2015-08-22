@@ -79,6 +79,18 @@ public:
         //- Return a reference to the selected turbulence model
         static autoPtr<ThermalDiffusivity> New
         (
+            const alphaField& alpha,
+            const volScalarField& rho,
+            const volVectorField& U,
+            const surfaceScalarField& phi,
+            const transportModel& trasportModel,
+            const word& propertiesName = turbulenceModel::propertiesName
+        );
+
+
+        //- Return a reference to the selected turbulence model
+        static autoPtr<ThermalDiffusivity> New
+        (
             const volScalarField& rho,
             const volVectorField& U,
             const surfaceScalarField& phi,

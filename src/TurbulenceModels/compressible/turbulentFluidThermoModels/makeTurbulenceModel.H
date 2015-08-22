@@ -42,7 +42,7 @@ License
             dictionary                                                         \
         );                                                                     \
                                                                                \
-        typedef BaseModel<CompressibleTurbulenceModel<Transport> >             \
+        typedef TDModel<BaseModel<Transport> >                                 \
             Transport##BaseModel;                                              \
                                                                                \
                                                                                \

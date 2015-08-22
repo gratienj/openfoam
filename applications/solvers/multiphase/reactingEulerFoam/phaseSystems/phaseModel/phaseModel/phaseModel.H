@@ -306,32 +306,32 @@ public:
             //- Return the laminar thermal conductivity on a patch
             virtual tmp<scalarField> kappa(const label patchi) const = 0;
 
-            //- Return the effective thermal conductivity
+            //- Return the laminar thermal conductivity
             virtual tmp<volScalarField> kappaEff
             (
                 const volScalarField& alphat
             ) const = 0;
 
-            //- Access the effective thermal conductivity
+            //- Access the laminar thermal conductivity
             virtual tmp<scalarField> kappaEff
             (
                 const scalarField& alphat,
                 const label patchi
             ) const = 0;
 
-            //- Return the laminar thermal diffusivity for enthalpy
+            //- Return the thermal diffusivity for enthalpy
             virtual tmp<volScalarField> alpha() const = 0;
 
-            //- Return the laminar thermal diffusivity for enthalpy on a patch
+            //- Return the thermal diffusivity for enthalpy on a patch
             virtual tmp<scalarField> alpha(const label patchi) const = 0;
 
-            //- Return the effective thermal diffusivity for enthalpy
+            //- Return the thermal diffusivity for enthalpy
             virtual tmp<volScalarField> alphaEff
             (
                 const volScalarField& alphat
             ) const = 0;
 
-            //- Return the effective thermal diffusivity for enthalpy on a patch
+            //- Return the thermal diffusivity for enthalpy on a patch
             virtual tmp<scalarField> alphaEff
             (
                 const scalarField& alphat,

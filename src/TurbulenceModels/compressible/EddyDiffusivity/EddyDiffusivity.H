@@ -92,19 +92,6 @@ public:
         );
 
 
-    // Selectors
-
-        //- Return a reference to the selected turbulence model
-        static autoPtr<EddyDiffusivity> New
-        (
-            const volScalarField& rho,
-            const volVectorField& U,
-            const surfaceScalarField& phi,
-            const transportModel& trasportModel,
-            const word& propertiesName = turbulenceModel::propertiesName
-        );
-
-
     //- Destructor
     virtual ~EddyDiffusivity()
     {}
