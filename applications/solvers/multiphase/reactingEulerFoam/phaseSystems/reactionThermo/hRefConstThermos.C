@@ -120,19 +120,6 @@ constTransport
     >
 > constRefRhoConstEThermoPhysics;
 
-typedef
-constTransport
-<
-    species::thermo
-    <
-        hRefConstThermo
-        <
-            rhoConst<specie>
-        >,
-        sensibleEnthalpy
-    >
-> constRefRhoConstHThermoPhysics;
-
 
 // pureMixture, sensibleEnthalpy:
 
@@ -239,28 +226,6 @@ makeReactionMixtureThermo
     heRhoThermo,
     multiComponentMixture,
     constRefRhoConstEThermoPhysics
-);
-
-
-// multiComponentMixture, sensibleEnthalpy:
-
-makeReactionMixtureThermo
-(
-    rhoThermo,
-    rhoReactionThermo,
-    heRhoThermo,
-    multiComponentMixture,
-    constRefRhoConstHThermoPhysics
-);
-
-
-makeReactionMixtureThermo
-(
-    rhoThermo,
-    rhoReactionThermo,
-    heRhoThermo,
-    multiComponentMixture,
-    constRefGasHThermoPhysics
 );
 
 
