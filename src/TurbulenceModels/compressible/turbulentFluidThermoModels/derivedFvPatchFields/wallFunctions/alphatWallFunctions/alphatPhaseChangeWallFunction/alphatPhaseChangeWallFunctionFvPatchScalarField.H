@@ -38,8 +38,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef compressibleAlphatPhaseChangeWallFunctionFvPatchScalarField_H
-#define compressibleAlphatPhaseChangeWallFunctionFvPatchScalarField_H
+#ifndef compressibleAlphatWallFunctionPhaseChangeFvPatchScalarField_H
+#define compressibleAlphatWallFunctionPhaseChangeFvPatchScalarField_H
 
 #include "fixedValueFvPatchFields.H"
 

@@ -310,6 +310,15 @@ void Foam::phaseSystem::correctEnergyTransport()
 }
 
 
+void Foam::phaseSystem::correctEnergyTransport()
+{
+    forAllIter(phaseModelTable, phaseModels_, phaseModelIter)
+    {
+        phaseModelIter()->correctEnergyTransport();
+    }
+}
+
+
 bool Foam::phaseSystem::read()
 {
     if (regIOobject::read())
