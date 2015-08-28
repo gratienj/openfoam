@@ -101,12 +101,6 @@ const Foam::word& Foam::phaseModel::keyword() const
 }
 
 
-Foam::label Foam::phaseModel::index() const
-{
-    return index_;
-}
-
-
 const Foam::phaseSystem& Foam::phaseModel::fluid() const
 {
     return fluid_;

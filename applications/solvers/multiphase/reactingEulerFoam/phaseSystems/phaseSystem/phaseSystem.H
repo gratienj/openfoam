@@ -42,7 +42,7 @@ SourceFiles
 #include "phasePair.H"
 #include "orderedPhasePair.H"
 #include "HashPtrTable.H"
-#include "PtrListDictionary.H"
+#include "PtrDictionary.H"
 
 #include "IOMRFZoneList.H"
 #include "fvIOoptionList.H"
@@ -118,7 +118,11 @@ public:
             >
             massTransferTable;
 
-        typedef PtrListDictionary<phaseModel> phaseModelList;
+        // typedef
+        //     HashTable<autoPtr<phaseModel>, word, word::hash>
+        //     phaseModelTable;
+
+        typedef PtrDictionary<phaseModel> phaseModelTable;
 
 
 protected:
@@ -197,7 +201,7 @@ protected:
         //- Calculate and return the mixture flux
         tmp<surfaceScalarField> calcPhi
         (
-            const phaseModelList& phaseModels
+            const phaseModelTable& phaseModels
         ) const;
 
         //- Generate pairs
@@ -351,6 +355,48 @@ public:
 
         //- Read base phaseProperties dictionary
         virtual bool read();
+
+
+        // Access
+
+            //- Constant access the mesh
+            inline const fvMesh& mesh() const;
+
+            //- Constant access the phase models
+            inline const phaseModelTable& phases() const;
+
+            //- Access the phase models
+            inline phaseModelTable& phases();
+
+            //- Constant access the mixture flux
+            inline const surfaceScalarField& phi() const;
+
+            //- Access the mixture flux
+            inline surfaceScalarField& phi();
+
+            //- Constant access the rate of change of the pressure
+            inline const volScalarField& dpdt() const;
+
+            //- Access the rate of change of the pressure
+            inline volScalarField& dpdt();
+
+            //- Return MRF zones
+            inline const IOMRFZoneList& MRF() const;
+
+            //- Optional FV-options
+            inline fv::IOoptionList& fvOptions() const;
+
+            //- Access a sub model between a phase pair
+            template <class modelType>
+            const modelType& lookupSubModel(const phasePair& key) const;
+
+            //- Access a sub model between two phases
+            template <class modelType>
+            const modelType& lookupSubModel
+            (
+                const phaseModel& dispersed,
+                const phaseModel& continuous
+            ) const;
 };
 
 

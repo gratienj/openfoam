@@ -51,14 +51,15 @@ Foam::tmp<Foam::surfaceScalarField> Foam::phaseSystem::calcPhi
         new surfaceScalarField
         (
             "phi",
-            fvc::interpolate(phaseModels[0])*phaseModels[0].phi()
+            fvc::interpolate(phaseModelIter())*phaseModelIter().phi()
         )
     );
 
     for (label phasei=1; phasei<phaseModels.size(); phasei++)
     {
         tmpPhi() +=
-            fvc::interpolate(phaseModels[phasei])*phaseModels[phasei].phi();
+            fvc::interpolate(phaseModelIter())
+           *phaseModelIter().phi();
     }
 
     return tmpPhi;
@@ -193,12 +194,12 @@ Foam::tmp<Foam::volScalarField> Foam::phaseSystem::rho() const
 {
     tmp<volScalarField> tmpRho
     (
-        phaseModels_[0]*phaseModels_[0].rho()
+        phaseModelIter()*phaseModelIter().rho()
     );
 
     for (label phasei=1; phasei<phaseModels_.size(); phasei++)
     {
-        tmpRho() += phaseModels_[phasei]*phaseModels_[phasei].rho();
+        tmpRho() += phaseModelIter()*phaseModelIter().rho();
     }
 
     return tmpRho;
@@ -209,12 +210,12 @@ Foam::tmp<Foam::volVectorField> Foam::phaseSystem::U() const
 {
     tmp<volVectorField> tmpU
     (
-        phaseModels_[0]*phaseModels_[0].U()
+        phaseModelIter()*phaseModelIter().U()
     );
 
     for (label phasei=1; phasei<phaseModels_.size(); phasei++)
     {
-        tmpU() += phaseModels_[phasei]*phaseModels_[phasei].U();
+        tmpU() += phaseModelIter()*phaseModelIter().U();
     }
 
     return tmpU;
@@ -259,7 +260,7 @@ void Foam::phaseSystem::correct()
 {
     forAll(phaseModels_, phasei)
     {
-        phaseModels_[phasei].correct();
+        phaseModelIter().correct();
     }
 }
 
@@ -270,15 +271,17 @@ void Foam::phaseSystem::correctKinematics()
 
     forAll(phaseModels_, phasei)
     {
-        phaseModels_[phasei].correctKinematics();
+        phaseModelIter().correctKinematics();
 
-        updateDpdt = updateDpdt || phaseModels_[phasei].thermo().dpdt();
+        updateDpdt = updateDpdt || phaseModelIter().thermo().dpdt();
     }
+
+    //phaseModelTable::iterator iter = phaseModels_.begin();
 
     // Update the pressure time-derivative if required
     if (updateDpdt)
     {
-        dpdt_ = fvc::ddt(phaseModels_.begin()().thermo().p());
+        dpdt_ = fvc::ddt(phaseModels_.begin()()->thermo().p());
     }
 }
 
@@ -287,7 +290,7 @@ void Foam::phaseSystem::correctThermo()
 {
     forAll(phaseModels_, phasei)
     {
-        phaseModels_[phasei].correctThermo();
+        phaseModelIter().correctThermo();
     }
 }
 
@@ -305,7 +308,7 @@ void Foam::phaseSystem::correctEnergyTransport()
 {
     forAll(phaseModels_, phasei)
     {
-        phaseModels_[phasei].correctEnergyTransport();
+        phaseModelIter().correctTurbulence();
     }
 }
 
@@ -314,7 +317,7 @@ void Foam::phaseSystem::correctEnergyTransport()
 {
     forAllIter(phaseModelTable, phaseModels_, phaseModelIter)
     {
-        phaseModelIter()->correctEnergyTransport();
+        phaseModelIter().correctEnergyTransport();
     }
 }
 
@@ -327,7 +330,7 @@ bool Foam::phaseSystem::read()
 
         forAll(phaseModels_, phasei)
         {
-            readOK &= phaseModels_[phasei].read();
+            readOK &= phaseModelIter().read();
         }
 
         // models ...
