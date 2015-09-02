@@ -3939,11 +3939,9 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
         Info<< "Setting cellZones according to named surfaces:" << endl;
         forAll(namedSurfaces, i)
         {
-            label surfI = namedSurfaces[i];
-
-            Info<< "Surface : " << surfaces_.names()[surfI] << nl
-                << "    faceZone : " << surfZones[surfI].faceZoneName() << nl
-                << "    cellZone : " << surfZones[surfI].cellZoneName() << endl;
+            const vectorField smallVec(ROOTSMALL*(end-start));
+            start -= smallVec;
+            end += smallVec;
         }
         Info<< endl;
 
