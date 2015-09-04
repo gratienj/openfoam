@@ -183,6 +183,7 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::Kd
         )
     );
 
+    // Add the implicit part of the drag force
     forAllConstIter
     (
         phaseSystem::KdTable,
@@ -437,6 +438,7 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::momentumTransfer() const
     }
 
     // Add the implicit part of the drag force
+    /* ***HGW Currently this is handled in the pEqn
     forAllConstIter
     (
         phaseSystem::KdTable,
@@ -460,6 +462,7 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::momentumTransfer() const
             Swap(phase, otherPhase);
         }
     }
+    */
 
     // Update the virtual mass coefficients
     forAllConstIter
