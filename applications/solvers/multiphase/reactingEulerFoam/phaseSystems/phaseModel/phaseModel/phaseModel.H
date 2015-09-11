@@ -130,6 +130,7 @@ public:
         class iNew
         {
             const phaseSystem& fluid_;
+            mutable label indexCounter_;
 
         public:
 
@@ -138,14 +139,16 @@ public:
                 const phaseSystem& fluid
             )
             :
-                fluid_(fluid)
+                fluid_(fluid),
+                indexCounter_(-1)
             {}
 
             autoPtr<phaseModel> operator()(Istream& is) const
             {
+                indexCounter_++;
                 return autoPtr<phaseModel>
                 (
-                    phaseModel::New(fluid_, word(is))
+                    phaseModel::New(fluid_, word(is), indexCounter_)
                 );
             }
         };
@@ -160,7 +163,11 @@ public:
         //- Return the name of this phase
         const word& name() const;
 
+        //- Return the name of the phase for use as the keyword in PtrDictionary
         const word& keyword() const;
+
+        //- Return the index of the phase
+        label index() const;
 
         //- Return the system to which this phase belongs
         const phaseSystem& fluid() const;

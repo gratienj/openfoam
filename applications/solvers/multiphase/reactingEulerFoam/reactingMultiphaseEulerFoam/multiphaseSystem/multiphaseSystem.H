@@ -169,15 +169,6 @@ public:
         //- Return the combined force (lift + wall-lubrication) for phase pair
         virtual autoPtr<PtrList<Foam::volVectorField> > Fs() const = 0;
 
-        //- Return the turbulent dispersion force on faces for phase pair
-        virtual autoPtr<PtrList<Foam::surfaceScalarField> > phiDs
-        (
-            const PtrList<volScalarField>& rAUs
-        ) const = 0;
-
-        //- Return true if there is mass transfer for phase
-        virtual bool transfersMass(const phaseModel& phase) const = 0;
-
         //- Return the total interfacial mass transfer rate for phase
         virtual tmp<volScalarField> dmdt(const phaseModel& phase) const = 0;
 

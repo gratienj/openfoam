@@ -12,9 +12,9 @@
 
     surfaceScalarField maxPhi("maxPhi", phi);
 
-    forAll(phases, phasei)
+    forAllIter(PtrDictionary<phaseModel>, fluid.phases(), iter)
     {
-        maxPhi = max(maxPhi, mag(phases[phasei].phi()));
+        maxPhi = max(maxPhi, mag(iter().phi()));
     }
 
     // Set the reciprocal time-step from the local Courant number

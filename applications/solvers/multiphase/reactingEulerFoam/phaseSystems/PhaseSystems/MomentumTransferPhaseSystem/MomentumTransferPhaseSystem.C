@@ -183,7 +183,6 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::Kd
         )
     );
 
-    // Add the implicit part of the drag force
     forAllConstIter
     (
         phaseSystem::KdTable,
@@ -438,7 +437,6 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::momentumTransfer() const
     }
 
     // Add the implicit part of the drag force
-    /* ***HGW Currently this is handled in the pEqn
     forAllConstIter
     (
         phaseSystem::KdTable,
@@ -462,7 +460,6 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::momentumTransfer() const
             Swap(phase, otherPhase);
         }
     }
-    */
 
     // Update the virtual mass coefficients
     forAllConstIter
@@ -514,12 +511,17 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::momentumTransfer() const
 
 
 template<class BasePhaseSystem>
-Foam::volVectorField& Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::setF
-(
-    PtrList<volVectorField>& Fs, const label phasei
-) const
+Foam::autoPtr<Foam::PtrList<Foam::volVectorField> >
+Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::Fs() const
 {
-    if (!Fs.set(phasei))
+    autoPtr<PtrList<volVectorField> > tFs
+    (
+        new PtrList<volVectorField>(this->phases().size())
+    );
+
+    PtrList<volVectorField>& Fs = tFs();
+
+    forAll(Fs, phasei)
     {
         Fs.set
         (
@@ -541,20 +543,6 @@ Foam::volVectorField& Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::setF
         );
     }
 
-    return Fs[phasei];
-}
-
-
-template<class BasePhaseSystem>
-Foam::autoPtr<Foam::PtrList<Foam::volVectorField> >
-Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::Fs() const
-{
-    autoPtr<PtrList<volVectorField> > tFs
-    (
-        new PtrList<volVectorField>(this->phases().size())
-    );
-    PtrList<volVectorField>& Fs = tFs();
-
     // Add the lift force
     forAllConstIter
     (
@@ -567,8 +555,8 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::Fs() const
 
         const phasePair& pair(this->phasePairs_[liftModelIter.key()]);
 
-        setF(Fs, pair.phase1().index()) += F;
-        setF(Fs, pair.phase2().index()) -= F;
+        Fs[pair.phase1().index()] += F;
+        Fs[pair.phase2().index()] -= F;
     }
 
     // Add the wall lubrication force
@@ -584,8 +572,8 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::Fs() const
         const phasePair&
             pair(this->phasePairs_[wallLubricationModelIter.key()]);
 
-        setF(Fs, pair.phase1().index()) += F;
-        setF(Fs, pair.phase2().index()) -= F;
+        Fs[pair.phase1().index()] += F;
+        Fs[pair.phase2().index()] -= F;
     }
 
     return tFs;
@@ -644,29 +632,23 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::phiDs
     PtrList<surfaceScalarField>& phiDs = tphiDs();
 
     // Add the turbulent dispersion force
-    forAllConstIter
-    (
-        turbulentDispersionModelTable,
-        turbulentDispersionModels_,
-        turbulentDispersionModelIter
-    )
-    {
-        const phasePair&
-            pair(this->phasePairs_[turbulentDispersionModelIter.key()]);
+    // forAllConstIter
+    // (
+    //     turbulentDispersionModelTable,
+    //     turbulentDispersionModels_,
+    //     turbulentDispersionModelIter
+    // )
+    // {
+    //     const volVectorField F(turbulentDispersionModelIter()->F<vector>());
 
-        const volScalarField D(turbulentDispersionModelIter()->D());
-        const surfaceScalarField snGradAlpha1
-        (
-            fvc::snGrad(pair.phase1())*this->mesh_.magSf()
-        );
+    //     const phasePair&
+    //         pair(this->phasePairs_[turbulentDispersionModelIter.key()]);
 
-        setPhiD(phiDs, pair.phase1().index()) +=
-            fvc::interpolate(rAUs[pair.phase1().index()]*D)*snGradAlpha1;
-        setPhiD(phiDs, pair.phase2().index()) -=
-            fvc::interpolate(rAUs[pair.phase2().index()]*D)*snGradAlpha1;
-    }
+    //     *eqns[pair.phase1().name()] += F;
+    //     *eqns[pair.phase2().name()] -= F;
+    // }
 
-    return tphiDs;
+    return tFs;
 }
 
 

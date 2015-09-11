@@ -249,7 +249,7 @@ while (pimple.correct())
 
             pEqnComp1 =
                 (
-                    phase1.continuityError()
+                    phase1.continuityError() - fluid.dmdt()
                   - fvc::Sp(fvc::ddt(alpha1) + fvc::div(alphaPhi1), rho1)
                 )/rho1
               + (alpha1/rho1)*correction
@@ -272,7 +272,7 @@ while (pimple.correct())
 
             pEqnComp2 =
                 (
-                    phase2.continuityError()
+                    phase2.continuityError() + fluid.dmdt()
                   - fvc::Sp(fvc::ddt(alpha2) + fvc::div(alphaPhi2), rho2)
                 )/rho2
                + (alpha2/rho2)*correction
@@ -290,7 +290,7 @@ while (pimple.correct())
         {
             pEqnComp1 =
                 (
-                    phase1.continuityError()
+                    phase1.continuityError() - fluid.dmdt()
                   - fvc::Sp(fvc::ddt(alpha1) + fvc::div(alphaPhi1), rho1)
                 )/rho1
               + (alpha1*psi1/rho1)*correction(fvm::ddt(p_rgh));
@@ -300,31 +300,10 @@ while (pimple.correct())
         {
             pEqnComp2 =
                 (
-                    phase2.continuityError()
+                    phase2.continuityError() + fluid.dmdt()
                   - fvc::Sp(fvc::ddt(alpha2) + fvc::div(alphaPhi2), rho2)
                 )/rho2
               + (alpha2*psi2/rho2)*correction(fvm::ddt(p_rgh));
-        }
-    }
-
-    if (fluid.transfersMass())
-    {
-        if (pEqnComp1.valid())
-        {
-            pEqnComp1() -= fluid.dmdt()/rho1;
-        }
-        else
-        {
-            pEqnComp1 = fvm::Su(-fluid.dmdt()/rho1, p_rgh);
-        }
-
-        if (pEqnComp2.valid())
-        {
-            pEqnComp2() += fluid.dmdt()/rho2;
-        }
-        else
-        {
-            pEqnComp2 = fvm::Su(fluid.dmdt()/rho2, p_rgh);
         }
     }
 
@@ -344,12 +323,12 @@ while (pimple.correct())
         {
             fvScalarMatrix pEqn(pEqnIncomp);
 
-            if (pEqnComp1.valid())
+            if (phase1.compressible())
             {
                 pEqn += pEqnComp1();
             }
 
-            if (pEqnComp2.valid())
+            if (phase2.compressible())
             {
                 pEqn += pEqnComp2();
             }

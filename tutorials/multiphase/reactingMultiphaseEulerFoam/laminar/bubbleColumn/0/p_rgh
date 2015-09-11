@@ -22,22 +22,19 @@ boundaryField
 {
     inlet
     {
-        type            fixedFluxPressure;
-        value           $internalField;
+        type               fixedFluxPressure;
+        value              $internalField;
     }
     outlet
     {
-        type            prghTotalPressure;
-        p0              $internalField;
-        U               U.air;
-        phi             phi.air;
-        rho             rho.air;
-        value           $internalField;
+        type               prghPressure;
+        p                  $internalField;
+        value              $internalField;
     }
     walls
     {
-        type            fixedFluxPressure;
-        value           $internalField;
+        type               fixedFluxPressure;
+        value              $internalField;
     }
 }
 

@@ -1,6 +1,6 @@
 Info<< "Constructing momentum equations" << endl;
 
-PtrList<fvVectorMatrix> UEqns(phases.size());
+PtrList<fvVectorMatrix> UEqns(fluid.phases().size());
 
 {
     autoPtr<phaseSystem::momentumTransferTable>
@@ -9,10 +9,10 @@ PtrList<fvVectorMatrix> UEqns(phases.size());
     phaseSystem::momentumTransferTable&
         momentumTransfer(momentumTransferPtr());
 
-    forAll(phases, phasei)
+    int phasei = 0;
+    forAllIter(PtrDictionary<phaseModel>, fluid.phases(), iter)
     {
-        phaseModel& phase = phases[phasei];
-
+        phaseModel& phase = iter();
         const volScalarField& alpha = phase;
         const volScalarField& rho = phase.rho();
         volVectorField& U = phase.U();
@@ -31,6 +31,7 @@ PtrList<fvVectorMatrix> UEqns(phases.size());
 
         UEqns[phasei].relax();
         fvOptions.constrain(UEqns[phasei]);
-        fvOptions.correct(U);
+
+        phasei++;
     }
 }
