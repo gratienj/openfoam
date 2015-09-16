@@ -69,7 +69,12 @@ massTransfer() const
 
     phaseSystem::massTransferTable& eqns = eqnsPtr();
 
-    forAll(this->phaseModels_, phasei)
+    forAllConstIter
+    (
+        phaseSystem::phaseModelList,
+        this->phaseModels_,
+        phaseModelIter
+    )
     {
         const phaseModel& phase = this->phaseModels_[phasei];
 
