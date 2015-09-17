@@ -278,12 +278,7 @@ Foam::HeatAndMassTransferPhaseSystem<BasePhaseSystem>::heatTransfer() const
 
     phaseSystem::heatTransferTable& eqns = eqnsPtr();
 
-    forAllConstIter
-    (
-        phaseSystem::phaseModelList,
-        this->phaseModels_,
-        phaseModelIter
-    )
+    forAll(this->phaseModels_, phasei)
     {
         const phaseModel& phase = this->phaseModels_[phasei];
 

@@ -414,12 +414,7 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::momentumTransfer() const
 
     phaseSystem::momentumTransferTable& eqns = eqnsPtr();
 
-    forAllConstIter
-    (
-        phaseSystem::phaseModelList,
-        this->phaseModels_,
-        phaseModelIter
-    )
+    forAll(this->phaseModels_, phasei)
     {
         const phaseModel& phase = this->phaseModels_[phasei];
 
