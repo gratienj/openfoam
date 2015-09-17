@@ -581,13 +581,20 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::Fs() const
 
 
 template<class BasePhaseSystem>
-Foam::surfaceScalarField&
-Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::setPhiD
+Foam::autoPtr<Foam::PtrList<Foam::surfaceScalarField> >
+Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::phiDs
 (
-    PtrList<surfaceScalarField>& phiDs, const label phasei
+    const PtrList<volScalarField>& rAUs
 ) const
 {
-    if (!phiDs.set(phasei))
+    autoPtr<PtrList<surfaceScalarField> > tphiDs
+    (
+        new PtrList<surfaceScalarField>(this->phases().size())
+    );
+
+    PtrList<surfaceScalarField>& phiDs = tphiDs();
+
+    forAll(phiDs, phasei)
     {
         phiDs.set
         (
@@ -596,7 +603,7 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::setPhiD
             (
                 IOobject
                 (
-                    turbulentDispersionModel::typeName + ":phiD",
+                    liftModel::typeName + ":F",
                     this->mesh_.time().timeName(),
                     this->mesh_,
                     IOobject::NO_READ,
@@ -614,41 +621,30 @@ Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::setPhiD
         );
     }
 
-    return phiDs[phasei];
-}
-
-
-template<class BasePhaseSystem>
-Foam::autoPtr<Foam::PtrList<Foam::surfaceScalarField> >
-Foam::MomentumTransferPhaseSystem<BasePhaseSystem>::phiDs
-(
-    const PtrList<volScalarField>& rAUs
-) const
-{
-    autoPtr<PtrList<surfaceScalarField> > tphiDs
-    (
-        new PtrList<surfaceScalarField>(this->phases().size())
-    );
-    PtrList<surfaceScalarField>& phiDs = tphiDs();
-
     // Add the turbulent dispersion force
-    // forAllConstIter
-    // (
-    //     turbulentDispersionModelTable,
-    //     turbulentDispersionModels_,
-    //     turbulentDispersionModelIter
-    // )
-    // {
-    //     const volVectorField F(turbulentDispersionModelIter()->F<vector>());
+    forAllConstIter
+    (
+        turbulentDispersionModelTable,
+        turbulentDispersionModels_,
+        turbulentDispersionModelIter
+    )
+    {
+        const phasePair&
+            pair(this->phasePairs_[turbulentDispersionModelIter.key()]);
 
-    //     const phasePair&
-    //         pair(this->phasePairs_[turbulentDispersionModelIter.key()]);
+        const volScalarField D(turbulentDispersionModelIter()->D());
+        const surfaceScalarField snGradAlpha1
+        (
+            fvc::snGrad(pair.phase1())*this->mesh_.magSf()
+        );
 
-    //     *eqns[pair.phase1().name()] += F;
-    //     *eqns[pair.phase2().name()] -= F;
-    // }
+        phiDs[pair.phase1().index()] +=
+            fvc::interpolate(rAUs[pair.phase1().index()]*D)*snGradAlpha1;
+        phiDs[pair.phase2().index()] -=
+            fvc::interpolate(rAUs[pair.phase2().index()]*D)*snGradAlpha1;
+    }
 
-    return tFs;
+    return tphiDs;
 }
 
 
