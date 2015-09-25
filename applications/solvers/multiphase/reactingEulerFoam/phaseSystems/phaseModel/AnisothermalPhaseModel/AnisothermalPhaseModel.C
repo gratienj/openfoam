@@ -37,17 +37,7 @@ Foam::AnisothermalPhaseModel<BasePhaseModel>::AnisothermalPhaseModel
 )
 :
     BasePhaseModel(fluid, phaseName, index),
-    divU_
-    (
-        IOobject
-        (
-            IOobject::groupName("divU", this->name()),
-            fluid.mesh().time().timeName(),
-            fluid.mesh()
-        ),
-        fluid.mesh(),
-        dimensionedScalar("divU", dimless/dimTime, 0)
-    ),
+    divU_(NULL),
     K_
     (
         IOobject
