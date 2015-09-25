@@ -282,6 +282,27 @@ while (pimple.correct())
         }
     }
 
+    if (fluid.transfersMass())
+    {
+        if (pEqnComp1.valid())
+        {
+            pEqnComp1() -= fluid.dmdt()/rho1;
+        }
+        else
+        {
+            pEqnComp1 = fvm::Su(-fluid.dmdt()/rho1, p_rgh);
+        }
+
+        if (pEqnComp2.valid())
+        {
+            pEqnComp2() += fluid.dmdt()/rho2;
+        }
+        else
+        {
+            pEqnComp2 = fvm::Su(fluid.dmdt()/rho2, p_rgh);
+        }
+    }
+
     // Cache p prior to solve for density update
     volScalarField p_rgh_0("p_rgh_0", p_rgh);
 
