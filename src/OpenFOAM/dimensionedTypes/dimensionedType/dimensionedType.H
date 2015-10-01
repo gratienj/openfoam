@@ -132,8 +132,7 @@ public:
             const Type& defaultValue = pTraits<Type>::zero
         );
 
-        //- Construct from dictionary, with default value and dimensions.
-        //  Deprecated, use form with dimensions before value.
+        //- Construct from dictionary dimensionless with value.
         static dimensioned<Type> lookupOrDefault
         (
             const word&,
@@ -151,15 +150,13 @@ public:
             const Type& defaultValue = pTraits<Type>::zero
         );
 
-        //- Construct from dictionary, with default value.
+        //- Construct from dictionary, dimensionless with default value.
         //  If the value is not found, it is added into the dictionary.
-        //  Deprecated, use form with dimensions before value.
         static dimensioned<Type> lookupOrAddToDict
         (
             const word&,
             dictionary&,
-            const Type& defaultValue = pTraits<Type>::zero,
-            const dimensionSet& dims = dimless
+            const Type& defaultValue = pTraits<Type>::zero
         );
 
 
