@@ -55,7 +55,7 @@ Description
         type         | type name: fieldMinMax  | yes         |
         writeToFile  | write min/max data to file | no       | yes
         log          | write min/max data to standard output | no | yes
-        location     | write location of the min/max value | no | yes
+        writeLocation | write location of the min/max value | no | yes
         mode         | calculation mode: magnitude or component | no | magnitude
         fields       | list of fields to process | yes       |
     \endtable
@@ -65,6 +65,7 @@ Description
 SeeAlso
     Foam::functionObject
     Foam::functionObjectFile
+    Foam::functionObjectState
     Foam::OutputFilterFunctionObject
 
 SourceFiles
@@ -105,11 +106,14 @@ class fieldMinMax
 {
 public:
 
-    enum modeType
-    {
-        mdMag,      // magnitude
-        mdCmpt      // component
-    };
+    // Public enumerations
+
+        enum modeType
+        {
+            mdMag,      // magnitude
+            mdCmpt      // component
+        };
+
 
 protected:
 
@@ -121,10 +125,7 @@ protected:
         //- Reference to the database
         const objectRegistry& obr_;
 
-        //- On/off switch
-        bool active_;
-
-        //- Switch to send output to Info as well as file
+        //- Switch to send output to Info as well
         Switch log_;
 
         //- Switch to write location of min/max values
