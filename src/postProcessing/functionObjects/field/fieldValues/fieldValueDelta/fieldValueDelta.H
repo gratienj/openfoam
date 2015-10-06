@@ -124,6 +124,9 @@ private:
         //- Database this class is registered to
         const objectRegistry& obr_;
 
+        //- On/off switch
+        bool active_;
+
         //- Flag to indicate to load from files
         bool loadFromFiles_;
 
