@@ -743,8 +743,8 @@ Foam::forces::forces
     const bool readFields
 )
 :
+    functionObjectState(obr, name),
     functionObjectFile(obr, name),
-    name_(name),
     obr_(obr),
     log_(true),
     force_(3),
@@ -786,21 +786,6 @@ Foam::forces::forces
             if (log_) Info << endl;
         }
     }
-    else
-    {
-        active_ = false;
-        WarningIn
-        (
-            "Foam::forces::forces"
-            "("
-                "const word&, "
-                "const objectRegistry&, "
-                "const dictionary&, "
-                "const bool"
-            ")"
-        )   << "No fvMesh available, deactivating " << name_
-            << endl;
-    }
 }
 
 
@@ -817,6 +802,7 @@ Foam::forces::forces
     const coordinateSystem& coordSys
 )
 :
+    functionObjectState(obr, name),
     functionObjectFile(obr, name),
     obr_(obr),
     log_(true),
@@ -1041,6 +1027,14 @@ void Foam::forces::execute()
         if (log_) Info << endl;
     }
 
+    // write state/results information
+    setResult("normalForce", sum(force_[0]));
+    setResult("tangentialForce", sum(force_[1]));
+    setResult("porousForce", sum(force_[2]));
+
+    setResult("normalMoment", sum(moment_[0]));
+    setResult("tangentialMoment", sum(moment_[1]));
+    setResult("porousMoment", sum(moment_[2]));
 }
 
 

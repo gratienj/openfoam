@@ -117,6 +117,7 @@ Note
 SeeAlso
     Foam::functionObject
     Foam::functionObjectFile
+    Foam::functionObjectState
     Foam::OutputFilterFunctionObject
     Foam::forceCoeffs
 
