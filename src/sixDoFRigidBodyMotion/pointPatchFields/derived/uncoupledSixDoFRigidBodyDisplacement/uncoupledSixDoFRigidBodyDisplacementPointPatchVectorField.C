@@ -160,6 +160,8 @@ void uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField::updateCoeffs()
         firstIter = true;
     }
 
+    motion_.updatePosition(firstIter, t.deltaTValue(), t.deltaT0Value());
+
     vector gravity = vector::zero;
 
     if (db().foundObject<uniformDimensionedVectorField>("g"))

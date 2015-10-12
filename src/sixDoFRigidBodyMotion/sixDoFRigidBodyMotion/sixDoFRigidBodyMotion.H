@@ -25,16 +25,28 @@ Class
     Foam::sixDoFRigidBodyMotion
 
 Description
-    Six degree of freedom motion for a rigid body.
+    Six degree of freedom motion for a rigid body.  Angular momentum
+    stored in body fixed reference frame.  Reference orientation of
+    the body (where Q = I) must align with the cartesian axes such
+    that the Inertia tensor is in principle component form.
 
-    Angular momentum stored in body fixed reference frame.  Reference
-    orientation of the body (where Q = I) must align with the cartesian axes
-    such that the Inertia tensor is in principle component form.  Can add
-    restraints (e.g. a spring) and constraints (e.g. motion may only be on a
-    plane).
+    Symplectic motion as per:
 
-    The time-integrator for the motion is run-time selectable with options for
-    symplectic (explicit), Crank-Nicolson and Newmark schemes.
+    title = {Symplectic splitting methods for rigid body molecular dynamics},
+    publisher = {AIP},
+    year = {1997},
+    journal = {The Journal of Chemical Physics},
+    volume = {107},
+    number = {15},
+    pages = {5840-5851},
+    url = {http://link.aip.org/link/?JCP/107/5840/1},
+    doi = {10.1063/1.474310}
+
+    Changes to Crank-Nicolson integration if subsequent iterations to handle
+    implicit coupling between pressure and motion.
+
+    Can add restraints (e.g. a spring)
+    and constraints (e.g. motion may only be on a plane).
 
 SourceFiles
     sixDoFRigidBodyMotionI.H
@@ -286,9 +298,16 @@ public:
 
         // Update state
 
-            //- Symplectic integration of velocities, orientation and position.
+            //- First symplectic velocity adjust and motion part, required
+            //  before force calculation.  Takes old timestep for variable
+            //  timestep cases.
             //  Changes to Crank-Nicolson integration for subsequent iterations.
-            void update
+            void updatePosition(bool firstIter, scalar deltaT, scalar deltaT0);
+
+            //- Second symplectic velocity adjust part
+            //  required after motion and force calculation.
+            //  Changes to Crank-Nicolson integration for subsequent iterations.
+            void updateAcceleration
             (
                 bool firstIter,
                 const vector& fGlobal,
