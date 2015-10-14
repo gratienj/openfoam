@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -3939,9 +3939,11 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
         Info<< "Setting cellZones according to named surfaces:" << endl;
         forAll(namedSurfaces, i)
         {
-            const vectorField smallVec(ROOTSMALL*(end-start));
-            start -= smallVec;
-            end += smallVec;
+            label surfI = namedSurfaces[i];
+
+            Info<< "Surface : " << surfaces_.names()[surfI] << nl
+                << "    faceZone : " << surfZones[surfI].faceZoneName() << nl
+                << "    cellZone : " << surfZones[surfI].cellZoneName() << endl;
         }
         Info<< endl;
 
