@@ -268,41 +268,26 @@ void Foam::sixDoFRigidBodyMotion::addConstraints
 
 void Foam::sixDoFRigidBodyMotion::updateAcceleration
 (
-    bool firstIter,
-    scalar deltaT,
-    scalar deltaT0
+    const vector& fGlobal,
+    const vector& tauGlobal
 )
 {
-    if (Pstream::master())
+    static bool first = false;
+
+    // Save the previous iteration accelerations for relaxation
+    vector aPrevIter = a();
+    vector tauPrevIter = tau();
+
+    // Calculate new accelerations
+    a() = fGlobal/mass_;
+    tau() = (Q().T() & tauGlobal);
+    applyRestraints();
+
+    // Relax accelerations on all but first iteration
+    if (!first)
     {
-        if (firstIter)
-        {
-            // First simplectic step:
-            //     Half-step for linear and angular velocities
-            //     Update position and orientation
-
-            v() = tConstraints_ & (v0() + aDamp_*0.5*deltaT0*a());
-            pi() = rConstraints_ & (pi0() + aDamp_*0.5*deltaT0*tau());
-
-            centreOfRotation() = centreOfRotation0() + deltaT*v();
-        }
-        else
-        {
-            // For subsequent iterations use Crank-Nicolson
-
-            v() = tConstraints_
-              & (v0() + aDamp_*0.5*deltaT*(a() + motionState0_.a()));
-            pi() = rConstraints_
-              & (pi0() + aDamp_*0.5*deltaT*(tau() + motionState0_.tau()));
-
-            centreOfRotation() =
-                centreOfRotation0() + 0.5*deltaT*(v() + motionState0_.v());
-        }
-
-        // Correct orientation
-        Tuple2<tensor, vector> Qpi = rotate(Q0(), pi(), deltaT);
-        Q() = Qpi.first();
-        pi() = rConstraints_ & Qpi.second();
+        a() = aRelax_*a() + (1 - aRelax_)*aPrevIter;
+        tau() = aRelax_*tau() + (1 - aRelax_)*tauPrevIter;
     }
 
     first = false;
@@ -318,44 +303,9 @@ void Foam::sixDoFRigidBodyMotion::update
     scalar deltaT0
 )
 {
-    static bool first = false;
-
     if (Pstream::master())
     {
-        // Save the previous iteration accelerations for relaxation
-        vector aPrevIter = a();
-        vector tauPrevIter = tau();
-
-        // Calculate new accelerations
-        a() = fGlobal/mass_;
-        tau() = (Q().T() & tauGlobal);
-        applyRestraints();
-
-        // Relax accelerations on all but first iteration
-        if (!first)
-        {
-            a() = aRelax_*a() + (1 - aRelax_)*aPrevIter;
-            tau() = aRelax_*tau() + (1 - aRelax_)*tauPrevIter;
-        }
-        first = false;
-
-        if (firstIter)
-        {
-            // Second simplectic step:
-            //     Complete update of linear and angular velocities
-
-            v() += tConstraints_ & aDamp_*0.5*deltaT*a();
-            pi() += rConstraints_ & aDamp_*0.5*deltaT*tau();
-        }
-        else
-        {
-            // For subsequent iterations use Crank-Nicolson
-
-            v() = tConstraints_
-              & (v0() + aDamp_*0.5*deltaT*(a() + motionState0_.a()));
-            pi() = rConstraints_
-              & (pi0() + aDamp_*0.5*deltaT*(tau() + motionState0_.tau()));
-        }
+        solver_->solve(firstIter, fGlobal, tauGlobal, deltaT, deltaT0);
 
         if (report_)
         {
@@ -365,7 +315,6 @@ void Foam::sixDoFRigidBodyMotion::update
 
     Pstream::scatter(motionState_);
 }
-
 
 
 void Foam::sixDoFRigidBodyMotion::status() const
