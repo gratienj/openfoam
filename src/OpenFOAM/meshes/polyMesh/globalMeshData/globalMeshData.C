@@ -2748,11 +2748,10 @@ void Foam::globalMeshData::updateMesh()
 
     // *** Temporary hack to avoid problems with overlapping communication
     // *** between these reductions and the calculation of deltaCoeffs
-    //label comm = UPstream::worldComm + 1;
     label comm = UPstream::allocateCommunicator
     (
         UPstream::worldComm,
-        identity(UPstream::nProcs(UPstream::worldComm)),
+        identity(UPstream::nProcs()),
         true
     );
 

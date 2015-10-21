@@ -1495,12 +1495,11 @@ Foam::label Foam::polyMesh::findCell
     const cellDecomposition decompMode
 ) const
 {
-    if (nCells() == 0)
-    {
-        return -1;
-    }
-
-    if (Pstream::parRun() && decompMode == FACE_DIAG_TRIS)
+    if
+    (
+        Pstream::parRun()
+     && (decompMode == FACE_DIAG_TRIS || decompMode == CELL_TETS)
+    )
     {
         // Force construction of face-diagonal decomposition before testing
         // for zero cells.
@@ -1509,6 +1508,11 @@ Foam::label Foam::polyMesh::findCell
         // construct the face-diagonal decomposition which uses parallel
         // transfers.
         (void)tetBasePtIs();
+    }
+
+    if (nCells() == 0)
+    {
+        return -1;
     }
 
     if (decompMode == CELL_TETS)
