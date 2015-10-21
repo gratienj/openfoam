@@ -54,6 +54,7 @@ Description
     #include "zoltanRenumber.H"
 #endif
 
+
 using namespace Foam;
 
 
@@ -166,7 +167,7 @@ void getBand
 labelList getFaceOrder
 (
     const primitiveMesh& mesh,
-    const labelList& cellOrder      // new to old cell
+    const labelList& cellOrder      // New to old cell
 )
 {
     labelList reverseCellOrder(invert(cellOrder.size(), cellOrder));
@@ -247,8 +248,7 @@ labelList getFaceOrder
             (
                 "getFaceOrder"
                 "(const primitiveMesh&, const labelList&, const labelList&)"
-            )   << "Did not determine new position"
-                << " for face " << faceI
+            )   << "Did not determine new position" << " for face " << faceI
                 << abort(FatalError);
         }
     }
@@ -262,12 +262,10 @@ labelList getFaceOrder
 labelList getRegionFaceOrder
 (
     const primitiveMesh& mesh,
-    const labelList& cellOrder,     // new to old cell
-    const labelList& cellToRegion   // old cell to region
+    const labelList& cellOrder,     // New to old cell
+    const labelList& cellToRegion   // Old cell to region
 )
 {
-    //Pout<< "Determining face order:" << endl;
-
     labelList reverseCellOrder(invert(cellOrder.size(), cellOrder));
 
     labelList oldToNewFace(mesh.nFaces(), -1);
@@ -283,8 +281,6 @@ labelList getRegionFaceOrder
         if (cellToRegion[oldCellI] != prevRegion)
         {
             prevRegion = cellToRegion[oldCellI];
-            //Pout<< "    region " << prevRegion << " internal faces start at "
-            //    << newFaceI << endl;
         }
 
         const cell& cFaces = mesh.cells()[oldCellI];
@@ -371,9 +367,6 @@ labelList getRegionFaceOrder
 
             if (prevKey != key)
             {
-                //Pout<< "    faces inbetween region " << key/nRegions
-                //    << " and " << key%nRegions
-                //    << " start at " << newFaceI << endl;
                 prevKey = key;
             }
 
@@ -402,7 +395,6 @@ labelList getRegionFaceOrder
                 << abort(FatalError);
         }
     }
-    //Pout<< endl;
 
     return invert(mesh.nFaces(), oldToNewFace);
 }
@@ -410,7 +402,7 @@ labelList getRegionFaceOrder
 
 // cellOrder: old cell for every new cell
 // faceOrder: old face for every new face. Ordering of boundary faces not
-// changed.
+//     changed.
 autoPtr<mapPolyMesh> reorderMesh
 (
     polyMesh& mesh,
@@ -531,7 +523,7 @@ autoPtr<mapPolyMesh> reorderMesh
     (
         new mapPolyMesh
         (
-            mesh,                       //const polyMesh& mesh,
+            mesh,                       // const polyMesh& mesh,
             mesh.nPoints(),             // nOldPoints,
             mesh.nFaces(),              // nOldFaces,
             mesh.nCells(),              // nOldCells,
@@ -646,8 +638,8 @@ int main(int argc, char *argv[])
     // Force linker to include zoltan symbols. This section is only needed since
     // Zoltan is a static library
     #ifdef FOAM_USE_ZOLTAN
-    Info<< "renumberMesh built with zoltan support." << nl << endl;
-    (void)zoltanRenumber::typeName;
+        Info<< "renumberMesh built with zoltan support." << nl << endl;
+        (void)zoltanRenumber::typeName;
     #endif
 
 
@@ -688,18 +680,19 @@ int main(int argc, char *argv[])
         (
             sumSqrIntersect,
             sumOp<scalar>()
-        )
-       /mesh.globalData().nTotalCells()
+        )/mesh.globalData().nTotalCells()
     );
 
     Info<< "Mesh size: " << mesh.globalData().nTotalCells() << nl
         << "Before renumbering :" << nl
         << "    band           : " << band << nl
         << "    profile        : " << profile << nl;
+
     if (doFrontWidth)
     {
         Info<< "    rms frontwidth : " << rmsFrontwidth << nl;
     }
+
     Info<< endl;
 
     bool sortCoupledFaceCells = false;
@@ -723,7 +716,6 @@ int main(int argc, char *argv[])
         const IOdictionary& renumberDict = renumberDictPtr();
 
         renumberPtr = renumberMethod::New(renumberDict);
-
 
         sortCoupledFaceCells = renumberDict.lookupOrDefault
         (
@@ -836,6 +828,7 @@ int main(int argc, char *argv[])
     // Read objects in time directory
     IOobjectList objects(mesh, runTime.timeName());
 
+
     // Read vol fields.
 
     PtrList<volScalarField> vsFlds;
@@ -852,6 +845,7 @@ int main(int argc, char *argv[])
 
     PtrList<volTensorField> vtFlds;
     ReadFields(mesh, objects, vtFlds);
+
 
     // Read surface fields.
 
@@ -870,6 +864,7 @@ int main(int argc, char *argv[])
     PtrList<surfaceTensorField> stFlds;
     ReadFields(mesh, objects, stFlds);
 
+
     // Read point fields.
 
     PtrList<pointScalarField> psFlds;
@@ -887,53 +882,6 @@ int main(int argc, char *argv[])
     PtrList<pointTensorField> ptFlds;
     ReadFields(pointMesh::New(mesh), objects, ptFlds);
 
-    // Read sets
-    PtrList<cellSet> cellSets;
-    PtrList<faceSet> faceSets;
-    PtrList<pointSet> pointSets;
-    if (renumberSets)
-    {
-        // Read sets
-        IOobjectList objects(mesh, mesh.facesInstance(), "polyMesh/sets");
-        {
-            IOobjectList cSets(objects.lookupClass(cellSet::typeName));
-            if (cSets.size())
-            {
-                Info<< "Reading cellSets:" << endl;
-                forAllConstIter(IOobjectList, cSets, iter)
-                {
-                    cellSets.append(new cellSet(*iter()));
-                    Info<< "    " << cellSets.last().name() << endl;
-                }
-            }
-        }
-        {
-            IOobjectList fSets(objects.lookupClass(faceSet::typeName));
-            if (fSets.size())
-            {
-                Info<< "Reading faceSets:" << endl;
-                forAllConstIter(IOobjectList, fSets, iter)
-                {
-                    faceSets.append(new faceSet(*iter()));
-                    Info<< "    " << faceSets.last().name() << endl;
-                }
-            }
-        }
-        {
-            IOobjectList pSets(objects.lookupClass(pointSet::typeName));
-            if (pSets.size())
-            {
-                Info<< "Reading pointSets:" << endl;
-                forAllConstIter(IOobjectList, pSets, iter)
-                {
-                    pointSets.append(new pointSet(*iter()));
-                    Info<< "    " << pointSets.last().name() << endl;
-                }
-            }
-        }
-    }
-
-
 
     Info<< endl;
 
@@ -947,7 +895,7 @@ int main(int argc, char *argv[])
         // Renumbering in two phases. Should be done in one so mapping of
         // fields is done correctly!
 
-        label nBlocks = mesh.nCells() / blockSize;
+        label nBlocks = mesh.nCells()/blockSize;
         Info<< "nBlocks   = " << nBlocks << endl;
 
         // Read decompositionMethod dictionary
@@ -1085,7 +1033,7 @@ int main(int argc, char *argv[])
         faceOrder = getFaceOrder
         (
             mesh,
-            cellOrder      // new to old cell
+            cellOrder      // New to old cell
         );
     }
 
@@ -1106,17 +1054,19 @@ int main(int argc, char *argv[])
         autoPtr<mapPolyMesh> pointOrderMap = meshMod.changeMesh
         (
             mesh,
-            false,      //inflate
-            true,       //syncParallel
-            false,      //orderCells
-            orderPoints //orderPoints
+            false,      // inflate
+            true,       // syncParallel
+            false,      // orderCells
+            orderPoints // orderPoints
         );
+
         // Combine point reordering into map.
         const_cast<labelList&>(map().pointMap()) = UIndirectList<label>
         (
             map().pointMap(),
             pointOrderMap().pointMap()
         )();
+
         inplaceRenumber
         (
             pointOrderMap().reversePointMap(),
@@ -1218,17 +1168,19 @@ int main(int argc, char *argv[])
             (
                 sumSqrIntersect,
                 sumOp<scalar>()
-            )
-          / mesh.globalData().nTotalCells()
+            )/mesh.globalData().nTotalCells()
         );
+
         Info<< "After renumbering :" << nl
             << "    band           : " << band << nl
             << "    profile        : " << profile << nl;
+
         if (doFrontWidth)
         {
 
             Info<< "    rms frontwidth : " << rmsFrontwidth << nl;
         }
+
         Info<< endl;
     }
 
@@ -1296,6 +1248,7 @@ int main(int argc, char *argv[])
     Info<< "Writing mesh to " << mesh.facesInstance() << endl;
 
     mesh.write();
+
     if (cellProcAddressing.headerOk())
     {
         cellProcAddressing.instance() = mesh.facesInstance();
@@ -1305,7 +1258,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            // procAddressing no longer valid. Delete it.
+            // procAddressing file no longer valid. Delete it.
             const fileName fName(cellProcAddressing.filePath());
             if (fName.size())
             {
@@ -1315,6 +1268,7 @@ int main(int argc, char *argv[])
             }
         }
     }
+
     if (faceProcAddressing.headerOk())
     {
         faceProcAddressing.instance() = mesh.facesInstance();
@@ -1352,6 +1306,7 @@ int main(int argc, char *argv[])
             }
         }
     }
+
     if (boundaryProcAddressing.headerOk())
     {
         boundaryProcAddressing.instance() = mesh.facesInstance();
@@ -1380,16 +1335,17 @@ int main(int argc, char *argv[])
             "origCellID",
             map().cellMap()
         )().write();
+
         createScalarField
         (
             mesh,
             "cellID",
             identity(mesh.nCells())
         )().write();
+
         Info<< nl << "Written current cellID and origCellID as volScalarField"
             << " for use in postprocessing."
             << nl << endl;
-
 
         labelIOList
         (
@@ -1405,6 +1361,7 @@ int main(int argc, char *argv[])
             ),
             map().cellMap()
         ).write();
+
         labelIOList
         (
             IOobject
@@ -1419,6 +1376,7 @@ int main(int argc, char *argv[])
             ),
             map().faceMap()
         ).write();
+
         labelIOList
         (
             IOobject
@@ -1435,25 +1393,61 @@ int main(int argc, char *argv[])
         ).write();
     }
 
+
+    // Renumber sets if required
     if (renumberSets)
     {
-        forAll(cellSets, i)
+        Info<< endl;
+
+        // Read sets
+        IOobjectList objects(mesh, mesh.facesInstance(), "polyMesh/sets");
+
         {
-            cellSets[i].updateMesh(map());
-            cellSets[i].instance() = mesh.facesInstance();
-            cellSets[i].write();
+            IOobjectList cSets(objects.lookupClass(cellSet::typeName));
+            if (cSets.size())
+            {
+                Info<< "Renumbering cellSets:" << endl;
+                forAllConstIter(IOobjectList, cSets, iter)
+                {
+                    cellSet cs(*iter());
+                    Info<< "    " << cs.name() << endl;
+                    cs.updateMesh(map());
+                    cs.instance() = mesh.facesInstance();
+                    cs.write();
+                }
+            }
         }
-        forAll(faceSets, i)
+
         {
-            faceSets[i].updateMesh(map());
-            faceSets[i].instance() = mesh.facesInstance();
-            faceSets[i].write();
+            IOobjectList fSets(objects.lookupClass(faceSet::typeName));
+            if (fSets.size())
+            {
+                Info<< "Renumbering faceSets:" << endl;
+                forAllConstIter(IOobjectList, fSets, iter)
+                {
+                    faceSet fs(*iter());
+                    Info<< "    " << fs.name() << endl;
+                    fs.updateMesh(map());
+                    fs.instance() = mesh.facesInstance();
+                    fs.write();
+                }
+            }
         }
-        forAll(pointSets, i)
+
         {
-            pointSets[i].updateMesh(map());
-            pointSets[i].instance() = mesh.facesInstance();
-            pointSets[i].write();
+            IOobjectList pSets(objects.lookupClass(pointSet::typeName));
+            if (pSets.size())
+            {
+                Info<< "Renumbering pointSets:" << endl;
+                forAllConstIter(IOobjectList, pSets, iter)
+                {
+                    pointSet ps(*iter());
+                    Info<< "    " << ps.name() << endl;
+                    ps.updateMesh(map());
+                    ps.instance() = mesh.facesInstance();
+                    ps.write();
+                }
+            }
         }
     }
 
