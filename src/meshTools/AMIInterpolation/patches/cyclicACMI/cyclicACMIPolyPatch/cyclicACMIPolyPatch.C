@@ -44,7 +44,11 @@ const Foam::scalar Foam::cyclicACMIPolyPatch::tolerance_ = 1e-6;
 
 void Foam::cyclicACMIPolyPatch::initPatchFaceAreas() const
 {
-    if (!empty() && (faceAreas0_.empty() || boundaryMesh().mesh().moving()))
+    if
+    (
+        !empty()
+     && (faceAreas0_.empty() || boundaryMesh().mesh().moving())
+    )
     {
         faceAreas0_ = faceAreas();
     }
@@ -140,12 +144,9 @@ void Foam::cyclicACMIPolyPatch::setNeighbourFaceAreas() const
 
 void Foam::cyclicACMIPolyPatch::initGeometry(PstreamBuffers& pBufs)
 {
-    // Note: cyclicAMIPolyPatch clears AMI so do first
     cyclicAMIPolyPatch::initGeometry(pBufs);
 
-    // Initialise the AMI so that base geometry (e.g. cell volumes) are
-    // correctly evaluated before e.g. any of the processor patches gets
-    // hit (since uses cell volumes in its initGeometry)
+    // Initialise the AMI
     resetAMI();
 }
 
@@ -165,9 +166,7 @@ void Foam::cyclicACMIPolyPatch::initMovePoints
     // Note: cyclicAMIPolyPatch clears AMI so do first
     cyclicAMIPolyPatch::initMovePoints(pBufs, p);
 
-    // Initialise the AMI so that base geometry (e.g. cell volumes) are
-    // correctly evaluated before e.g. any of the processor patches gets
-    // hit (since uses cell volumes in its initGeometry)
+    // Initialise the AMI
     resetAMI();
 }
 

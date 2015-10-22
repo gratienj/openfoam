@@ -75,7 +75,6 @@ Foam::vector Foam::cyclicAMIPolyPatch::findFaceNormalMaxRadius
 
 void Foam::cyclicAMIPolyPatch::calcTransforms()
 {
-    // Half0
     const cyclicAMIPolyPatch& half0 = *this;
     vectorField half0Areas(half0.size());
     forAll(half0, facei)
@@ -83,7 +82,6 @@ void Foam::cyclicAMIPolyPatch::calcTransforms()
         half0Areas[facei] = half0[facei].normal(half0.points());
     }
 
-    // Half1
     const cyclicAMIPolyPatch& half1 = neighbPatch();
     vectorField half1Areas(half1.size());
     forAll(half1, facei)
@@ -411,7 +409,7 @@ void Foam::cyclicAMIPolyPatch::resetAMI
 
 void Foam::cyclicAMIPolyPatch::initGeometry(PstreamBuffers& pBufs)
 {
-    // The AMI is no longer valid. Leave it up to demand-driven calculation
+    // Clear the invalid AMI
     AMIPtr_.clear();
 
     polyPatch::initGeometry(pBufs);
@@ -439,7 +437,7 @@ void Foam::cyclicAMIPolyPatch::initMovePoints
     const pointField& p
 )
 {
-    // The AMI is no longer valid. Leave it up to demand-driven calculation
+    // Clear the invalid AMI
     AMIPtr_.clear();
 
     polyPatch::initMovePoints(pBufs, p);
@@ -463,7 +461,7 @@ void Foam::cyclicAMIPolyPatch::movePoints
 
 void Foam::cyclicAMIPolyPatch::initUpdateMesh(PstreamBuffers& pBufs)
 {
-    // The AMI is no longer valid. Leave it up to demand-driven calculation
+    // Clear the invalid AMI
     AMIPtr_.clear();
 
     polyPatch::initUpdateMesh(pBufs);
