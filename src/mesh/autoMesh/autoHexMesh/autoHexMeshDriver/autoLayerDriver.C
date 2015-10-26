@@ -3068,8 +3068,10 @@ void Foam::autoLayerDriver::addLayers
                 )
             );
 
-            // Displacement for all pp.localPoints.
-            vectorField patchDisp(pp().nPoints(), vector::one);
+            // Displacement for all pp.localPoints. Set to large value to
+            // avoid truncation in syncPatchDisplacement because of
+            // minThickness.
+            vectorField patchDisp(pp().nPoints(), vector(GREAT, GREAT, GREAT));
             labelList patchNLayers(pp().nPoints(), 0);
             label nIdealTotAddedCells = 0;
             List<extrudeMode> extrudeStatus(pp().nPoints(), EXTRUDE);
@@ -3086,6 +3088,8 @@ void Foam::autoLayerDriver::addLayers
                 nIdealTotAddedCells
             );
             // Make sure displacement is equal on both sides of coupled patches.
+            // Note that we explicitly disable the minThickness truncation
+            // of the patchDisp here.
             syncPatchDisplacement
             (
                 pp,
@@ -3534,6 +3538,9 @@ void Foam::autoLayerDriver::addLayers
 
 
             // Make sure displacement is equal on both sides of coupled patches.
+            // Note that this also does the patchDisp < minThickness truncation
+            // so for the first pass make sure the patchDisp is larger than
+            // that.
             syncPatchDisplacement
             (
                 pp,
