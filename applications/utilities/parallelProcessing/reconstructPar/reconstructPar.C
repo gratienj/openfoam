@@ -794,6 +794,7 @@ int main(int argc, char *argv[])
                             );
                         }
                         cellSet& cSet = cellSets[setI];
+                        cSet.instance() = runTime.timeName();
 
                         forAllConstIter(cellSet, procSet, iter)
                         {
@@ -820,6 +821,7 @@ int main(int argc, char *argv[])
                             );
                         }
                         faceSet& fSet = faceSets[setI];
+                        fSet.instance() = runTime.timeName();
 
                         forAllConstIter(faceSet, procSet, iter)
                         {
@@ -845,6 +847,7 @@ int main(int argc, char *argv[])
                             );
                         }
                         pointSet& pSet = pointSets[setI];
+                        pSet.instance() = runTime.timeName();
 
                         forAllConstIter(pointSet, propSet, iter)
                         {
