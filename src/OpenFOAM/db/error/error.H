@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -78,9 +78,10 @@ protected:
         string sourceFileName_;
         label sourceFileLineNumber_;
 
+        bool abort_;
+
         bool throwExceptions_;
         OStringStream* messageStreamPtr_;
-
 
 public:
 
@@ -309,46 +310,41 @@ extern IOerror FatalIOError;
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Convenience macros to add the file name and line number to the function name
 
-/**
- * \def FatalErrorIn(functionName)
- * Report an error message using Foam::FatalError for functionName in
- * file __FILE__ at line __LINE__
-*/
-#define FatalErrorIn(fn) \
-    ::Foam::FatalError((fn), __FILE__, __LINE__)
+//- Report an error message using Foam::FatalError
+//  for functionName in file __FILE__ at line __LINE__
+#define FatalErrorIn(functionName)                                             \
+    ::Foam::FatalError((functionName), __FILE__, __LINE__)
 
-/**
- * \def FatalIOErrorIn(functionName, ios)
- * Report an error message using Foam::FatalIOError for functionName in
- * file __FILE__ at line __LINE__
- * for a particular IOstream
-*/
-#define FatalIOErrorIn(fn, ios) \
-    ::Foam::FatalIOError((fn), __FILE__, __LINE__, (ios))
+//- Report an error message using Foam::FatalIOError
+//  for functionName in file __FILE__ at line __LINE__
+//  for a particular IOstream
+#define FatalIOErrorIn(functionName, ios)                                      \
+    ::Foam::FatalIOError((functionName), __FILE__, __LINE__, (ios))
 
-/**
- * \def SafeFatalIOErrorIn(functionName, ios, msg)
- * Report an error message using Foam::FatalIOError (or cerr if FatalIOError
- * not yet constructed) for functionName in
- * file __FILE__ at line __LINE__
- * for a particular IOstream
-*/
-#define SafeFatalIOErrorIn(fn, ios, msg) \
-    ::Foam::IOerror::SafeFatalIOError((fn), __FILE__, __LINE__, (ios), (msg))
+//- Report an error message using Foam::FatalIOError
+//  (or cerr if FatalIOError not yet constructed)
+//  for functionName in file __FILE__ at line __LINE__
+//  for a particular IOstream
+#define SafeFatalIOErrorIn(functionName, ios, msg)                             \
+    ::Foam::IOerror::SafeFatalIOError                                          \
+    ((functionName), __FILE__, __LINE__, (ios), (msg))
 
-/**
- * \def notImplemented(functionName)
- * Issue a FatalErrorIn for the functionName.
- * This is used for functions that are not currently implemented.
- * The functionName is printed and then abort is called.
- *
- * \note
- * This macro can be particularly useful when methods must be defined to
- * complete the interface of a derived class even if they should never be
- * called for this derived class.
-*/
-#define notImplemented(fn) \
-    FatalErrorIn(fn) << "Not implemented" << ::Foam::abort(FatalError);
+//- Issue a FatalErrorIn for a function not currently implemented.
+//  The functionName is printed and then abort is called.
+//
+//  This macro can be particularly useful when methods must be defined to
+//  complete the interface of a derived class even if they should never be
+//  called for this derived class.
+#define notImplemented(functionName)                                           \
+    FatalErrorIn(functionName)                                                 \
+        << "Not implemented" << ::Foam::abort(FatalError);
+
+//- Issue a FatalErrorIn for a function not currently implemented.
+//  The compiler generated function name string is printed and then
+//  abort is called.
+#define NotImplemented                                                         \
+    notImplemented(__PRETTY_FUNCTION__)
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
