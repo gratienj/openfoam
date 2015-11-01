@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -188,10 +188,8 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
             << " nearest face:" << faceI;
     }
 
-    const typename PatchType::FaceType& localF = patch_.localFaces()[faceI];
-    const typename PatchType::FaceType& f = patch_[faceI];
-    const pointField& points = patch_.points();
-    const labelList& mp = patch_.meshPoints();
+    const pointField& points = patch_.localPoints();
+    const typename PatchType::FaceType& f = patch_.localFaces()[faceI];
 
     // Retest to classify where on face info is. Note: could be improved. We
     // already have point.
@@ -244,7 +242,7 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
 
             return indexedOctree<treeDataPrimitivePatch>::getSide
             (
-                patch_.pointNormals()[localF[fp]],
+                patch_.pointNormals()[f[fp]],
                 sample - curPt
             );
         }
@@ -282,8 +280,8 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
     {
         label edgeI = fEdges[fEdgeI];
         const edge& e = patch_.edges()[edgeI];
-        const linePointRef ln(points[mp[e.start()]], points[mp[e.end()]]);
-        pointHit edgeHit = ln.nearestDist(sample);
+
+        pointHit edgeHit = e.line(points).nearestDist(sample);
 
         if ((magSqr(edgeHit.rawPoint() - curPt)/typDimSqr) < planarTol_)
         {
@@ -324,7 +322,11 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
 
     forAll(f, fp)
     {
-        pointHit edgeHit = linePointRef(points[f[fp]], fc).nearestDist(sample);
+        pointHit edgeHit = linePointRef
+        (
+            points[f[fp]],
+            fc
+        ).nearestDist(sample);
 
         if ((magSqr(edgeHit.rawPoint() - curPt)/typDimSqr) < planarTol_)
         {
@@ -367,8 +369,7 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
 
         forAll(f, fp)
         {
-            Pout<< "    vertex:" << f[fp]
-                << "  coord:" << points[f[fp]]
+            Pout<< "    vertex:" << f[fp] << "  coord:" << points[f[fp]]
                 << endl;
         }
     }
@@ -541,18 +542,7 @@ void Foam::treeDataPrimitivePatch<PatchType>::findNearestOp::operator()
     point& nearestPoint
 ) const
 {
-    notImplemented
-    (
-        "treeDataPrimitivePatch<PatchType>::findNearestOp::operator()"
-        "("
-        "    const labelUList&,"
-        "    const linePointRef&,"
-        "    treeBoundBox&,"
-        "    label&,"
-        "    point&,"
-        "    point&"
-        ") const"
-    );
+    NotImplemented;
 }
 
 

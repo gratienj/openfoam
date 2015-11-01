@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -69,8 +69,6 @@ bool Foam::CollidingParcel<ParcelType>::move
     typename TrackData::cloudType::parcelType& p =
         static_cast<typename TrackData::cloudType::parcelType&>(*this);
 
-    td.keepParticle = true;
-
     switch (td.part())
     {
         case TrackData::tpVelocityHalfStep:
@@ -96,7 +94,7 @@ bool Foam::CollidingParcel<ParcelType>::move
 
         case TrackData::tpRotationalTrack:
         {
-            notImplemented("TrackData::tpRotationalTrack");
+            NotImplemented;
 
             break;
         }
