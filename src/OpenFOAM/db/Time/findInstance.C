@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,7 +31,6 @@ Description
 
 #include "Time.H"
 #include "IOobject.H"
-#include "IOList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -43,9 +42,8 @@ Foam::word Foam::Time::findInstance
     const word& stopInstance
 ) const
 {
-    // Note: - if name is empty, just check the directory itself
-    //       - check for an object with local file scope (so no looking up in
-    //         parent directory in case of parallel)
+    // Note: if name is empty, just check the directory itself
+
 
     const fileName tPath(path());
     const fileName dirPath(tPath/timeName()/dir);
@@ -58,13 +56,7 @@ Foam::word Foam::Time::findInstance
       :
         (
             isFile(dirPath/name)
-         && IOobject
-            (
-                name,
-                timeName(),
-                dir,
-                *this
-            ).typeHeaderOk<IOList<label> >(false) // use object with local scope
+         && IOobject(name, timeName(), dir, *this).headerOk()
         )
     )
     {
@@ -105,13 +97,7 @@ Foam::word Foam::Time::findInstance
           :
             (
                 isFile(tPath/ts[instanceI].name()/dir/name)
-             && IOobject
-                (
-                    name,
-                    ts[instanceI].name(),
-                    dir,
-                    *this
-                ).typeHeaderOk<IOList<label> >(false)
+             && IOobject(name, ts[instanceI].name(), dir, *this).headerOk()
             )
         )
         {
@@ -148,24 +134,16 @@ Foam::word Foam::Time::findInstance
             {
                 if (name.empty())
                 {
-                    FatalErrorIn
-                    (
-                        "Time::findInstance"
-                        "(const fileName&, const word&"
-                        ", const IOobject::readOption, const word&)"
-                    )   << "Cannot find directory "
+                    FatalErrorInFunction
+                        << "Cannot find directory "
                         << dir << " in times " << timeName()
                         << " down to " << stopInstance
                         << exit(FatalError);
                 }
                 else
                 {
-                    FatalErrorIn
-                    (
-                        "Time::findInstance"
-                        "(const fileName&, const word&"
-                        ", const IOobject::readOption, const word&)"
-                    )   << "Cannot find file \"" << name << "\" in directory "
+                    FatalErrorInFunction
+                        << "Cannot find file \"" << name << "\" in directory "
                         << dir << " in times " << timeName()
                         << " down to " << stopInstance
                         << exit(FatalError);
@@ -190,13 +168,7 @@ Foam::word Foam::Time::findInstance
       :
         (
             isFile(tPath/constant()/dir/name)
-         && IOobject
-            (
-                name,
-                constant(),
-                dir,
-                *this
-            ).typeHeaderOk<IOList<label> >(false)
+         && IOobject(name, constant(), dir, *this).headerOk()
         )
     )
     {
@@ -215,12 +187,8 @@ Foam::word Foam::Time::findInstance
 
     if (rOpt == IOobject::MUST_READ || rOpt == IOobject::MUST_READ_IF_MODIFIED)
     {
-        FatalErrorIn
-        (
-            "Time::findInstance"
-            "(const fileName&, const word&"
-            ", const IOobject::readOption, const word&)"
-        )   << "Cannot find file \"" << name << "\" in directory "
+        FatalErrorInFunction
+            << "Cannot find file \"" << name << "\" in directory "
             << dir << " in times " << timeName()
             << " down to " << constant()
             << exit(FatalError);

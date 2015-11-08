@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,7 +31,7 @@ License
 namespace Foam
 {
     template<>
-    const char* NamedEnum<outputFilterOutputControl::outputControls, 8>::
+    const char* NamedEnum<outputFilterOutputControl::outputControls, 7>::
     names[] =
     {
         "timeStep",
@@ -40,12 +40,11 @@ namespace Foam
         "runTime",
         "clockTime",
         "cpuTime",
-        "onEnd",
         "none"
     };
 }
 
-const Foam::NamedEnum<Foam::outputFilterOutputControl::outputControls, 8>
+const Foam::NamedEnum<Foam::outputFilterOutputControl::outputControls, 7>
     Foam::outputFilterOutputControl::outputControlNames_;
 
 
@@ -114,7 +113,6 @@ void Foam::outputFilterOutputControl::read(const dictionary& dict)
             break;
         }
 
-        case ocOnEnd:
         default:
         {
             // do nothing
@@ -198,13 +196,6 @@ bool Foam::outputFilterOutputControl::output()
             break;
         }
 
-        case ocOnEnd:
-        {
-            scalar endTime = time_.endTime().value() - 0.5*time_.deltaTValue();
-            return time_.value() > endTime;
-            break;
-        }
-
         case ocNone:
         {
             return false;
@@ -213,7 +204,7 @@ bool Foam::outputFilterOutputControl::output()
         default:
         {
             // this error should not actually be possible
-            FatalErrorIn("bool Foam::outputFilterOutputControl::output()")
+            FatalErrorInFunction
                 << "Undefined output control: "
                 << outputControlNames_[outputControl_] << nl
                 << abort(FatalError);
