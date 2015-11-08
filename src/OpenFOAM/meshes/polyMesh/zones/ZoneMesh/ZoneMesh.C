@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,7 +38,7 @@ void Foam::ZoneMesh<ZoneType, MeshType>::calcZoneMap() const
     // if the pointer is already set
     if (zoneMapPtr_)
     {
-        FatalErrorIn("void ZoneMesh<ZoneType>::calcZoneMap() const")
+        FatalErrorInFunction
             << "zone map already calculated"
             << abort(FatalError);
     }
@@ -80,8 +80,13 @@ bool Foam::ZoneMesh<ZoneType, MeshType>::read()
      || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
     )
     {
-        // Warn for MUST_READ_IF_MODIFIED
-        warnNoRereading<ZoneMesh<ZoneType, MeshType> >();
+        if (readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+        {
+            WarningInFunction
+                << "Specified IOobject::MUST_READ_IF_MODIFIED but class"
+                << " does not support automatic rereading."
+                << endl;
+        }
 
         PtrList<ZoneType>& zones = *this;
 
@@ -537,10 +542,8 @@ const ZoneType& Foam::ZoneMesh<ZoneType, MeshType>::operator[]
 
     if (zoneI < 0)
     {
-        FatalErrorIn
-        (
-            "ZoneMesh<ZoneType>::operator[](const word&) const"
-        )   << "Zone named " << zoneName << " not found." << nl
+        FatalErrorInFunction
+            << "Zone named " << zoneName << " not found." << nl
             << "Available zone names: " << names() << endl
             << abort(FatalError);
     }
@@ -559,10 +562,8 @@ ZoneType& Foam::ZoneMesh<ZoneType, MeshType>::operator[]
 
     if (zoneI < 0)
     {
-        FatalErrorIn
-        (
-            "ZoneMesh<ZoneType>::operator[](const word&)"
-        )   << "Zone named " << zoneName << " not found." << nl
+        FatalErrorInFunction
+            << "Zone named " << zoneName << " not found." << nl
             << "Available zone names: " << names() << endl
             << abort(FatalError);
     }

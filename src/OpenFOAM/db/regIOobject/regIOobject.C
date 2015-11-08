@@ -181,6 +181,31 @@ bool Foam::regIOobject::checkIn()
         // any mapping
         registered_ = db().checkIn(*this);
 
+        if
+        (
+            registered_
+         && readOpt() == MUST_READ_IF_MODIFIED
+         && time().runTimeModifiable()
+        )
+        {
+            if (watchIndex_ != -1)
+            {
+                FatalErrorInFunction
+                    << "Object " << objectPath()
+                    << " already watched with index " << watchIndex_
+                    << abort(FatalError);
+            }
+
+            fileName f = filePath();
+            if (!f.size())
+            {
+                // We don't have this file but would like to re-read it.
+                // Possibly if master-only reading mode.
+                f = objectPath();
+            }
+            watchIndex_ = time().addWatch(f);
+        }
+
         // check-in on defaultRegion is allowed to fail, since subsetted meshes
         // are created with the same name as their originating mesh
         if (!registered_ && debug && name() != polyMesh::defaultRegion)
@@ -189,7 +214,7 @@ bool Foam::regIOobject::checkIn()
             {
                 // for ease of finding where attempted duplicate check-in
                 // originated
-                FatalErrorIn("regIOobject::checkIn()")
+                FatalErrorInFunction
                     << "failed to register object " << objectPath()
                     << " the name already exists in the objectRegistry" << endl
                     << "Contents:" << db().sortedToc()
@@ -197,7 +222,7 @@ bool Foam::regIOobject::checkIn()
             }
             else
             {
-                WarningIn("regIOobject::checkIn()")
+                WarningInFunction
                     << "failed to register object " << objectPath()
                     << " the name already exists in the objectRegistry"
                     << endl;

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -130,10 +130,200 @@ void Foam::mapDistribute::transform::operator()
 {}
 
 
+Foam::List<Foam::labelPair> Foam::mapDistribute::schedule
+(
+    const labelListList& subMap,
+    const labelListList& constructMap,
+    const int tag
+)
+{
+    // Communications: send and receive processor
+    List<labelPair> allComms;
+
+    {
+        HashSet<labelPair, labelPair::Hash<> > commsSet(Pstream::nProcs());
+
+        // Find what communication is required
+        forAll(subMap, procI)
+        {
+            if (procI != Pstream::myProcNo())
+            {
+                if (subMap[procI].size())
+                {
+                    // I need to send to procI
+                    commsSet.insert(labelPair(Pstream::myProcNo(), procI));
+                }
+                if (constructMap[procI].size())
+                {
+                    // I need to receive from procI
+                    commsSet.insert(labelPair(procI, Pstream::myProcNo()));
+                }
+            }
+        }
+        allComms = commsSet.toc();
+    }
+
+
+    // Reduce
+    if (Pstream::master())
+    {
+        // Receive and merge
+        for
+        (
+            int slave=Pstream::firstSlave();
+            slave<=Pstream::lastSlave();
+            slave++
+        )
+        {
+            IPstream fromSlave(Pstream::scheduled, slave, 0, tag);
+            List<labelPair> nbrData(fromSlave);
+
+            forAll(nbrData, i)
+            {
+                if (findIndex(allComms, nbrData[i]) == -1)
+                {
+                    label sz = allComms.size();
+                    allComms.setSize(sz+1);
+                    allComms[sz] = nbrData[i];
+                }
+            }
+        }
+        // Send back
+        for
+        (
+            int slave=Pstream::firstSlave();
+            slave<=Pstream::lastSlave();
+            slave++
+        )
+        {
+            OPstream toSlave(Pstream::scheduled, slave, 0, tag);
+            toSlave << allComms;
+        }
+    }
+    else
+    {
+        {
+            OPstream toMaster(Pstream::scheduled, Pstream::masterNo(), 0, tag);
+            toMaster << allComms;
+        }
+        {
+            IPstream fromMaster
+            (
+                Pstream::scheduled,
+                Pstream::masterNo(),
+                0,
+                tag
+            );
+            fromMaster >> allComms;
+        }
+    }
+
+
+    // Determine my schedule.
+    labelList mySchedule
+    (
+        commSchedule
+        (
+            Pstream::nProcs(),
+            allComms
+        ).procSchedule()[Pstream::myProcNo()]
+    );
+
+    // Processors involved in my schedule
+    return List<labelPair>(UIndirectList<labelPair>(allComms, mySchedule));
+
+
+    //if (debug)
+    //{
+    //    Pout<< "I need to:" << endl;
+    //    const List<labelPair>& comms = schedule();
+    //    forAll(comms, i)
+    //    {
+    //        const labelPair& twoProcs = comms[i];
+    //        label sendProc = twoProcs[0];
+    //        label recvProc = twoProcs[1];
+    //
+    //        if (recvProc == Pstream::myProcNo())
+    //        {
+    //            Pout<< "    receive from " << sendProc << endl;
+    //        }
+    //        else
+    //        {
+    //            Pout<< "    send to " << recvProc << endl;
+    //        }
+    //    }
+    //}
+}
+
+
+const Foam::List<Foam::labelPair>& Foam::mapDistribute::schedule() const
+{
+    if (schedulePtr_.empty())
+    {
+        schedulePtr_.reset
+        (
+            new List<labelPair>
+            (
+                schedule(subMap_, constructMap_, Pstream::msgType())
+            )
+        );
+    }
+    return schedulePtr_();
+}
+
+
+void Foam::mapDistribute::checkReceivedSize
+(
+    const label procI,
+    const label expectedSize,
+    const label receivedSize
+)
+{
+    if (receivedSize != expectedSize)
+    {
+        FatalErrorInFunction
+            << "Expected from processor " << procI
+            << " " << expectedSize << " but received "
+            << receivedSize << " elements."
+            << abort(FatalError);
+    }
+}
+
+
 void Foam::mapDistribute::printLayout(Ostream& os) const
 {
     mapDistributeBase::printLayout(os);
 
+    os  << "Layout: (constructSize:" << constructSize_ << ")" << endl
+        << "local (processor " << Pstream::myProcNo() << "):" << endl
+        << "    start : 0" << endl
+        << "    size  : " << localSize << endl;
+
+    label offset = localSize;
+    forAll(minIndex, procI)
+    {
+        if (procI != Pstream::myProcNo())
+        {
+            if (constructMap_[procI].size() > 0)
+            {
+                if (minIndex[procI] != offset)
+                {
+                    FatalErrorInFunction
+                        << "offset:" << offset
+                        << " procI:" << procI
+                        << " minIndex:" << minIndex[procI]
+                        << abort(FatalError);
+                }
+
+                label size = maxIndex[procI]-minIndex[procI]+1;
+                os  << "processor " << procI << ':' << endl
+                    << "    start : " << offset << endl
+                    << "    size  : " << size << endl;
+
+                offset += size;
+            }
+        }
+    }
     forAll(transformElements_, trafoI)
     {
         if (transformElements_[trafoI].size() > 0)
@@ -207,8 +397,70 @@ Foam::mapDistribute::mapDistribute
     const labelList& recvProcs
 )
 :
-    mapDistributeBase(sendProcs, recvProcs)
-{}
+    constructSize_(0),
+    schedulePtr_()
+{
+    if (sendProcs.size() != recvProcs.size())
+    {
+        FatalErrorInFunction
+            << "The send and receive data is not the same length. sendProcs:"
+            << sendProcs.size() << " recvProcs:" << recvProcs.size()
+            << abort(FatalError);
+    }
+
+    // Per processor the number of samples we have to send/receive.
+    labelList nSend(Pstream::nProcs(), 0);
+    labelList nRecv(Pstream::nProcs(), 0);
+
+    forAll(sendProcs, sampleI)
+    {
+        label sendProc = sendProcs[sampleI];
+        label recvProc = recvProcs[sampleI];
+
+        // Note that also need to include local communication (both
+        // RecvProc and sendProc on local processor)
+
+        if (Pstream::myProcNo() == sendProc)
+        {
+            // I am the sender. Count destination processor.
+            nSend[recvProc]++;
+        }
+        if (Pstream::myProcNo() == recvProc)
+        {
+            // I am the receiver.
+            nRecv[sendProc]++;
+        }
+    }
+
+    subMap_.setSize(Pstream::nProcs());
+    constructMap_.setSize(Pstream::nProcs());
+    forAll(nSend, procI)
+    {
+        subMap_[procI].setSize(nSend[procI]);
+        constructMap_[procI].setSize(nRecv[procI]);
+    }
+    nSend = 0;
+    nRecv = 0;
+
+    forAll(sendProcs, sampleI)
+    {
+        label sendProc = sendProcs[sampleI];
+        label recvProc = recvProcs[sampleI];
+
+        if (Pstream::myProcNo() == sendProc)
+        {
+            // I am the sender. Store index I need to send.
+            subMap_[recvProc][nSend[recvProc]++] = sampleI;
+        }
+        if (Pstream::myProcNo() == recvProc)
+        {
+            // I am the receiver.
+            constructMap_[sendProc][nRecv[sendProc]++] = sampleI;
+            // Largest entry inside constructMap
+            constructSize_ = sampleI+1;
+        }
+    }
+}
 
 
 Foam::mapDistribute::mapDistribute
@@ -541,11 +793,8 @@ void Foam::mapDistribute::operator=(const mapDistribute& rhs)
     // Check for assignment to self
     if (this == &rhs)
     {
-        FatalErrorIn
-        (
-            "Foam::mapDistribute::operator="
-            "(const Foam::mapDistribute&)"
-        )   << "Attempted assignment to self"
+        FatalErrorInFunction
+            << "Attempted assignment to self"
             << abort(FatalError);
     }
     mapDistributeBase::operator=(rhs);

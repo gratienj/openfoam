@@ -59,19 +59,10 @@ void Foam::UPstream::setParRun(const label nProcs)
 {
     if (nProcs == 0)
     {
-        parRun_ = false;
-        freeCommunicator(UPstream::worldComm);
-        label comm = allocateCommunicator(-1, labelList(1, label(0)), false);
-        if (comm != UPstream::worldComm)
-        {
-            FatalErrorIn("UPstream::setParRun(const label)")
-                << "problem : comm:" << comm
-                << "  UPstream::worldComm:" << UPstream::worldComm
-                << Foam::exit(FatalError);
-        }
-
-        Pout.prefix() = "";
-        Perr.prefix() = "";
+        FatalErrorInFunction
+            << "problem : comm:" << comm
+            << "  UPstream::worldComm:" << UPstream::worldComm
+            << Foam::exit(FatalError);
     }
     else
     {
@@ -288,11 +279,8 @@ Foam::label Foam::UPstream::allocateCommunicator
         // Enforce incremental order (so index is rank in next communicator)
         if (i >= 1 && subRanks[i] <= subRanks[i-1])
         {
-            FatalErrorIn
-            (
-                "UPstream::allocateCommunicator"
-                "(const label, const labelList&, const bool)"
-            )   << "subranks not sorted : " << subRanks
+            FatalErrorInFunction
+                << "subranks not sorted : " << subRanks
                 << " when allocating subcommunicator from parent "
                 << parentIndex
                 << Foam::abort(FatalError);

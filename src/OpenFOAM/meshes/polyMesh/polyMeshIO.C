@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -204,8 +204,7 @@ Foam::polyMesh::readUpdateState Foam::polyMesh::readUpdate()
 
         if (boundaryChanged)
         {
-            WarningIn("polyMesh::readUpdateState polyMesh::readUpdate()")
-                << "Number of patches has changed.  This may have "
+            WarningInFunction
                 << "unexpected consequences.  Proceed with care." << endl;
 
             boundary_.clear();
@@ -433,7 +432,7 @@ Foam::polyMesh::readUpdateState Foam::polyMesh::readUpdate()
 
         if (nOldPoints != 0 && nOldPoints != newPoints.size())
         {
-            FatalErrorIn("polyMesh::readUpdate()")
+            FatalErrorInFunction
                 << "Point motion detected but number of points "
                 << newPoints.size() << " in "
                 << newPoints.objectPath() << " does not correspond to "

@@ -188,15 +188,24 @@ void Foam::functionObjectFile::read(const dictionary& dict)
 
 Foam::OFstream& Foam::functionObjectFile::file()
 {
-    if (!writeToFile_)
+    if (!Pstream::master())
     {
-        return Snull;
+        FatalErrorInFunction
+            << "Request for file() can only be done by the master process"
+            << abort(FatalError);
+    }
+
+    if (filePtrs_.size() != 1)
+    {
+        WarningInFunction
+            << "Requested single file, but multiple files are present"
+            << endl;
     }
 
     if (!filePtr_.valid())
     {
-        FatalErrorIn("Foam::OFstream& Foam::functionObjectFile::file()")
-            << "File pointer not allocated"
+        FatalErrorInFunction
+            << "File pointer at index " << 0 << " not allocated"
             << abort(FatalError);
     }
 
@@ -206,7 +215,34 @@ Foam::OFstream& Foam::functionObjectFile::file()
 
 bool Foam::functionObjectFile::writeToFile() const
 {
-    return writeToFile_;
+    if (!Pstream::master())
+    {
+        FatalErrorInFunction
+            << "Request for files() can only be done by the master process"
+            << abort(FatalError);
+    }
+
+    return filePtrs_;
+}
+
+
+Foam::OFstream& Foam::functionObjectFile::file(const label i)
+{
+    if (!Pstream::master())
+    {
+        FatalErrorInFunction
+            << "Request for file(i) can only be done by the master process"
+            << abort(FatalError);
+    }
+
+    if (!filePtrs_.set(i))
+    {
+        FatalErrorInFunction
+            << "File pointer at index " << i << " not allocated"
+            << abort(FatalError);
+    }
+
+    return filePtrs_[i];
 }
 
 

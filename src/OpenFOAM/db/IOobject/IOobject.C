@@ -128,16 +128,8 @@ bool Foam::IOobject::fileNameComponents
     // called with directory
     if (isDir(path))
     {
-        WarningIn
-        (
-            "IOobject::fileNameComponents"
-            "("
-                "const fileName&, "
-                "fileName&, "
-                "fileName&, "
-                "word&"
-            ")"
-        )   << " called with directory: " << path << endl;
+        WarningInFunction
+            << " called with directory: " << path << endl;
 
         return false;
     }
@@ -181,16 +173,7 @@ bool Foam::IOobject::fileNameComponents
     // Check for valid (and stripped) name, regardless of the debug level
     if (name.empty() || string::stripInvalid<word>(name))
     {
-        WarningIn
-        (
-            "IOobject::fileNameComponents"
-            "("
-                "const fileName&, "
-                "fileName&, "
-                "fileName&, "
-                "word&"
-            ")"
-        )
+        WarningInFunction
             << "has invalid word for name: \"" << name
             << "\"\nwhile processing path: " << path << endl;
 
@@ -291,17 +274,7 @@ Foam::IOobject::IOobject
 {
     if (!fileNameComponents(path, instance_, local_, name_))
     {
-        FatalErrorIn
-        (
-            "IOobject::IOobject"
-            "("
-                "const fileName&, "
-                "const objectRegistry&, "
-                "readOption, "
-                "writeOption, "
-                "bool"
-            ")"
-        )
+        FatalErrorInFunction
             << " invalid path specification"
             << exit(FatalError);
     }
@@ -622,11 +595,52 @@ Foam::Istream* Foam::IOobject::objectStream(const fileName& fName)
 }
 
 
+bool Foam::IOobject::headerOk()
+{
+    bool ok = true;
+
+    Istream* isPtr = objectStream();
+
+    // If the stream has failed return
+    if (!isPtr)
+    {
+        if (objectRegistry::debug)
+        {
+            Info
+                << "IOobject::headerOk() : "
+                << "file " << objectPath() << " could not be opened"
+                << endl;
+        }
+
+        ok = false;
+    }
+    else
+    {
+        // Try reading header
+        if (!readHeader(*isPtr))
+        {
+            if (objectRegistry::debug)
+            {
+                IOWarningInFunction((*isPtr))
+                    << "failed to read header of file " << objectPath()
+                    << endl;
+            }
+
+            ok = false;
+        }
+    }
+
+    delete isPtr;
+
+    return ok;
+}
+
+
 void Foam::IOobject::setBad(const string& s)
 {
     if (objState_ != GOOD)
     {
-        FatalErrorIn("IOobject::setBad(const string&)")
+        FatalErrorInFunction
             << "recurrent failure for object " << s
             << exit(FatalError);
     }
