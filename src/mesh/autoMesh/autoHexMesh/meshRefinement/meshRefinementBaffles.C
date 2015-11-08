@@ -53,6 +53,9 @@ License
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
+// Repatches external face or creates baffle for internal face
+// with user specified patches (might be different for both sides).
+// Returns label of added face.
 Foam::label Foam::meshRefinement::createBaffle
 (
     const label faceI,
@@ -130,6 +133,46 @@ Foam::label Foam::meshRefinement::createBaffle
 }
 
 
+//// Check if we are a boundary face and normal of surface does
+//// not align with test vector. In this case there'd probably be
+//// a freestanding 'baffle' so we might as well not create it.
+//// Note that since it is not a proper baffle we cannot detect it
+//// afterwards so this code cannot be merged with the
+//// filterDuplicateFaces code.
+//bool Foam::meshRefinement::validBaffleTopology
+//(
+//    const label faceI,
+//    const vector& n1,
+//    const vector& n2,
+//    const vector& testDir
+//) const
+//{
+//
+//    label patchI = mesh_.boundaryMesh().whichPatch(faceI);
+//    if (patchI == -1 || mesh_.boundaryMesh()[patchI].coupled())
+//    {
+//        return true;
+//    }
+//    else if (mag(n1&n2) > cos(degToRad(30)))
+//    {
+//        // Both normals aligned. Check that test vector perpendicularish to
+//        // surface normal
+//        scalar magTestDir = mag(testDir);
+//        if (magTestDir > VSMALL)
+//        {
+//            if (mag(n1&(testDir/magTestDir)) < cos(degToRad(45)))
+//            {
+//                //Pout<< "** disabling baffling face "
+//                //    << mesh_.faceCentres()[faceI] << endl;
+//                return false;
+//            }
+//        }
+//    }
+//    return true;
+//}
+
+
+// Determine patches for baffles on all intersected unnamed faces
 void Foam::meshRefinement::getBafflePatches
 (
     const labelList& surfacesToTest,
@@ -458,11 +501,11 @@ Foam::Map<Foam::labelPair> Foam::meshRefinement::getZoneBafflePatches
             }
         }
     }
-
     return bafflePatch;
 }
 
 
+// Create baffle for every face where ownPatch != -1
 Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::createBaffles
 (
     const labelList& ownPatch,
@@ -626,7 +669,6 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::createBaffles
             }
         }
     }
-
     // Pick up neighbour side of baffle (added faces)
     forAll(faceMap, faceI)
     {
@@ -661,6 +703,7 @@ Foam::labelList Foam::meshRefinement::getZones
 ) const
 {
     const faceZoneMesh& fZones = mesh_.faceZones();
+
     const polyBoundaryMesh& pbm = mesh_.boundaryMesh();
 
     forAll(faceZones, zoneI)
@@ -876,25 +919,26 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::createZoneBaffles
         Info<< "Created " << nTotalBaffles << " baffles in = "
             << mesh_.time().cpuTimeIncrement() << " s\n" << nl << endl;
     }
-
     return map;
 }
 
 
+// Extract those baffles (duplicate) faces that are on the edge of a baffle
+// region. These are candidates for merging.
+// Done by counting the number of baffles faces per mesh edge. If edge
+// has 2 boundary faces and both are baffle faces it is the edge of a baffle
+// region.
 Foam::List<Foam::labelPair> Foam::meshRefinement::freeStandingBaffles
 (
     const List<labelPair>& couples,
     const scalar planarAngle
 ) const
 {
-    // Done by counting the number of baffles faces per mesh edge. If edge
-    // has 2 boundary faces and both are baffle faces it is the edge of a baffle
-    // region.
-
     // All duplicate faces on edge of the patch are to be merged.
     // So we count for all edges of duplicate faces how many duplicate
     // faces use them.
     labelList nBafflesPerEdge(mesh_.nEdges(), 0);
+
 
     // This algorithm is quite tricky. We don't want to use edgeFaces and
     // also want it to run in parallel so it is now an algorithm over
@@ -909,7 +953,9 @@ Foam::List<Foam::labelPair> Foam::meshRefinement::freeStandingBaffles
     // So now any edge that is used by baffle faces only will have the
     // value 2*1000000+2*1.
 
+
     const label baffleValue = 1000000;
+
 
     // Count number of boundary faces per edge
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -938,8 +984,10 @@ Foam::List<Foam::labelPair> Foam::meshRefinement::freeStandingBaffles
         }
     }
 
+
     DynamicList<label> fe0;
     DynamicList<label> fe1;
+
 
     // Count number of duplicate boundary faces per edge
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1139,6 +1187,7 @@ Foam::List<Foam::labelPair> Foam::meshRefinement::freeStandingBaffles
 }
 
 
+// Merge baffles. Gets pairs of faces.
 Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::mergeBaffles
 (
     const List<labelPair>& couples,
@@ -1357,6 +1406,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::mergeZoneBaffles
 }
 
 
+// Finds region per cell for cells inside closed named surfaces
 void Foam::meshRefinement::findCellZoneGeometric
 (
     const pointField& neiCc,
@@ -1586,6 +1636,7 @@ void Foam::meshRefinement::findCellZoneInsideWalk
     const labelList& locationSurfaces,  // indices of surfaces with inside point
     const labelList& namedSurfaceIndex, // per face index of named surface
     const labelList& surfaceToCellZone, // cell zone index per surface
+
     labelList& cellToZone
 ) const
 {
@@ -1604,7 +1655,6 @@ void Foam::meshRefinement::findCellZoneInsideWalk
             blockedFace[faceI] = true;
         }
     }
-
     // No need to sync since namedSurfaceIndex already is synced
 
     // Set region per cell based on walking
@@ -1903,11 +1953,14 @@ bool Foam::meshRefinement::calcRegionToZone
             }
         }
     }
-
     return changed;
 }
 
 
+// Finds region per cell. Assumes:
+// - region containing keepPoint does not go into a cellZone
+// - all other regions can be found by crossing faces marked in
+//   namedSurfaceIndex.
 void Foam::meshRefinement::findCellZoneTopo
 (
     const pointField& locationsInMesh,
@@ -1916,11 +1969,6 @@ void Foam::meshRefinement::findCellZoneTopo
     labelList& cellToZone
 ) const
 {
-    //  Assumes:
-    // - region containing keepPoint does not go into a cellZone
-    // - all other regions can be found by crossing faces marked in
-    //   namedSurfaceIndex.
-
     // Analyse regions. Reuse regionsplit
     boolList blockedFace(mesh_.nFaces());
 
@@ -2115,6 +2163,8 @@ void Foam::meshRefinement::findCellZoneTopo
 }
 
 
+// Make namedSurfaceIndex consistent with cellToZone - clear out any blocked
+// faces inbetween same cell zone.
 void Foam::meshRefinement::makeConsistentFaceIndex
 (
     const labelList& cellToZone,
@@ -2296,21 +2346,7 @@ Foam::labelList Foam::meshRefinement::freeStandingBaffleFaces
     const labelList& faceNeighbour = mesh_.faceNeighbour();
 
 
-    // We want to pick up the faces to orient. These faces come in
-    // two variants:
-    // - faces originating from stand-alone faceZones
-    //   (these will most likely have no cellZone on either side so
-    //    ownZone and neiZone both -1)
-    // - sticky-up faces originating from a 'bulge' in a outside of
-    //   a cellZone. These will have the same cellZone on either side.
-    //   How to orient these is not really clearly defined so do them
-    //   same as stand-alone faceZone faces for now. (Normally these will
-    //   already have been removed by the 'allowFreeStandingZoneFaces=false'
-    //   default setting)
-
-    // Note that argument neiCellZone will have -1 on uncoupled boundaries.
-
-    DynamicList<label> faceLabels(mesh_.nFaces()/100);
+    DynamicList<label> faceLabels(mesh_.nFaces()/20);
 
     for (label faceI = 0; faceI < mesh_.nInternalFaces(); faceI++)
     {
@@ -2319,7 +2355,7 @@ Foam::labelList Foam::meshRefinement::freeStandingBaffleFaces
             // Free standing baffle?
             label ownZone = cellToZone[faceOwner[faceI]];
             label neiZone = cellToZone[faceNeighbour[faceI]];
-            if (ownZone == neiZone)
+            if (max(ownZone, neiZone) == -1)
             {
                 faceLabels.append(faceI);
             }
@@ -2337,14 +2373,13 @@ Foam::labelList Foam::meshRefinement::freeStandingBaffleFaces
                 // Free standing baffle?
                 label ownZone = cellToZone[faceOwner[faceI]];
                 label neiZone = neiCellZone[faceI-mesh_.nInternalFaces()];
-                if (ownZone == neiZone)
+                if (max(ownZone, neiZone) == -1)
                 {
                     faceLabels.append(faceI);
                 }
             }
         }
     }
-
     return faceLabels.shrink();
 }
 
@@ -2601,6 +2636,7 @@ void Foam::meshRefinement::consistentOrientation
     }
 
 
+
     DynamicList<label> changedEdges;
     DynamicList<patchFaceOrientation> changedInfo;
 
@@ -2687,6 +2723,7 @@ void Foam::meshRefinement::consistentOrientation
         {
             break;
         }
+
 
 
         // Walk
@@ -2995,6 +3032,7 @@ void Foam::meshRefinement::allocateInterRegionFaceZone
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+// Split off unreachable areas of mesh.
 void Foam::meshRefinement::baffleAndSplitMesh
 (
     const bool doHandleSnapProblems,
@@ -3263,6 +3301,7 @@ void Foam::meshRefinement::mergeFreeStandingBaffles
 }
 
 
+// Split off (with optional buffer layers) unreachable areas of mesh.
 Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::splitMesh
 (
     const label nBufferLayers,
@@ -3541,6 +3580,8 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::splitMesh
 }
 
 
+// Find boundary points that connect to more than one cell region and
+// split them.
 Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::dupNonManifoldPoints
 (
     const localPointRegion& regionSide
@@ -3600,6 +3641,8 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::dupNonManifoldPoints
 }
 
 
+// Find boundary points that connect to more than one cell region and
+// split them.
 Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::dupNonManifoldPoints()
 {
     // Analyse which points need to be duplicated
@@ -3609,6 +3652,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::dupNonManifoldPoints()
 }
 
 
+// Zoning
 Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
 (
     const labelList& pointToDuplicate
@@ -4345,23 +4389,22 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
 
 
     // Get coupled neighbour cellZone. Set to -1 on non-coupled patches.
-    labelList neiCellZone;
-    syncTools::swapBoundaryCellList(mesh_, cellToZone, neiCellZone);
+    labelList neiCellZone(mesh_.nFaces()-mesh_.nInternalFaces(), -1);
     forAll(patches, patchI)
     {
         const polyPatch& pp = patches[patchI];
 
-        if (!pp.coupled())
+        if (pp.coupled())
         {
-            label bFaceI = pp.start()-mesh_.nInternalFaces();
             forAll(pp, i)
             {
-                neiCellZone[bFaceI++] = -1;
+                label faceI = pp.start()+i;
+                neiCellZone[faceI-mesh_.nInternalFaces()] =
+                    cellToZone[mesh_.faceOwner()[faceI]];
             }
         }
     }
-
-
+    syncTools::swapBoundaryFaceList(mesh_, neiCellZone);
 
     // Get per face whether is it master (of a coupled set of faces)
     const PackedBoolList isMasterFace(syncTools::getMasterFaces(mesh_));
@@ -4400,13 +4443,6 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
         {
             Info<< "Detected " << nFreeStanding << " free-standing zone faces"
                 << endl;
-
-            if (debug)
-            {
-                OBJstream str(mesh_.time().path()/"freeStanding.obj");
-                str.write(patch.localFaces(), patch.localPoints(), false);
-            }
-
 
             // Detect non-manifold edges
             labelList nMasterFacesPerEdge;
@@ -4506,18 +4542,21 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
         if (surfI != -1)
         {
             // Orient face zone to have slave cells in max cell zone.
-            // Note: logic to use flipMap should be consistent with logic
-            //       to pick up the freeStandingBaffleFaces!
-
             label ownZone = cellToZone[faceOwner[faceI]];
             label neiZone = cellToZone[faceNeighbour[faceI]];
 
             bool flip;
 
-            if (ownZone == neiZone)
+            label maxZone = max(ownZone, neiZone);
+
+            if (maxZone == -1)
             {
                 // free-standing face. Use geometrically derived orientation
                 flip = meshFlipMap[faceI];
+            }
+            else if (ownZone == maxZone)
+            {
+                flip = false;
             }
             else
             {
@@ -4561,18 +4600,26 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
 
                 bool flip;
 
-                if (ownZone == neiZone)
+                label maxZone = max(ownZone, neiZone);
+
+                if (maxZone == -1)
                 {
                     // free-standing face. Use geometrically derived orientation
                     flip = meshFlipMap[faceI];
                 }
+                else if (ownZone == neiZone)
+                {
+                    // Free-standing zone face or coupled boundary. Keep master
+                    // face unflipped.
+                    flip = !isMasterFace[faceI];
+                }
+                else if (neiZone == maxZone)
+                {
+                    flip = true;
+                }
                 else
                 {
-                    flip =
-                    (
-                        ownZone == -1
-                     || (neiZone != -1 && ownZone > neiZone)
-                    );
+                    flip = false;
                 }
 
                 meshMod.setAction
