@@ -408,8 +408,13 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::agglomerate
         labelList tgtCompactMap(map.constructSize());
 
         {
-            const labelList& elemsMap =
-                map.constructMap()[Pstream::myProcNo()];
+            // Note that in special cases (e.g. 'appending' two AMIs) the
+            // local size after distributing can be longer than the number
+            // of faces. I.e. it duplicates elements.
+            // Since we don't know this size instead we loop over all
+            // reachable elements (using the local constructMap)
+
+            const labelList& elemsMap = map.constructMap()[Pstream::myProcNo()];
             forAll(elemsMap, i)
             {
                 label fineElem = elemsMap[i];
