@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,7 +34,22 @@ Foam::IOdictionary::IOdictionary(const IOobject& io)
 :
     baseIOdictionary(io)
 {
-    readHeaderOk(IOstream::ASCII, typeName);
+    // Temporary warning
+    if (debug && io.readOpt() == IOobject::MUST_READ)
+    {
+        WarningInFunction
+            << "Dictionary " << name()
+            << " constructed with IOobject::MUST_READ"
+            " instead of IOobject::MUST_READ_IF_MODIFIED." << nl
+            << "Use MUST_READ_IF_MODIFIED if you need automatic rereading."
+            << endl;
+    }
+
+    // Everyone check or just master
+    bool masterOnly =
+        regIOobject::fileModificationChecking == timeStampMaster
+     || regIOobject::fileModificationChecking == inotifyMaster;
+
 
     // For if MUST_READ_IF_MODIFIED
     addWatch();
@@ -49,7 +64,54 @@ Foam::IOdictionary::IOdictionary
 :
     baseIOdictionary(io, dict)
 {
-    if (!readHeaderOk(IOstream::ASCII, typeName))
+    // Temporary warning
+    if (debug && io.readOpt() == IOobject::MUST_READ)
+    {
+        WarningInFunction
+            << "Dictionary " << name()
+            << " constructed with IOobject::MUST_READ"
+            " instead of IOobject::MUST_READ_IF_MODIFIED." << nl
+            << "Use MUST_READ_IF_MODIFIED if you need automatic rereading."
+            << endl;
+    }
+
+    // Everyone check or just master
+    bool masterOnly =
+        regIOobject::fileModificationChecking == timeStampMaster
+     || regIOobject::fileModificationChecking == inotifyMaster;
+
+
+    // Check if header is ok for READ_IF_PRESENT
+    bool isHeaderOk = false;
+    if (io.readOpt() == IOobject::READ_IF_PRESENT)
+    {
+        if (masterOnly)
+        {
+            if (Pstream::master())
+            {
+                isHeaderOk = headerOk();
+            }
+            Pstream::scatter(isHeaderOk);
+        }
+        else
+        {
+            isHeaderOk = headerOk();
+        }
+    }
+
+
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || isHeaderOk
+    )
+    {
+        readFile(masterOnly);
+    }
+    else
     {
         dictionary::operator=(dict);
     }

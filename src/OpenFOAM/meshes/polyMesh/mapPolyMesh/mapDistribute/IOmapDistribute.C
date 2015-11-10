@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2014-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,8 +39,15 @@ Foam::IOmapDistribute::IOmapDistribute(const IOobject& io)
 :
     regIOobject(io)
 {
-    // Warn for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOmapDistribute>();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "IOmapDistribute " << name()
+            << " constructed with IOobject::MUST_READ_IF_MODIFIED"
+            " but IOmapDistribute does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
@@ -65,8 +72,15 @@ Foam::IOmapDistribute::IOmapDistribute
 :
     regIOobject(io)
 {
-    // Warn for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOmapDistribute>();
+     // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "IOmapDistribute " << name()
+            << " constructed with IOobject::MUST_READ_IF_MODIFIED"
+            " but IOmapDistribute does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
@@ -95,8 +109,15 @@ Foam::IOmapDistribute::IOmapDistribute
 :
     regIOobject(io)
 {
-    // Warn for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOmapDistribute>();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "IOmapDistribute " << name()
+            << " constructed with IOobject::MUST_READ_IF_MODIFIED"
+            " but IOmapDistribute does not support automatic rereading."
+            << endl;
+    }
 
     mapDistribute::transfer(map());
 
