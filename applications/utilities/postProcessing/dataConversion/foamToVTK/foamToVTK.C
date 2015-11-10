@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
 
     if (binary && (sizeof(floatScalar) != 4 || sizeof(label) != 4))
     {
-        FatalErrorIn(args.executable())
+        FatalErrorInFunction
             << "floatScalar and/or label are not 4 bytes in size" << nl
             << "Hence cannot use binary VTK format. Please use -ascii"
             << exit(FatalError);
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
 
     if (nearCellValue)
     {
-        WarningIn(args.executable())
+        WarningInFunction
             << "Using neighbouring cell value instead of patch value"
             << nl << endl;
     }
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
 
     if (noPointValues)
     {
-        WarningIn(args.executable())
+        WarningInFunction
             << "Outputting cell values only" << nl << endl;
     }
 
@@ -601,53 +601,6 @@ int main(int argc, char *argv[])
               + vtf.size();
 
 
-        // Construct dimensioned fields
-        PtrList<volScalarField::DimensionedInternalField> dsf;
-        PtrList<volVectorField::DimensionedInternalField> dvf;
-        PtrList<volSphericalTensorField::DimensionedInternalField> dSpheretf;
-        PtrList<volSymmTensorField::DimensionedInternalField> dSymmtf;
-        PtrList<volTensorField::DimensionedInternalField> dtf;
-
-        if (!specifiedFields || selectedFields.size())
-        {
-            readFields(vMesh, vMesh.baseMesh(), objects, selectedFields, dsf);
-            print("    volScalarFields::Internal          :", Info, dsf);
-
-            readFields(vMesh, vMesh.baseMesh(), objects, selectedFields, dvf);
-            print("    volVectorFields::Internal          :", Info, dvf);
-
-            readFields
-            (
-                vMesh,
-                vMesh.baseMesh(),
-                objects,
-                selectedFields,
-                dSpheretf
-            );
-            print("    volSphericalTensorFields::Internal :", Info, dSpheretf);
-
-            readFields
-            (
-                vMesh,
-                vMesh.baseMesh(),
-                objects,
-                selectedFields,
-                dSymmtf
-            );
-            print("    volSymmTensorFields::Internal      :", Info, dSymmtf);
-
-            readFields(vMesh, vMesh.baseMesh(), objects, selectedFields, dtf);
-            print("    volTensorFields::Internal          :", Info, dtf);
-        }
-
-        label nDimFields =
-                dsf.size()
-              + dvf.size()
-              + dSpheretf.size()
-              + dSymmtf.size()
-              + dtf.size();
-
-
         // Construct pointMesh only if nessecary since constructs edge
         // addressing (expensive on polyhedral meshes)
         if (noPointValues)
@@ -748,7 +701,7 @@ int main(int argc, char *argv[])
             (
                 writer.os(),
                 vMesh.nFieldCells(),
-                1 + nVolFields + nDimFields
+                1+nVolFields
             );
 
             // Write cellID field
@@ -761,20 +714,13 @@ int main(int argc, char *argv[])
             writer.write(vSymmtf);
             writer.write(vtf);
 
-            // Write dimensionedFields
-            writer.write<scalar, volMesh>(dsf);
-            writer.write<vector, volMesh>(dvf);
-            writer.write<sphericalTensor, volMesh>(dSpheretf);
-            writer.write<symmTensor, volMesh>(dSymmtf);
-            writer.write<tensor, volMesh>(dtf);
-
             if (!noPointValues)
             {
                 writeFuns::writePointDataHeader
                 (
                     writer.os(),
                     vMesh.nFieldPoints(),
-                    nVolFields + nDimFields + nPointFields
+                    nVolFields+nPointFields
                 );
 
                 // pointFields
@@ -791,12 +737,6 @@ int main(int argc, char *argv[])
                 writer.write(pInterp, vSpheretf);
                 writer.write(pInterp, vSymmtf);
                 writer.write(pInterp, vtf);
-
-                writer.write<scalar, volMesh>(pInterp, dsf);
-                writer.write<vector, volMesh>(pInterp, dvf);
-                writer.write<sphericalTensor, volMesh>(pInterp, dSpheretf);
-                writer.write<symmTensor, volMesh>(pInterp, dSymmtf);
-                writer.write<tensor, volMesh>(pInterp, dtf);
             }
         }
 
@@ -1295,7 +1235,7 @@ int main(int argc, char *argv[])
                     );
                     if (system(cmd.c_str()) == -1)
                     {
-                        WarningIn(args.executable())
+                        WarningInFunction
                             << "Could not execute command " << cmd << endl;
                     }
                 }

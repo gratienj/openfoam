@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
     {
         if (noLagrangian)
         {
-            FatalErrorIn(args.executable())
+            FatalErrorInFunction
                 << "Cannot specify noLagrangian and lagrangianFields "
                 << "options together."
                 << exit(FatalError);
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 
     if (!nProcs)
     {
-        FatalErrorIn(args.executable())
+        FatalErrorInFunction
             << "No processor* directories found"
             << exit(FatalError);
     }
@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
 
     if (timeDirs.empty())
     {
-        FatalErrorIn(args.executable())
+        FatalErrorInFunction
             << "No times selected"
             << exit(FatalError);
     }
@@ -349,7 +349,7 @@ int main(int argc, char *argv[])
             }
             else if (meshStat != procStat)
             {
-                WarningIn(args.executable())
+                WarningInFunction
                     << "readUpdate for the reconstructed mesh:"
                     << meshStat << nl
                     << "readUpdate for the processor meshes  :"

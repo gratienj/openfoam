@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -66,8 +66,7 @@ Foam::fileName Foam::helpType::doxygenPath() const
 void Foam::helpType::displayDocOptions
 (
     const string& searchStr,
-    const bool exactMatch,
-    const word& ext
+    const bool exactMatch
 ) const
 {
     fileName doxyPath(doxygenPath());
@@ -84,14 +83,8 @@ void Foam::helpType::displayDocOptions
         doxyPath/"../DTAGS",
         "tagfile",
         searchStr,
-        exactMatch,
-        ext
+        exactMatch
     );
-
-    if (debug)
-    {
-        Info<< parser;
-    }
 
     Info<< "Valid types include:" << nl << SortableList<word>(parser.toc());
 }
@@ -101,8 +94,7 @@ void Foam::helpType::displayDoc
 (
     const word& className,
     const string& searchStr,
-    const bool exactMatch,
-    const word& ext
+    const bool exactMatch
 ) const
 {
     fileName doxyPath(doxygenPath());
@@ -127,8 +119,7 @@ void Foam::helpType::displayDoc
         doxyPath/"../DTAGS",
         "tagfile",
         searchStr,
-        exactMatch,
-        ext
+        exactMatch
     );
 
     if (debug)
@@ -155,16 +146,7 @@ void Foam::helpType::displayDoc
     }
     else
     {
-        FatalErrorIn
-        (
-            "void Foam::helpType::displayDoc"
-            "("
-                "const word&, "
-                "const string&, "
-                "const bool, "
-                "const word&"
-            ")"
-        )
+        FatalErrorInFunction
             << "No help for type " << className << " found."
             << "  Valid options include:" << SortableList<word>(parser.toc())
             << exit(FatalError);

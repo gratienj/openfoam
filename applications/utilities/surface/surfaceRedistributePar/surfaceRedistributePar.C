@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,18 +31,21 @@ Description
 
 Note
     - best decomposition option is hierarchGeomDecomp since
-      guarantees square decompositions.
+    guarantees square decompositions.
     - triangles might be present on multiple processors.
     - merging uses geometric tolerance so take care with writing precision.
 
 \*---------------------------------------------------------------------------*/
 
+#include "treeBoundBox.H"
+#include "FixedList.H"
 #include "argList.H"
 #include "Time.H"
 #include "polyMesh.H"
 #include "distributedTriSurfaceMesh.H"
 #include "mapDistribute.H"
-#include "localIOdictionary.H"
+#include "triSurfaceFields.H"
+#include "Pair.H"
 
 using namespace Foam;
 
@@ -134,7 +137,7 @@ int main(int argc, char *argv[])
 
     if (!Pstream::parRun())
     {
-        FatalErrorIn(args.executable())
+        FatalErrorInFunction
             << "Please run this program on the decomposed case."
             << " It will read surface " << surfFileName
             << " and decompose it such that it overlaps the mesh bounding box."
@@ -169,11 +172,10 @@ int main(int argc, char *argv[])
         "triSurface",         // local
         runTime,              // registry
         IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     );
 
-    // Look for file (using searchableSurface rules)
-    const fileName actualPath(typeFilePath<searchableSurface>(io));
+    const fileName actualPath(io.filePath());
     fileName localPath(actualPath);
     localPath.replace(runTime.rootPath() + '/', "");
 
@@ -195,7 +197,7 @@ int main(int argc, char *argv[])
         dict.add("distributionType", distType);
         dict.add("mergeDistance", SMALL);
 
-        localIOdictionary ioDict
+        IOdictionary ioDict
         (
             IOobject
             (
@@ -213,7 +215,6 @@ int main(int argc, char *argv[])
         Info<< "Writing dummy bounds dictionary to " << ioDict.name()
             << nl << endl;
 
-        // Force writing in ascii
         ioDict.regIOobject::writeObject
         (
             IOstream::ASCII,
@@ -238,17 +239,23 @@ int main(int argc, char *argv[])
             (
                 IOobject
                 (
-                    "faceCentres",                                  // name
-                    surfMesh.searchableSurface::time().timeName(),  // instance
+                    surfMesh.searchableSurface::name(),     // name
+                    surfMesh.searchableSurface::instance(), // instance
+                    surfMesh.searchableSurface::local(),    // local
                     surfMesh,
                     IOobject::NO_READ,
                     IOobject::AUTO_WRITE
                 ),
                 surfMesh,
-                dimLength,
-                s.faceCentres()
+                dimLength
             )
         );
+        triSurfaceVectorField& fc = fcPtr();
+
+        forAll(fc, triI)
+        {
+            fc[triI] = s[triI].centre(s.points());
+        }
 
         // Steal pointer and store object on surfMesh
         fcPtr.ptr()->store();
@@ -283,7 +290,7 @@ int main(int argc, char *argv[])
 
 
     Info<< "Writing surface." << nl << endl;
-    surfMesh.objectRegistry::write();
+    surfMesh.searchableSurface::write();
 
     Info<< "End\n" << endl;
 

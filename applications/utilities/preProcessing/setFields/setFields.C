@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,7 +64,7 @@ bool setCellFieldType
     );
 
     // Check the "constant" directory
-    if (!fieldHeader.typeHeaderOk<fieldType>(true))
+    if (!fieldHeader.headerOk())
     {
         fieldHeader = IOobject
         (
@@ -76,7 +76,7 @@ bool setCellFieldType
     }
 
     // Check field exists
-    if (fieldHeader.typeHeaderOk<fieldType>(true))
+    if (fieldHeader.headerOk())
     {
         Info<< "    Setting internal values of "
             << fieldHeader.headerClassName()
@@ -106,22 +106,14 @@ bool setCellFieldType
 
         if (!field.write())
         {
-            FatalErrorIn
-            (
-                "void setCellFieldType"
-                "(const fvMesh& mesh, const labelList& selectedCells,"
-                "Istream& fieldValueStream)"
-            ) << "Failed writing field " << fieldName << endl;
+            FatalErrorInFunction
+              << "Failed writing field " << fieldName << endl;
         }
     }
     else
     {
-        WarningIn
-        (
-            "void setCellFieldType"
-            "(const fvMesh& mesh, const labelList& selectedCells,"
-            "Istream& fieldValueStream)"
-        ) << "Field " << fieldName << " not found" << endl;
+        WarningInFunction
+          << "Field " << fieldName << " not found" << endl;
 
         // Consume value
         (void)pTraits<Type>(fieldValueStream);
@@ -177,7 +169,7 @@ public:
                 )
             )
             {
-                WarningIn("setCellField::iNew::operator()(Istream& is)")
+                WarningInFunction
                     << "field type " << fieldType << " not currently supported"
                     << endl;
             }
@@ -216,7 +208,7 @@ bool setFaceFieldType
     );
 
     // Check the "constant" directory
-    if (!fieldHeader.typeHeaderOk<fieldType>(true))
+    if (!fieldHeader.headerOk())
     {
         fieldHeader = IOobject
         (
@@ -228,7 +220,7 @@ bool setFaceFieldType
     }
 
     // Check field exists
-    if (fieldHeader.typeHeaderOk<fieldType>(true))
+    if (fieldHeader.headerOk())
     {
         Info<< "    Setting patchField values of "
             << fieldHeader.headerClassName()
@@ -266,7 +258,7 @@ bool setFaceFieldType
                 if (!hasWarned)
                 {
                     hasWarned = true;
-                    WarningIn("setFaceFieldType(..)")
+                    WarningInFunction
                         << "Ignoring internal face " << facei
                         << ". Suppressing further warnings." << endl;
                 }
@@ -302,22 +294,14 @@ bool setFaceFieldType
 
         if (!field.write())
         {
-            FatalErrorIn
-            (
-                "void setFaceFieldType"
-                "(const fvMesh& mesh, const labelList& selectedFaces,"
-                "Istream& fieldValueStream)"
-            )   << "Failed writing field " << field.name() << exit(FatalError);
+            FatalErrorInFunction
+                << "Failed writing field " << field.name() << exit(FatalError);
         }
     }
     else
     {
-        WarningIn
-        (
-            "void setFaceFieldType"
-            "(const fvMesh& mesh, const labelList& selectedFaces,"
-            "Istream& fieldValueStream)"
-        ) << "Field " << fieldName << " not found" << endl;
+        WarningInFunction
+          << "Field " << fieldName << " not found" << endl;
 
         // Consume value
         (void)pTraits<Type>(fieldValueStream);
@@ -373,7 +357,7 @@ public:
                 )
             )
             {
-                WarningIn("setFaceField::iNew::operator()(Istream& is)")
+                WarningInFunction
                     << "field type " << fieldType << " not currently supported"
                     << endl;
             }
