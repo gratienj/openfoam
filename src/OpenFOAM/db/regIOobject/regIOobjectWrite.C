@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,7 +42,7 @@ bool Foam::regIOobject::writeObject
 {
     if (!good())
     {
-        SeriousErrorIn("regIOobject::write()")
+        SeriousErrorInFunction
             << "bad object " << name()
             << endl;
 
@@ -51,112 +51,72 @@ bool Foam::regIOobject::writeObject
 
     if (instance().empty())
     {
-        SeriousErrorIn("regIOobject::write()")
+        SeriousErrorInFunction
             << "instance undefined for object " << name()
             << endl;
 
         return false;
     }
 
-
-
-    //- uncomment this if you want to write global objects on master only
-    //bool isGlobal = global();
-    bool isGlobal = false;
-
-    if (instance() == time().timeName())
-    {
-        // Mark as written to local directory
-        isGlobal = false;
-    }
-    else if
+    if
     (
-        instance() != time().system()
+        instance() != time().timeName()
+     && instance() != time().system()
      && instance() != time().caseSystem()
      && instance() != time().constant()
      && instance() != time().caseConstant()
     )
     {
-        // Update instance
         const_cast<regIOobject&>(*this).instance() = time().timeName();
-
-        // Mark as written to local directory
-        isGlobal = false;
     }
+
+    mkDir(path());
 
     if (OFstream::debug)
     {
-        if (isGlobal)
-        {
-            Pout<< "regIOobject::write() : "
-                << "writing (global) file " << objectPath();
-        }
-        else
-        {
-            Pout<< "regIOobject::write() : "
-                << "writing (local) file " << objectPath();
-        }
+        Info<< "regIOobject::write() : "
+            << "writing file " << objectPath();
     }
 
 
     bool osGood = false;
 
-
-    // Everyone check or just master
-    bool masterOnly =
-        isGlobal
-     && (
-            regIOobject::fileModificationChecking == timeStampMaster
-         || regIOobject::fileModificationChecking == inotifyMaster
-        );
-
-
-    if (Pstream::master() || !masterOnly)
     {
-        if (mkDir(path()))
+        // Try opening an OFstream for object
+        OFstream os(objectPath(), fmt, ver, cmp);
+
+        // If any of these fail, return (leave error handling to Ostream class)
+        if (!os.good())
         {
-            // Try opening an OFstream for object
-            OFstream os(objectPath(), fmt, ver, cmp);
-
-            // If any of these fail, return (leave error handling to Ostream
-            // class)
-            if (!os.good())
-            {
-                return false;
-            }
-
-            if (!writeHeader(os))
-            {
-                return false;
-            }
-
-            // Write the data to the Ostream
-            if (!writeData(os))
-            {
-                return false;
-            }
-
-            writeEndDivider(os);
-
-            osGood = os.good();
+            return false;
         }
-    }
-    else
-    {
-        // Or scatter the master osGood?
-        osGood = true;
+
+        if (!writeHeader(os))
+        {
+            return false;
+        }
+
+        // Write the data to the Ostream
+        if (!writeData(os))
+        {
+            return false;
+        }
+
+        writeEndDivider(os);
+
+        osGood = os.good();
     }
 
     if (OFstream::debug)
     {
-        Pout<< " .... written" << endl;
+        Info<< " .... written" << endl;
     }
 
     // Only update the lastModified_ time if this object is re-readable,
     // i.e. lastModified_ is already set
-    if (watchIndices_.size())
+    if (watchIndex_ != -1)
     {
-        time().setUnmodified(watchIndices_.last());
+        time().setUnmodified(watchIndex_);
     }
 
     return osGood;
@@ -172,6 +132,5 @@ bool Foam::regIOobject::write() const
         time().writeCompression()
     );
 }
-
 
 // ************************************************************************* //

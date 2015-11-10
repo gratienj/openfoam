@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,8 +32,15 @@ Foam::IOField<Type>::IOField(const IOobject& io)
 :
     regIOobject(io)
 {
-    // Check for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOField<Type> >();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "IOField " << name()
+            << " constructed with IOobject::MUST_READ_IF_MODIFIED"
+            " but IOField does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
@@ -55,8 +62,15 @@ Foam::IOField<Type>::IOField(const IOobject& io, const label size)
 :
     regIOobject(io)
 {
-    // Check for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOField<Type> >();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "IOField " << name()
+            << " constructed with IOobject::MUST_READ_IF_MODIFIED"
+            " but IOField does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
@@ -82,8 +96,15 @@ Foam::IOField<Type>::IOField(const IOobject& io, const Field<Type>& f)
 :
     regIOobject(io)
 {
-    // Check for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOField<Type> >();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "IOField " << name()
+            << " constructed with IOobject::MUST_READ_IF_MODIFIED"
+            " but IOField does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
@@ -109,8 +130,15 @@ Foam::IOField<Type>::IOField(const IOobject& io, const Xfer<Field<Type> >& f)
 :
     regIOobject(io)
 {
-    // Check for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOField<Type> >();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "IOField " << name()
+            << " constructed with IOobject::MUST_READ_IF_MODIFIED"
+            " but IOField does not support automatic rereading."
+            << endl;
+    }
 
     Field<Type>::transfer(f());
 

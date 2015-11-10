@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -185,7 +185,7 @@ Foam::label Foam::objectRegistry::getEvent() const
     {
         if (objectRegistry::debug)
         {
-            WarningIn("objectRegistry::getEvent() const")
+            WarningInFunction
                 << "Event counter has overflowed. "
                 << "Resetting counter on all dependent objects." << nl
                 << "This might cause extra evaluations." << endl;
@@ -195,9 +195,21 @@ Foam::label Foam::objectRegistry::getEvent() const
         curEvent = 1;
         event_ = 2;
 
+        for (const_iterator iter = begin(); iter != end(); ++iter)
+        {
+            const regIOobject& io = *iter();
 
-        // No need to reset dependent objects; overflow is now handled
-        // in regIOobject::upToDate
+            if (objectRegistry::debug)
+            {
+                Pout<< "objectRegistry::getEvent() : "
+                    << "resetting count on " << iter.key() << endl;
+            }
+
+            if (io.eventNo() != 0)
+            {
+                const_cast<regIOobject&>(io).eventNo() = curEvent;
+            }
+        }
     }
 
     return curEvent;
@@ -210,7 +222,6 @@ bool Foam::objectRegistry::checkIn(regIOobject& io) const
     {
         Pout<< "objectRegistry::checkIn(regIOobject&) : "
             << name() << " : checking in " << io.name()
-            << " of type " << io.type()
             << endl;
     }
 
@@ -235,7 +246,7 @@ bool Foam::objectRegistry::checkOut(regIOobject& io) const
         {
             if (objectRegistry::debug)
             {
-                WarningIn("objectRegistry::checkOut(regIOobject&)")
+                WarningInFunction
                     << name() << " : attempt to checkOut copy of "
                     << iter.key()
                     << endl;
@@ -343,7 +354,6 @@ bool Foam::objectRegistry::writeObject
             Pout<< "objectRegistry::write() : "
                 << name() << " : Considering writing object "
                 << iter.key()
-                << " of type " << iter()->type()
                 << " with writeOpt " << iter()->writeOpt()
                 << " to file " << iter()->objectPath()
                 << endl;

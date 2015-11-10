@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,56 +26,147 @@ License
 #include "IOdictionary.H"
 #include "objectRegistry.H"
 #include "Pstream.H"
-#include "Time.H"
+
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+namespace Foam
+{
+defineTypeNameAndDebug(IOdictionary, 0);
+
+bool IOdictionary::writeDictionaries
+(
+    debug::infoSwitch("writeDictionaries", 0)
+);
+}
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::IOdictionary::IOdictionary(const IOobject& io)
 :
-    baseIOdictionary(io)
+    regIOobject(io)
 {
-    readHeaderOk(IOstream::ASCII, typeName);
+    // Temporary warning
+    if (debug && io.readOpt() == IOobject::MUST_READ)
+    {
+        WarningInFunction
+            << "Dictionary " << name()
+            << " constructed with IOobject::MUST_READ"
+            " instead of IOobject::MUST_READ_IF_MODIFIED." << nl
+            << "Use MUST_READ_IF_MODIFIED if you need automatic rereading."
+            << endl;
+    }
 
-    // For if MUST_READ_IF_MODIFIED
-    addWatch();
+    // Everyone check or just master
+    bool masterOnly =
+        regIOobject::fileModificationChecking == timeStampMaster
+     || regIOobject::fileModificationChecking == inotifyMaster;
+
+
+    // Check if header is ok for READ_IF_PRESENT
+    bool isHeaderOk = false;
+    if (io.readOpt() == IOobject::READ_IF_PRESENT)
+    {
+        if (masterOnly)
+        {
+            if (Pstream::master())
+            {
+                isHeaderOk = headerOk();
+            }
+            Pstream::scatter(isHeaderOk);
+        }
+        else
+        {
+            isHeaderOk = headerOk();
+        }
+    }
+
+
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || isHeaderOk
+    )
+    {
+        readFile(masterOnly);
+    }
+
+    dictionary::name() = IOobject::objectPath();
 }
 
 
-Foam::IOdictionary::IOdictionary
-(
-    const IOobject& io,
-    const dictionary& dict
-)
+Foam::IOdictionary::IOdictionary(const IOobject& io, const dictionary& dict)
 :
-    baseIOdictionary(io, dict)
+    regIOobject(io)
 {
-    if (!readHeaderOk(IOstream::ASCII, typeName))
+    // Temporary warning
+    if (debug && io.readOpt() == IOobject::MUST_READ)
+    {
+        WarningInFunction
+            << "Dictionary " << name()
+            << " constructed with IOobject::MUST_READ"
+            " instead of IOobject::MUST_READ_IF_MODIFIED." << nl
+            << "Use MUST_READ_IF_MODIFIED if you need automatic rereading."
+            << endl;
+    }
+
+    // Everyone check or just master
+    bool masterOnly =
+        regIOobject::fileModificationChecking == timeStampMaster
+     || regIOobject::fileModificationChecking == inotifyMaster;
+
+
+    // Check if header is ok for READ_IF_PRESENT
+    bool isHeaderOk = false;
+    if (io.readOpt() == IOobject::READ_IF_PRESENT)
+    {
+        if (masterOnly)
+        {
+            if (Pstream::master())
+            {
+                isHeaderOk = headerOk();
+            }
+            Pstream::scatter(isHeaderOk);
+        }
+        else
+        {
+            isHeaderOk = headerOk();
+        }
+    }
+
+
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || isHeaderOk
+    )
+    {
+        readFile(masterOnly);
+    }
+    else
     {
         dictionary::operator=(dict);
     }
 
-    // For if MUST_READ_IF_MODIFIED
-    addWatch();
+    dictionary::name() = IOobject::objectPath();
 }
 
 
-Foam::IOdictionary::IOdictionary
-(
-    const IOobject& io,
-    Istream& is
-)
+Foam::IOdictionary::IOdictionary(const IOobject& io, Istream& is)
 :
-    baseIOdictionary(io, is)
+    regIOobject(io)
 {
-    // Note that we do construct the dictionary null and read in
-    // afterwards
-    // so that if there is some fancy massaging due to a
-    // functionEntry in
+    dictionary::name() = IOobject::objectPath();
+    // Note that we do construct the dictionary null and read in afterwards
+    // so that if there is some fancy massaging due to a functionEntry in
     // the dictionary at least the type information is already complete.
     is  >> *this;
-
-    // For if MUST_READ_IF_MODIFIED
-    addWatch();
 }
 
 
@@ -83,6 +174,22 @@ Foam::IOdictionary::IOdictionary
 
 Foam::IOdictionary::~IOdictionary()
 {}
+
+
+// * * * * * * * * * * * * * * * Members Functions * * * * * * * * * * * * * //
+
+const Foam::word& Foam::IOdictionary::name() const
+{
+    return regIOobject::name();
+}
+
+
+// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
+
+void Foam::IOdictionary::operator=(const IOdictionary& rhs)
+{
+    dictionary::operator=(rhs);
+}
 
 
 // ************************************************************************* //
