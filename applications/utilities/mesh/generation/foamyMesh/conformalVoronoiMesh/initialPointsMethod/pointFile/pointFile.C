@@ -87,7 +87,12 @@ List<Vb::Point> pointFile::initialPoints() const
             IOobject::NO_WRITE
         );
 
-        Info<< "    Inserting points from file " << pointFileName_ << endl;
+    if (points.empty())
+    {
+        FatalErrorInFunction
+            << "Point file contain no points"
+            << exit(FatalError) << endl;
+    }
 
         // See if processor local file
         if (pointsIO.typeHeaderOk<pointIOField>(true))

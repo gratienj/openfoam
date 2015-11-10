@@ -106,7 +106,7 @@ scalar getMergeDistance
 
     if (runTime.writeFormat() == IOstream::ASCII && mergeTol < writeTol)
     {
-        FatalErrorIn("getMergeDistance")
+        FatalErrorInFunction
             << "Your current settings specify ASCII writing with "
             << IOstream::defaultPrecision() << " digits precision." << endl
             << "Your merging tolerance (" << mergeTol << ") is finer than this."
@@ -612,7 +612,7 @@ void readFields
 
     if (haveMesh[Pstream::myProcNo()] && objectNames != masterNames)
     {
-        FatalErrorIn("readFields()")
+        FatalErrorInFunction
             << "differing fields of type " << GeoField::typeName
             << " on processors." << endl
             << "Master has:" << masterNames << endl
@@ -722,7 +722,18 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
          || Pstream::defaultCommsType == Pstream::nonBlocking
         )
         {
-            label nReq = Pstream::nRequests();
+            FatalErrorInFunction
+                << "Did not map volVectorField correctly:" << nl
+                << "cell:" << cellI
+                << " transfer b:" << b[cellI]
+                << " real cc:" << a[cellI]
+                << abort(FatalError);
+        }
+    }
+    forAll(a.boundaryField(), patchI)
+    {
+        // We have real mesh cellcentre and
+        // mapped original cell centre.
 
             forAll(bfld, patchi)
             {
@@ -772,14 +783,16 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
                 //if (isA<CoupledPatchType>(pfld))
                 if (pfld.patch().coupled())
                 {
-                    if (patchSchedule[patchEvali].init)
-                    {
-                        pfld.initEvaluate(Pstream::scheduled);
-                    }
-                    else
-                    {
-                        pfld.evaluate(Pstream::scheduled);
-                    }
+                    WarningInFunction
+                        << "Did not map volVectorField correctly:"
+                        << endl
+                        << "patch:" << patchI << " patchFace:" << i
+                        << " cc:" << endl
+                        << "    real    :" << aBoundary[i] << endl
+                        << "    mapped  :" << bBoundary[i] << endl
+                        << "This might be just a precision entry"
+                        << " on writing the mesh." << endl;
+                        //<< abort(FatalError);
                 }
             }
         }
@@ -814,9 +827,14 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     Time& runTime = const_cast<Time&>(mesh.time());
 
 
-    //// Print some statistics
-    //Info<< "Before distribution:" << endl;
-    //printMeshData(mesh);
+    if (env("FOAM_SIGFPE"))
+    {
+        WarningInFunction
+            << "Detected floating point exception trapping (FOAM_SIGFPE)."
+            << " This might give" << nl
+            << "    problems when mapping fields. Switch it off in case"
+            << " of problems." << endl;
+    }
 
 
     PtrList<volScalarField> volScalarFields;
@@ -1131,9 +1149,16 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     {
         if (Pstream::master())
         {
-            Info<< "Setting caseName to " << baseRunTime.caseName()
-                << " to write reconstructed mesh and fields." << endl;
-            runTime.TimePaths::caseName() = baseRunTime.caseName();
+            WarningInFunction
+                << "You have selected decomposition method "
+                << decomposer().typeName
+                << " which does" << endl
+                << "not synchronise the decomposition across"
+                << " processor patches." << endl
+                << "    You might want to select a decomposition method which"
+                << " is aware of this. Continuing."
+                << endl;
+        }
 
             mesh.write();
 
@@ -1178,7 +1203,10 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
         hexRef8Data refData(io);
         if (Pstream::master() && decompose)
         {
-            runTime.TimePaths::caseName() = proc0CaseName;
+            FatalErrorInFunction
+                << "Cannot find non-processor patch on processor "
+                << Pstream::myProcNo() << endl
+                << " Current patches:" << patches.names() << abort(FatalError);
         }
         // Make sure all processors have valid data (since only some will
         // read)

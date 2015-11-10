@@ -438,13 +438,12 @@ void visitPointRegion
                 }
             }
 
-            if (nextEdgeI == -1)
-            {
-                FatalErrorIn("visitPointRegion()")
-                    << "Problem: cannot find edge out of " << fEdges
-                    << "on face " << nextFaceI << " that uses point " << pointI
-                    << " and is not edge " << startEdgeI << abort(FatalError);
-            }
+    if (!validActions.found(action))
+    {
+        FatalErrorInFunction
+            << "Unsupported action " << action << endl
+            << "Supported actions:" << validActions.toc() << abort(FatalError);
+    }
 
 
             visitPointRegion
@@ -477,7 +476,20 @@ label dupNonManifoldPoints(triSurface& s, labelList& pointMap)
 
     forAll(pf, pointI)
     {
-        const labelList& pFaces = pf[pointI];
+        FatalErrorInFunction
+            << "Inverted space only makes sense for union or intersection."
+            << exit(FatalError);
+    }
+
+    // Calculate the points where the edges are cut by the other surface
+    calcEdgeCuts
+    (
+        surf1,
+        surf2,
+        args.optionFound("perturb"),
+        edge1Cuts,
+        edge2Cuts
+    );
 
         // Visited faces (as indices into pFaces)
         labelList pFacesZone(pFaces.size(), -1);
@@ -1449,7 +1461,7 @@ autoPtr<extendedFeatureEdgeMesh> createEdgeMesh
     }
     else
     {
-        FatalErrorIn("createEdgeMesh(..)")
+        FatalErrorInFunction
             << "Unsupported booleanSurface:booleanOpType and space "
             << action << " " << invertedSpace
             << abort(FatalError);

@@ -242,7 +242,7 @@ void Foam::calc(const argList& args, const Time& runTime, const fvMesh& mesh)
         }
         else
         {
-            FatalErrorIn(args.executable())
+            FatalErrorInFunction
                 << "Incorrect dimensions of phi: " << phi.dimensions()
                     << abort(FatalError);
         }

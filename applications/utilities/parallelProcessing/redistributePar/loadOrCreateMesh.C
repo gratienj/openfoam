@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -283,10 +283,8 @@ Foam::autoPtr<Foam::fvMesh> Foam::loadOrCreateMesh
 
             if (patchI >= patches.size())
             {
-                FatalErrorIn
-                (
-                    "createMesh(const Time&, const fileName&, const bool)"
-                )   << "Non-processor patches not synchronised."
+                FatalErrorInFunction
+                    << "Non-processor patches not synchronised."
                     << endl
                     << "Processor " << Pstream::myProcNo()
                     << " has only " << patches.size()
@@ -301,10 +299,8 @@ Foam::autoPtr<Foam::fvMesh> Foam::loadOrCreateMesh
              || name != patches[patchI].name()
             )
             {
-                FatalErrorIn
-                (
-                    "createMesh(const Time&, const fileName&, const bool)"
-                )   << "Non-processor patches not synchronised."
+                FatalErrorInFunction
+                    << "Non-processor patches not synchronised."
                     << endl
                     << "Master patch " << patchI
                     << " name:" << type
