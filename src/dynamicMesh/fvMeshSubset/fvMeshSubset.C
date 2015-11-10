@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,9 +34,6 @@ Description
 #include "emptyPolyPatch.H"
 #include "demandDrivenData.H"
 #include "cyclicPolyPatch.H"
-#include "removeCells.H"
-#include "polyTopoChange.H"
-#include "mapPolyMesh.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -49,8 +46,7 @@ bool Foam::fvMeshSubset::checkCellSubset() const
 {
     if (fvMeshSubsetPtr_.empty())
     {
-        FatalErrorIn("bool fvMeshSubset::checkCellSubset() const")
-            << "Mesh subset not set.  Please set the cell map using "
+        FatalErrorInFunction
             << "void setCellSubset(const labelHashSet& cellsToSubset)" << endl
             << "before attempting to access subset data"
             << abort(FatalError);
@@ -357,39 +353,6 @@ void Foam::fvMeshSubset::subsetZones()
 }
 
 
-Foam::labelList Foam::fvMeshSubset::getCellsToRemove
-(
-    const labelList& region,
-    const label currentRegion
-) const
-{
-    // Count
-    label nKeep = 0;
-    forAll(region, cellI)
-    {
-        if (region[cellI] == currentRegion)
-        {
-            nKeep++;
-        }
-    }
-
-    // Collect cells to remove
-    label nRemove = baseMesh().nCells() - nKeep;
-    labelList cellsToRemove(nRemove);
-
-    nRemove = 0;
-    forAll(region, cellI)
-    {
-        if (region[cellI] != currentRegion)
-        {
-            cellsToRemove[nRemove++] = cellI;
-        }
-    }
-
-    return cellsToRemove;
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 // Construct from components
@@ -400,8 +363,7 @@ Foam::fvMeshSubset::fvMeshSubset(const fvMesh& baseMesh)
     pointMap_(0),
     faceMap_(0),
     cellMap_(0),
-    patchMap_(0),
-    faceFlipMapPtr_()
+    patchMap_(0)
 {}
 
 
@@ -431,18 +393,11 @@ void Foam::fvMeshSubset::setCellSubset
     }
     else if (wantedPatchID < 0 || wantedPatchID >= oldPatches.size())
     {
-        FatalErrorIn
-        (
-            "fvMeshSubset::setCellSubset(const labelHashSet&"
-            ", const label patchID)"
-        )   << "Non-existing patch index " << wantedPatchID << endl
+        FatalErrorInFunction
+            << "Non-existing patch index " << wantedPatchID << endl
             << "Should be between 0 and " << oldPatches.size()-1
             << abort(FatalError);
     }
-
-
-    // Clear demand driven data
-    faceFlipMapPtr_.clear();
 
 
     cellMap_ = globalCellMap.toc();
@@ -815,11 +770,8 @@ void Foam::fvMeshSubset::setLargeCellSubset
 
     if (region.size() != oldCells.size())
     {
-        FatalErrorIn
-        (
-            "fvMeshSubset::setCellSubset(const labelList&"
-            ", const label, const label, const bool)"
-        )   << "Size of region " << region.size()
+        FatalErrorInFunction
+            << "Size of region " << region.size()
             << " is not equal to number of cells in mesh " << oldCells.size()
             << abort(FatalError);
     }
@@ -835,17 +787,12 @@ void Foam::fvMeshSubset::setLargeCellSubset
     }
     else if (wantedPatchID < 0 || wantedPatchID >= oldPatches.size())
     {
-        FatalErrorIn
-        (
-            "fvMeshSubset::setCellSubset(const labelList&"
-            ", const label, const label, const bool)"
-        )   << "Non-existing patch index " << wantedPatchID << endl
+        FatalErrorInFunction
+            << "Non-existing patch index " << wantedPatchID << endl
             << "Should be between 0 and " << oldPatches.size()-1
             << abort(FatalError);
     }
 
-    // Clear demand driven data
-    faceFlipMapPtr_.clear();
 
     // Get the cells for the current region.
     cellMap_.setSize(oldCells.size());
@@ -1088,11 +1035,8 @@ void Foam::fvMeshSubset::setLargeCellSubset
 
     if (faceI != nFacesInSet)
     {
-        FatalErrorIn
-        (
-            "fvMeshSubset::setCellSubset(const labelList&"
-            ", const label, const label, const bool)"
-        )   << "Problem" << abort(FatalError);
+        FatalErrorInFunction
+            << "Problem" << abort(FatalError);
     }
 
 
@@ -1414,68 +1358,6 @@ void Foam::fvMeshSubset::setLargeCellSubset
 }
 
 
-Foam::labelList Foam::fvMeshSubset::getExposedFaces
-(
-    const labelList& region,
-    const label currentRegion,
-    const bool syncCouples
-) const
-{
-    // Collect cells to remove
-    labelList cellsToRemove(getCellsToRemove(region, currentRegion));
-
-    return removeCells(baseMesh(), syncCouples).getExposedFaces(cellsToRemove);
-}
-
-
-void Foam::fvMeshSubset::setLargeCellSubset
-(
-    const labelList& region,
-    const label currentRegion,
-    const labelList& exposedFaces,
-    const labelList& patchIDs,
-    const bool syncCouples
-)
-{
-    // Collect cells to remove
-    labelList cellsToRemove(getCellsToRemove(region, currentRegion));
-
-    // Mesh changing engine.
-    polyTopoChange meshMod(baseMesh());
-
-    removeCells cellRemover(baseMesh(), syncCouples);
-
-    cellRemover.setRefinement
-    (
-        cellsToRemove,
-        exposedFaces,
-        patchIDs,
-        meshMod
-    );
-
-    // Create mesh, return map from old to new mesh.
-    autoPtr<mapPolyMesh> map = meshMod.makeMesh
-    (
-        fvMeshSubsetPtr_,
-        IOobject
-        (
-            baseMesh().name(),
-            baseMesh().time().timeName(),
-            baseMesh().time(),
-            IOobject::NO_READ,
-            IOobject::NO_WRITE
-        ),
-        baseMesh(),
-        syncCouples
-    );
-
-    pointMap_ = map().pointMap();
-    faceMap_ = map().faceMap();
-    cellMap_ = map().cellMap();
-    patchMap_ = identity(baseMesh().boundaryMesh().size());
-}
-
-
 bool Foam::fvMeshSubset::hasSubMesh() const
 {
     return fvMeshSubsetPtr_.valid();
@@ -1511,44 +1393,6 @@ const labelList& Foam::fvMeshSubset::faceMap() const
     checkCellSubset();
 
     return faceMap_;
-}
-
-
-const labelList& Foam::fvMeshSubset::faceFlipMap() const
-{
-    if (!faceFlipMapPtr_.valid())
-    {
-        const labelList& subToBaseFace = faceMap();
-        const labelList& subToBaseCell = cellMap();
-
-        faceFlipMapPtr_.reset(new labelList(subToBaseFace.size()));
-        labelList& faceFlipMap = faceFlipMapPtr_();
-
-        // Only exposed internal faces might be flipped (since we don't do
-        // any cell renumbering, just compacting)
-        label subInt = subMesh().nInternalFaces();
-        const labelList& subOwn = subMesh().faceOwner();
-        const labelList& own = baseMesh_.faceOwner();
-
-        for (label subFaceI = 0; subFaceI < subInt; subFaceI++)
-        {
-            faceFlipMap[subFaceI] = subToBaseFace[subFaceI]+1;
-        }
-        for (label subFaceI = subInt; subFaceI < subOwn.size(); subFaceI++)
-        {
-            label faceI = subToBaseFace[subFaceI];
-            if (subToBaseCell[subOwn[subFaceI]] == own[faceI])
-            {
-                faceFlipMap[subFaceI] = faceI+1;
-            }
-            else
-            {
-                faceFlipMap[subFaceI] = -faceI-1;
-            }
-        }
-    }
-
-    return faceFlipMapPtr_();
 }
 
 

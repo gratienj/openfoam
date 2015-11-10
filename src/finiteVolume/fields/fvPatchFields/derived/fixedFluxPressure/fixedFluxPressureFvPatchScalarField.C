@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,26 +60,15 @@ Foam::fixedFluxPressureFvPatchScalarField::fixedFluxPressureFvPatchScalarField
     gradient().map(ptf.gradient(), mapper);
 
     // Evaluate the value field from the gradient if the internal field is valid
-    if (notNull(iF))
+    if (notNull(iF) && iF.size())
     {
-        if (iF.size())
-        {
-            // Note: cannot ask for nf() if zero faces
-
-            scalarField::operator=
-            (
-                //patchInternalField() + gradient()/patch().deltaCoeffs()
-                // ***HGW Hack to avoid the construction of mesh.deltaCoeffs
-                // which fails for AMI patches for some mapping operations
-                patchInternalField()
-              + gradient()*(patch().nf() & patch().delta())
-            );
-        }
-    }
-    else
-    {
-        // Enforce mapping of values so we have a valid starting value
-        this->map(ptf, mapper);
+        scalarField::operator=
+        (
+            //patchInternalField() + gradient()/patch().deltaCoeffs()
+            // ***HGW Hack to avoid the construction of mesh.deltaCoeffs
+            // which fails for AMI patches for some mapping operations
+            patchInternalField() + gradient()*(patch().nf() & patch().delta())
+        );
     }
 }
 
@@ -159,7 +148,7 @@ void Foam::fixedFluxPressureFvPatchScalarField::updateCoeffs()
 
     if (curTimeIndex_ != this->db().time().timeIndex())
     {
-        FatalErrorIn("fixedFluxPressureFvPatchScalarField::updateCoeffs()")
+        FatalErrorInFunction
             << "updateCoeffs(const scalarField& snGradp) MUST be called before"
                " updateCoeffs() or evaluate() to set the boundary gradient."
             << exit(FatalError);

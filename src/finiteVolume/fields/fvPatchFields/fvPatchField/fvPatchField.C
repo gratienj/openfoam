@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -98,7 +98,7 @@ Foam::fvPatchField<Type>::fvPatchField
     patchType_(ptf.patchType_)
 {
     // For unmapped faces set to internal field value (zero-gradient)
-    if (notNull(iF) && mapper.hasUnmapped())
+    if (notNull(iF) && iF.size())
     {
         fvPatchField<Type>::operator=(this->patchInternalField());
     }
@@ -135,15 +135,8 @@ Foam::fvPatchField<Type>::fvPatchField
     }
     else
     {
-        FatalIOErrorIn
+        FatalIOErrorInFunction
         (
-            "fvPatchField<Type>::fvPatchField"
-            "("
-            "const fvPatch& p,"
-            "const DimensionedField<Type, volMesh>& iF,"
-            "const dictionary& dict,"
-            "const bool valueRequired"
-            ")",
             dict
         )   << "Essential entry 'value' missing"
             << exit(FatalIOError);
@@ -196,7 +189,7 @@ void Foam::fvPatchField<Type>::check(const fvPatchField<Type>& ptf) const
 {
     if (&patch_ != &(ptf.patch_))
     {
-        FatalErrorIn("PatchField<Type>::check(const fvPatchField<Type>&)")
+        FatalErrorInFunction
             << "different patches for fvPatchField<Type>s"
             << abort(FatalError);
     }
@@ -233,7 +226,7 @@ void Foam::fvPatchField<Type>::autoMap
 {
     Field<Type>& f = *this;
 
-    if (!this->size() && !mapper.distributed())
+    if (!this->size())
     {
         f.setSize(mapper.size());
         if (f.size())
@@ -246,41 +239,39 @@ void Foam::fvPatchField<Type>::autoMap
         // Map all faces provided with mapping data
         Field<Type>::autoMap(mapper);
 
-
         // For unmapped faces set to internal field value (zero-gradient)
-        if (mapper.hasUnmapped())
+        if
+        (
+            mapper.direct()
+         && notNull(mapper.directAddressing())
+         && mapper.directAddressing().size()
+        )
         {
             Field<Type> pif(this->patchInternalField());
 
-            if
-            (
-                mapper.direct()
-             && notNull(mapper.directAddressing())
-             && mapper.directAddressing().size()
-            )
-            {
-                const labelList& mapAddressing = mapper.directAddressing();
+            const labelList& mapAddressing = mapper.directAddressing();
 
-                forAll(mapAddressing, i)
+            forAll(mapAddressing, i)
+            {
+                if (mapAddressing[i] < 0)
                 {
-                    if (mapAddressing[i] < 0)
-                    {
-                        f[i] = pif[i];
-                    }
+                    f[i] = pif[i];
                 }
             }
-            else if (!mapper.direct() && mapper.addressing().size())
+        }
+        else if (!mapper.direct() && mapper.addressing().size())
+        {
+            Field<Type> pif(this->patchInternalField());
+
+            const labelListList& mapAddressing = mapper.addressing();
+
+            forAll(mapAddressing, i)
             {
-                const labelListList& mapAddressing = mapper.addressing();
+                const labelList& localAddrs = mapAddressing[i];
 
-                forAll(mapAddressing, i)
+                if (!localAddrs.size())
                 {
-                    const labelList& localAddrs = mapAddressing[i];
-
-                    if (!localAddrs.size())
-                    {
-                        f[i] = pif[i];
-                    }
+                    f[i] = pif[i];
                 }
             }
         }
@@ -435,10 +426,8 @@ void Foam::fvPatchField<Type>::operator*=
 {
     if (&patch_ != &ptf.patch())
     {
-        FatalErrorIn
-        (
-            "PatchField<Type>::operator*=(const fvPatchField<scalar>& ptf)"
-        )   << "incompatible patches for patch fields"
+        FatalErrorInFunction
+            << "incompatible patches for patch fields"
             << abort(FatalError);
     }
 
@@ -454,10 +443,7 @@ void Foam::fvPatchField<Type>::operator/=
 {
     if (&patch_ != &ptf.patch())
     {
-        FatalErrorIn
-        (
-            "PatchField<Type>::operator/=(const fvPatchField<scalar>& ptf)"
-        )   << "    incompatible patches for patch fields"
+        FatalErrorInFunction
             << abort(FatalError);
     }
 
