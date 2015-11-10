@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,22 +36,6 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
-
-void Foam::residuals::writeFileHeader(Ostream& os) const
-{
-    writeHeader(os, "Residuals");
-    writeCommented(os, "Time");
-
-    forAll(fieldSet_, fieldI)
-    {
-        writeTabbed(os, fieldSet_[fieldI]);
-    }
-
-    os << endl;
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::residuals::residuals
@@ -62,7 +46,7 @@ Foam::residuals::residuals
     const bool loadFromFiles
 )
 :
-    functionObjectFile(obr, name, typeName, dict),
+    functionObjectFile(obr, name, typeName),
     name_(name),
     obr_(obr),
     active_(true),
@@ -85,11 +69,7 @@ Foam::residuals::residuals
             << endl;
     }
 
-    if (active_)
-    {
-        read(dict);
-        writeFileHeader(file());
-    }
+    read(dict);
 }
 
 
@@ -105,37 +85,52 @@ void Foam::residuals::read(const dictionary& dict)
 {
     if (active_)
     {
-        functionObjectFile::read(dict);
+        dict.lookup("fields") >> fieldSet_;
+    }
+}
 
-        wordList allFields(dict.lookup("fields"));
-        wordHashSet uniqueFields(allFields);
-        fieldSet_ = uniqueFields.toc();
+
+void Foam::residuals::writeFileHeader(const label i)
+{
+    if (Pstream::master())
+    {
+        writeHeader(file(), "Residuals");
+        writeCommented(file(), "Time");
+
+        forAll(fieldSet_, fieldI)
+        {
+            const word& fieldName = fieldSet_[fieldI];
+
+            writeFileHeader<scalar>(fieldName);
+            writeFileHeader<vector>(fieldName);
+            writeFileHeader<sphericalTensor>(fieldName);
+            writeFileHeader<symmTensor>(fieldName);
+            writeFileHeader<tensor>(fieldName);
+        }
+
+        file() << endl;
     }
 }
 
 
 void Foam::residuals::execute()
-{
-    // Do nothing - only valid on write
-}
+{}
 
 
 void Foam::residuals::end()
-{
-    // Do nothing - only valid on write
-}
+{}
 
 
 void Foam::residuals::timeSet()
-{
-    // Do nothing - only valid on write
-}
+{}
 
 
 void Foam::residuals::write()
 {
     if (active_)
     {
+        functionObjectFile::write();
+
         if (Pstream::master())
         {
             file()<< obr_.time().value();
@@ -155,5 +150,6 @@ void Foam::residuals::write()
         }
     }
 }
+
 
 // ************************************************************************* //
