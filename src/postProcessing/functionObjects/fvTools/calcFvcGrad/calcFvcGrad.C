@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,23 +50,14 @@ Foam::calcFvcGrad::calcFvcGrad
     obr_(obr),
     active_(true),
     fieldName_("undefined-fieldName"),
-    resultName_(word::null),
-    log_(true)
+    resultName_("undefined-resultName")
 {
     // Check if the available mesh is an fvMesh, otherwise deactivate
     if (!isA<fvMesh>(obr_))
     {
         active_ = false;
-        WarningIn
-        (
-            "calcFvcGrad::calcFvcGrad"
-            "("
-                "const word&, "
-                "const objectRegistry&, "
-                "const dictionary&, "
-                "const bool"
-            ")"
-        )   << "No fvMesh available, deactivating." << nl
+        WarningInFunction
+            << "No fvMesh available, deactivating." << nl
             << endl;
     }
 
@@ -86,12 +77,10 @@ void Foam::calcFvcGrad::read(const dictionary& dict)
 {
     if (active_)
     {
-        log_.readIfPresent("log", dict);
-
         dict.lookup("fieldName") >> fieldName_;
-        dict.readIfPresent("resultName", resultName_);
+        dict.lookup("resultName") >> resultName_;
 
-        if (resultName_ == word::null)
+        if (resultName_ == "none")
         {
             resultName_ = "fvc::grad(" + fieldName_ + ")";
         }
@@ -110,7 +99,7 @@ void Foam::calcFvcGrad::execute()
 
         if (!processed)
         {
-            WarningIn("void Foam::calcFvcGrad::write()")
+            WarningInFunction
                 << "Unprocessed field " << fieldName_ << endl;
         }
     }
@@ -119,7 +108,10 @@ void Foam::calcFvcGrad::execute()
 
 void Foam::calcFvcGrad::end()
 {
-    // Do nothing
+    if (active_)
+    {
+        execute();
+    }
 }
 
 
@@ -138,8 +130,7 @@ void Foam::calcFvcGrad::write()
             const regIOobject& field =
                 obr_.lookupObject<regIOobject>(resultName_);
 
-            if (log_) Info
-                << type() << " " << name_ << " output:" << nl
+            Info<< type() << " " << name_ << " output:" << nl
                 << "    writing field " << field.name() << nl << endl;
 
             field.write();

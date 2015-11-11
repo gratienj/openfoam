@@ -108,7 +108,7 @@ void Foam::probes::findElements(const fvMesh& mesh)
         {
             if (Pstream::master())
             {
-                WarningIn("findElements::findElements(const fvMesh&)")
+                WarningInFunction
                     << "Did not find location " << location
                     << " in any cell. Skipping location." << endl;
             }
@@ -117,7 +117,7 @@ void Foam::probes::findElements(const fvMesh& mesh)
         {
             if (Pstream::master())
             {
-                WarningIn("probes::findElements(const fvMesh&)")
+                WarningInFunction
                     << "Did not find location " << location
                     << " in any face. Skipping location." << endl;
             }
@@ -127,7 +127,7 @@ void Foam::probes::findElements(const fvMesh& mesh)
             // Make sure location not on two domains.
             if (elementList_[probeI] != -1 && elementList_[probeI] != cellI)
             {
-                WarningIn("probes::findElements(const fvMesh&)")
+                WarningInFunction
                     << "Location " << location
                     << " seems to be on multiple domains:"
                     << " cell " << elementList_[probeI]
@@ -141,7 +141,7 @@ void Foam::probes::findElements(const fvMesh& mesh)
 
             if (faceList_[probeI] != -1 && faceList_[probeI] != faceI)
             {
-                WarningIn("probes::findElements(const fvMesh&)")
+                WarningInFunction
                     << "Location " << location
                     << " seems to be on multiple domains:"
                     << " cell " << faceList_[probeI]
@@ -265,25 +265,6 @@ Foam::label Foam::probes::prepare()
 }
 
 
-void Foam::probes::readDict(const dictionary& dict)
-{
-    dict.lookup("probeLocations") >> *this;
-    dict.lookup("fields") >> fieldSelection_;
-
-    dict.readIfPresent("fixedLocations", fixedLocations_);
-    if (dict.readIfPresent("interpolationScheme", interpolationScheme_))
-    {
-        if (!fixedLocations_ && interpolationScheme_ != "cell")
-        {
-            WarningIn("void Foam::probes::read(const dictionary&)")
-                << "Only cell interpolation can be applied when "
-                << "not using fixedLocations. InterpolationScheme "
-                << "entry will be ignored";
-        }
-    }
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::probes::probes
@@ -291,8 +272,7 @@ Foam::probes::probes
     const word& name,
     const objectRegistry& obr,
     const dictionary& dict,
-    const bool loadFromFiles,
-    const bool doFindElements
+    const bool loadFromFiles
 )
 :
     pointField(0),
@@ -303,18 +283,7 @@ Foam::probes::probes
     fixedLocations_(true),
     interpolationScheme_("cell")
 {
-    // Read dictionary (but do not search for elements)
-    readDict(dict);
-
-    // Optionally find elements in constructor
-    if (doFindElements)
-    {
-        // Find the elements
-        findElements(mesh_);
-
-        // Open the probe streams
-        prepare();
-    }
+    read(dict);
 }
 
 
@@ -365,12 +334,24 @@ void Foam::probes::write()
 
 void Foam::probes::read(const dictionary& dict)
 {
-    readDict(dict);
+    dict.lookup("probeLocations") >> *this;
+    dict.lookup("fields") >> fieldSelection_;
 
-    // Find the elements
+    dict.readIfPresent("fixedLocations", fixedLocations_);
+    if (dict.readIfPresent("interpolationScheme", interpolationScheme_))
+    {
+        if (!fixedLocations_ && interpolationScheme_ != "cell")
+        {
+            WarningInFunction
+                << "Only cell interpolation can be applied when "
+                << "not using fixedLocations.  InterpolationScheme "
+                << "entry will be ignored";
+        }
+    }
+
+    // Initialise cells to sample from supplied locations
     findElements(mesh_);
 
-    // Open the probe streams
     prepare();
 }
 
@@ -401,28 +382,20 @@ void Foam::probes::updateMesh(const mapPolyMesh& mpm)
             forAll(elementList_, i)
             {
                 label cellI = elementList_[i];
-                if (cellI != -1)
+                label newCellI = reverseMap[cellI];
+                if (newCellI == -1)
                 {
-                    label newCellI = reverseMap[cellI];
-                    if (newCellI == -1)
-                    {
-                        // cell removed
-                    }
-                    else if (newCellI < -1)
-                    {
-                        // cell merged
-                        elems.append(-newCellI - 2);
-                    }
-                    else
-                    {
-                        // valid new cell
-                        elems.append(newCellI);
-                    }
+                    // cell removed
+                }
+                else if (newCellI < -1)
+                {
+                    // cell merged
+                    elems.append(-newCellI - 2);
                 }
                 else
                 {
-                    // Keep -1 elements so the size stays the same
-                    elems.append(-1);
+                    // valid new cell
+                    elems.append(newCellI);
                 }
             }
 
@@ -437,28 +410,20 @@ void Foam::probes::updateMesh(const mapPolyMesh& mpm)
             forAll(faceList_, i)
             {
                 label faceI = faceList_[i];
-                if (faceI != -1)
+                label newFaceI = reverseMap[faceI];
+                if (newFaceI == -1)
                 {
-                    label newFaceI = reverseMap[faceI];
-                    if (newFaceI == -1)
-                    {
-                        // face removed
-                    }
-                    else if (newFaceI < -1)
-                    {
-                        // face merged
-                        elems.append(-newFaceI - 2);
-                    }
-                    else
-                    {
-                        // valid new face
-                        elems.append(newFaceI);
-                    }
+                    // face removed
+                }
+                else if (newFaceI < -1)
+                {
+                    // face merged
+                    elems.append(-newFaceI - 2);
                 }
                 else
                 {
-                    // Keep -1 elements
-                    elems.append(-1);
+                    // valid new face
+                    elems.append(newFaceI);
                 }
             }
 

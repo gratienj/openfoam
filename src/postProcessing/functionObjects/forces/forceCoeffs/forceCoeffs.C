@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,9 +28,6 @@ License
 #include "Time.H"
 #include "Pstream.H"
 #include "IOmanip.H"
-#include "fvMesh.H"
-#include "dimensionedTypes.H"
-#include "volFields.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -42,157 +39,81 @@ namespace Foam
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-void Foam::forceCoeffs::createFiles()
+void Foam::forceCoeffs::writeFileHeader(const label i)
 {
-    // Note: Only possible to create bin files after bins have been initialised
-
-    if (writeToFile() && !coeffFilePtr_.valid())
+    if (i == 0)
     {
-        coeffFilePtr_ = createFile("coefficient");
-        writeIntegratedHeader("Coefficients", coeffFilePtr_());
+        // force coeff data
 
-        if (nBin_ > 1)
+        writeHeader(file(i), "Force coefficients");
+        writeHeaderValue(file(i), "liftDir", liftDir_);
+        writeHeaderValue(file(i), "dragDir", dragDir_);
+        writeHeaderValue(file(i), "pitchAxis", pitchAxis_);
+        writeHeaderValue(file(i), "magUInf", magUInf_);
+        writeHeaderValue(file(i), "lRef", lRef_);
+        writeHeaderValue(file(i), "Aref", Aref_);
+        writeHeaderValue(file(i), "CofR", coordSys_.origin());
+        writeCommented(file(i), "Time");
+        writeTabbed(file(i), "Cm");
+        writeTabbed(file(i), "Cd");
+        writeTabbed(file(i), "Cl");
+        writeTabbed(file(i), "Cl(f)");
+        writeTabbed(file(i), "Cl(r)");
+        file(i)
+            << tab << "Cm" << tab << "Cd" << tab << "Cl" << tab << "Cl(f)"
+            << tab << "Cl(r)";
+    }
+    else if (i == 1)
+    {
+        // bin coeff data
+
+        writeHeader(file(i), "Force coefficient bins");
+        writeHeaderValue(file(i), "bins", nBin_);
+        writeHeaderValue(file(i), "start", binMin_);
+        writeHeaderValue(file(i), "delta", binDx_);
+        writeHeaderValue(file(i), "direction", binDir_);
+
+        vectorField binPoints(nBin_);
+        writeCommented(file(i), "x co-ords  :");
+        forAll(binPoints, pointI)
         {
-            CmBinFilePtr_ = createFile("CmBin");
-            writeBinHeader("Moment coefficient bins", CmBinFilePtr_());
-            CdBinFilePtr_ = createFile("CdBin");
-            writeBinHeader("Drag coefficient bins", CdBinFilePtr_());
-            ClBinFilePtr_ = createFile("ClBin");
-            writeBinHeader("Lift coefficient bins", ClBinFilePtr_());
+            binPoints[pointI] = (binMin_ + (pointI + 1)*binDx_)*binDir_;
+            file(i) << tab << binPoints[pointI].x();
+        }
+        file(i) << nl;
+
+        writeCommented(file(i), "y co-ords  :");
+        forAll(binPoints, pointI)
+        {
+            file(i) << tab << binPoints[pointI].y();
+        }
+        file(i) << nl;
+
+        writeCommented(file(i), "z co-ords  :");
+        forAll(binPoints, pointI)
+        {
+            file(i) << tab << binPoints[pointI].z();
+        }
+        file(i) << nl;
+
+        writeCommented(file(i), "Time");
+
+        for (label j = 0; j < nBin_; j++)
+        {
+            const word jn('(' + Foam::name(j) + ')');
+            writeTabbed(file(i), "Cm" + jn);
+            writeTabbed(file(i), "Cd" + jn);
+            writeTabbed(file(i), "Cl" + jn);
         }
     }
-}
-
-
-void Foam::forceCoeffs::writeIntegratedHeader
-(
-    const word& header,
-    Ostream& os
-) const
-{
-    writeHeader(os, "Force coefficients");
-    writeHeaderValue(os, "liftDir", liftDir_);
-    writeHeaderValue(os, "dragDir", dragDir_);
-    writeHeaderValue(os, "pitchAxis", pitchAxis_);
-    writeHeaderValue(os, "magUInf", magUInf_);
-    writeHeaderValue(os, "lRef", lRef_);
-    writeHeaderValue(os, "Aref", Aref_);
-    writeHeaderValue(os, "CofR", coordSys_.origin());
-    writeHeader(os, "");
-    writeCommented(os, "Time");
-    writeTabbed(os, "Cm");
-    writeTabbed(os, "Cd");
-    writeTabbed(os, "Cl");
-    writeTabbed(os, "Cl(f)");
-    writeTabbed(os, "Cl(r)");
-    os  << endl;
-}
-
-
-void Foam::forceCoeffs::writeBinHeader
-(
-    const word& header,
-    Ostream& os
-) const
-{
-    writeHeader(os, header);
-    writeHeaderValue(os, "bins", nBin_);
-    writeHeaderValue(os, "start", binMin_);
-    writeHeaderValue(os, "delta", binDx_);
-    writeHeaderValue(os, "direction", binDir_);
-
-    vectorField binPoints(nBin_);
-    writeCommented(os, "x co-ords  :");
-    forAll(binPoints, pointI)
+    else
     {
-        binPoints[pointI] = (binMin_ + (pointI + 1)*binDx_)*binDir_;
-        os << tab << binPoints[pointI].x();
-    }
-    os << nl;
-
-    writeCommented(os, "y co-ords  :");
-    forAll(binPoints, pointI)
-    {
-        os << tab << binPoints[pointI].y();
-    }
-    os << nl;
-
-    writeCommented(os, "z co-ords  :");
-    forAll(binPoints, pointI)
-    {
-        os << tab << binPoints[pointI].z();
-    }
-    os << nl;
-
-    writeHeader(os, "");
-    writeCommented(os, "Time");
-
-    for (label j = 0; j < nBin_; j++)
-    {
-        word jn(Foam::name(j) + ':');
-        writeTabbed(os, jn + "total");
-        writeTabbed(os, jn + "pressure");
-        writeTabbed(os, jn + "viscous");
-
-        if (porosity_)
-        {
-            writeTabbed(os, jn + "porous");
-        }
+        FatalErrorInFunction
+            << "Unhandled file index: " << i
+            << abort(FatalError);
     }
 
-    os  << endl;
-}
-
-
-void Foam::forceCoeffs::writeIntegratedData
-(
-    const word& title,
-    const List<Field<scalar> >& coeff
-) const
-{
-    scalar pressure = sum(coeff[0]);
-    scalar viscous = sum(coeff[1]);
-    scalar porous = sum(coeff[2]);
-    scalar total = pressure + viscous + porous;
-
-    if (log_)
-    {
-        Info<< "        " << title << "       : " << total << token::TAB
-            << "("
-            << "pressure: " << pressure << token::TAB
-            << "viscous: " << viscous;
-
-        if (porosity_)
-        {
-            Info<< token::TAB << "porous: " << porous;
-        }
-
-        Info<< ")" << endl;
-    }
-}
-
-
-void Foam::forceCoeffs::writeBinData
-(
-    const List<Field<scalar> > coeffs,
-    Ostream& os
-) const
-{
-    os  << obr_.time().value();
-
-    for (label binI = 0; binI < nBin_; binI++)
-    {
-        scalar total = coeffs[0][binI] + coeffs[1][binI] + coeffs[2][binI];
-
-        os  << tab << total << tab << coeffs[0][binI] << tab << coeffs[1][binI];
-
-        if (porosity_)
-        {
-            os  << tab << coeffs[2][binI];
-        }
-    }
-
-    os  << endl;
+    file(i)<< endl;
 }
 
 
@@ -203,8 +124,7 @@ Foam::forceCoeffs::forceCoeffs
     const word& name,
     const objectRegistry& obr,
     const dictionary& dict,
-    const bool loadFromFiles,
-    const bool readFields
+    const bool loadFromFiles
 )
 :
     forces(name, obr, dict, loadFromFiles, false),
@@ -213,17 +133,11 @@ Foam::forceCoeffs::forceCoeffs
     pitchAxis_(vector::zero),
     magUInf_(0.0),
     lRef_(0.0),
-    Aref_(0.0),
-    coeffFilePtr_(),
-    CmBinFilePtr_(),
-    CdBinFilePtr_(),
-    ClBinFilePtr_()
+    Aref_(0.0)
 {
-    if (readFields)
-    {
-        read(dict);
-        if (log_) Info << endl;
-    }
+    read(dict);
+
+    Info<< endl;
 }
 
 
@@ -237,220 +151,115 @@ Foam::forceCoeffs::~forceCoeffs()
 
 void Foam::forceCoeffs::read(const dictionary& dict)
 {
-    if (!active_)
+    if (active_)
     {
-        return;
-    }
+        forces::read(dict);
 
-    forces::read(dict);
+        // Directions for lift and drag forces, and pitch moment
+        dict.lookup("liftDir") >> liftDir_;
+        dict.lookup("dragDir") >> dragDir_;
+        dict.lookup("pitchAxis") >> pitchAxis_;
 
-    // Directions for lift and drag forces, and pitch moment
-    dict.lookup("liftDir") >> liftDir_;
-    dict.lookup("dragDir") >> dragDir_;
-    dict.lookup("pitchAxis") >> pitchAxis_;
+        // Free stream velocity magnitude
+        dict.lookup("magUInf") >> magUInf_;
 
-    // Free stream velocity magnitude
-    dict.lookup("magUInf") >> magUInf_;
-
-    // Reference length and area scales
-    dict.lookup("lRef") >> lRef_;
-    dict.lookup("Aref") >> Aref_;
-
-    if (writeFields_)
-    {
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
-        tmp<volVectorField> tforceCoeff
-        (
-            new volVectorField
-            (
-                IOobject
-                (
-                    fieldName("forceCoeff"),
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedVector("0", dimless, vector::zero)
-            )
-        );
-
-        obr_.store(tforceCoeff.ptr());
-
-        tmp<volVectorField> tmomentCoeff
-        (
-            new volVectorField
-            (
-                IOobject
-                (
-                    fieldName("momentCoeff"),
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedVector("0", dimless, vector::zero)
-            )
-        );
-
-        obr_.store(tmomentCoeff.ptr());
+        // Reference length and area scales
+        dict.lookup("lRef") >> lRef_;
+        dict.lookup("Aref") >> Aref_;
     }
 }
 
 
 void Foam::forceCoeffs::execute()
 {
-    if (!active_)
-    {
-        return;
-    }
-
-    forces::calcForcesMoment();
-
-    createFiles();
-
-    scalar pDyn = 0.5*rhoRef_*magUInf_*magUInf_;
-
-    // Storage for pressure, viscous and porous contributions to coeffs
-    List<Field<scalar> > momentCoeffs(3);
-    List<Field<scalar> > dragCoeffs(3);
-    List<Field<scalar> > liftCoeffs(3);
-    forAll(liftCoeffs, i)
-    {
-        momentCoeffs[i].setSize(nBin_);
-        dragCoeffs[i].setSize(nBin_);
-        liftCoeffs[i].setSize(nBin_);
-    }
-
-    // Calculate coefficients
-    scalar CmTot = 0;
-    scalar CdTot = 0;
-    scalar ClTot = 0;
-    forAll(liftCoeffs, i)
-    {
-        momentCoeffs[i] = (moment_[i] & pitchAxis_)/(Aref_*pDyn*lRef_);
-        dragCoeffs[i] = (force_[i] & dragDir_)/(Aref_*pDyn);
-        liftCoeffs[i] = (force_[i] & liftDir_)/(Aref_*pDyn);
-
-        CmTot += sum(momentCoeffs[i]);
-        CdTot += sum(dragCoeffs[i]);
-        ClTot += sum(liftCoeffs[i]);
-    }
-
-    scalar ClfTot = ClTot/2.0 + CmTot;
-    scalar ClrTot = ClTot/2.0 - CmTot;
-
-    if (log_) Info
-        << type() << " " << name_ << " output:" << nl
-        << "    Coefficients" << nl;
-
-    writeIntegratedData("Cm", momentCoeffs);
-    writeIntegratedData("Cd", dragCoeffs);
-    writeIntegratedData("Cl", liftCoeffs);
-
-    if (log_) Info
-        << "        Cl(f)    : " << ClfTot << nl
-        << "        Cl(r)    : " << ClrTot << nl
-        << endl;
-
-    if (writeToFile())
-    {
-        coeffFilePtr_()
-            << obr_.time().value() << tab << CmTot << tab  << CdTot
-            << tab << ClTot << tab << ClfTot << tab << ClrTot << endl;
-
-
-        if (nBin_ > 1)
-        {
-            if (binCumulative_)
-            {
-                forAll(liftCoeffs, i)
-                {
-                    for (label binI = 1; binI < nBin_; binI++)
-                    {
-                        liftCoeffs[i][binI] += liftCoeffs[i][binI-1];
-                        dragCoeffs[i][binI] += dragCoeffs[i][binI-1];
-                        momentCoeffs[i][binI] += momentCoeffs[i][binI-1];
-                    }
-                }
-            }
-
-            writeBinData(dragCoeffs, CdBinFilePtr_());
-            writeBinData(liftCoeffs, ClBinFilePtr_());
-            writeBinData(momentCoeffs, CmBinFilePtr_());
-        }
-    }
-
-    // Write state/results information
-    {
-        setResult("Cm", CmTot);
-        setResult("Cd", CdTot);
-        setResult("Cl", ClTot);
-        setResult("Cl(f)", ClfTot);
-        setResult("Cl(r)", ClrTot);
-    }
-
-    if (writeFields_)
-    {
-        const volVectorField& force =
-            obr_.lookupObject<volVectorField>(fieldName("force"));
-
-        const volVectorField& moment =
-            obr_.lookupObject<volVectorField>(fieldName("moment"));
-
-        volVectorField& forceCoeff =
-            const_cast<volVectorField&>
-            (
-                obr_.lookupObject<volVectorField>(fieldName("forceCoeff"))
-            );
-
-        volVectorField& momentCoeff =
-            const_cast<volVectorField&>
-            (
-                obr_.lookupObject<volVectorField>(fieldName("momentCoeff"))
-            );
-
-        dimensionedScalar f0("f0", dimForce, Aref_*pDyn);
-        dimensionedScalar m0("m0", dimForce*dimLength, Aref_*lRef_*pDyn);
-
-        forceCoeff == force/f0;
-        momentCoeff == moment/m0;
-    }
+    // Do nothing - only valid on write
 }
 
 
 void Foam::forceCoeffs::end()
 {
-    // Do nothing
+    // Do nothing - only valid on write
 }
 
 
 void Foam::forceCoeffs::timeSet()
 {
-    // Do nothing
+    // Do nothing - only valid on write
 }
 
 
 void Foam::forceCoeffs::write()
 {
+    forces::calcForcesMoment();
+
     if (!active_)
     {
         return;
     }
 
-    if (writeFields_)
+    if (Pstream::master())
     {
-        const volVectorField& forceCoeff =
-            obr_.lookupObject<volVectorField>(fieldName("forceCoeff"));
+        functionObjectFile::write();
 
-        const volVectorField& momentCoeff =
-            obr_.lookupObject<volVectorField>(fieldName("momentCoeff"));
+        scalar pDyn = 0.5*rhoRef_*magUInf_*magUInf_;
 
-        forceCoeff.write();
-        momentCoeff.write();
+        Field<vector> totForce(force_[0] + force_[1] + force_[2]);
+        Field<vector> totMoment(moment_[0] + moment_[1] + moment_[2]);
+
+        List<Field<scalar> > coeffs(3);
+        coeffs[0].setSize(nBin_);
+        coeffs[1].setSize(nBin_);
+        coeffs[2].setSize(nBin_);
+
+        // lift, drag and moment
+        coeffs[0] = (totForce & liftDir_)/(Aref_*pDyn);
+        coeffs[1] = (totForce & dragDir_)/(Aref_*pDyn);
+        coeffs[2] = (totMoment & pitchAxis_)/(Aref_*lRef_*pDyn);
+
+        scalar Cl = sum(coeffs[0]);
+        scalar Cd = sum(coeffs[1]);
+        scalar Cm = sum(coeffs[2]);
+
+        scalar Clf = Cl/2.0 + Cm;
+        scalar Clr = Cl/2.0 - Cm;
+
+        file(0)
+            << obr_.time().value() << tab << Cm << tab  << Cd
+            << tab << Cl << tab << Clf << tab << Clr << endl;
+
+        if (log_) Info<< type() << " " << name_ << " output:" << nl
+            << "    Cm    = " << Cm << nl
+            << "    Cd    = " << Cd << nl
+            << "    Cl    = " << Cl << nl
+            << "    Cl(f) = " << Clf << nl
+            << "    Cl(r) = " << Clr << endl;
+
+        if (nBin_ > 1)
+        {
+            if (binCumulative_)
+            {
+                for (label i = 1; i < coeffs[0].size(); i++)
+                {
+                    coeffs[0][i] += coeffs[0][i-1];
+                    coeffs[1][i] += coeffs[1][i-1];
+                    coeffs[2][i] += coeffs[2][i-1];
+                }
+            }
+
+            file(1)<< obr_.time().value();
+
+            forAll(coeffs[0], i)
+            {
+                file(1)
+                    << tab << coeffs[2][i]
+                    << tab << coeffs[1][i]
+                    << tab << coeffs[0][i];
+            }
+
+            file(1) << endl;
+        }
+
+        if (log_) Info<< endl;
     }
 }
 

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,7 +27,6 @@ License
 #include "AMIMethod.H"
 #include "meshTools.H"
 #include "mapDistribute.H"
-#include "flipOp.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -64,15 +63,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolationMethodToWord
         }
         default:
         {
-            FatalErrorIn
-            (
-                "const Foam::word"
-                "Foam::AMIInterpolation<SourcePatch, TargetPatch>::"
-                "interpolationMethodToWord"
-                "("
-                    "const interpolationMethod&"
-                ")"
-            )
+            FatalErrorInFunction
                 << "Unhandled interpolationMethod enumeration " << method
                 << abort(FatalError);
         }
@@ -122,16 +113,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::wordTointerpolationMethod
     }
     else
     {
-        FatalErrorIn
-        (
-            "Foam::AMIInterpolation<SourcePatch, TargetPatch>::"
-            "interpolationMethod"
-            "Foam::AMIInterpolation<SourcePatch, TargetPatch>::"
-            "wordTointerpolationMethod"
-            "("
-                "const word&"
-            ")"
-        )
+        FatalErrorInFunction
             << "Invalid interpolationMethod " << im
             << ".  Valid methods are:" << methods
             << exit(FatalError);
@@ -177,15 +159,7 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::projectPointsToSurface
 
     if (nMiss > 0)
     {
-        FatalErrorIn
-        (
-            "void Foam::AMIInterpolation<SourcePatch, TargetPatch>::"
-            "projectPointsToSurface"
-            "("
-                "const searchableSurface&, "
-                "pointField&"
-            ") const"
-        )
+        FatalErrorInFunction
             << "Error projecting points to surface: "
             << nMiss << " faces could not be determined"
             << abort(FatalError);
@@ -605,6 +579,7 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::constructFromSurface
     }
 }
 
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class SourcePatch, class TargetPatch>
@@ -786,15 +761,8 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::AMIInterpolation
      || fineAMI.tgtAddress().size() != targetRestrictAddressing.size()
     )
     {
-        FatalErrorIn
-        (
-            "AMIInterpolation<SourcePatch, TargetPatch>::AMIInterpolation"
-            "("
-                "const AMIInterpolation<SourcePatch, TargetPatch>&, "
-                "const labelList&, "
-                "const labelList&"
-            ")"
-        )   << "Size mismatch." << nl
+        FatalErrorInFunction
+            << "Size mismatch." << nl
             << "Source patch size:" << fineAMI.srcAddress().size() << nl
             << "Source agglomeration size:"
             << sourceRestrictAddressing.size() << nl
@@ -965,7 +933,7 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::update
                 tgtMagSf_,
                 triMode_,
                 reverseTarget_,
-                requireMatch_ && (lowWeightCorrection_ < 0)
+                requireMatch_
             )
         );
 
@@ -1010,33 +978,27 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::update
         // send data back to originating procs. Note that contributions
         // from different processors get added (ListAppendEqOp)
 
-        mapDistributeBase::distribute
+        mapDistribute::distribute
         (
             Pstream::nonBlocking,
             List<labelPair>(),
             tgtPatch.size(),
             map.constructMap(),
-            false,                      // has flip
             map.subMap(),
-            false,                      // has flip
             tgtAddress_,
             ListAppendEqOp<label>(),
-            flipOp(),                   // flip operation
             labelList()
         );
 
-        mapDistributeBase::distribute
+        mapDistribute::distribute
         (
             Pstream::nonBlocking,
             List<labelPair>(),
             tgtPatch.size(),
             map.constructMap(),
-            false,
             map.subMap(),
-            false,
             tgtWeights_,
             ListAppendEqOp<scalar>(),
-            flipOp(),
             scalarList()
         );
 
@@ -1088,7 +1050,7 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::update
                 tgtMagSf_,
                 triMode_,
                 reverseTarget_,
-                requireMatch_ && (lowWeightCorrection_ < 0)
+                requireMatch_
             )
         );
 
@@ -1149,16 +1111,8 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 {
     if (fld.size() != srcAddress_.size())
     {
-        FatalErrorIn
-        (
-            "AMIInterpolation::interpolateToTarget"
-            "("
-                "const UList<Type>&, "
-                "const CombineOp&, "
-                "List<Type>&, "
-                "const UList<Type>&"
-            ") const"
-        )   << "Supplied field size is not equal to source patch size" << nl
+        FatalErrorInFunction
+            << "Supplied field size is not equal to source patch size" << nl
             << "    source patch   = " << srcAddress_.size() << nl
             << "    target patch   = " << tgtAddress_.size() << nl
             << "    supplied field = " << fld.size()
@@ -1169,16 +1123,8 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
     {
         if (defaultValues.size() != tgtAddress_.size())
         {
-            FatalErrorIn
-            (
-                "AMIInterpolation::interpolateToTarget"
-                "("
-                    "const UList<Type>&, "
-                    "const CombineOp&, "
-                    "List<Type>&, "
-                    "const UList<Type>&"
-                ") const"
-            )   << "Employing default values when sum of weights falls below "
+            FatalErrorInFunction
+                << "Employing default values when sum of weights falls below "
                 << lowWeightCorrection_
                 << " but supplied default field size is not equal to target "
                 << "patch size" << nl
@@ -1250,16 +1196,8 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 {
     if (fld.size() != tgtAddress_.size())
     {
-        FatalErrorIn
-        (
-            "AMIInterpolation::interpolateToSource"
-            "("
-                "const UList<Type>&, "
-                "const CombineOp&, "
-                "List<Type>&, "
-                "const UList<Type>&"
-            ") const"
-        )   << "Supplied field size is not equal to target patch size" << nl
+        FatalErrorInFunction
+            << "Supplied field size is not equal to target patch size" << nl
             << "    source patch   = " << srcAddress_.size() << nl
             << "    target patch   = " << tgtAddress_.size() << nl
             << "    supplied field = " << fld.size()
@@ -1270,16 +1208,8 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
     {
         if (defaultValues.size() != srcAddress_.size())
         {
-            FatalErrorIn
-            (
-                "AMIInterpolation::interpolateToSource"
-                "("
-                    "const UList<Type>&, "
-                    "const CombineOp&, "
-                    "List<Type>&, "
-                    "const UList<Type>&"
-                ") const"
-            )   << "Employing default values when sum of weights falls below "
+            FatalErrorInFunction
+                << "Employing default values when sum of weights falls below "
                 << lowWeightCorrection_
                 << " but supplied default field size is not equal to target "
                 << "patch size" << nl

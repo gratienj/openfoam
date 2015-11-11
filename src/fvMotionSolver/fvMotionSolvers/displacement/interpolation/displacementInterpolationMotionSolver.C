@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,13 +44,6 @@ namespace Foam
         dictionary
     );
 
-    addToRunTimeSelectionTable
-    (
-        displacementMotionSolver,
-        displacementInterpolationMotionSolver,
-        displacement
-    );
-
     template<>
     const word IOList<Tuple2<scalar, vector> >::typeName("scalarVectorTable");
 }
@@ -58,7 +51,16 @@ namespace Foam
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::displacementInterpolationMotionSolver::calcInterpolation()
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::displacementInterpolationMotionSolver::
+displacementInterpolationMotionSolver
+(
+    const polyMesh& mesh,
+    const IOdictionary& dict
+)
+:
+    displacementMotionSolver(mesh, dict, typeName)
 {
     // Get zones and their interpolation tables for displacement
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,7 +70,7 @@ void Foam::displacementInterpolationMotionSolver::calcInterpolation()
         coeffDict().lookup("interpolationTables")
     );
 
-    const faceZoneMesh& fZones = mesh().faceZones();
+    const faceZoneMesh& fZones = mesh.faceZones();
 
     times_.setSize(fZones.size());
     displacements_.setSize(fZones.size());
@@ -80,13 +82,9 @@ void Foam::displacementInterpolationMotionSolver::calcInterpolation()
 
         if (zoneI == -1)
         {
-            FatalErrorIn
-            (
-                "displacementInterpolationMotionSolver::"
-                "displacementInterpolationMotionSolver(const polyMesh&,"
-                "Istream&)"
-            )   << "Cannot find zone " << zoneName << endl
-                << "Valid zones are " << mesh().faceZones().names()
+            FatalErrorInFunction
+                << "Cannot find zone " << zoneName << endl
+                << "Valid zones are " << mesh.faceZones().names()
                 << exit(FatalError);
         }
 
@@ -97,9 +95,9 @@ void Foam::displacementInterpolationMotionSolver::calcInterpolation()
             IOobject
             (
                 tableName,
-                mesh().time().constant(),
+                mesh.time().constant(),
                 "tables",
-                mesh(),
+                mesh,
                 IOobject::MUST_READ,
                 IOobject::NO_WRITE,
                 false
@@ -248,12 +246,8 @@ void Foam::displacementInterpolationMotionSolver::calcInterpolation()
 
             if (rangeI == -1 || rangeI == rangeToCoord.size()-1)
             {
-                FatalErrorIn
-                (
-                    "displacementInterpolationMotionSolver::"
-                    "displacementInterpolationMotionSolver"
-                    "(const polyMesh&, Istream&)"
-                )   << "Did not find point " << points0()[pointI]
+                FatalErrorInFunction
+                    << "Did not find point " << points0()[pointI]
                     << " coordinate " << meshCoords[pointI]
                     << " in ranges " << rangeToCoord
                     << abort(FatalError);
@@ -297,36 +291,6 @@ void Foam::displacementInterpolationMotionSolver::calcInterpolation()
 }
 
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::displacementInterpolationMotionSolver::
-displacementInterpolationMotionSolver
-(
-    const polyMesh& mesh,
-    const IOdictionary& dict
-)
-:
-    displacementMotionSolver(mesh, dict, typeName)
-{
-    calcInterpolation();
-}
-
-
-Foam::displacementInterpolationMotionSolver::
-displacementInterpolationMotionSolver
-(
-    const polyMesh& mesh,
-    const IOdictionary& dict,
-    const pointVectorField& pointDisplacement,
-    const pointIOField& points0
-)
-:
-    displacementMotionSolver(mesh, dict, pointDisplacement, points0, typeName)
-{
-    calcInterpolation();
-}
-
-
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::displacementInterpolationMotionSolver::
@@ -341,10 +305,8 @@ Foam::displacementInterpolationMotionSolver::curPoints() const
 {
     if (mesh().nPoints() != points0().size())
     {
-        FatalErrorIn
-        (
-            "displacementInterpolationMotionSolver::curPoints() const"
-        )   << "The number of points in the mesh seems to have changed." << endl
+        FatalErrorInFunction
+            << "The number of points in the mesh seems to have changed." << endl
             << "In constant/polyMesh there are " << points0().size()
             << " points; in the current mesh there are " << mesh().nPoints()
             << " points." << exit(FatalError);

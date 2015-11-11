@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,14 +25,17 @@ License
 
 #include "multiDirRefinement.H"
 #include "polyMesh.H"
+#include "polyTopoChanger.H"
 #include "Time.H"
 #include "undoableMeshCutter.H"
 #include "hexCellLooper.H"
 #include "geomCellLooper.H"
+#include "topoSet.H"
 #include "directions.H"
 #include "hexRef8.H"
 #include "mapPolyMesh.H"
 #include "polyTopoChange.H"
+#include "ListOps.H"
 #include "cellModeller.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -67,11 +70,8 @@ void Foam::multiDirRefinement::addCells
 
         if (iter == splitMap.end())
         {
-            FatalErrorIn
-            (
-                "multiDirRefinement::addCells(const Map<label>&"
-                ", List<refineCell>&)"
-            )   << "Problem : cannot find added cell for cell "
+            FatalErrorInFunction
+                << "Problem : cannot find added cell for cell "
                 << refCell.cellNo() << abort(FatalError);
         }
 
@@ -140,11 +140,8 @@ void Foam::multiDirRefinement::addCells
             }
             else if (origCell[slave] != cellI)
             {
-                FatalErrorIn
-                (
-                    "multiDirRefinement::addCells(const primitiveMesh&"
-                    ", const Map<label>&"
-                )   << "Added cell " << slave << " has two different masters:"
+                FatalErrorInFunction
+                    << "Added cell " << slave << " has two different masters:"
                     << origCell[slave] << " , " << cellI
                     << abort(FatalError);
             }
@@ -164,11 +161,8 @@ void Foam::multiDirRefinement::addCells
 
         if (masterI >= addedCells_.size())
         {
-            FatalErrorIn
-            (
-                "multiDirRefinement::addCells(const primitiveMesh&"
-                ", const Map<label>&"
-            )   << "Map of added cells contains master cell " << masterI
+            FatalErrorInFunction
+                << "Map of added cells contains master cell " << masterI
                 << " which is not a valid cell number" << endl
                 << "This means that the mesh is not consistent with the"
                 << " done refinement" << endl
@@ -262,8 +256,7 @@ void Foam::multiDirRefinement::refineHex8
                 false
             ),
             List<refinementHistory::splitCell8>(0),
-            labelList(0),
-            false
+            labelList(0)
         )                                   // refinement history
     );
 
@@ -296,11 +289,8 @@ void Foam::multiDirRefinement::refineHex8
 
             if (iter == hexCellSet.end())
             {
-                FatalErrorIn
-                (
-                    "multiDirRefinement::refineHex8"
-                    "(polyMesh&, const labelList&, const bool)"
-                )   << "Resulting mesh would not satisfy 2:1 ratio"
+                FatalErrorInFunction
+                    << "Resulting mesh would not satisfy 2:1 ratio"
                     << " when refining cell " << cellI << abort(FatalError);
             }
             else
@@ -315,11 +305,8 @@ void Foam::multiDirRefinement::refineHex8
         {
             if (iter() != 2)
             {
-                FatalErrorIn
-                (
-                    "multiDirRefinement::refineHex8"
-                    "(polyMesh&, const labelList&, const bool)"
-                )   << "Resulting mesh would not satisfy 2:1 ratio"
+                FatalErrorInFunction
+                    << "Resulting mesh would not satisfy 2:1 ratio"
                     << " when refining cell " << iter.key()
                     << abort(FatalError);
             }

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -43,14 +43,11 @@ void Foam::fieldValue::read(const dictionary& dict)
 {
     if (active_)
     {
-        functionObjectFile::read(dict);
-
         dict_ = dict;
 
         log_ = dict.lookupOrDefault<Switch>("log", true);
         dict.lookup("fields") >> fields_;
         dict.lookup("valueOutput") >> valueOutput_;
-        dict.readIfPresent("scaleFactor", scaleFactor_);
     }
 }
 
@@ -59,7 +56,9 @@ void Foam::fieldValue::write()
 {
     if (active_)
     {
-        if (log_) Info << type() << " " << name_ << " output:" << nl;
+        functionObjectFile::write();
+
+        if (log_) Info<< type() << " " << name_ << " output:" << nl;
     }
 }
 
@@ -75,20 +74,28 @@ Foam::fieldValue::fieldValue
     const bool loadFromFiles
 )
 :
-    functionObjectState(obr, name),
-    functionObjectFile(obr, name, valueType, dict),
+    functionObjectFile(obr, name, valueType),
+    name_(name),
     obr_(obr),
     dict_(dict),
+    active_(true),
     log_(true),
-    sourceName_(dict.lookupOrDefault<word>("sourceName", "sampledSurface")),
-    fields_(),
-    valueOutput_(false),
-    scaleFactor_(1.0)
+    sourceName_(word::null),
+    fields_(dict.lookup("fields")),
+    valueOutput_(dict.lookup("valueOutput")),
+    resultDict_(fileName("name"), dictionary::null)
 {
     // Only active if obr is an fvMesh
-    if (setActive<fvMesh>())
+    if (isA<fvMesh>(obr_))
     {
         read(dict);
+    }
+    else
+    {
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name << nl
+            << endl;
+        active_ = false;
     }
 }
 

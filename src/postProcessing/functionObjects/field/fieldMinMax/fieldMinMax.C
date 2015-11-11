@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,45 +49,6 @@ const Foam::NamedEnum<Foam::fieldMinMax::modeType, 2>
 Foam::fieldMinMax::modeTypeNames_;
 
 
-// * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
-
-void Foam::fieldMinMax::writeFileHeader(Ostream& os) const
-{
-    writeHeader(os, "Field minima and maxima");
-    writeCommented(os, "Time");
-
-    if (writeLocation_)
-    {
-        writeTabbed(os, "field");
-        writeTabbed(os, "min");
-        writeTabbed(os, "position(min)");
-
-        if (Pstream::parRun())
-        {
-            writeTabbed(os, "processor");
-        }
-
-        writeTabbed(os, "max");
-        writeTabbed(os, "position(max)");
-
-        if (Pstream::parRun())
-        {
-            writeTabbed(os, "processor");
-        }
-    }
-    else
-    {
-        forAll(fieldSet_, fieldI)
-        {
-            writeTabbed(os, "min(" + fieldSet_[fieldI] + ')');
-            writeTabbed(os, "max(" + fieldSet_[fieldI] + ')');
-        }
-    }
-
-    os  << endl;
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::fieldMinMax::fieldMinMax
@@ -98,20 +59,25 @@ Foam::fieldMinMax::fieldMinMax
     const bool loadFromFiles
 )
 :
-    functionObjectState(obr, name),
-    functionObjectFile(obr, name, typeName, dict),
+    functionObjectFile(obr, name, typeName),
+    name_(name),
     obr_(obr),
+    active_(true),
     log_(true),
-    writeLocation_(true),
+    location_(true),
     mode_(mdMag),
     fieldSet_()
 {
     // Check if the available mesh is an fvMesh otherise deactivate
-    if (setActive<fvMesh>())
+    if (!isA<fvMesh>(obr_))
     {
-        read(dict);
-        writeFileHeader(file());
+        active_ = false;
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_
+            << endl;
     }
+
+    read(dict);
 }
 
 
@@ -127,14 +93,52 @@ void Foam::fieldMinMax::read(const dictionary& dict)
 {
     if (active_)
     {
-        functionObjectFile::read(dict);
-
         log_ = dict.lookupOrDefault<Switch>("log", true);
-        writeLocation_ = dict.lookupOrDefault<Switch>("writeLocation", true);
+        location_ = dict.lookupOrDefault<Switch>("location", true);
 
         mode_ = modeTypeNames_[dict.lookupOrDefault<word>("mode", "magnitude")];
         dict.lookup("fields") >> fieldSet_;
     }
+}
+
+
+void Foam::fieldMinMax::writeFileHeader(const label i)
+{
+    OFstream& file = this->file();
+
+    writeHeader(file, "Field minima and maxima");
+    writeCommented(file, "Time");
+
+    if (location_)
+    {
+        writeTabbed(file, "field");
+
+        writeTabbed(file, "min");
+        writeTabbed(file, "location(min)");
+
+        if (Pstream::parRun())
+        {
+            writeTabbed(file, "processor");
+        }
+
+        writeTabbed(file, "max");
+        writeTabbed(file, "location(max)");
+
+        if (Pstream::parRun())
+        {
+            writeTabbed(file, "processor");
+        }
+    }
+    else
+    {
+        forAll(fieldSet_, fieldI)
+        {
+            writeTabbed(file, "min(" + fieldSet_[fieldI] + ')');
+            writeTabbed(file, "max(" + fieldSet_[fieldI] + ')');
+        }
+    }
+
+    file<< endl;
 }
 
 
@@ -160,7 +164,9 @@ void Foam::fieldMinMax::write()
 {
     if (active_)
     {
-        if (!writeLocation_) file()<< obr_.time().value();
+        functionObjectFile::write();
+
+        if (!location_) file()<< obr_.time().value();
         if (log_) Info<< type() << " " << name_ <<  " output:" << nl;
 
         forAll(fieldSet_, fieldI)
@@ -172,7 +178,7 @@ void Foam::fieldMinMax::write()
             calcMinMaxFields<tensor>(fieldSet_[fieldI], mode_);
         }
 
-        if (!writeLocation_) file()<< endl;
+        if (!location_) file()<< endl;
         if (log_) Info<< endl;
     }
 }

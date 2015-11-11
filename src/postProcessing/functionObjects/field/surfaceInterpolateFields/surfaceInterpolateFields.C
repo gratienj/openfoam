@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,8 +46,7 @@ Foam::surfaceInterpolateFields::surfaceInterpolateFields
     name_(name),
     obr_(obr),
     active_(true),
-    fieldSet_(),
-    log_(true)
+    fieldSet_()
 {
     // Check if the available mesh is an fvMesh otherise deactivate
     if (isA<fvMesh>(obr_))
@@ -57,16 +56,8 @@ Foam::surfaceInterpolateFields::surfaceInterpolateFields
     else
     {
         active_ = false;
-        WarningIn
-        (
-            "surfaceInterpolateFields::surfaceInterpolateFields"
-            "("
-                "const word&, "
-                "const objectRegistry&, "
-                "const dictionary&, "
-                "const bool"
-            ")"
-        )   << "No fvMesh available, deactivating " << name_
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_
             << endl;
     }
 }
@@ -84,7 +75,6 @@ void Foam::surfaceInterpolateFields::read(const dictionary& dict)
 {
     if (active_)
     {
-        log_.readIfPresent("log", dict);
         dict.lookup("fields") >> fieldSet_;
     }
 }
@@ -94,7 +84,7 @@ void Foam::surfaceInterpolateFields::execute()
 {
     if (active_)
     {
-        if (log_) Info<< type() << " " << name_ << " output:" << nl;
+        Info<< type() << " " << name_ << " output:" << nl;
 
         // Clear out any previously loaded fields
         ssf_.clear();
@@ -109,14 +99,17 @@ void Foam::surfaceInterpolateFields::execute()
         interpolateFields<symmTensor>(sSymmtf_);
         interpolateFields<tensor>(stf_);
 
-        if (log_) Info<< endl;
+        Info<< endl;
     }
 }
 
 
 void Foam::surfaceInterpolateFields::end()
 {
-    // Do nothing
+    if (active_)
+    {
+        execute();
+    }
 }
 
 
@@ -130,9 +123,9 @@ void Foam::surfaceInterpolateFields::write()
 {
     if (active_)
     {
-        if (log_) Info
-            << type() << " " << name_ << " output:" << nl
-            << "    Writing interpolated surface fields to "
+        Info<< type() << " " << name_ << " output:" << nl;
+
+        Info<< "    Writing interpolated surface fields to "
             << obr_.time().timeName() << endl;
 
         forAll(ssf_, i)

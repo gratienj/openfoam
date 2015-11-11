@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -57,7 +57,7 @@ void Foam::calcTypes::addSubtract::writeAddSubtractFields
         IOobject::MUST_READ
     );
 
-    if (addSubtractFieldHeader.typeHeaderOk<volScalarField>(false))
+    if (addSubtractFieldHeader.headerOk())
     {
         writeAddSubtractField<scalar>
         (
@@ -108,7 +108,7 @@ void Foam::calcTypes::addSubtract::writeAddSubtractFields
     }
     else
     {
-        FatalErrorIn("calcTypes::addSubtract::writeAddSubtractFields()")
+        FatalErrorInFunction
             << "Unable to read addSubtract field: " << addSubtractFieldName_
             << nl << exit(FatalError);
     }
@@ -162,7 +162,7 @@ void Foam::calcTypes::addSubtract::writeAddSubtractValues
 
     if (!processed)
     {
-        FatalErrorIn("calcTypes::addSubtract::writeAddSubtractValue()")
+        FatalErrorInFunction
             << "Unable to process " << baseFieldName_
             << " + " << addSubtractValueStr_ << nl
             << "No call to addSubtract for fields of type "
@@ -225,7 +225,7 @@ void Foam::calcTypes::addSubtract::preCalc
     }
     else
     {
-        FatalErrorIn("calcTypes::addSubtract::preCalc")
+        FatalErrorInFunction
             << "Invalid calcMode: " << calcModeName << nl
             << "    Valid calcModes are add and subtract" << nl
             << exit(FatalError);
@@ -241,7 +241,7 @@ void Foam::calcTypes::addSubtract::preCalc
     }
     else
     {
-        FatalErrorIn("calcTypes::addSubtract::preCalc")
+        FatalErrorInFunction
             << "addSubtract requires either -field or -value option"
             << nl << exit(FatalError);
     }
@@ -265,7 +265,7 @@ void Foam::calcTypes::addSubtract::calc
         IOobject::MUST_READ
     );
 
-    if (baseFieldHeader.typeHeaderOk<volScalarField>(false))
+    if (baseFieldHeader.headerOk())
     {
         switch (calcType_)
         {
@@ -281,7 +281,7 @@ void Foam::calcTypes::addSubtract::calc
             }
             default:
             {
-                FatalErrorIn("calcTypes::addSubtract::calc")
+                FatalErrorInFunction
                     << "unknown calcType " << calcType_ << nl
                     << abort(FatalError);
             }
@@ -289,7 +289,7 @@ void Foam::calcTypes::addSubtract::calc
     }
     else
     {
-        FatalErrorIn("calcTypes::addSubtract::calc")
+        FatalErrorInFunction
             << "Unable to read base field: " << baseFieldName_
             << nl << exit(FatalError);
     }

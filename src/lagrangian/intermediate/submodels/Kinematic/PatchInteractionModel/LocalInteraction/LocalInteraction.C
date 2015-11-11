@@ -70,7 +70,7 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
         if (it == PatchInteractionModel<CloudType>::itOther)
         {
             const word& patchName = patchData_[patchI].patchName();
-            FatalErrorIn("LocalInteraction(const dictionary&, CloudType&)")
+            FatalErrorInFunction
                 << "Unknown patch interaction type "
                 << interactionTypeName << " for patch " << patchName
                 << ". Valid selections are:"
@@ -255,17 +255,8 @@ bool Foam::LocalInteraction<CloudType>::correct
             }
             default:
             {
-                FatalErrorIn
-                (
-                    "bool LocalInteraction<CloudType>::correct"
-                    "("
-                        "typename CloudType::parcelType&, "
-                        "const polyPatch&, "
-                        "bool&, "
-                        "const scalar, "
-                        "const tetIndices&"
-                    ") const"
-                )   << "Unknown interaction type "
+                FatalErrorInFunction
+                    << "Unknown interaction type "
                     << patchData_[patchI].interactionTypeName()
                     << "(" << it << ") for patch "
                     << patchData_[patchI].patchName()

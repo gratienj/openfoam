@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,141 +30,92 @@ License
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class Type>
-void Foam::nastranSurfaceWriter::writeValue
-(
-    const Type& value,
-    Ostream& os
-) const
-{
-    switch (writeFormat_)
-    {
-        case wfShort:
-        {
-            os  << setw(8) << value;
-            break;
-        }
-        case wfLong:
-        {
-            os  << setw(16) << value;
-            break;
-        }
-        case wfFree:
-        {
-            os  << value;
-            break;
-        }
-    }
-}
-
-
-template<class Type>
 void Foam::nastranSurfaceWriter::writeFaceValue
 (
-    const dataFormat& format,
+    const word& nasFieldName,
     const Type& value,
     const label EID,
-    Ostream& os
+    OFstream& os
 ) const
 {
-    // Fixed short/long formats supporting PLOAD2 and PLOAD4:
-
-    // PLOAD2:
-    // 1 descriptor : PLOAD2
-    // 2 SID        : load set ID
-    // 3 data value : load value - MUST be singular
-    // 4 EID        : element ID
-
-    // PLOAD4:
-    // 1 descriptor : PLOAD4
-    // 2 SID        : load set ID
-    // 3 EID        : element ID
-    // 4 onwards    : load values
+    // Fixed short/long formats:
+    // 1 Nastran distributed load type, e.g. PLOAD4
+    // 2 SID  : load set ID
+    // 3 EID  : element ID
+    // 4 onwards: load values
 
     label SID = 1;
 
     Type scaledValue = scale_*value;
 
-    // Write Keyword
-    writeKeyword(dataFormatNames_[format], os);
-
-    os  << separator_;
-
-    // Write load set ID
-    os.setf(ios_base::right);
-    writeValue(SID, os);
-
-    os  << separator_;
-
-    switch (format)
+    switch (writeFormat_)
     {
-        case dfPLOAD2:
+        case wfShort:
         {
-            if (pTraits<Type>::nComponents == 1)
-            {
-                writeValue(scaledValue, os);
-            }
-            else
-            {
-                WarningIn
-                (
-                    "template<class Type>"
-                    "void Foam::nastranSurfaceWriter::writeNodeValue"
-                    "("
-                        "const dataFormat&, "
-                        "const Type&, "
-                        "const label, "
-                        "OFstream&"
-                    ") const"
-                )
-                    << dataFormatNames_[format] << " requires scalar values "
-                    << "and cannot be used for higher rank values"
-                    << endl;
-
-                writeValue(scalar(0), os);
-            }
-
-            os  << separator_;
-            writeValue(EID, os);
-
-            break;
-        }
-        case dfPLOAD4:
-        {
-            writeValue(EID, os);
+            os.setf(ios_base::left);
+            os  << setw(8) << nasFieldName;
+            os.unsetf(ios_base::left);
+            os.setf(ios_base::right);
+            os  << setw(8) << SID
+                << setw(8) << EID;
 
             for (direction dirI = 0; dirI < pTraits<Type>::nComponents; dirI++)
             {
-                os  << separator_;
-                writeValue(component(scaledValue, dirI), os);
+                os  << setw(8) << component(scaledValue, dirI);
             }
+
+            os.unsetf(ios_base::right);
+
+            break;
+        }
+        case wfLong:
+        {
+            os.setf(ios_base::left);
+            os  << setw(8) << word(nasFieldName + "*");
+            os.unsetf(ios_base::left);
+            os.setf(ios_base::right);
+            os  << setw(16) << SID
+                << setw(16) << EID;
+
+            for (direction dirI = 0; dirI < pTraits<Type>::nComponents; dirI++)
+            {
+                os  << setw(16) << component(scaledValue, dirI);
+            }
+
+            os.unsetf(ios_base::right);
+
+            os  << nl;
+
+            os.setf(ios_base::left);
+            os  << '*';
+            os.unsetf(ios_base::left);
+
+            break;
+        }
+        case wfFree:
+        {
+            os  << nasFieldName << ','
+                << SID << ','
+                << EID;
+
+            for (direction dirI = 0; dirI < pTraits<Type>::nComponents; dirI++)
+            {
+                os  << ',' << component(scaledValue, dirI);
+            }
+
             break;
         }
         default:
         {
-            WarningIn
-            (
-                "template<class Type>"
-                "void Foam::nastranSurfaceWriter::writeNodeValue"
-                "("
-                    "const dataFormat&, "
-                    "const Type&, "
-                    "const label, "
-                    "OFstream&"
-                ") const"
-            )
-                << "Unhandled enumeration " << dataFormatNames_[format]
-                << endl;
         }
     }
-
-    os.unsetf(ios_base::right);
 
     os << nl;
 }
 
 
 template<class Type>
-Foam::fileName Foam::nastranSurfaceWriter::writeTemplate
+void Foam::nastranSurfaceWriter::writeTemplate
 (
     const fileName& outputDir,
     const fileName& surfaceName,
@@ -176,32 +127,18 @@ Foam::fileName Foam::nastranSurfaceWriter::writeTemplate
     const bool verbose
 ) const
 {
-
     if (!fieldMap_.found(fieldName))
     {
-        WarningIn
-        (
-            "void Foam::nastranSurfaceWriter::writeTemplate"
-            "("
-                "const fileName&, "
-                "const fileName&, "
-                "const pointField&, "
-                "const faceList&, "
-                "const word&, "
-                "const Field<Type>&, "
-                "const bool, "
-                "const bool"
-            ") const"
-        )
+        WarningInFunction
             << "No mapping found between field " << fieldName
             << " and corresponding Nastran field.  Available types are:"
             << fieldMap_
             << exit(FatalError);
 
-        return fileName::null;
+        return;
     }
 
-    const dataFormat& format(fieldMap_[fieldName]);
+    const word& nasFieldName(fieldMap_[fieldName]);
 
     if (!isDir(outputDir/fieldName))
     {
@@ -211,7 +148,7 @@ Foam::fileName Foam::nastranSurfaceWriter::writeTemplate
     // const scalar timeValue = Foam::name(this->mesh().time().timeValue());
     const scalar timeValue = 0.0;
 
-    OFstream os(outputDir/fieldName/surfaceName + ".nas");
+    OFstream os(outputDir/fieldName/surfaceName + ".dat");
     formatOS(os);
 
     if (verbose)
@@ -253,7 +190,7 @@ Foam::fileName Foam::nastranSurfaceWriter::writeTemplate
                 }
                 v /= f.size();
 
-                writeFaceValue(format, v, ++n, os);
+                writeFaceValue(nasFieldName, v, ++n, os);
             }
         }
     }
@@ -267,16 +204,12 @@ Foam::fileName Foam::nastranSurfaceWriter::writeTemplate
 
             forAll(dFaces, faceI)
             {
-                writeFaceValue(format, values[faceI], ++n, os);
+                writeFaceValue(nasFieldName, values[faceI], ++n, os);
             }
         }
     }
 
-    writeFooter(os);
-
     os  << "ENDDATA" << endl;
-
-    return os.name();
 }
 
 

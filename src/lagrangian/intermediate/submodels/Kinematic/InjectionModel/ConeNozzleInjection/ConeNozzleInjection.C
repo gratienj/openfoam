@@ -56,7 +56,7 @@ void Foam::ConeNozzleInjection<CloudType>::setInjectionMethod()
     }
     else
     {
-        FatalErrorIn("Foam::InjectionModel<CloudType>::setInjectionMethod()")
+        FatalErrorInFunction
             << "injectionMethod must be either 'point' or 'disc'"
             << exit(FatalError);
     }
@@ -84,7 +84,7 @@ void Foam::ConeNozzleInjection<CloudType>::setFlowType()
     }
     else
     {
-        FatalErrorIn("Foam::InjectionModel<CloudType>::setFlowType()")
+        FatalErrorInFunction
             << "flowType must be either 'constantVelocity', "
             <<"'pressureDrivenVelocity' or 'flowRateAndDischarge'"
             << exit(FatalError);
@@ -162,19 +162,9 @@ Foam::ConeNozzleInjection<CloudType>::ConeNozzleInjection
 {
     if (innerDiameter_ >= outerDiameter_)
     {
-        FatalErrorIn
-        (
-            "Foam::ConeNozzleInjection<CloudType>::ConeNozzleInjection"
-            "("
-                "const dictionary&, "
-                "CloudType&, "
-                "const word&"
-            ")"
-        )
-            << "Inner diameter must be less than the outer diameter:" << nl
-            << "    innerDiameter: " << innerDiameter_ << nl
-            << "    outerDiameter: " << outerDiameter_
-            << exit(FatalError);
+        FatalErrorInFunction
+         << "innerNozzleDiameter >= outerNozzleDiameter" << nl
+         << exit(FatalError);
     }
 
     duration_ = owner.db().time().userTimeToTime(duration_);
@@ -268,7 +258,7 @@ void Foam::ConeNozzleInjection<CloudType>::updateMesh()
         }
         default:
         {
-            // Do nothing
+            // do nothing
         }
     }
 }
@@ -347,10 +337,9 @@ void Foam::ConeNozzleInjection<CloudType>::setPositionAndCell
         }
         case imDisc:
         {
-            scalar frac = rndGen.globalSample01<scalar>();
+            scalar frac = rndGen.sample01<scalar>();
             scalar dr = outerDiameter_ - innerDiameter_;
             scalar r = 0.5*(innerDiameter_ + frac*dr);
-
             position = position_ + r*normal_;
 
             this->findCellAtPosition
@@ -358,25 +347,15 @@ void Foam::ConeNozzleInjection<CloudType>::setPositionAndCell
                 cellOwner,
                 tetFaceI,
                 tetPtI,
-                position
+                position,
+                false
             );
             break;
         }
         default:
         {
-            FatalErrorIn
-            (
-                "void Foam::ConeNozzleInjection<CloudType>::setPositionAndCell"
-                "("
-                    "const label, "
-                    "const label, "
-                    "const scalar, "
-                    "vector&, "
-                    "label&, "
-                    "label&, "
-                    "label&"
-                ")"
-            )<< "Unknown injectionMethod type" << nl
+            FatalErrorInFunction
+             << "Unknown injectionMethod type" << nl
              << exit(FatalError);
         }
     }
@@ -394,7 +373,7 @@ void Foam::ConeNozzleInjection<CloudType>::setProperties
 {
     cachedRandom& rndGen = this->owner().rndGen();
 
-    // Set particle velocity
+    // set particle velocity
     const scalar deg2Rad = mathematical::pi/180.0;
 
     scalar t = time - this->SOI_;
@@ -444,7 +423,7 @@ void Foam::ConeNozzleInjection<CloudType>::setProperties
         }
     }
 
-    // Set particle diameter
+    // set particle diameter
     parcel.d() = sizeDistribution_->sample();
 }
 

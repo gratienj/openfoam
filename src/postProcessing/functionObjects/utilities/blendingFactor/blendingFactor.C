@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,19 +34,6 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * //
-
-void Foam::blendingFactor::writeFileHeader(Ostream& os) const
-{
-    writeHeader(os, "Blending factor");
-    writeCommented(os, "Time");
-    writeTabbed(os, "Scheme1");
-    writeTabbed(os, "Scheme2");
-    writeTabbed(os, "Blended");
-    os  << endl;
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::blendingFactor::blendingFactor
@@ -57,44 +44,22 @@ Foam::blendingFactor::blendingFactor
     const bool loadFromFiles
 )
 :
-    functionObjectState(obr, name),
-    functionObjectFile(obr, name, typeName, dict),
     name_(name),
     obr_(obr),
-    phiName_("phi"),
-    fieldName_("unknown-fieldName"),
-    resultName_(word::null),
-    tolerance_(0.001),
-    log_(true)
+    active_(true),
+    phiName_("unknown-phiName"),
+    fieldName_("unknown-fieldName")
 {
     // Check if the available mesh is an fvMesh, otherwise deactivate
-    if (setActive<fvMesh>())
+    if (!isA<fvMesh>(obr_))
     {
-        read(dict);
-        writeFileHeader(file());
-
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
-        volScalarField* indicatorPtr
-        (
-            new volScalarField
-            (
-                IOobject
-                (
-                    resultName_,
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedScalar("0", dimless, 0.0),
-                zeroGradientFvPatchScalarField::typeName
-            )
-        );
-
-        mesh.objectRegistry::store(indicatorPtr);
+        active_ = false;
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_ << nl
+            << endl;
     }
+
+    read(dict);
 }
 
 
@@ -110,26 +75,8 @@ void Foam::blendingFactor::read(const dictionary& dict)
 {
     if (active_)
     {
-        functionObjectFile::read(dict);
-
-        log_.readIfPresent("log", dict);
-
-        dict.readIfPresent("phiName", phiName_);
+        phiName_ = dict.lookupOrDefault<word>("phiName", "phi");
         dict.lookup("fieldName") >> fieldName_;
-
-
-        if (!dict.readIfPresent("resultName", resultName_))
-        {
-            resultName_ = name_ + ':' + fieldName_;
-        }
-
-        dict.readIfPresent("tolerance", tolerance_);
-        if ((tolerance_ < 0) || (tolerance_ > 1))
-        {
-            FatalErrorIn("void Foam::blendingFactor::read(const dictionary&)")
-                << "tolerance must be in the range 0 to 1.  Supplied value: "
-                << tolerance_ << exit(FatalError);
-        }
     }
 }
 
@@ -146,9 +93,11 @@ void Foam::blendingFactor::execute()
 
 void Foam::blendingFactor::end()
 {
-    // Do nothing
+    if (active_)
+    {
+        execute();
+    }
 }
-
 
 void Foam::blendingFactor::timeSet()
 {
@@ -160,15 +109,16 @@ void Foam::blendingFactor::write()
 {
     if (active_)
     {
-        const volScalarField& indicator =
-            obr_.lookupObject<volScalarField>(resultName_);
+        const word fieldName = "blendingFactor:" + fieldName_;
 
-        if (log_) Info
-            << type() << " " << name_ << " output:" << nl
-            << "    writing field " << indicator.name() << nl
+        const volScalarField& blendingFactor =
+            obr_.lookupObject<volScalarField>(fieldName);
+
+        Info<< type() << " " << name_ << " output:" << nl
+            << "    writing field " << blendingFactor.name() << nl
             << endl;
 
-        indicator.write();
+        blendingFactor.write();
     }
 }
 

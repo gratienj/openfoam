@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -135,7 +135,7 @@ Foam::triSurfaceRegionSearch::treeByRegion() const
 
     //            if (nPoints != surface().points().size())
     //            {
-    //                WarningIn("triSurfaceRegionSearch::treeByRegion() const")
+    //                WarningInFunction
     //                    << "Surface does not have compact point numbering. "
     //                    << "Of " << surface().points().size()
     //                    << " only " << nPoints
@@ -163,7 +163,7 @@ Foam::triSurfaceRegionSearch::treeByRegion() const
                 (
                     treeDataIndirectTriSurface
                     (
-                        false,              //true,
+                        true,
                         indirectRegionPatches_[regionI],
                         tolerance()
                     ),
@@ -211,7 +211,6 @@ void Foam::triSurfaceRegionSearch::findNearest
             }
 
             const treeType& octree = octrees[treeI];
-            const treeDataIndirectTriSurface::findNearestOp nearOp(octree);
 
             forAll(samples, i)
             {
@@ -224,7 +223,7 @@ void Foam::triSurfaceRegionSearch::findNearest
                 (
                     samples[i],
                     nearestDistSqr[i],
-                    nearOp
+                    treeDataIndirectTriSurface::findNearestOp(octree)
                 );
 
                 if

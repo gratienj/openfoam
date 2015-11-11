@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -194,20 +194,15 @@ void Foam::fieldToCell::applyToSet
         false
     );
 
-    // Note: should check for volScalarField but that introduces depencendy
-    //       on volMesh so just use another type with processor-local scope
-    if (!fieldObject.typeHeaderOk<labelIOList>(false))
+    if (!fieldObject.headerOk())
     {
-        WarningIn
-        (
-            "fieldToCell::applyToSet(const topoSetSource::setAction"
-            ", topoSet& set)"
-        )   << "Cannot read field " << fieldName_
+        WarningInFunction
+            << "Cannot read field " << fieldName_
             << " from time " << mesh().time().timeName() << endl;
     }
     else if (fieldObject.headerClassName() == "volScalarField")
     {
-        IFstream str(typeFilePath<labelIOList>(fieldObject));
+        IFstream str(fieldObject.filePath());
 
         // Read dictionary
         fieldDictionary fieldDict(fieldObject, fieldObject.headerClassName());
@@ -218,7 +213,7 @@ void Foam::fieldToCell::applyToSet
     }
     else if (fieldObject.headerClassName() == "volVectorField")
     {
-        IFstream str(typeFilePath<labelIOList>(fieldObject));
+        IFstream str(fieldObject.filePath());
 
         // Read dictionary
         fieldDictionary fieldDict(fieldObject, fieldObject.headerClassName());
@@ -229,11 +224,8 @@ void Foam::fieldToCell::applyToSet
     }
     else
     {
-        WarningIn
-        (
-            "fieldToCell::applyToSet(const topoSetSource::setAction"
-            ", topoSet& set)"
-        )   << "Cannot handle fields of type " << fieldObject.headerClassName()
+        WarningInFunction
+            << "Cannot handle fields of type " << fieldObject.headerClassName()
             << endl;
     }
 }

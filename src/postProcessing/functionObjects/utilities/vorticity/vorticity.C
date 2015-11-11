@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2014-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,23 +50,14 @@ Foam::vorticity::vorticity
     obr_(obr),
     active_(true),
     UName_("U"),
-    resultName_(name),
-    log_(true)
+    outputName_(typeName)
 {
     // Check if the available mesh is an fvMesh, otherwise deactivate
     if (!isA<fvMesh>(obr_))
     {
         active_ = false;
-        WarningIn
-        (
-            "vorticity::vorticity"
-            "("
-                "const word&, "
-                "const objectRegistry&, "
-                "const dictionary&, "
-                "const bool"
-            ")"
-        )   << "No fvMesh available, deactivating " << name_ << nl
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_ << nl
             << endl;
     }
 
@@ -82,7 +73,7 @@ Foam::vorticity::vorticity
             (
                 IOobject
                 (
-                    resultName_,
+                    outputName_,
                     mesh.time().timeName(),
                     mesh,
                     IOobject::NO_READ,
@@ -110,16 +101,10 @@ void Foam::vorticity::read(const dictionary& dict)
 {
     if (active_)
     {
-        log_.readIfPresent("log", dict);
-        dict.readIfPresent("UName", UName_);
-
-        if (!dict.readIfPresent("resultName", resultName_))
+        UName_ = dict.lookupOrDefault<word>("UName", "U");
+        if (UName_ != "U")
         {
-            resultName_ = name_;
-            if (UName_ != "U")
-            {
-                resultName_ = resultName_ + "(" + UName_ + ")";
-            }
+            outputName_ = typeName + "(" + UName_ + ")";
         }
     }
 }
@@ -134,7 +119,7 @@ void Foam::vorticity::execute()
         volVectorField& vorticity =
             const_cast<volVectorField&>
             (
-                obr_.lookupObject<volVectorField>(resultName_)
+                obr_.lookupObject<volVectorField>(outputName_)
             );
 
         vorticity = fvc::curl(U);
@@ -144,7 +129,10 @@ void Foam::vorticity::execute()
 
 void Foam::vorticity::end()
 {
-    // Do nothing
+    if (active_)
+    {
+        execute();
+    }
 }
 
 
@@ -159,10 +147,9 @@ void Foam::vorticity::write()
     if (active_)
     {
         const volVectorField& vorticity =
-            obr_.lookupObject<volVectorField>(resultName_);
+            obr_.lookupObject<volVectorField>(outputName_);
 
-        if (log_) Info
-            << type() << " " << name_ << " output:" << nl
+        Info<< type() << " " << name_ << " output:" << nl
             << "    writing field " << vorticity.name() << nl
             << endl;
 

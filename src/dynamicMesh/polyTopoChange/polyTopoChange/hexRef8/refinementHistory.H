@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,7 @@ Description
     All refinement history. Used in unrefinement.
 
     - visibleCells: valid for the current mesh and contains per cell -1
-      (cell unrefined) or an index into splitCells_.
+    (cell unrefined) or an index into splitCells_.
     - splitCells: for every split contains the parent (also index into
       splitCells) and optionally a subsplit as 8 indices into splitCells.
       Note that the numbers in splitCells are not cell labels, they are purely
@@ -71,14 +71,12 @@ SourceFiles
 #ifndef refinementHistory_H
 #define refinementHistory_H
 
-#include "UPtrList.H"
 #include "DynamicList.H"
 #include "labelList.H"
 #include "FixedList.H"
+#include "SLList.H"
 #include "autoPtr.H"
 #include "regIOobject.H"
-#include "boolList.H"
-#include "labelPair.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -95,8 +93,7 @@ class mapDistributePolyMesh;
 
 class refinementHistory
 :
-    public regIOobject,
-    public refCount
+    public regIOobject
 {
 public:
 
@@ -125,11 +122,50 @@ public:
         splitCell8(const splitCell8&);
 
         //- Copy operator since autoPtr otherwise 'steals' storage.
-        void operator=(const splitCell8& s);
+        void operator=(const splitCell8& s)
+        {
+            // Check for assignment to self
+            if (this == &s)
+            {
+                FatalErrorInFunction
+                    << "Attempted assignment to self"
+                    << abort(FatalError);
+            }
 
-        bool operator==(const splitCell8& s) const;
+            parent_ = s.parent_;
 
-        bool operator!=(const splitCell8& s) const;
+            addedCellsPtr_.reset
+            (
+                s.addedCellsPtr_.valid()
+              ? new FixedList<label, 8>(s.addedCellsPtr_())
+              : NULL
+            );
+        }
+
+        bool operator==(const splitCell8& s) const
+        {
+            if (addedCellsPtr_.valid() != s.addedCellsPtr_.valid())
+            {
+                return false;
+            }
+            else if (parent_ != s.parent_)
+            {
+                return false;
+            }
+            else if (addedCellsPtr_.valid())
+            {
+                return addedCellsPtr_() == s.addedCellsPtr_();
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        bool operator!=(const splitCell8& s) const
+        {
+            return !operator==(s);
+        }
 
         friend Istream& operator>>(Istream&, splitCell8&);
         friend Ostream& operator<<(Ostream&, const splitCell8&);
@@ -139,9 +175,6 @@ public:
 private:
 
     // Private data
-
-        //- Is active?
-        bool active_;
 
         //- Storage for splitCells
         DynamicList<splitCell8> splitCells_;
@@ -193,15 +226,6 @@ private:
             labelList& splitCellNum
         ) const;
 
-        // For distribution:
-
-            //- Mark index and all its descendants
-            void mark(const label, const label, labelList&) const;
-
-            //- Mark cells according to top parent. Return number of clusters
-            //  (set of cells originating from same parent)
-            label markCommonCells(labelList& cellToCluster) const;
-
 public:
 
     // Declare name of the class and its debug switch
@@ -210,47 +234,25 @@ public:
 
     // Constructors
 
-        //- Construct (read) given an IOobject. If global number of visible
-        //  cells > 0 becomes active
+        //- Construct (read) given an IOobject
         refinementHistory(const IOobject&);
 
-        //- Construct (read) or construct from components
+        //- Construct (read) or construct null
         refinementHistory
         (
             const IOobject&,
             const List<splitCell8>& splitCells,
-            const labelList& visibleCells,
-            const bool active
+            const labelList& visibleCells
         );
 
         //- Construct (read) or construct from initial number of cells
-        //  (all visible). If global number of visible
-        //  cells > 0 becomes active
+        //  (all visible)
         refinementHistory(const IOobject&, const label nCells);
-
-        //- Construct (read) or construct from initial number of cells
-        //  (all visible) and active flag
-        refinementHistory
-        (
-            const IOobject&,
-            const label nCells,
-            const bool active
-        );
 
         //- Construct as copy
         refinementHistory(const IOobject&, const refinementHistory&);
 
-        //- Construct from multiple refinement histories. If global number of
-        //  visible cells > 0 becomes active
-        refinementHistory
-        (
-            const IOobject&,
-            const UPtrList<const labelList>& cellMaps,
-            const UPtrList<const refinementHistory>&
-        );
-
-        //- Construct from Istream. If global number of
-        //  visible cells > 0 becomes active
+        //- Construct from Istream
         refinementHistory(const IOobject&, Istream&);
 
 
@@ -276,16 +278,12 @@ public:
             return freeSplitCells_;
         }
 
-        //- Is there unrefinement history?
+        //- Is there unrefinement history. Note that this will fall over if
+        //  there are 0 cells in the mesh. But this gives problems with
+        //  lots of other programs anyway.
         bool active() const
         {
-            return active_;
-        }
-
-        //- Is there unrefinement history?
-        bool& active()
-        {
-            return active_;
+            return visibleCells_.size() > 0;
         }
 
         //- Get parent of cell
@@ -295,7 +293,7 @@ public:
 
             if (index < 0)
             {
-                FatalErrorIn("refinementHistory::parentIndex(const label)")
+                FatalErrorInFunction
                     << "Cell " << cellI << " is not visible"
                     << abort(FatalError);
             }
@@ -316,23 +314,6 @@ public:
             const labelList& combinedCells
         );
 
-        //- Low level clone
-        autoPtr<refinementHistory> clone
-        (
-            const IOobject& io,
-            const labelList& decomposition,
-            const labelList& splitCellProc,
-            const labelList& splitCellNum,
-            const label procI,
-            labelList& oldToNewSplit
-        ) const;
-
-        //- Create clone from subset
-        autoPtr<refinementHistory> clone
-        (
-            const IOobject& io,
-            const labelList& cellMap
-        ) const;
 
         //- Update numbering for mesh changes
         void updateMesh(const mapPolyMesh&);
@@ -350,6 +331,7 @@ public:
         //  handle parts recombined in multiple passes.
         void distribute(const mapDistributePolyMesh&);
 
+
         //- Compact splitCells_. Removes all freeSplitCells_ elements.
         void compact();
 
@@ -361,44 +343,20 @@ public:
         void writeDebug() const;
 
 
-        //- Read object. If global number of visible cells > 0 becomes active
-        virtual bool read();
-
-        //- ReadData function required for regIOobject read operation. Note:
-        //  does not do a reduction - does not set active_ flag
+        //- ReadData function required for regIOobject read operation
         virtual bool readData(Istream&);
 
         //- WriteData function required for regIOobject write operation
         virtual bool writeData(Ostream&) const;
 
-        // Helpers for decompositionConstraint
 
-            //- Add my decomposition constraints
-            void add
-            (
-                boolList& blockedFace,
-                PtrList<labelList>& specifiedProcessorFaces,
-                labelList& specifiedProcessor,
-                List<labelPair>& explicitConnections
-            ) const;
+    // Friend Functions
 
-            //- Apply any additional post-decomposition constraints
-            void apply
-            (
-                const boolList& blockedFace,
-                const PtrList<labelList>& specifiedProcessorFaces,
-                const labelList& specifiedProcessor,
-                const List<labelPair>& explicitConnections,
-                labelList& decomposition
-            ) const;
-
+    // Friend Operators
 
     // IOstream Operators
 
-        //- Istream operator. Note: does not do a reduction - does not set
-        //  active_ flag
         friend Istream& operator>>(Istream&, refinementHistory&);
-
         friend Ostream& operator<<(Ostream&, const refinementHistory&);
 };
 

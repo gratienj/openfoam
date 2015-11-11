@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,8 +32,6 @@ License
 
 struct sigaction Foam::sigSegv::oldAction_;
 
-bool Foam::sigSegv::sigActive_ = false;
-
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -42,10 +40,8 @@ void Foam::sigSegv::sigHandler(int)
     // Reset old handling
     if (sigaction(SIGSEGV, &oldAction_, NULL) < 0)
     {
-        FatalErrorIn
-        (
-            "Foam::sigSegv::sigHandler()"
-        )   << "Cannot reset SIGSEGV trapping"
+        FatalErrorInFunction
+            << "Cannot reset SIGSEGV trapping"
             << abort(FatalError);
     }
 
@@ -63,7 +59,7 @@ void Foam::sigSegv::sigHandler(int)
 
 Foam::sigSegv::sigSegv()
 {
-    set(false);
+    oldAction_.sa_handler = NULL;
 }
 
 
@@ -71,7 +67,13 @@ Foam::sigSegv::sigSegv()
 
 Foam::sigSegv::~sigSegv()
 {
-    unset(false);
+    // Reset old handling
+    if (sigaction(SIGSEGV, &oldAction_, NULL) < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot reset SIGSEGV trapping"
+            << abort(FatalError);
+    }
 }
 
 
@@ -79,38 +81,22 @@ Foam::sigSegv::~sigSegv()
 
 void Foam::sigSegv::set(const bool)
 {
-    if (!sigActive_)
+    if (oldAction_.sa_handler)
     {
-        struct sigaction newAction;
-        newAction.sa_handler = sigHandler;
-        newAction.sa_flags = SA_NODEFER;
-        sigemptyset(&newAction.sa_mask);
-        if (sigaction(SIGSEGV, &newAction, &oldAction_) < 0)
-        {
-            FatalErrorIn
-            (
-                "Foam::sigSegv::set()"
-            )   << "Cannot set SIGSEGV trapping"
-                << abort(FatalError);
-        }
-        sigActive_ = true;
+        FatalErrorInFunction
+            << "Cannot call sigSegv::set() more than once"
+            << abort(FatalError);
     }
-}
 
-
-void Foam::sigSegv::unset(const bool)
-{
-    if (sigActive_)
+    struct sigaction newAction;
+    newAction.sa_handler = sigHandler;
+    newAction.sa_flags = SA_NODEFER;
+    sigemptyset(&newAction.sa_mask);
+    if (sigaction(SIGSEGV, &newAction, &oldAction_) < 0)
     {
-        if (sigaction(SIGSEGV, &oldAction_, NULL) < 0)
-        {
-            FatalErrorIn
-            (
-                "Foam::sigSegv::unset()"
-            )   << "Cannot reset SIGSEGV trapping"
-                << abort(FatalError);
-        }
-        sigActive_ = false;
+        FatalErrorInFunction
+            << "Cannot set SIGSEGV trapping"
+            << abort(FatalError);
     }
 }
 

@@ -28,15 +28,16 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "fvPatchFieldMapper.H"
 #include "volFields.H"
+#include "OFstream.H"
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeHeader
 (
-    Ostream& os
+    OFstream& os
 ) const
 {
-    os  << "# Values: magSf T qDot htc" << endl;
+    os  << "# Values: magSf value qDot htc" << endl;
 }
 
 
@@ -74,40 +75,8 @@ externalCoupledTemperatureMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    //externalCoupledMixedFvPatchField<scalar>(p, iF, dict)
-    externalCoupledMixedFvPatchField<scalar>(p, iF)
-{
-    if (dict.found("refValue"))
-    {
-        // Initialise same way as mixed
-        this->refValue() = scalarField("refValue", dict, p.size());
-        this->refGrad() = scalarField("refGradient", dict, p.size());
-        this->valueFraction() = scalarField("valueFraction", dict, p.size());
-
-        evaluate();
-    }
-    else
-    {
-        // For convenience: initialise as fixedValue with either read value
-        // or extrapolated value
-        if (dict.found("value"))
-        {
-            fvPatchField<scalar>::operator=
-            (
-                scalarField("value", dict, p.size())
-            );
-        }
-        else
-        {
-            fvPatchField<scalar>::operator=(this->patchInternalField());
-        }
-
-        // Initialise as a fixed value
-        this->refValue() = *this;
-        this->refGrad() = pTraits<scalar>::zero;
-        this->valueFraction() = 1.0;
-    }
-}
+    externalCoupledMixedFvPatchField<scalar>(p, iF, dict)
+{}
 
 
 Foam::externalCoupledTemperatureMixedFvPatchScalarField::
@@ -140,14 +109,21 @@ Foam::externalCoupledTemperatureMixedFvPatchScalarField::
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeData
+void Foam::externalCoupledTemperatureMixedFvPatchScalarField::transferData
 (
-    Ostream& os
+    OFstream& os
 ) const
 {
+    if (log())
+    {
+        Info<< type() << ": " << this->patch().name()
+            << ": writing data to " << os.name()
+            << endl;
+    }
+
     const label patchI = patch().index();
 
-    // Heat flux [W/m2]
+    // heat flux [W/m2]
     scalarField qDot(this->patch().size(), 0.0);
 
     typedef compressible::turbulenceModel cmpTurbModelType;
@@ -161,7 +137,7 @@ void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeData
         )
     );
 
-    static word thermoName("thermophysicalProperties");
+    static word thermoName(basicThermo::dictName);
 
     if (db().foundObject<cmpTurbModelType>(turbName))
     {
@@ -184,60 +160,99 @@ void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeData
     }
     else
     {
-        FatalErrorIn
-        (
-            "void Foam::externalCoupledTemperatureMixedFvPatchScalarField::"
-            "transferData"
-            "("
-                "Ostream&"
-            ") const"
-        )   << "Condition requires either compressible turbulence and/or "
+        FatalErrorInFunction
+            << "Condition requires either compressible turbulence and/or "
             << "thermo model to be available" << exit(FatalError);
     }
 
-    // Patch temperature [K]
-    const scalarField& Tp(*this);
+    // patch temperature [K]
+    const scalarField Tp(*this);
 
-    // Near wall cell temperature [K]
+    // near wall cell temperature [K]
     const scalarField Tc(patchInternalField());
 
-    // Heat transfer coefficient [W/m2/K]
+    // heat transfer coefficient [W/m2/K]
     const scalarField htc(qDot/(Tp - Tc + ROOTVSMALL));
 
-    const Field<scalar>& magSf(this->patch().magSf());
-
-    forAll(patch(), faceI)
+    if (Pstream::parRun())
     {
-        os  << magSf[faceI] << token::SPACE
-            << Tp[faceI] << token::SPACE
-            << qDot[faceI] << token::SPACE
-            << htc[faceI] << token::SPACE
-            << nl;
+        int tag = Pstream::msgType() + 1;
+
+        List<Field<scalar> > magSfs(Pstream::nProcs());
+        magSfs[Pstream::myProcNo()].setSize(this->patch().size());
+        magSfs[Pstream::myProcNo()] = this->patch().magSf();
+        Pstream::gatherList(magSfs, tag);
+
+        List<Field<scalar> > values(Pstream::nProcs());
+        values[Pstream::myProcNo()].setSize(this->patch().size());
+        values[Pstream::myProcNo()] = Tp;
+        Pstream::gatherList(values, tag);
+
+        List<Field<scalar> > qDots(Pstream::nProcs());
+        qDots[Pstream::myProcNo()].setSize(this->patch().size());
+        qDots[Pstream::myProcNo()] = qDot;
+        Pstream::gatherList(qDots, tag);
+
+        List<Field<scalar> > htcs(Pstream::nProcs());
+        htcs[Pstream::myProcNo()].setSize(this->patch().size());
+        htcs[Pstream::myProcNo()] = htc;
+        Pstream::gatherList(htcs, tag);
+
+        if (Pstream::master())
+        {
+            forAll(values, procI)
+            {
+                const Field<scalar>& magSf = magSfs[procI];
+                const Field<scalar>& value = values[procI];
+                const Field<scalar>& qDot = qDots[procI];
+                const Field<scalar>& htc = htcs[procI];
+
+                forAll(magSf, faceI)
+                {
+                    os  << magSf[faceI] << token::SPACE
+                        << value[faceI] << token::SPACE
+                        << qDot[faceI] << token::SPACE
+                        << htc[faceI] << token::SPACE
+                        << nl;
+                }
+            }
+
+            os.flush();
+        }
+    }
+    else
+    {
+        const Field<scalar>& magSf(this->patch().magSf());
+
+        forAll(patch(), faceI)
+        {
+            os  << magSf[faceI] << token::SPACE
+                << Tp[faceI] << token::SPACE
+                << qDot[faceI] << token::SPACE
+                << htc[faceI] << token::SPACE
+                << nl;
+        }
+
+        os.flush();
     }
 }
 
 
-void Foam::externalCoupledTemperatureMixedFvPatchScalarField::readData
+void Foam::externalCoupledTemperatureMixedFvPatchScalarField::evaluate
 (
-    Istream& is
+    const Pstream::commsTypes comms
 )
 {
-    // Assume generic input stream so we can do line-based format and skip
-    // unused columns
-    ISstream& iss = dynamic_cast<ISstream&>(is);
+    externalCoupledMixedFvPatchField<scalar>::evaluate(comms);
+}
 
-    string line;
 
-    forAll(*this, faceI)
-    {
-        iss.getLine(line);
-        IStringStream lineStr(line);
-
-        lineStr
-            >> this->refValue()[faceI]
-            >> this->refGrad()[faceI]
-            >> this->valueFraction()[faceI];
-    }
+void Foam::externalCoupledTemperatureMixedFvPatchScalarField::write
+(
+    Ostream& os
+) const
+{
+    externalCoupledMixedFvPatchField<scalar>::write(os);
 }
 
 

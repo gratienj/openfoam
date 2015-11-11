@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -46,41 +46,30 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
 
     const polyBoundaryMesh& bm = mesh.boundaryMesh();
 
-    // All the info for nearest. Construct to miss
-    List<mappedPatchBase::nearInfo> nearest(this->size());
+    label patchI = bm.findPatchID(patchName_);
 
-
-    const labelList patchIDs(bm.patchSet(patchNames_).sortedToc());
-
-    label nFaces = 0;
-    forAll(patchIDs, i)
+    if (patchI == -1)
     {
-        nFaces += bm[patchIDs[i]].size();
+        FatalErrorInFunction
+            << " Unknown patch name "
+            << patchName_ << endl
+            << exit(FatalError);
     }
 
-    if (nFaces > 0)
-    {
-        // Collect mesh faces and bounding box
-        labelList bndFaces(nFaces);
-        treeBoundBox overallBb(treeBoundBox::invertedBox);
+     // All the info for nearest. Construct to miss
+    List<mappedPatchBase::nearInfo> nearest(this->size());
 
-        nFaces = 0;
-        forAll(patchIDs, i)
+    const polyPatch& pp = bm[patchI];
+
+    if (pp.size() > 0)
+    {
+        labelList bndFaces(pp.size());
+        forAll(bndFaces, i)
         {
-            const polyPatch& pp = bm[patchIDs[i]];
-            forAll(pp, i)
-            {
-                bndFaces[nFaces++] = pp.start()+i;
-                const face& f = pp[i];
-                forAll(f, fp)
-                {
-                    const point& pt = pp.points()[f[fp]];
-                    overallBb.min() = min(overallBb.min(), pt);
-                    overallBb.max() = max(overallBb.max(), pt);
-                }
-            }
+            bndFaces[i] =  pp.start() + i;
         }
 
+        treeBoundBox overallBb(pp.points());
         Random rndGen(123456);
         overallBb = overallBb.extend(rndGen, 1e-4);
         overallBb.min() -= point(ROOTVSMALL, ROOTVSMALL, ROOTVSMALL);
@@ -115,7 +104,11 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
 
             if (!info.hit())
             {
-                info = boundaryTree.findNearest(sample, Foam::sqr(GREAT));
+                info = boundaryTree.findNearest
+                (
+                    sample,
+                    Foam::sqr(GREAT)
+                );
             }
 
             label faceI = boundaryTree.shapes().faceLabels()[info.index()];
@@ -124,36 +117,27 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
 
             if (isA<emptyPolyPatch>(bm[patchi]))
             {
-                WarningIn
-                (
-                    " Foam::patchProbes::findElements(const fvMesh&)"
-                )
+                WarningInFunction
                 << " The sample point: " << sample
                 << " belongs to " << patchi
                 << " which is an empty patch. This is not permitted. "
                 << " This sample will not be included "
                 << endl;
             }
-            else if (info.hit())
+            else
             {
-                // Note: do we store the face centre or the actual nearest?
-                // We interpolate using the faceI only though (no
-                // interpolation) so it does not actually matter much, just for
-                // the location written to the header.
-
-                //const point& facePt = mesh.faceCentres()[faceI];
-                const point& facePt = info.hitPoint();
+                const point& fc = mesh.faceCentres()[faceI];
 
                 mappedPatchBase::nearInfo sampleInfo;
 
                 sampleInfo.first() = pointIndexHit
                 (
                     true,
-                    facePt,
+                    fc,
                     faceI
                 );
 
-                sampleInfo.second().first() = magSqr(facePt-sample);
+                sampleInfo.second().first() = magSqr(fc-sample);
                 sampleInfo.second().second() = Pstream::myProcNo();
 
                 nearest[probeI]= sampleInfo;
@@ -166,14 +150,6 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
     Pstream::listCombineGather(nearest, mappedPatchBase::nearestEqOp());
     Pstream::listCombineScatter(nearest);
 
-
-    // Update actual probe locations
-    forAll(nearest, sampleI)
-    {
-        operator[](sampleI) = nearest[sampleI].first().rawPoint();
-    }
-
-
     if (debug)
     {
         Info<< "patchProbes::findElements" << " : " << endl;
@@ -184,38 +160,23 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
 
             Info<< "    " << sampleI << " coord:"<< operator[](sampleI)
                 << " found on processor:" << procI
-                << " in local face:" << localI
-                << " with location:" << nearest[sampleI].first().rawPoint()
-                << endl;
+                << " in local cell/face:" << localI
+                << " with fc:" << nearest[sampleI].first().rawPoint() << endl;
         }
     }
 
 
     // Extract any local faces to sample
-    elementList_.setSize(nearest.size());
-    elementList_ = -1;
-    faceList_.setSize(nearest.size());
-    faceList_ = -1;
+    elementList_.setSize(nearest.size(), -1);
 
     forAll(nearest, sampleI)
     {
         if (nearest[sampleI].second().second() == Pstream::myProcNo())
         {
             // Store the face to sample
-            faceList_[sampleI] = nearest[sampleI].first().index();
+            elementList_[sampleI] = nearest[sampleI].first().index();
         }
     }
-}
-
-
-void Foam::patchProbes::readDict(const dictionary& dict)
-{
-    if (!dict.readIfPresent("patches", patchNames_))
-    {
-        word patchName(dict.lookup("patchName"));
-        patchNames_ = wordReList(1, wordRe(patchName));
-    }
-    probes::readDict(dict);
 }
 
 
@@ -226,22 +187,19 @@ Foam::patchProbes::patchProbes
     const word& name,
     const objectRegistry& obr,
     const dictionary& dict,
-    const bool loadFromFiles,
-    const bool doFindElements
+    const bool loadFromFiles
 )
 :
-    probes(name, obr, dict, loadFromFiles, false)
+    probes(name, obr, dict, loadFromFiles)
 {
-    readDict(dict);
+    // When constructing probes above it will have called the
+    // probes::findElements (since the virtual mechanism not yet operating).
+    // Not easy to workaround (apart from feeding through flag into constructor)
+    // so clear out any cells found for now.
+    elementList_.clear();
+    faceList_.clear();
 
-    if (doFindElements)
-    {
-        // Find the elements
-        findElements(mesh_);
-
-        // Open the probe streams
-        prepare();
-    }
+    read(dict);
 }
 
 
@@ -269,16 +227,10 @@ void Foam::patchProbes::write()
     }
 }
 
-
 void Foam::patchProbes::read(const dictionary& dict)
 {
-    readDict(dict);
-
-    // Find the elements
-    findElements(mesh_);
-
-    // Open the probe streams
-    prepare();
+    dict.lookup("patchName") >> patchName_;
+    probes::read(dict);
 }
 
 

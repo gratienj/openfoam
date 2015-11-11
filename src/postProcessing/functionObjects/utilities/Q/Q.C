@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,24 +49,14 @@ Foam::Q::Q
     name_(name),
     obr_(obr),
     active_(true),
-    UName_("U"),
-    resultName_(name),
-    log_(true)
+    UName_("U")
 {
     // Check if the available mesh is an fvMesh, otherwise deactivate
     if (!isA<fvMesh>(obr_))
     {
         active_ = false;
-        WarningIn
-        (
-            "Q::Q"
-            "("
-                "const word&, "
-                "const objectRegistry&, "
-                "const dictionary&, "
-                "const bool"
-            ")"
-        )   << "No fvMesh available, deactivating " << name_ << nl
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_ << nl
             << endl;
     }
 
@@ -82,7 +72,7 @@ Foam::Q::Q
             (
                 IOobject
                 (
-                    resultName_,
+                    type(),
                     mesh.time().timeName(),
                     mesh,
                     IOobject::NO_READ,
@@ -110,17 +100,7 @@ void Foam::Q::read(const dictionary& dict)
 {
     if (active_)
     {
-        log_.readIfPresent("log", dict);
-        dict.readIfPresent("UName", UName_);
-
-        if (!dict.readIfPresent("resultName", resultName_))
-        {
-            resultName_ = name_;
-            if (UName_ != "U")
-            {
-                resultName_ = resultName_ + "(" + UName_ + ")";
-            }
-        }
+        UName_ = dict.lookupOrDefault<word>("UName", "U");
     }
 }
 
@@ -139,7 +119,7 @@ void Foam::Q::execute()
         volScalarField& Q =
             const_cast<volScalarField&>
             (
-                mesh.lookupObject<volScalarField>(resultName_)
+                mesh.lookupObject<volScalarField>(type())
             );
 
         Q = 0.5*(sqr(tr(gradU)) - tr(((gradU) & (gradU))));
@@ -149,7 +129,10 @@ void Foam::Q::execute()
 
 void Foam::Q::end()
 {
-    // Do nothing
+    if (active_)
+    {
+        execute();
+    }
 }
 
 
@@ -164,10 +147,9 @@ void Foam::Q::write()
     if (active_)
     {
         const volScalarField& Q =
-            obr_.lookupObject<volScalarField>(resultName_);
+            obr_.lookupObject<volScalarField>(type());
 
-        if (log_) Info
-            << type() << " " << name_ << " output:" << nl
+        Info<< type() << " " << name_ << " output:" << nl
             << "    writing field " << Q.name() << nl
             << endl;
 

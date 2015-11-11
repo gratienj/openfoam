@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -209,7 +209,7 @@ Foam::triSurfaceSearch::tree() const
 
             if (nPoints != surface().points().size())
             {
-                WarningIn("triSurfaceSearch::tree() const")
+                WarningInFunction
                     << "Surface does not have compact point numbering."
                     << " Of " << surface().points().size()
                     << " only " << nPoints
@@ -234,7 +234,7 @@ Foam::triSurfaceSearch::tree() const
         (
             new indexedOctree<treeDataTriSurface>
             (
-                treeDataTriSurface(false, surface_, tolerance_),
+                treeDataTriSurface(true, surface_, tolerance_),
                 bb,
                 maxTreeDepth_,  // maxLevel
                 10,             // leafsize
@@ -290,17 +290,15 @@ void Foam::triSurfaceSearch::findNearest
 
     const indexedOctree<treeDataTriSurface>& octree = tree();
 
-    const treeDataTriSurface::findNearestOp fOp(octree);
-
     info.setSize(samples.size());
 
     forAll(samples, i)
     {
-        info[i] = octree.findNearest
+        static_cast<pointIndexHit&>(info[i]) = octree.findNearest
         (
             samples[i],
             nearestDistSqr[i],
-            fOp
+            treeDataTriSurface::findNearestOp(octree)
         );
     }
 
@@ -337,7 +335,11 @@ void Foam::triSurfaceSearch::findLine
 
     forAll(start, i)
     {
-        info[i] = octree.findLine(start[i], end[i]);
+        static_cast<pointIndexHit&>(info[i]) = octree.findLine
+        (
+            start[i],
+            end[i]
+        );
     }
 
     indexedOctree<treeDataTriSurface>::perturbTol() = oldTol;
@@ -360,7 +362,11 @@ void Foam::triSurfaceSearch::findLineAny
 
     forAll(start, i)
     {
-        info[i] = octree.findLineAny(start[i], end[i]);
+        static_cast<pointIndexHit&>(info[i]) = octree.findLineAny
+        (
+            start[i],
+            end[i]
+        );
     }
 
     indexedOctree<treeDataTriSurface>::perturbTol() = oldTol;

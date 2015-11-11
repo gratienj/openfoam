@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,7 +49,7 @@ void Foam::Cloud<ParticleType>::readCloudUniformProperties()
         false
     );
 
-    if (dictObj.typeHeaderOk<IOdictionary>(true))
+    if (dictObj.headerOk())
     {
         const IOdictionary uniformPropsDict(dictObj);
 
@@ -219,11 +219,8 @@ void Foam::Cloud<ParticleType>::checkFieldIOobject
 {
     if (data.size() != c.size())
     {
-        FatalErrorIn
-        (
-            "void Cloud<ParticleType>::checkFieldIOobject"
-            "(const Cloud<ParticleType>&, const IOField<DataType>&) const"
-        )   << "Size of " << data.name()
+        FatalErrorInFunction
+            << "Size of " << data.name()
             << " field " << data.size()
             << " does not match the number of particles " << c.size()
             << abort(FatalError);
@@ -241,14 +238,8 @@ void Foam::Cloud<ParticleType>::checkFieldFieldIOobject
 {
     if (data.size() != c.size())
     {
-        FatalErrorIn
-        (
-            "void Cloud<ParticleType>::checkFieldFieldIOobject"
-            "("
-                "const Cloud<ParticleType>&, "
-                "const CompactIOField<Field<DataType>, DataType>&"
-            ") const"
-        )   << "Size of " << data.name()
+        FatalErrorInFunction
+            << "Size of " << data.name()
             << " field " << data.size()
             << " does not match the number of particles " << c.size()
             << abort(FatalError);

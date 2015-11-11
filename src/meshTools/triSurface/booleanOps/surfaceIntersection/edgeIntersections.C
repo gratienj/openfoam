@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -54,6 +54,7 @@ void Foam::edgeIntersections::checkEdges(const triSurface& surf)
 {
     const pointField& localPoints = surf.localPoints();
     const edgeList& edges = surf.edges();
+    const labelListList& edgeFaces = surf.edgeFaces();
 
     treeBoundBox bb(localPoints);
 
@@ -67,13 +68,22 @@ void Foam::edgeIntersections::checkEdges(const triSurface& surf)
 
         if (eMag < minSize)
         {
-            WarningIn
-            (
-                "Foam::edgeIntersections::checkEdges(const triSurface& surf)"
-            )   << "Edge " << edgeI << " vertices " << e
+            WarningInFunction
+                << "Edge " << edgeI << " vertices " << e
                 << " coords:" << localPoints[e[0]] << ' '
                 << localPoints[e[1]] << " is very small compared to bounding"
                 << " box dimensions " << bb << endl
+                << "This might lead to problems in intersection"
+                << endl;
+        }
+
+        if (edgeFaces[edgeI].size() == 1)
+        {
+            WarningInFunction
+                << "Edge " << edgeI << " vertices " << e
+                << " coords:" << localPoints[e[0]] << ' '
+                << localPoints[e[1]] << " has only one face connected to it:"
+                << edgeFaces[edgeI] << endl
                 << "This might lead to problems in intersection"
                 << endl;
         }
@@ -452,6 +462,7 @@ Foam::edgeIntersections::edgeIntersections()
 {}
 
 
+// Construct from surface and tolerance
 Foam::edgeIntersections::edgeIntersections
 (
     const triSurface& surf1,
@@ -463,9 +474,16 @@ Foam::edgeIntersections::edgeIntersections
     classification_(surf1.nEdges())
 {
     checkEdges(surf1);
+    checkEdges(query2.surface());
 
     // Current set of edges to test
-    labelList edgesToTest(identity(surf1.nEdges()));
+    labelList edgesToTest(surf1.nEdges());
+
+    // Start off with all edges
+    forAll(edgesToTest, i)
+    {
+        edgesToTest[i] = i;
+    }
 
     // Determine intersections for edgesToTest
     intersectEdges
@@ -660,7 +678,7 @@ Foam::label Foam::edgeIntersections::removeDegenerates
 
         if (edgesToTest.empty())
         {
-            FatalErrorIn("perturb") << "oops" << abort(FatalError);
+            FatalErrorInFunction << "oops" << abort(FatalError);
         }
 
         // Re intersect moved edges.

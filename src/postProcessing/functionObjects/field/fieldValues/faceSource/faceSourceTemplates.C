@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,7 +51,7 @@ bool Foam::fieldValues::faceSource::validField(const word& fieldName) const
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type> > Foam::fieldValues::faceSource::setFieldValues
+Foam::tmp<Foam::Field<Type> > Foam::fieldValues::faceSource::getFieldValues
 (
     const word& fieldName,
     const bool mustGet,
@@ -110,16 +110,8 @@ Foam::tmp<Foam::Field<Type> > Foam::fieldValues::faceSource::setFieldValues
 
     if (mustGet)
     {
-        FatalErrorIn
-        (
-            "Foam::tmp<Foam::Field<Type> > "
-            "Foam::fieldValues::faceSource::setFieldValues"
-            "("
-                "const word&, "
-                "const bool, "
-                "const bool"
-            ") const"
-        )   << "Field " << fieldName << " not found in database"
+        FatalErrorInFunction
+            << "Field " << fieldName << " not found in database"
             << abort(FatalError);
     }
 
@@ -140,26 +132,17 @@ Type Foam::fieldValues::faceSource::processSameTypeValues
     {
         case opSum:
         {
-            result = gSum(values);
+            result = sum(values);
             break;
         }
         case opSumMag:
         {
-            result = gSum(cmptMag(values));
+            result = sum(cmptMag(values));
             break;
         }
         case opSumDirection:
         {
-            FatalErrorIn
-            (
-                "template<class Type>"
-                "Type Foam::fieldValues::faceSource::processSameTypeValues"
-                "("
-                    "const Field<Type>&, "
-                    "const vectorField&, "
-                    "const scalarField&"
-                ") const"
-            )
+            FatalErrorInFunction
                 << "Operation " << operationTypeNames_[operation_]
                 << " not available for values of type "
                 << pTraits<Type>::typeName
@@ -170,16 +153,7 @@ Type Foam::fieldValues::faceSource::processSameTypeValues
         }
         case opSumDirectionBalance:
         {
-            FatalErrorIn
-            (
-                "template<class Type>"
-                "Type Foam::fieldValues::faceSource::processSameTypeValues"
-                "("
-                    "const Field<Type>&, "
-                    "const vectorField&, "
-                    "const scalarField&"
-                ") const"
-            )
+            FatalErrorInFunction
                 << "Operation " << operationTypeNames_[operation_]
                 << " not available for values of type "
                 << pTraits<Type>::typeName
@@ -190,23 +164,18 @@ Type Foam::fieldValues::faceSource::processSameTypeValues
         }
         case opAverage:
         {
-            label n = returnReduce(values.size(), sumOp<label>());
-            result = gSum(values)/(scalar(n) + ROOTVSMALL);
+            result = sum(values)/values.size();
             break;
         }
         case opWeightedAverage:
         {
-            label wSize = returnReduce(weightField.size(), sumOp<label>());
-
-            if (wSize > 0)
+            if (weightField.size())
             {
-                result =
-                    gSum(weightField*values)/(gSum(weightField) + ROOTVSMALL);
+                result = sum(weightField*values)/sum(weightField);
             }
             else
             {
-                label n = returnReduce(values.size(), sumOp<label>());
-                result = gSum(values)/(scalar(n) + ROOTVSMALL);
+                result = sum(values)/values.size();
             }
             break;
         }
@@ -214,21 +183,20 @@ Type Foam::fieldValues::faceSource::processSameTypeValues
         {
             const scalarField magSf(mag(Sf));
 
-            result = gSum(magSf*values)/gSum(magSf);
+            result = sum(magSf*values)/sum(magSf);
             break;
         }
         case opWeightedAreaAverage:
         {
             const scalarField magSf(mag(Sf));
-            label wSize = returnReduce(weightField.size(), sumOp<label>());
 
-            if (wSize > 0)
+            if (weightField.size())
             {
-                result = gSum(weightField*magSf*values)/gSum(magSf*weightField);
+                result = sum(weightField*magSf*values)/sum(magSf*weightField);
             }
             else
             {
-                result = gSum(magSf*values)/gSum(magSf);
+                result = sum(magSf*values)/sum(magSf);
             }
             break;
         }
@@ -236,26 +204,24 @@ Type Foam::fieldValues::faceSource::processSameTypeValues
         {
             const scalarField magSf(mag(Sf));
 
-            result = gSum(magSf*values);
+            result = sum(magSf*values);
             break;
         }
         case opMin:
         {
-            result = gMin(values);
+            result = min(values);
             break;
         }
         case opMax:
         {
-            result = gMax(values);
+            result = max(values);
             break;
         }
         case opCoV:
         {
             const scalarField magSf(mag(Sf));
 
-            const scalar gSumMagSf = gSum(magSf);
-
-            Type meanValue = gSum(values*magSf)/gSumMagSf;
+            Type meanValue = sum(values*magSf)/sum(magSf);
 
             const label nComp = pTraits<Type>::nComponents;
 
@@ -265,9 +231,7 @@ Type Foam::fieldValues::faceSource::processSameTypeValues
                 scalar mean = component(meanValue, d);
                 scalar& res = setComponent(result, d);
 
-                res =
-                    sqrt(gSum(magSf*sqr(vals - mean))/gSumMagSf)
-                   /(mean + ROOTVSMALL);
+                res = sqrt(sum(magSf*sqr(vals - mean))/sum(magSf))/mean;
             }
 
             break;
@@ -309,7 +273,7 @@ bool Foam::fieldValues::faceSource::writeValues
 
     if (ok)
     {
-        Field<Type> values(setFieldValues<Type>(fieldName, true, orient));
+        Field<Type> values(getFieldValues<Type>(fieldName, true, orient));
 
         vectorField Sf;
         if (surfacePtr_.valid())
@@ -323,12 +287,13 @@ bool Foam::fieldValues::faceSource::writeValues
             Sf = filterField(mesh().Sf(), true);
         }
 
+        // Combine onto master
+        combineFields(values);
+        combineFields(Sf);
+
         // Write raw values on surface if specified
         if (surfaceWriterPtr_.valid())
         {
-            Field<Type> allValues(values);
-            combineFields(allValues);
-
             faceList faces;
             pointField points;
 
@@ -353,28 +318,29 @@ bool Foam::fieldValues::faceSource::writeValues
                     points,
                     faces,
                     fieldName,
-                    allValues,
+                    values,
                     false
                 );
             }
         }
 
+
         // Apply scale factor
         values *= scaleFactor_;
 
-        Type result = processValues(values, Sf, weightField);
+        if (Pstream::master())
+        {
+            Type result = processValues(values, Sf, weightField);
 
-        file()<< tab << result;
+            // Add to result dictionary, over-writing any previous entry
+            resultDict_.add(fieldName, result, true);
 
-        if (log_) Info
-            << "    " << operationTypeNames_[operation_]
-            << "(" << sourceName_ << ") for " << fieldName
-            <<  " = " << result << endl;
+            file()<< tab << result;
 
-        // Write state/results information
-        const word& opName = operationTypeNames_[operation_];
-        word resultName = opName + '(' + sourceName_ + ',' + fieldName + ')';
-        this->setResult(resultName, result);
+            if (log_) Info<< "    " << operationTypeNames_[operation_]
+                << "(" << sourceName_ << ") of " << fieldName
+                <<  " = " << result << endl;
+        }
     }
 
     return ok;
@@ -401,14 +367,8 @@ Foam::tmp<Foam::Field<Type> > Foam::fieldValues::faceSource::filterField
         }
         else
         {
-            FatalErrorIn
-            (
-                "fieldValues::faceSource::filterField"
-                "("
-                    "const GeometricField<Type, fvPatchField, volMesh>&, "
-                    "const bool"
-                ") const"
-            )   << type() << " " << name_ << ": "
+            FatalErrorInFunction
+                << type() << " " << name_ << ": "
                 << sourceTypeNames_[source_] << "(" << sourceName_ << "):"
                 << nl
                 << "    Unable to process internal faces for volume field "
