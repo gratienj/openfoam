@@ -92,9 +92,6 @@ protected:
         //- Scale factor - optional
         scalar scaleFactor_;
 
-        //- Scale factor - optional
-        scalar scaleFactor_;
-
 
 public:
 
