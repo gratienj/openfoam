@@ -90,6 +90,13 @@ Foam::fieldValue::fieldValue
     {
         read(dict);
     }
+    else
+    {
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name << nl
+            << endl;
+        active_ = false;
+    }
 }
 
 

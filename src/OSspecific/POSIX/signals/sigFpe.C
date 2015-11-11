@@ -94,10 +94,8 @@ void Foam::sigFpe::sigHandler(int)
     // Reset old handling
     if (sigaction(SIGFPE, &oldAction_, NULL) < 0)
     {
-        FatalErrorIn
-        (
-            "Foam::sigSegv::sigHandler()"
-        )   << "Cannot reset SIGFPE trapping"
+        FatalErrorInFunction
+            << "Cannot reset SIGFPE trapping"
             << abort(FatalError);
     }
 
@@ -124,7 +122,26 @@ Foam::sigFpe::sigFpe()
 
 Foam::sigFpe::~sigFpe()
 {
-    unset(false);
+    if (env("FOAM_SIGFPE"))
+    {
+        #ifdef LINUX_GNUC
+        // Reset signal
+        if (oldAction_.sa_handler && sigaction(SIGFPE, &oldAction_, NULL) < 0)
+        {
+            FatalErrorInFunction
+                << "Cannot reset SIGFPE trapping"
+                << abort(FatalError);
+        }
+        #endif
+    }
+
+    if (env("FOAM_SETNAN"))
+    {
+        #ifdef LINUX
+        // Disable initialization to NaN
+        mallocNanActive_ = false;
+        #endif
+    }
 }
 
 
@@ -132,7 +149,14 @@ Foam::sigFpe::~sigFpe()
 
 void Foam::sigFpe::set(const bool verbose)
 {
-    if (!sigFpeActive_ && env("FOAM_SIGFPE"))
+    if (oldAction_.sa_handler)
+    {
+        FatalErrorInFunction
+            << "Cannot call sigFpe::set() more than once"
+            << abort(FatalError);
+    }
+
+    if (env("FOAM_SIGFPE"))
     {
         bool supported = false;
 
@@ -152,10 +176,8 @@ void Foam::sigFpe::set(const bool verbose)
         sigemptyset(&newAction.sa_mask);
         if (sigaction(SIGFPE, &newAction, &oldAction_) < 0)
         {
-            FatalErrorIn
-            (
-                "Foam::sigFpe::set()"
-            )   << "Cannot set SIGFPE trapping"
+            FatalErrorInFunction
+                << "Cannot set SIGFPE trapping"
                 << abort(FatalError);
         }
 

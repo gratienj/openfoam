@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2014-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -103,7 +103,7 @@ void Foam::partialWrite::read(const dictionary& dict)
 
     if (writeInterval_ < 1)
     {
-        FatalIOErrorIn("partialWrite::read(const dictionary&)", dict)
+        FatalIOErrorInFunction(dict)
             << "Illegal value for writeInterval " << writeInterval_
             << ". It should be >= 1."
             << exit(FatalIOError);

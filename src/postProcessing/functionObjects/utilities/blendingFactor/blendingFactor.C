@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -70,30 +70,10 @@ Foam::blendingFactor::blendingFactor
     // Check if the available mesh is an fvMesh, otherwise deactivate
     if (setActive<fvMesh>())
     {
-        read(dict);
-        writeFileHeader(file());
-
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
-        volScalarField* indicatorPtr
-        (
-            new volScalarField
-            (
-                IOobject
-                (
-                    resultName_,
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedScalar("0", dimless, 0.0),
-                zeroGradientFvPatchScalarField::typeName
-            )
-        );
-
-        mesh.objectRegistry::store(indicatorPtr);
+        active_ = false;
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_ << nl
+            << endl;
     }
 }
 

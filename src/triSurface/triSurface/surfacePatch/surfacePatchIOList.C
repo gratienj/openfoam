@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -55,8 +55,13 @@ Foam::surfacePatchIOList::surfacePatchIOList
      || readOpt() == IOobject::MUST_READ_IF_MODIFIED
     )
     {
-        // Warn for MUST_READ_IF_MODIFIED
-        warnNoRereading<surfacePatchIOList>();
+        if (readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+        {
+            WarningInFunction
+                << "Specified IOobject::MUST_READ_IF_MODIFIED but class"
+                << " does not support automatic rereading."
+                << endl;
+        }
 
 
         surfacePatchList& patches = *this;
@@ -89,7 +94,7 @@ Foam::surfacePatchIOList::surfacePatchIOList
 
             if (startFaceI != faceI)
             {
-                FatalErrorIn(functionName)
+                FatalErrorInFunction
                     << "Patches are not ordered. Start of patch " << patchI
                     << " does not correspond to sum of preceding patches."
                     << endl

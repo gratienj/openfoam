@@ -51,14 +51,33 @@ void Foam::regionSplit::calcNonCompactRegionSplit
     labelList& cellRegion
 ) const
 {
-    // Field on cells and faces.
-    List<minData> cellData(mesh().nCells());
-    List<minData> faceData(mesh().nFaces());
-
-    // Take over blockedFaces by seeding a negative number
-    // (so is always less than the decomposition)
-    label nUnblocked = 0;
-    forAll(faceData, faceI)
+    if (faceRegion[faceI] >= 0)
+    {
+        if (faceRegion[otherFaceI] == -1)
+        {
+            faceRegion[otherFaceI] = faceRegion[faceI];
+            newChangedFaces.append(otherFaceI);
+        }
+        else if (faceRegion[otherFaceI] == -2)
+        {
+            // otherFaceI blocked but faceI is not. Is illegal for coupled
+            // faces, not for explicit connections.
+        }
+        else if (faceRegion[otherFaceI] != faceRegion[faceI])
+        {
+            FatalErrorInFunction
+                  << "Problem : coupled face " << faceI
+                  << " on patch " << mesh().boundaryMesh().whichPatch(faceI)
+                  << " has region " << faceRegion[faceI]
+                  << " but coupled face " << otherFaceI
+                  << " has region " << faceRegion[otherFaceI]
+                  << endl
+                  << "Is your blocked faces specification"
+                  << " synchronized across coupled boundaries?"
+                  << abort(FatalError);
+        }
+    }
+    else if (faceRegion[faceI] == -1)
     {
         if (blockedFace.size() && blockedFace[faceI])
         {
@@ -141,7 +160,50 @@ Foam::autoPtr<Foam::globalIndex> Foam::regionSplit::calcRegionSplit
     labelList& cellRegion
 ) const
 {
-    // See header in regionSplit.H
+    if (debug)
+    {
+        if (blockedFace.size())
+        {
+            // Check that blockedFace is synced.
+            boolList syncBlockedFace(blockedFace);
+            syncTools::swapFaceList(mesh(), syncBlockedFace);
+
+            forAll(syncBlockedFace, faceI)
+            {
+                if (syncBlockedFace[faceI] != blockedFace[faceI])
+                {
+                    FatalErrorInFunction
+                        << "Face " << faceI << " not synchronised. My value:"
+                        << blockedFace[faceI] << "  coupled value:"
+                        << syncBlockedFace[faceI]
+                        << abort(FatalError);
+                }
+            }
+        }
+    }
+
+    // Region per face.
+    // -1 unassigned
+    // -2 blocked
+    labelList faceRegion(mesh().nFaces(), -1);
+
+    if (blockedFace.size())
+    {
+        forAll(blockedFace, faceI)
+        {
+            if (blockedFace[faceI])
+            {
+                faceRegion[faceI] = -2;
+            }
+        }
+    }
+
+
+    // Assign local regions
+    // ~~~~~~~~~~~~~~~~~~~~
+
+    // Start with region 0
+    label nLocalRegions = 0;
 
 
     if (!doGlobalRegions)
@@ -197,8 +259,9 @@ Foam::autoPtr<Foam::globalIndex> Foam::regionSplit::calcRegionSplit
             Map<label>::const_iterator fnd = globalToCompact.find(region);
             if (fnd == globalToCompact.end())
             {
-                globalRegion = globalRegions.toGlobal(globalToCompact.size());
-                globalToCompact.insert(region, globalRegion);
+                FatalErrorInFunction
+                    << "cell:" << cellI << " region:" << cellRegion[cellI]
+                    << abort(FatalError);
             }
             else
             {
@@ -212,7 +275,12 @@ Foam::autoPtr<Foam::globalIndex> Foam::regionSplit::calcRegionSplit
         labelList compactOffsets(Pstream::nProcs()+1, 0);
         for (label i = Pstream::myProcNo()+1; i < compactOffsets.size(); i++)
         {
-            compactOffsets[i] = globalToCompact.size();
+            if (faceRegion[faceI] == -1)
+            {
+                FatalErrorInFunction
+                    << "face:" << faceI << " region:" << faceRegion[faceI]
+                    << abort(FatalError);
+            }
         }
 
         return autoPtr<globalIndex>(new globalIndex(compactOffsets.xfer()));

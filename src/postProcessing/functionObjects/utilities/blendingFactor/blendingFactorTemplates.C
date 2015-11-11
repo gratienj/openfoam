@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,7 +60,7 @@ void Foam::blendingFactor::calc()
 
     if (!isA<blendedSchemeBase<Type> >(interpScheme))
     {
-        FatalErrorIn("void Foam::blendingFactor::execute()")
+        FatalErrorInFunction
             << interpScheme.typeName << " is not a blended scheme"
             << exit(FatalError);
     }

@@ -278,14 +278,7 @@ void Foam::fieldMinMax::calcMinMaxFields
             }
             default:
             {
-                FatalErrorIn
-                (
-                    "Foam::fieldMinMax::calcMinMaxFields"
-                    "("
-                        "const word&, "
-                        "const modeType&"
-                    ")"
-                )
+                FatalErrorInFunction
                     << "Unknown min/max mode: " << modeTypeNames_[mode_]
                     << exit(FatalError);
             }

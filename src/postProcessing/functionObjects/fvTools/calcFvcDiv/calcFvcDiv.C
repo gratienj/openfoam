@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -95,16 +95,8 @@ Foam::calcFvcDiv::calcFvcDiv
     if (!isA<fvMesh>(obr_))
     {
         active_ = false;
-        WarningIn
-        (
-            "calcFvcDiv::calcFvcDiv"
-            "("
-                "const word&, "
-                "const objectRegistry&, "
-                "const dictionary&, "
-                "const bool"
-            ")"
-        )   << "No fvMesh available, deactivating." << nl
+        WarningInFunction
+            << "No fvMesh available, deactivating." << nl
             << endl;
     }
 
@@ -148,7 +140,7 @@ void Foam::calcFvcDiv::execute()
 
         if (!processed)
         {
-            WarningIn("void Foam::calcFvcDiv::write()")
+            WarningInFunction
                 << "Unprocessed field " << fieldName_ << endl;
         }
     }

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -358,7 +358,7 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::smoothPatchDisplacement
             }
             else
             {
-                FatalErrorIn("autoSnapDriver::smoothPatchDisplacement(..)")
+                FatalErrorInFunction
                     << "Both sides of baffle consisting of faces " << f0
                     << " and " << f1 << " are already slave faces."
                     << abort(FatalError);
@@ -950,11 +950,8 @@ Foam::labelList Foam::autoSnapDriver::getZoneSurfacePoints
 
     if (zoneI == -1)
     {
-        FatalErrorIn
-        (
-            "autoSnapDriver::getZoneSurfacePoints"
-            "(const fvMesh&, const indirectPrimitivePatch&, const word&)"
-        )   << "Cannot find zone " << zoneName
+        FatalErrorInFunction
+            << "Cannot find zone " << zoneName
             << exit(FatalError);
     }
 
@@ -2031,7 +2028,7 @@ Foam::vectorField Foam::autoSnapDriver::calcNearestSurface
         {
             if (snapSurf[pointI] == -1)
             {
-                WarningIn("autoSnapDriver::calcNearestSurface(..)")
+                WarningInFunction
                     << "For point:" << pointI
                     << " coordinate:" << localPoints[pointI]
                     << " did not find any surface within:"
@@ -2093,6 +2090,254 @@ Foam::vectorField Foam::autoSnapDriver::calcNearestSurface
     return patchDisp;
 }
 
+
+////XXXXXXXXX
+//// Get (pp-local) indices of points that are on both patches
+//Foam::labelList Foam::autoSnapDriver::getPatchSurfacePoints
+//(
+//    const fvMesh& mesh,
+//    const indirectPrimitivePatch& allPp,
+//    const polyPatch& pp
+//)
+//{
+//    // Could use PrimitivePatch & localFaces to extract points but might just
+//    // as well do it ourselves.
+//
+//    boolList pointOnZone(allPp.nPoints(), false);
+//
+//    forAll(pp, i)
+//    {
+//        const face& f = pp[i];
+//
+//        forAll(f, fp)
+//        {
+//            label meshPointI = f[fp];
+//
+//            Map<label>::const_iterator iter =
+//                allPp.meshPointMap().find(meshPointI);
+//
+//            if (iter != allPp.meshPointMap().end())
+//            {
+//                label pointI = iter();
+//                pointOnZone[pointI] = true;
+//            }
+//        }
+//    }
+//
+//    return findIndices(pointOnZone, true);
+//}
+//Foam::vectorField Foam::autoSnapDriver::calcNearestLocalSurface
+//(
+//    const meshRefinement& meshRefiner,
+//    const scalarField& snapDist,
+//    const indirectPrimitivePatch& pp
+//)
+//{
+//    Info<< "Calculating patchDisplacement as distance to nearest"
+//        << " local surface point ..." << endl;
+//
+//    const pointField& localPoints = pp.localPoints();
+//    const refinementSurfaces& surfaces = meshRefiner.surfaces();
+//    const fvMesh& mesh = meshRefiner.mesh();
+//    const polyBoundaryMesh& pbm = mesh.boundaryMesh();
+//
+//
+////    // Assume that all patch-internal points get attracted to their surface
+////    // only. So we want to know if point is on multiple regions
+////
+////    labelList minPatch(mesh.nPoints(), labelMax);
+////    labelList maxPatch(mesh.nPoints(), labelMin);
+////
+////    forAll(meshMover.adaptPatchIDs(), i)
+////    {
+////        label patchI = meshMover.adaptPatchIDs()[i];
+////        const labelList& meshPoints = pbm[patchI].meshPoints();
+////
+////        forAll(meshPoints, meshPointI)
+////        {
+////            label meshPointI = meshPoints[meshPointI];
+////            minPatch[meshPointI] = min(minPatch[meshPointI], patchI);
+////            maxPatch[meshPointI] = max(maxPatch[meshPointI], patchI);
+////        }
+////    }
+////
+////    syncTools::syncPointList
+////    (
+////        mesh,
+////        minPatch,
+////        minEqOp<label>(),   // combine op
+////        labelMax            // null value
+////    );
+////    syncTools::syncPointList
+////    (
+////        mesh,
+////        maxPatch,
+////        maxEqOp<label>(),   // combine op
+////        labelMin            // null value
+////    );
+//
+//    // Now all points with minPatch != maxPatch will be on the outside of
+//    // the patch.
+//
+//    // Displacement per patch point
+//    vectorField patchDisp(localPoints.size(), vector::zero);
+//    // Current best snap distance
+//    scalarField minSnapDist(snapDist);
+//    // Current surface snapped to
+//    labelList snapSurf(localPoints.size(), -1);
+//
+//    const labelList& surfaceGeometry = surfaces.surfaces();
+//    forAll(surfaceGeometry, surfI)
+//    {
+//        label geomI = surfaceGeometry[surfI];
+//        const wordList& regNames = allGeometry.regionNames()[geomI];
+//        forAll(regNames, regionI)
+//        {
+//            label globalRegionI = surfaces.globalRegion(surfI, regionI);
+//            // Collect master patch points
+//            label masterPatchI = globalToMasterPatch_[globalRegionI];
+//            label slavePatchI = globalToSlavePatch_[globalRegionI];
+//
+//            labelList patchPointIndices
+//            (
+//                getPatchSurfacePoints
+//                (
+//                    mesh,
+//                    pp,
+//                    pbm[masterPatchI]
+//                )
+//            );
+//
+//            // Find nearest for points both on faceZone and pp.
+//            List<pointIndexHit> hitInfo;
+//            surfaces.findNearest
+//            (
+//                surfI,
+//                regionI,
+//                pointField(localPoints, patchPointIndices),
+//                sqr(scalarField(minSnapDist, patchPointIndices)),
+//                hitInfo
+//            );
+//
+//            forAll(hitInfo, i)
+//            {
+//                label pointI = patchPointIndices[i];
+//
+//                if (hitInfo[i].hit())
+//                {
+//                    const point& pt = hitInfo[i].hitPoint();
+//                    patchDisp[pointI] = pt-localPoints[pointI];
+//                    minSnapDist[pointI] = min
+//                    (
+//                        minSnapDist[pointI],
+//                        mag(patchDisp[pointI])
+//                    );
+//                    snapSurf[pointI] = surfI;
+//                }
+//            }
+//
+//            // Slave patch
+//            if (slavePatchI != masterPatchI)
+//            {
+//                labelList patchPointIndices
+//                (
+//                    getPatchSurfacePoints
+//                    (
+//                        mesh,
+//                        pp,
+//                        pbm[slavePatchI]
+//                    )
+//                );
+//
+//                // Find nearest for points both on faceZone and pp.
+//                List<pointIndexHit> hitInfo;
+//                surfaces.findNearest
+//                (
+//                    surfI,
+//                    regionI,
+//                    pointField(localPoints, patchPointIndices),
+//                    sqr(scalarField(minSnapDist, patchPointIndices)),
+//                    hitInfo
+//                );
+//
+//                forAll(hitInfo, i)
+//                {
+//                    label pointI = patchPointIndices[i];
+//
+//                    if (hitInfo[i].hit())
+//                    {
+//                        const point& pt = hitInfo[i].hitPoint();
+//                        patchDisp[pointI] = pt-localPoints[pointI];
+//                        minSnapDist[pointI] = min
+//                        (
+//                            minSnapDist[pointI],
+//                            mag(patchDisp[pointI])
+//                        );
+//                        snapSurf[pointI] = surfI;
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//
+//    // Check if all points are being snapped
+//    forAll(snapSurf, pointI)
+//    {
+//        if (snapSurf[pointI] == -1)
+//        {
+//            WarningInFunction
+//                << "For point:" << pointI
+//                << " coordinate:" << localPoints[pointI]
+//                << " did not find any surface within:"
+//                << minSnapDist[pointI]
+//                << " metre." << endl;
+//        }
+//    }
+//
+//    {
+//        scalarField magDisp(mag(patchDisp));
+//
+//        Info<< "Wanted displacement : average:"
+//            << gSum(magDisp)/returnReduce(patchDisp.size(), sumOp<label>())
+//            << " min:" << gMin(magDisp)
+//            << " max:" << gMax(magDisp) << endl;
+//    }
+//
+//
+//    Info<< "Calculated surface displacement in = "
+//        << mesh.time().cpuTimeIncrement() << " s\n" << nl << endl;
+//
+//
+//    // Limit amount of movement.
+//    forAll(patchDisp, patchPointI)
+//    {
+//        scalar magDisp = mag(patchDisp[patchPointI]);
+//
+//        if (magDisp > snapDist[patchPointI])
+//        {
+//            patchDisp[patchPointI] *= snapDist[patchPointI] / magDisp;
+//
+//            Pout<< "Limiting displacement for " << patchPointI
+//                << " from " << magDisp << " to " << snapDist[patchPointI]
+//                << endl;
+//        }
+//    }
+//
+//    // Points on zones in one domain but only present as point on other
+//    // will not do condition 2 on all. Sync explicitly.
+//    syncTools::syncPointList
+//    (
+//        mesh,
+//        pp.meshPoints(),
+//        patchDisp,
+//        minMagSqrEqOp<point>(),    // combine op
+//        vector(GREAT, GREAT, GREAT)// null value (note: cannot use VGREAT)
+//    );
+//
+//    return patchDisp;
+//}
+////XXXXXXXXX
 
 void Foam::autoSnapDriver::smoothDisplacement
 (
@@ -2848,7 +3093,7 @@ void Foam::autoSnapDriver::doSnap
 
             if (!meshOk)
             {
-                WarningIn("autoSnapDriver::doSnap(..)")
+                WarningInFunction
                     << "Did not succesfully snap mesh."
                     << " Continuing to snap to resolve easy" << nl
                     << "    surfaces but the"

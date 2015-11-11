@@ -120,7 +120,7 @@ void Foam::cyclicAMIPolyPatch::calcTransforms
 {
     if (transform() != neighbPatch().transform())
     {
-        FatalErrorIn("cyclicAMIPolyPatch::calcTransforms()")
+        FatalErrorInFunction
             << "Patch " << name()
             << " has transform type " << transformTypeNames[transform()]
             << ", neighbour patch " << neighbPatchName()
@@ -192,17 +192,8 @@ void Foam::cyclicAMIPolyPatch::calcTransforms
 
                 if (areaError > matchTolerance())
                 {
-                    WarningIn
-                    (
-                        "void Foam::cyclicAMIPolyPatch::calcTransforms"
-                        "("
-                            "const primitivePatch&, "
-                            "const pointField&, "
-                            "const vectorField&, "
-                            "const pointField&, "
-                            "const vectorField&"
-                        ")"
-                    )   << "Patch areas are not consistent within "
+                    WarningInFunction
+                        << "Patch areas are not consistent within "
                         << 100*matchTolerance()
                         << " % indicating a possible error in the specified "
                         << "angle of rotation" << nl
@@ -542,15 +533,8 @@ Foam::cyclicAMIPolyPatch::cyclicAMIPolyPatch
 {
     if (nbrPatchName_ == word::null && !coupleGroup_.valid())
     {
-        FatalIOErrorIn
+        FatalIOErrorInFunction
         (
-            "cyclicAMIPolyPatch::cyclicAMIPolyPatch"
-            "("
-                "const word&, "
-                "const dictionary&, "
-                "const label, "
-                "const polyBoundaryMesh&"
-            ")",
             dict
         )   << "No \"neighbourPatch\" or \"coupleGroup\" provided."
             << exit(FatalIOError);
@@ -558,15 +542,8 @@ Foam::cyclicAMIPolyPatch::cyclicAMIPolyPatch
 
     if (nbrPatchName_ == name)
     {
-        FatalIOErrorIn
+        FatalIOErrorInFunction
         (
-            "cyclicAMIPolyPatch::cyclicAMIPolyPatch"
-            "("
-                "const word&, "
-                "const dictionary&, "
-                "const label, "
-                "const polyBoundaryMesh&"
-            ")",
             dict
         )   << "Neighbour patch name " << nbrPatchName_
             << " cannot be the same as this patch " << name
@@ -594,15 +571,8 @@ Foam::cyclicAMIPolyPatch::cyclicAMIPolyPatch
             scalar magRot = mag(rotationAxis_);
             if (magRot < SMALL)
             {
-                FatalIOErrorIn
+                FatalIOErrorInFunction
                 (
-                    "cyclicAMIPolyPatch::cyclicAMIPolyPatch"
-                    "("
-                        "const word&, "
-                        "const dictionary&, "
-                        "const label, "
-                        "const polyBoundaryMesh&"
-                    ")",
                     dict
                 )   << "Illegal rotationAxis " << rotationAxis_ << endl
                     << "Please supply a non-zero vector."
@@ -683,15 +653,8 @@ Foam::cyclicAMIPolyPatch::cyclicAMIPolyPatch
 {
     if (nbrPatchName_ == name())
     {
-        FatalErrorIn
-        (
-            "const cyclicAMIPolyPatch& "
-            "const polyBoundaryMesh&, "
-            "const label, "
-            "const label, "
-            "const label, "
-            "const word&"
-        )   << "Neighbour patch name " << nbrPatchName_
+        FatalErrorInFunction
+            << "Neighbour patch name " << nbrPatchName_
             << " cannot be the same as this patch " << name()
             << exit(FatalError);
     }
@@ -744,7 +707,7 @@ Foam::label Foam::cyclicAMIPolyPatch::neighbPatchID() const
 
         if (nbrPatchID_ == -1)
         {
-            FatalErrorIn("cyclicPolyAMIPatch::neighbPatchID() const")
+            FatalErrorInFunction
                 << "Illegal neighbourPatch name " << neighbPatchName()
                 << nl << "Valid patch names are "
                 << this->boundaryMesh().names()
@@ -760,7 +723,7 @@ Foam::label Foam::cyclicAMIPolyPatch::neighbPatchID() const
 
         if (nbrPatch.neighbPatchName() != name())
         {
-            WarningIn("cyclicAMIPolyPatch::neighbPatchID() const")
+            WarningInFunction
                 << "Patch " << name()
                 << " specifies neighbour patch " << neighbPatchName()
                 << nl << " but that in return specifies "
@@ -821,10 +784,7 @@ const Foam::AMIPatchToPatchInterpolation& Foam::cyclicAMIPolyPatch::AMI() const
 {
     if (!owner())
     {
-        FatalErrorIn
-        (
-            "const AMIPatchToPatchInterpolation& cyclicAMIPolyPatch::AMI()"
-        )
+        FatalErrorInFunction
             << "AMI interpolator only available to owner patch"
             << abort(FatalError);
     }

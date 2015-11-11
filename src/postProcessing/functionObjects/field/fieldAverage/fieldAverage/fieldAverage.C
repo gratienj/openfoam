@@ -90,7 +90,7 @@ void Foam::fieldAverage::initialize()
     {
         if (!faItems_[fieldI].active())
         {
-            WarningIn("void Foam::fieldAverage::initialize()")
+            WarningInFunction
                 << "Field " << faItems_[fieldI].fieldName()
                 << " not found in database for averaging";
         }
@@ -244,6 +244,13 @@ Foam::fieldAverage::fieldAverage
     if (setActive<fvMesh>())
     {
         read(dict);
+    }
+    else
+    {
+        active_ = false;
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_ << nl
+            << endl;
     }
 }
 

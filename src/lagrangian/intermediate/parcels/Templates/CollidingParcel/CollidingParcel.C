@@ -103,10 +103,8 @@ bool Foam::CollidingParcel<ParcelType>::move
 
         default:
         {
-            FatalErrorIn
-            (
-                "CollidingParcel<ParcelType>::move(TrackData&, const scalar)"
-            )   << td.part() << " is an invalid part of the tracking method."
+            FatalErrorInFunction
+                << td.part() << " is an invalid part of the tracking method."
                 << abort(FatalError);
         }
     }

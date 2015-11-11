@@ -156,6 +156,12 @@ void Foam::forces::writeBinHeader(const word& header, Ostream& os) const
             os  << tab << jn << "(porous_x porous_y porous_z)";
         }
     }
+    else
+    {
+        FatalErrorInFunction
+            << "Unhandled file index: " << i
+            << abort(FatalError);
+    }
 
     os << endl;
 }
@@ -173,7 +179,7 @@ void Foam::forces::initialise()
         if (!obr_.foundObject<volVectorField>(fDName_))
         {
             active_ = false;
-            WarningIn("void Foam::forces::initialise()")
+            WarningInFunction
                 << "Could not find " << fDName_ << " in database." << nl
                 << "    De-activating forces."
                 << endl;
@@ -193,7 +199,7 @@ void Foam::forces::initialise()
         {
             active_ = false;
 
-            WarningIn("void Foam::forces::initialise()")
+            WarningInFunction
                 << "Could not find " << UName_ << ", " << pName_;
 
             if (rhoName_ != "rhoInf")
@@ -370,7 +376,7 @@ Foam::tmp<Foam::volSymmTensorField> Foam::forces::devRhoReff() const
     }
     else
     {
-        FatalErrorIn("forces::devRhoReff()")
+        FatalErrorInFunction
             << "No valid model for viscous stress calculation"
             << exit(FatalError);
 
@@ -409,7 +415,7 @@ Foam::tmp<Foam::volScalarField> Foam::forces::mu() const
     }
     else
     {
-        FatalErrorIn("forces::mu()")
+        FatalErrorInFunction
             << "No valid model for dynamic viscosity calculation"
             << exit(FatalError);
 
@@ -456,7 +462,7 @@ Foam::scalar Foam::forces::rho(const volScalarField& p) const
     {
         if (rhoName_ != "rhoInf")
         {
-            FatalErrorIn("forces::rho(const volScalarField& p)")
+            FatalErrorInFunction
                 << "Dynamic pressure is expected but kinematic is provided."
                 << exit(FatalError);
         }
@@ -786,6 +792,14 @@ Foam::forces::forces
             if (log_) Info << endl;
         }
     }
+    else
+    {
+        active_ = false;
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_
+            << endl;
+    }
+
 }
 
 
@@ -951,28 +965,21 @@ void Foam::forces::read(const dictionary& dict)
         }
     }
 
-    writeFields_ = dict.lookupOrDefault("writeFields", false);
-
-    if (writeFields_)
-    {
-        if (log_) Info << "    Fields will be written" << endl;
-
-        tmp<volVectorField> tforce
-        (
-            new volVectorField
-            (
-                IOobject
-                (
-                    fieldName("force"),
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedVector("0", dimForce, vector::zero)
-            )
-        );
+            if (nBin_ < 0)
+            {
+                FatalIOErrorInFunction(dict)
+                    << "Number of bins (nBin) must be zero or greater"
+                    << exit(FatalIOError);
+            }
+            else if ((nBin_ == 0) || (nBin_ == 1))
+            {
+                nBin_ = 1;
+                forAll(force_, i)
+                {
+                    force_[i].setSize(1);
+                    moment_[i].setSize(1);
+                }
+            }
 
         obr_.store(tforce.ptr());
 
@@ -1176,7 +1183,7 @@ void Foam::forces::calcForcesMoment()
 
         if (models.empty())
         {
-            WarningIn("void Foam::forces::calcForcesMoment()")
+            WarningInFunction
                 << "Porosity effects requested, but no porosity models found "
                 << "in the database"
                 << endl;

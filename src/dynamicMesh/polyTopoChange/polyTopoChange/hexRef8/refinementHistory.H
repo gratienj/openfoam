@@ -125,7 +125,15 @@ public:
         splitCell8(const splitCell8&);
 
         //- Copy operator since autoPtr otherwise 'steals' storage.
-        void operator=(const splitCell8& s);
+        void operator=(const splitCell8& s)
+        {
+            // Check for assignment to self
+            if (this == &s)
+            {
+                FatalErrorInFunction
+                    << "Attempted assignment to self"
+                    << abort(FatalError);
+            }
 
         bool operator==(const splitCell8& s) const;
 
@@ -295,7 +303,7 @@ public:
 
             if (index < 0)
             {
-                FatalErrorIn("refinementHistory::parentIndex(const label)")
+                FatalErrorInFunction
                     << "Cell " << cellI << " is not visible"
                     << abort(FatalError);
             }

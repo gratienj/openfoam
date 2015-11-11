@@ -121,10 +121,8 @@ Foam::PackedBoolList Foam::isoSurface::collocatedFaces
     }
     else
     {
-        FatalErrorIn
-        (
-            "isoSurface::collocatedFaces(const coupledPolyPatch&) const"
-        )   << "Unhandled coupledPolyPatch type " << pp.type()
+        FatalErrorInFunction
+            << "Unhandled coupledPolyPatch type " << pp.type()
             << abort(FatalError);
     }
     return collocated;
@@ -887,7 +885,7 @@ Foam::triSurface Foam::isoSurface::stitchTriPoints
 
     if ((triPoints.size() % 3) != 0)
     {
-        FatalErrorIn("isoSurface::stitchTriPoints(..)")
+        FatalErrorInFunction
             << "Problem: number of points " << triPoints.size()
             << " not a multiple of 3." << abort(FatalError);
     }
@@ -918,7 +916,7 @@ Foam::triSurface Foam::isoSurface::stitchTriPoints
 
         if (hasMerged)
         {
-            FatalErrorIn("isoSurface::stitchTriPoints(..)")
+            FatalErrorInFunction
                 << "Merged points contain duplicates"
                 << " when merging with distance " << mergeDistance_ << endl
                 << "merged:" << newPoints.size() << " re-merged:"
@@ -1035,7 +1033,7 @@ Foam::triSurface Foam::isoSurface::stitchTriPoints
 
                     if (f == nbrF)
                     {
-                        FatalErrorIn("validTri(const triSurface&, const label)")
+                        FatalErrorInFunction
                             << "Check : "
                             << " triangle " << faceI << " vertices " << f
                             << " fc:" << f.centre(surf.points())
@@ -1064,14 +1062,28 @@ void Foam::isoSurface::trimToPlanes
     DynamicList<triPoints> insideTrisA;
     storeOp insideOpA(insideTrisA);
 
-    // Buffer for generated triangles
-    DynamicList<triPoints> insideTrisB;
-    storeOp insideOpB(insideTrisB);
+    if
+    (
+        (f[0] < 0) || (f[0] >= surf.points().size())
+     || (f[1] < 0) || (f[1] >= surf.points().size())
+     || (f[2] < 0) || (f[2] >= surf.points().size())
+    )
+    {
+        WarningInFunction
+            << "triangle " << faceI << " vertices " << f
+            << " uses point indices outside point range 0.."
+            << surf.points().size()-1 << endl;
 
     triPointRef::dummyOp dop;
 
-    // Store starting triangle in insideTrisA
-    insideOpA(triPoints(tri.a(), tri.b(), tri.c()));
+    if ((f[0] == f[1]) || (f[0] == f[2]) || (f[1] == f[2]))
+    {
+        WarningInFunction
+            << "triangle " << faceI
+            << " uses non-unique vertices " << f
+            << endl;
+        return false;
+    }
 
 
     bool useA = true;
@@ -1107,20 +1119,15 @@ void Foam::isoSurface::trimToPlanes
     {
         forAll(insideOpA.tris_, i)
         {
-            const triPoints& tri = insideOpA.tris_[i];
-            newTriPoints.append(tri[0]);
-            newTriPoints.append(tri[1]);
-            newTriPoints.append(tri[2]);
-        }
-    }
-    else
-    {
-        forAll(insideOpB.tris_, i)
-        {
-            const triPoints& tri = insideOpB.tris_[i];
-            newTriPoints.append(tri[0]);
-            newTriPoints.append(tri[1]);
-            newTriPoints.append(tri[2]);
+            WarningInFunction
+                << "triangle " << faceI << " vertices " << f
+                << " fc:" << f.centre(surf.points())
+                << " has the same vertices as triangle " << nbrFaceI
+                << " vertices " << nbrF
+                << " fc:" << nbrF.centre(surf.points())
+                << endl;
+
+            return false;
         }
     }
 }
@@ -1202,6 +1209,46 @@ void Foam::isoSurface::trimToBox
     // Trim triPoints, return map
     trimToBox(bb, triPoints, triMap);
 
+                if (iter != extraEdgeFaces.end())
+                {
+                    labelList& eFaces = iter();
+                    label sz = eFaces.size();
+                    eFaces.setSize(sz+1);
+                    eFaces[sz] = triI;
+                }
+                else
+                {
+                    extraEdgeFaces.insert(e, labelList(1, triI));
+                }
+            }
+            else if (edgeFace1[edgeI] == -1)
+            {
+                edgeFace1[edgeI] = triI;
+            }
+            else
+            {
+                //WarningInFunction
+                //    << "Edge " << edgeI << " with centre "
+                //    << mergedCentres[edgeI]
+                //    << " used by more than two triangles: "
+                //    << edgeFace0[edgeI] << ", "
+                //    << edgeFace1[edgeI] << " and " << triI << endl;
+                Map<labelList>::iterator iter = edgeFacesRest.find(edgeI);
+
+                if (iter != edgeFacesRest.end())
+                {
+                    labelList& eFaces = iter();
+                    label sz = eFaces.size();
+                    eFaces.setSize(sz+1);
+                    eFaces[sz] = triI;
+                }
+                else
+                {
+                    edgeFacesRest.insert(edgeI, labelList(1, triI));
+                }
+            }
+        }
+    }
 
     // Find point correspondence:
     // - one-to-one for preserved original points (triPointMap)
@@ -1261,9 +1308,70 @@ void Foam::isoSurface::trimToBox
         }
     }
 
-    interpolatedPoints.transfer(dynInterpolatedPoints);
-    interpolatedOldPoints.transfer(dynInterpolatedOldPoints);
-    interpolationWeights.transfer(dynInterpolationWeights);
+        forAll(changedFaces, i)
+        {
+            label triI = changedFaces[i];
+            const labelledTri& tri = surf[triI];
+            const FixedList<label, 3>& fEdges = faceEdges[triI];
+
+            forAll(fEdges, fp)
+            {
+                label edgeI = fEdges[fp];
+
+                // my points:
+                label p0 = tri[fp];
+                label p1 = tri[tri.fcIndex(fp)];
+
+                label nbrI =
+                (
+                    edgeFace0[edgeI] != triI
+                  ? edgeFace0[edgeI]
+                  : edgeFace1[edgeI]
+                );
+
+                if (nbrI != -1 && flipState[nbrI] == -1)
+                {
+                    const labelledTri& nbrTri = surf[nbrI];
+
+                    // nbr points
+                    label nbrFp = findIndex(nbrTri, p0);
+
+                    if (nbrFp == -1)
+                    {
+                        FatalErrorInFunction
+                            << "triI:" << triI
+                            << " tri:" << tri
+                            << " p0:" << p0
+                            << " p1:" << p1
+                            << " fEdges:" << fEdges
+                            << " edgeI:" << edgeI
+                            << " edgeFace0:" << edgeFace0[edgeI]
+                            << " edgeFace1:" << edgeFace1[edgeI]
+                            << " nbrI:" << nbrI
+                            << " nbrTri:" << nbrTri
+                            << abort(FatalError);
+                    }
+
+
+                    label nbrP1 = nbrTri[nbrTri.rcIndex(nbrFp)];
+
+                    bool sameOrientation = (p1 == nbrP1);
+
+                    if (flipState[triI] == 0)
+                    {
+                        flipState[nbrI] = (sameOrientation ? 0 : 1);
+                    }
+                    else
+                    {
+                        flipState[nbrI] = (sameOrientation ? 1 : 0);
+                    }
+                    newChangedFaces.append(nbrI);
+                }
+            }
+        }
+
+        changedFaces.transfer(newChangedFaces);
+    }
 }
 
 
@@ -1281,10 +1389,22 @@ bool Foam::isoSurface::validTri(const triSurface& surf, const label faceI)
      || (f[2] < 0) || (f[2] >= surf.points().size())
     )
     {
-        WarningIn("validTri(const triSurface&, const label)")
-            << "triangle " << faceI << " vertices " << f
-            << " uses point indices outside point range 0.."
-            << surf.points().size()-1 << endl;
+        if (flipState[triI] == 1)
+        {
+            labelledTri tri(surf[triI]);
+
+            surf[triI][0] = tri[0];
+            surf[triI][1] = tri[2];
+            surf[triI][2] = tri[1];
+        }
+        else if (flipState[triI] == -1)
+        {
+            FatalErrorInFunction
+                << "problem" << abort(FatalError);
+        }
+    }
+}
+
 
         return false;
     }

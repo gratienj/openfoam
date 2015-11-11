@@ -542,7 +542,7 @@ void Foam::isoSurface::generateTriPoints
      || (snappedPoint.size() != mesh_.nPoints())
     )
     {
-        FatalErrorIn("isoSurface::generateTriPoints(..)")
+        FatalErrorInFunction
             << "Incorrect size." << endl
             << "mesh: nCells:" << mesh_.nCells()
             << " points:" << mesh_.nPoints() << endl
@@ -853,6 +853,46 @@ Foam::isoSurface::interpolate
         interpolationWeights_,
         triPoints
     );
+    Field<Type>& values = tvalues();
+    labelList nValues(values.size(), 0);
+
+    forAll(triPoints, i)
+    {
+        label mergedPointI = triPointMergeMap_[i];
+
+        if (mergedPointI >= 0)
+        {
+            values[mergedPointI] += triPoints[i];
+            nValues[mergedPointI]++;
+        }
+    }
+
+    if (debug)
+    {
+        Pout<< "nValues:" << values.size() << endl;
+        label nMult = 0;
+        forAll(nValues, i)
+        {
+            if (nValues[i] == 0)
+            {
+                FatalErrorInFunction
+                    << "point:" << i << " nValues:" << nValues[i]
+                    << abort(FatalError);
+            }
+            else if (nValues[i] > 1)
+            {
+                nMult++;
+            }
+        }
+        Pout<< "Of which mult:" << nMult << endl;
+    }
+
+    forAll(values, i)
+    {
+        values[i] /= scalar(nValues[i]);
+    }
+
+    return tvalues;
 }
 
 

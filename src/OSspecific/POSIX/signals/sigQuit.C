@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,10 +42,8 @@ void Foam::sigQuit::sigHandler(int)
     // Reset old handling
     if (sigaction(SIGQUIT, &oldAction_, NULL) < 0)
     {
-        FatalErrorIn
-        (
-            "Foam::sigQuit::sigHandler()"
-        )   << "Cannot reset SIGQUIT trapping"
+        FatalErrorInFunction
+            << "Cannot reset SIGQUIT trapping"
             << abort(FatalError);
     }
 
@@ -71,7 +69,13 @@ Foam::sigQuit::sigQuit()
 
 Foam::sigQuit::~sigQuit()
 {
-    unset(false);
+    // Reset old handling
+    if (oldAction_.sa_handler && sigaction(SIGQUIT, &oldAction_, NULL) < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot reset SIGQUIT trapping"
+            << abort(FatalError);
+    }
 }
 
 
@@ -81,19 +85,9 @@ void Foam::sigQuit::set(const bool verbose)
 {
     if (!sigActive_)
     {
-        struct sigaction newAction;
-        newAction.sa_handler = sigHandler;
-        newAction.sa_flags = SA_NODEFER;
-        sigemptyset(&newAction.sa_mask);
-        if (sigaction(SIGQUIT, &newAction, &oldAction_) < 0)
-        {
-            FatalErrorIn
-            (
-                "Foam::sigQuit::set()"
-            )   << "Cannot set SIGQUIT trapping"
-                << abort(FatalError);
-        }
-        sigActive_ = true;
+        FatalErrorInFunction
+            << "Cannot call sigQuit::set() more than once"
+            << abort(FatalError);
     }
 }
 
@@ -102,15 +96,9 @@ void Foam::sigQuit::unset(const bool)
 {
     if (sigActive_)
     {
-        if (sigaction(SIGQUIT, &oldAction_, NULL) < 0)
-        {
-            FatalErrorIn
-            (
-                "Foam::sigQuit::unset()"
-            )   << "Cannot reset SIGQUIT trapping"
-                << abort(FatalError);
-        }
-        sigActive_ = false;
+        FatalErrorInFunction
+            << "Cannot set SIGQUIT trapping"
+            << abort(FatalError);
     }
 }
 

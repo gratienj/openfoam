@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,10 +42,8 @@ void Foam::sigInt::sigHandler(int)
     // Reset old handling
     if (sigaction(SIGINT, &oldAction_, NULL) < 0)
     {
-        FatalErrorIn
-        (
-            "Foam::sigInt::sigHandler()"
-        )   << "Cannot reset SIGINT trapping"
+        FatalErrorInFunction
+            << "Cannot reset SIGINT trapping"
             << abort(FatalError);
     }
 
@@ -69,7 +67,13 @@ Foam::sigInt::sigInt()
 
 Foam::sigInt::~sigInt()
 {
-    unset(false);
+    // Reset old handling
+    if (sigaction(SIGINT, &oldAction_, NULL) < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot reset SIGINT trapping"
+            << abort(FatalError);
+    }
 }
 
 
@@ -79,19 +83,9 @@ void Foam::sigInt::set(const bool)
 {
     if (!sigActive_)
     {
-        struct sigaction newAction;
-        newAction.sa_handler = sigHandler;
-        newAction.sa_flags = SA_NODEFER;
-        sigemptyset(&newAction.sa_mask);
-        if (sigaction(SIGINT, &newAction, &oldAction_) < 0)
-        {
-            FatalErrorIn
-            (
-                "Foam::sigInt::set()"
-            )   << "Cannot set SIGINT trapping"
-                << abort(FatalError);
-        }
-        sigActive_ = true;
+        FatalErrorInFunction
+            << "Cannot call sigInt::set() more than once"
+            << abort(FatalError);
     }
 }
 
@@ -100,15 +94,9 @@ void Foam::sigInt::unset(const bool)
 {
     if (sigActive_)
     {
-        if (sigaction(SIGINT, &oldAction_, NULL) < 0)
-        {
-            FatalErrorIn
-            (
-                "Foam::sigInt::unset()"
-            )   << "Cannot reset SIGINT trapping"
-                << abort(FatalError);
-        }
-        sigActive_ = false;
+        FatalErrorInFunction
+            << "Cannot set SIGINT trapping"
+            << abort(FatalError);
     }
 }
 

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -113,7 +113,7 @@ void Foam::timeActivatedFileUpdate::read(const dictionary& dict)
             timeVsFile_[i].second() = timeVsFile_[i].second().expand();
             if (!isFile(timeVsFile_[i].second()))
             {
-                FatalErrorIn("timeActivatedFileUpdate::read(const dictionary&)")
+                FatalErrorInFunction
                     << "File: " << timeVsFile_[i].second() << " not found"
                     << nl << exit(FatalError);
             }

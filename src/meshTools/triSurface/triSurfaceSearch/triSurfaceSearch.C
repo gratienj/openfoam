@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -209,7 +209,7 @@ Foam::triSurfaceSearch::tree() const
 
             if (nPoints != surface().points().size())
             {
-                WarningIn("triSurfaceSearch::tree() const")
+                WarningInFunction
                     << "Surface does not have compact point numbering."
                     << " Of " << surface().points().size()
                     << " only " << nPoints

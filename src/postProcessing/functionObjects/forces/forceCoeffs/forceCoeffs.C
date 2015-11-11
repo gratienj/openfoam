@@ -182,14 +182,9 @@ void Foam::forceCoeffs::writeBinData
 
     for (label binI = 0; binI < nBin_; binI++)
     {
-        scalar total = coeffs[0][binI] + coeffs[1][binI] + coeffs[2][binI];
-
-        os  << tab << total << tab << coeffs[0][binI] << tab << coeffs[1][binI];
-
-        if (porosity_)
-        {
-            os  << tab << coeffs[2][binI];
-        }
+        FatalErrorInFunction
+            << "Unhandled file index: " << i
+            << abort(FatalError);
     }
 
     os  << endl;

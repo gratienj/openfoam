@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -437,7 +437,7 @@ Foam::labelList Foam::meshRefinement::nearestPatch
             {
                 if (!haveWarned)
                 {
-                    WarningIn("meshRefinement::nearestPatch(..)")
+                    WarningInFunction
                         << "Did not visit some faces, e.g. face " << faceI
                         << " at " << mesh_.faceCentres()[faceI] << endl
                         << "Assigning  these cells to patch "

@@ -109,8 +109,10 @@ Foam::fieldMinMax::fieldMinMax
     // Check if the available mesh is an fvMesh otherise deactivate
     if (setActive<fvMesh>())
     {
-        read(dict);
-        writeFileHeader(file());
+        active_ = false;
+        WarningInFunction
+            << "No fvMesh available, deactivating " << name_
+            << endl;
     }
 }
 

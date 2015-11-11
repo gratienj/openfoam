@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -189,11 +189,8 @@ Foam::autoPtr<Foam::decompositionMethod> Foam::decompositionMethod::New
 
     if (cstrIter == dictionaryConstructorTablePtr_->end())
     {
-        FatalErrorIn
-        (
-            "decompositionMethod::New"
-            "(const dictionary& decompositionDict)"
-        )   << "Unknown decompositionMethod "
+        FatalErrorInFunction
+            << "Unknown decompositionMethod "
             << methodType << nl << nl
             << "Valid decompositionMethods are : " << endl
             << dictionaryConstructorTablePtr_->sortedToc()
@@ -1095,17 +1092,8 @@ Foam::labelList Foam::decompositionMethod::decompose
 
     if (nWeights > 0 && cellWeights.size() != mesh.nCells())
     {
-        FatalErrorIn
-        (
-            "decompositionMethod::decompose\n"
-            "(\n"
-            "   const polyMesh&,\n"
-            "   const scalarField&,\n"
-            "   const boolList&,\n"
-            "   const PtrList<labelList>&,\n"
-            "   const labelList&,\n"
-            "   const List<labelPair>&\n"
-        )   << "Number of weights " << cellWeights.size()
+        FatalErrorInFunction
+            << "Number of weights " << cellWeights.size()
             << " differs from number of cells " << mesh.nCells()
             << exit(FatalError);
     }
@@ -1265,18 +1253,8 @@ Foam::labelList Foam::decompositionMethod::decompose
             }
             else if (blockedFace[f0] != blockedFace[f1])
             {
-                FatalErrorIn
-                (
-                    "labelList decompose\n"
-                    "(\n"
-                    "    const polyMesh&,\n"
-                    "    const scalarField&,\n"
-                    "    const boolList&,\n"
-                    "    const PtrList<labelList>&,\n"
-                    "    const labelList&,\n"
-                    "    const List<labelPair>&\n"
-                    ")"
-                )   << "On explicit connection between faces " << f0
+                FatalErrorInFunction
+                    << "On explicit connection between faces " << f0
                     << " and " << f1
                     << " the two blockedFace status are not equal : "
                     << blockedFace[f0] << " and " << blockedFace[f1]
@@ -1420,7 +1398,7 @@ Foam::labelList Foam::decompositionMethod::decompose
                             label nbrProc = nbrDecomp[bFaceI];
                             if (ownProc != nbrProc)
                             {
-                                FatalErrorIn("decompositionMethod::decompose()")
+                                FatalErrorInFunction
                                     << "patch:" << pp.name()
                                     << " face:" << faceI
                                     << " at:" << mesh.faceCentres()[faceI]
@@ -1454,7 +1432,101 @@ void Foam::decompositionMethod::setConstraints
     specifiedProcessorFaces.clear();
     explicitConnections.clear();
 
-    forAll(constraints_, constraintI)
+
+    if (decompositionDict_.found("preservePatches"))
+    {
+        wordList pNames(decompositionDict_.lookup("preservePatches"));
+
+        Info<< nl
+            << "Keeping owner of faces in patches " << pNames
+            << " on same processor. This only makes sense for cyclics." << endl;
+
+        const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+        forAll(pNames, i)
+        {
+            const label patchI = patches.findPatchID(pNames[i]);
+
+            if (patchI == -1)
+            {
+                FatalErrorInFunction
+                    << "Unknown preservePatch " << pNames[i]
+                    << endl << "Valid patches are " << patches.names()
+                    << exit(FatalError);
+            }
+
+            const polyPatch& pp = patches[patchI];
+
+            forAll(pp, i)
+            {
+                if (blockedFace[pp.start() + i])
+                {
+                    blockedFace[pp.start() + i] = false;
+                    //nUnblocked++;
+                }
+            }
+        }
+    }
+    if (decompositionDict_.found("preserveFaceZones"))
+    {
+        wordList zNames(decompositionDict_.lookup("preserveFaceZones"));
+
+        Info<< nl
+            << "Keeping owner and neighbour of faces in zones " << zNames
+            << " on same processor" << endl;
+
+        const faceZoneMesh& fZones = mesh.faceZones();
+
+        forAll(zNames, i)
+        {
+            label zoneI = fZones.findZoneID(zNames[i]);
+
+            if (zoneI == -1)
+            {
+                FatalErrorInFunction
+                    << "Unknown preserveFaceZone " << zNames[i]
+                    << endl << "Valid faceZones are " << fZones.names()
+                    << exit(FatalError);
+            }
+
+            const faceZone& fz = fZones[zoneI];
+
+            forAll(fz, i)
+            {
+                if (blockedFace[fz[i]])
+                {
+                    blockedFace[fz[i]] = false;
+                    //nUnblocked++;
+                }
+            }
+        }
+    }
+
+    bool preserveBaffles = decompositionDict_.lookupOrDefault
+    (
+        "preserveBaffles",
+        false
+    );
+    if (preserveBaffles)
+    {
+        Info<< nl
+            << "Keeping owner of faces in baffles "
+            << " on same processor." << endl;
+
+        explicitConnections = localPointRegion::findDuplicateFacePairs(mesh);
+        forAll(explicitConnections, i)
+        {
+            blockedFace[explicitConnections[i].first()] = false;
+            blockedFace[explicitConnections[i].second()] = false;
+        }
+    }
+
+    if
+    (
+        decompositionDict_.found("preservePatches")
+     || decompositionDict_.found("preserveFaceZones")
+     || preserveBaffles
+    )
     {
         constraints_[constraintI].add
         (

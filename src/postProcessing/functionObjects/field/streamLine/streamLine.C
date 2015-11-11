@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -77,15 +77,161 @@ void Foam::streamLine::track()
     PtrList<interpolation<vector> > vvInterp;
     label UIndex = -1;
 
-    initInterpolations
-    (
-        nSeeds,
-        UIndex,
-        vsFlds,
-        vsInterp,
-        vvFlds,
-        vvInterp
-    );
+    if (loadFromFiles_)
+    {
+        IOobjectList allObjects(mesh, runTime.timeName());
+
+        IOobjectList objects(2*fields_.size());
+        forAll(fields_, i)
+        {
+            objects.add(*allObjects[fields_[i]]);
+        }
+
+        ReadFields(mesh, objects, vsFlds);
+        vsInterp.setSize(vsFlds.size());
+        forAll(vsFlds, i)
+        {
+            vsInterp.set
+            (
+                i,
+                interpolation<scalar>::New
+                (
+                    interpolationScheme_,
+                    vsFlds[i]
+                )
+            );
+        }
+        ReadFields(mesh, objects, vvFlds);
+        vvInterp.setSize(vvFlds.size());
+        forAll(vvFlds, i)
+        {
+            vvInterp.set
+            (
+                i,
+                interpolation<vector>::New
+                (
+                    interpolationScheme_,
+                    vvFlds[i]
+                )
+            );
+        }
+    }
+    else
+    {
+        label nScalar = 0;
+        label nVector = 0;
+
+        forAll(fields_, i)
+        {
+            if (mesh.foundObject<volScalarField>(fields_[i]))
+            {
+                nScalar++;
+            }
+            else if (mesh.foundObject<volVectorField>(fields_[i]))
+            {
+                nVector++;
+            }
+            else
+            {
+                FatalErrorInFunction
+                    << "Cannot find field " << fields_[i] << nl
+                    << "Valid scalar fields are:"
+                    << mesh.names(volScalarField::typeName) << nl
+                    << "Valid vector fields are:"
+                    << mesh.names(volVectorField::typeName)
+                    << exit(FatalError);
+            }
+        }
+        vsInterp.setSize(nScalar);
+        nScalar = 0;
+        vvInterp.setSize(nVector);
+        nVector = 0;
+
+        forAll(fields_, i)
+        {
+            if (mesh.foundObject<volScalarField>(fields_[i]))
+            {
+                const volScalarField& f = mesh.lookupObject<volScalarField>
+                (
+                    fields_[i]
+                );
+                vsInterp.set
+                (
+                    nScalar++,
+                    interpolation<scalar>::New
+                    (
+                        interpolationScheme_,
+                        f
+                    )
+                );
+            }
+            else if (mesh.foundObject<volVectorField>(fields_[i]))
+            {
+                const volVectorField& f = mesh.lookupObject<volVectorField>
+                (
+                    fields_[i]
+                );
+
+                if (f.name() == UName_)
+                {
+                    UIndex = nVector;
+                }
+
+                vvInterp.set
+                (
+                    nVector++,
+                    interpolation<vector>::New
+                    (
+                        interpolationScheme_,
+                        f
+                    )
+                );
+            }
+        }
+    }
+
+    // Store the names
+    scalarNames_.setSize(vsInterp.size());
+    forAll(vsInterp, i)
+    {
+        scalarNames_[i] = vsInterp[i].psi().name();
+    }
+    vectorNames_.setSize(vvInterp.size());
+    forAll(vvInterp, i)
+    {
+        vectorNames_[i] = vvInterp[i].psi().name();
+    }
+
+    // Check that we know the index of U in the interpolators.
+
+    if (UIndex == -1)
+    {
+        FatalErrorInFunction
+            << "Cannot find field to move particles with : " << UName_ << nl
+            << "This field has to be present in the sampled fields " << fields_
+            << " and in the objectRegistry."
+            << exit(FatalError);
+    }
+
+    // Sampled data
+    // ~~~~~~~~~~~~
+
+    // Size to maximum expected sizes.
+    allTracks_.clear();
+    allTracks_.setCapacity(nSeeds);
+    allScalars_.setSize(vsInterp.size());
+    forAll(allScalars_, i)
+    {
+        allScalars_[i].clear();
+        allScalars_[i].setCapacity(nSeeds);
+    }
+    allVectors_.setSize(vvInterp.size());
+    forAll(allVectors_, i)
+    {
+        allVectors_[i].clear();
+        allVectors_[i].setCapacity(nSeeds);
+    }
+
 
     // Additional particle info
     streamLineParticle::trackingData td
@@ -130,6 +276,13 @@ Foam::streamLine::streamLine
     {
         read(dict_);
     }
+    else
+    {
+        active_ = false;
+        WarningInFunction
+            << "No fvMesh available, deactivating."
+            << nl << endl;
+    }
 }
 
 
@@ -145,14 +298,52 @@ void Foam::streamLine::read(const dictionary& dict)
 {
     if (active_)
     {
-        streamLineBase::read(dict);
+        Info<< type() << " " << name_ << ":" << nl;
+
+        //dict_ = dict;
+        dict.lookup("fields") >> fields_;
+        if (dict.found("UName"))
+        {
+            dict.lookup("UName") >> UName_;
+        }
+        else
+        {
+            UName_ = "U";
+            if (dict.found("U"))
+            {
+                IOWarningInFunction(dict)
+                    << "Using deprecated entry \"U\"."
+                    << " Please use \"UName\" instead."
+                    << endl;
+                dict.lookup("U") >> UName_;
+            }
+        }
+
+        if (findIndex(fields_, UName_) == -1)
+        {
+            FatalIOErrorInFunction(dict)
+                << "Velocity field for tracking " << UName_
+                << " should be present in the list of fields " << fields_
+                << exit(FatalIOError);
+        }
+
+
+        dict.lookup("trackForward") >> trackForward_;
+        dict.lookup("lifeTime") >> lifeTime_;
+        if (lifeTime_ < 1)
+        {
+            FatalErrorInFunction
+                << "Illegal value " << lifeTime_ << " for lifeTime"
+                << exit(FatalError);
+        }
+
 
         bool subCycling = dict.found("nSubCycle");
         bool fixedLength = dict.found("trackLength");
 
         if (subCycling && fixedLength)
         {
-            FatalIOErrorIn("streamLine::read(const dictionary&)", dict)
+            FatalIOErrorInFunction(dict)
                 << "Cannot both specify automatic time stepping (through '"
                 << "nSubCycle' specification) and fixed track length (through '"
                 << "trackLength')"
