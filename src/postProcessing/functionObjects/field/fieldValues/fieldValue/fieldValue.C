@@ -75,6 +75,7 @@ Foam::fieldValue::fieldValue
     const bool loadFromFiles
 )
 :
+    functionObjectState(obr, name),
     functionObjectFile(obr, name, valueType, dict),
     obr_(obr),
     dict_(dict),
