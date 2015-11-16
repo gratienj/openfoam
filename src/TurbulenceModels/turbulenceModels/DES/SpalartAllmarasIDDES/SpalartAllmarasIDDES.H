@@ -92,7 +92,7 @@ class SpalartAllmarasIDDES
         ) const;
 
         //- Delay function
-        tmp<volScalarField> fdt(const volScalarField& magGradU) const;
+        tmp<volScalarField> fd(const volScalarField& magGradU) const;
 
         // Disallow default bitwise copy construct and assignment
         SpalartAllmarasIDDES(const SpalartAllmarasIDDES&);
@@ -146,7 +146,7 @@ public:
 
     // Member Functions
 
-        //- Re-read model coefficients if they have changed
+        //- Read model coefficients if they have changed
         virtual bool read();
 };
 

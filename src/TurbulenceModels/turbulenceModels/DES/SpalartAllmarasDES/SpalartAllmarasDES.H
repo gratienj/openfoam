@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,15 +39,6 @@ Description
         Advances in DNS/LES, 1, 4-8.
     \endverbatim
 
-    Including the low Reynolds number correction documented in
-    \verbatim
-        Spalart, P. R., Deck, S., Shur, M.L., Squires, K.D., Strelets, M.Kh,
-        Travin, A. (2006).
-        A new version of detached-eddy simulation, resistant to ambiguous grid
-        densities.
-        Theor. Comput. Fluid Dyn., 20, 181-195.
-    \endverbatim
-
 SourceFiles
     SpalartAllmarasDES.C
 
@@ -56,7 +47,7 @@ SourceFiles
 #ifndef SpalartAllmarasDES_H
 #define SpalartAllmarasDES_H
 
-#include "DESModel.H"
+#include "LESeddyViscosity.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -72,7 +63,7 @@ namespace LESModels
 template<class BasicTurbulenceModel>
 class SpalartAllmarasDES
 :
-    public DESModel<BasicTurbulenceModel>
+    public LESeddyViscosity<BasicTurbulenceModel>
 {
     // Private Member Functions
 
@@ -100,15 +91,6 @@ protected:
             dimensionedScalar CDES_;
             dimensionedScalar ck_;
 
-
-            // Low Reynolds number correction
-
-                Switch lowReCorrection_;
-                dimensionedScalar Ct3_;
-                dimensionedScalar Ct4_;
-                dimensionedScalar fwStar_;
-
-
         // Fields
 
             volScalarField nuTilda_;
@@ -130,8 +112,6 @@ protected:
             const volScalarField& chi,
             const volScalarField& fv1
         ) const;
-
-        tmp<volScalarField> ft2(const volScalarField& chi) const;
 
         tmp<volScalarField> S(const volTensorField& gradU) const;
 
@@ -156,12 +136,6 @@ protected:
         (
             const volScalarField& Omega,
             const volScalarField& dTilda
-        ) const;
-
-        tmp<volScalarField> psi
-        (
-            const volScalarField& chi,
-            const volScalarField& fv1
         ) const;
 
         //- Length scale
@@ -210,7 +184,7 @@ public:
 
     // Member Functions
 
-        //- Re-read model coefficients if they have changed
+        //- Read model coefficients if they have changed
         virtual bool read();
 
         //- Return the effective diffusivity for nuTilda
