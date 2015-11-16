@@ -188,9 +188,11 @@ void FSD<CombThermoType, ThermoType>::calculateSourceNorm()
     volScalarField& omegaFuelBar = tomegaFuel();
 
     // Calculation of the mixture fraction variance (ftVar)
-    // TODO: generalize delta for RAS and LES.
-    const volScalarField& delta =
-        refCast<const compressible::LESModel>(this->turbulence()).delta();
+    const compressible::LESModel& lesModel =
+        YO2.db().lookupObject<compressible::LESModel>
+        (
+            turbulenceModel::propertiesName
+        );
 
     const volScalarField ftVar(Cv_*sqr(delta)*sqr(mgft));
 
