@@ -208,7 +208,7 @@ displacementLaplacianFvMotionSolver
     }
 
 
-    if (io.typeHeaderOk<pointVectorField>(true))
+    if (io.headerOk())
     {
         pointLocation_.reset
         (
