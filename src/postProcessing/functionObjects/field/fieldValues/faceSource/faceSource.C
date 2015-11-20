@@ -352,7 +352,7 @@ void Foam::fieldValues::faceSource::combineSurfaceGeometry
 
         if (Pstream::parRun())
         {
-            // Dimension as fraction of mesh bounding box
+            // dimension as fraction of mesh bounding box
             scalar mergeDim = 1e-10*mesh().bounds().mag();
 
             labelList pointsMap;
@@ -400,6 +400,8 @@ Foam::scalar Foam::fieldValues::faceSource::totalArea() const
 
 void Foam::fieldValues::faceSource::initialise(const dictionary& dict)
 {
+    dict.lookup("sourceName") >> sourceName_;
+
     switch (source_)
     {
         case stFaceZone:
@@ -445,14 +447,15 @@ void Foam::fieldValues::faceSource::initialise(const dictionary& dict)
 
     totalArea_ = totalArea();
 
-    if (log_) Info
-        << type() << " " << name_ << ":" << nl
-        << "    total faces  = " << nFaces_ << nl
-        << "    total area   = " << totalArea_ << nl;
+    Info<< type() << " " << name_ << ":" << nl
+        << "    total faces  = " << nFaces_
+        << nl
+        << "    total area   = " << totalArea_
+        << nl;
 
     if (dict.readIfPresent("weightField", weightFieldName_))
     {
-        if (log_) Info << "    weight field = " << weightFieldName_ << nl;
+        Info<< "    weight field = " << weightFieldName_ << nl;
 
         if (source_ == stSampledSurface)
         {
@@ -467,7 +470,7 @@ void Foam::fieldValues::faceSource::initialise(const dictionary& dict)
         if (weightFieldName_ == "none")
         {
             dict.lookup("orientedWeightField") >>  weightFieldName_;
-            if (log_) Info << "    weight field = " << weightFieldName_ << nl;
+            Info<< "    weight field = " << weightFieldName_ << nl;
             orientWeightField_ = true;
         }
         else
@@ -486,7 +489,12 @@ void Foam::fieldValues::faceSource::initialise(const dictionary& dict)
         fields_.append(orientedFields);
     }
 
-    if (log_) Info << nl << endl;
+    if (dict.readIfPresent("scaleFactor", scaleFactor_))
+    {
+        Info<< "    scale factor = " << scaleFactor_ << nl;
+    }
+
+    Info<< nl << endl;
 
     if (valueOutput_)
     {
@@ -505,27 +513,29 @@ void Foam::fieldValues::faceSource::initialise(const dictionary& dict)
 }
 
 
-void Foam::fieldValues::faceSource::writeFileHeader(Ostream& os) const
+void Foam::fieldValues::faceSource::writeFileHeader(const label i)
 {
-    writeHeaderValue(os, "Source", sourceTypeNames_[source_]);
-    writeHeaderValue(os, "Name", sourceName_);
-    writeHeaderValue(os, "Faces", nFaces_);
-    writeHeaderValue(os, "Total area", totalArea_);
-    writeHeaderValue(os, "Scale factor", scaleFactor_);
+    writeCommented(file(), "Source : ");
+    file() << sourceTypeNames_[source_] << " " << sourceName_ << endl;
+    writeCommented(file(), "Faces  : ");
+    file() << nFaces_ << endl;
+    writeCommented(file(), "Area   : ");
+    file() << totalArea_ << endl;
 
-    writeCommented(os, "Time");
+    writeCommented(file(), "Time");
     if (writeArea_)
     {
-        os  << tab << "Area";
+        file() << tab << "Area";
     }
 
     forAll(fields_, i)
     {
-        os  << tab << operationTypeNames_[operation_]
+        file()
+            << tab << operationTypeNames_[operation_]
             << "(" << fields_[i] << ")";
     }
 
-    os  << endl;
+    file() << endl;
 }
 
 
@@ -542,14 +552,14 @@ Foam::scalar Foam::fieldValues::faceSource::processValues
         case opSumDirection:
         {
             vector n(dict_.lookup("direction"));
-            return gSum(pos(values*(Sf & n))*mag(values));
+            return sum(pos(values*(Sf & n))*mag(values));
         }
         case opSumDirectionBalance:
         {
             vector n(dict_.lookup("direction"));
             const scalarField nv(values*(Sf & n));
 
-            return gSum(pos(nv)*mag(values) - neg(nv)*mag(values));
+            return sum(pos(nv)*mag(values) - neg(nv)*mag(values));
         }
         default:
         {
@@ -576,7 +586,7 @@ Foam::vector Foam::fieldValues::faceSource::processValues
             n /= mag(n) + ROOTVSMALL;
             const scalarField nv(n & values);
 
-            return gSum(pos(nv)*n*(nv));
+            return sum(pos(nv)*n*(nv));
         }
         case opSumDirectionBalance:
         {
@@ -584,16 +594,16 @@ Foam::vector Foam::fieldValues::faceSource::processValues
             n /= mag(n) + ROOTVSMALL;
             const scalarField nv(n & values);
 
-            return gSum(pos(nv)*n*(nv));
+            return sum(pos(nv)*n*(nv));
         }
         case opAreaNormalAverage:
         {
-            scalar result = gSum(values & Sf)/gSum(mag(Sf));
+            scalar result = sum(values & Sf)/sum(mag(Sf));
             return vector(result, 0.0, 0.0);
         }
         case opAreaNormalIntegrate:
         {
-            scalar result = gSum(values & Sf);
+            scalar result = sum(values & Sf);
             return vector(result, 0.0, 0.0);
         }
         default:
@@ -622,17 +632,14 @@ Foam::fieldValues::faceSource::faceSource
     weightFieldName_("none"),
     orientWeightField_(false),
     orientedFieldsStart_(labelMax),
+    scaleFactor_(1.0),
     writeArea_(dict.lookupOrDefault("writeArea", false)),
     nFaces_(0),
     faceId_(),
     facePatchId_(),
     faceSign_()
 {
-    if (active_)
-    {
-        read(dict);
-        writeFileHeader(file());
-    }
+    read(dict);
 }
 
 
@@ -646,11 +653,10 @@ Foam::fieldValues::faceSource::~faceSource()
 
 void Foam::fieldValues::faceSource::read(const dictionary& dict)
 {
+    fieldValue::read(dict);
+
     if (active_)
     {
-        fieldValue::read(dict);
-
-        // No additional info to read
         initialise(dict);
     }
 }
@@ -667,21 +673,27 @@ void Foam::fieldValues::faceSource::write()
             surfacePtr_().update();
         }
 
-        file() << obr_.time().value();
+        if (Pstream::master())
+        {
+            writeTime(file());
+        }
 
         if (writeArea_)
         {
             totalArea_ = totalArea();
-            file() << tab << totalArea_;
+            if (Pstream::master())
+            {
+                file() << tab << totalArea_;
+            }
             if (log_) Info<< "    total area = " << totalArea_ << endl;
         }
 
-        // Construct weight field. Note: zero size indicates unweighted
+        // construct weight field. Note: zero size means weight = 1
         scalarField weightField;
         if (weightFieldName_ != "none")
         {
             weightField =
-                setFieldValues<scalar>
+                getFieldValues<scalar>
                 (
                     weightFieldName_,
                     true,
@@ -689,7 +701,10 @@ void Foam::fieldValues::faceSource::write()
                 );
         }
 
-        // Process the fields
+        // Combine onto master
+        combineFields(weightField);
+
+        // process the fields
         forAll(fields_, i)
         {
             const word& fieldName = fields_[i];
@@ -698,8 +713,8 @@ void Foam::fieldValues::faceSource::write()
             bool orient = i >= orientedFieldsStart_;
             ok = ok || writeValues<scalar>(fieldName, weightField, orient);
             ok = ok || writeValues<vector>(fieldName, weightField, orient);
-            ok = ok ||
-                writeValues<sphericalTensor>(fieldName, weightField, orient);
+            ok = ok
+              || writeValues<sphericalTensor>(fieldName, weightField, orient);
             ok = ok || writeValues<symmTensor>(fieldName, weightField, orient);
             ok = ok || writeValues<tensor>(fieldName, weightField, orient);
 
@@ -712,7 +727,10 @@ void Foam::fieldValues::faceSource::write()
             }
         }
 
-        file()<< endl;
+        if (Pstream::master())
+        {
+            file()<< endl;
+        }
 
         if (log_) Info<< endl;
     }

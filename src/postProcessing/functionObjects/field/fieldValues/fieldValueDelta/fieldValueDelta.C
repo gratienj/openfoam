@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -54,9 +54,30 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-void Foam::fieldValues::fieldValueDelta::writeFileHeader(Ostream& os) const
+Foam::fieldValues::fieldValueDelta::fieldValueDelta
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+:
+    functionObjectFile(obr, name, typeName),
+    name_(name),
+    obr_(obr),
+    loadFromFiles_(loadFromFiles),
+    log_(true),
+    operation_(opSubtract),
+    source1Ptr_(NULL),
+    source2Ptr_(NULL)
+{
+    read(dict);
+}
+
+
+void Foam::fieldValues::fieldValueDelta::writeFileHeader(const label i)
 {
     const wordList& fields1 = source1Ptr_->fields();
     const wordList& fields2 = source2Ptr_->fields();
@@ -70,6 +91,8 @@ void Foam::fieldValues::fieldValueDelta::writeFileHeader(Ostream& os) const
             commonFields.append(fields1[i]);
         }
     }
+
+    Ostream& os = file();
 
     writeHeaderValue(os, "Source1", source1Ptr_->name());
     writeHeaderValue(os, "Source2", source2Ptr_->name());
@@ -85,33 +108,6 @@ void Foam::fieldValues::fieldValueDelta::writeFileHeader(Ostream& os) const
 }
 
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::fieldValues::fieldValueDelta::fieldValueDelta
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-:
-    functionObjectState(obr, name),
-    functionObjectFile(obr, name, typeName, dict),
-    obr_(obr),
-    loadFromFiles_(loadFromFiles),
-    log_(true),
-    operation_(opSubtract),
-    source1Ptr_(NULL),
-    source2Ptr_(NULL)
-{
-    if (setActive<fvMesh>())
-    {
-        read(dict);
-        writeFileHeader(file());
-    }
-}
-
-
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::fieldValues::fieldValueDelta::~fieldValueDelta()
@@ -122,122 +118,77 @@ Foam::fieldValues::fieldValueDelta::~fieldValueDelta()
 
 void Foam::fieldValues::fieldValueDelta::read(const dictionary& dict)
 {
-    if (active_)
-    {
-        functionObjectFile::read(dict);
-
-        log_ = dict.lookupOrDefault<Switch>("log", true);
-        source1Ptr_.reset
+    log_ = dict.lookupOrDefault<Switch>("log", true);
+    source1Ptr_.reset
+    (
+        fieldValue::New
         (
-            fieldValue::New
-            (
-                name_ + ".source1",
-                obr_,
-                dict.subDict("source1"),
-                loadFromFiles_,
-                false
-            ).ptr()
-        );
-        source2Ptr_.reset
+            name_ + ".source1",
+            obr_,
+            dict.subDict("source1"),
+            loadFromFiles_,
+            false
+        ).ptr()
+    );
+    source2Ptr_.reset
+    (
+        fieldValue::New
         (
-            fieldValue::New
-            (
-                name_ + ".source2",
-                obr_,
-                dict.subDict("source2"),
-                loadFromFiles_,
-                false
-            ).ptr()
-        );
+            name_ + ".source2",
+            obr_,
+            dict.subDict("source2"),
+            loadFromFiles_,
+            false
+        ).ptr()
+    );
 
-        operation_ = operationTypeNames_.read(dict.lookup("operation"));
-    }
+    operation_ = operationTypeNames_.read(dict.lookup("operation"));
 }
 
 
 void Foam::fieldValues::fieldValueDelta::write()
 {
-    // Do nothing
+    functionObjectFile::write();
+
+    source1Ptr_->write();
+    source2Ptr_->write();
+
+    if (Pstream::master())
+    {
+        writeTime(file());
+    }
+
+    if (log_) Info<< type() << " " << name_ << " output:" << endl;
+
+    bool found = false;
+    processFields<scalar>(found);
+    processFields<vector>(found);
+    processFields<sphericalTensor>(found);
+    processFields<symmTensor>(found);
+    processFields<tensor>(found);
+
+    if (Pstream::master())
+    {
+        file()<< endl;
+    }
+
+    if (log_)
+    {
+        if (!found)
+        {
+            Info<< "    none" << endl;
+        }
+        else
+        {
+            Info<< endl;
+        }
+    }
 }
 
 
 void Foam::fieldValues::fieldValueDelta::execute()
 {
-    if (active_)
-    {
-        source1Ptr_->write();
-        source2Ptr_->write();
-
-        file()<< obr_.time().value();
-
-        if (log_) Info << type() << " " << name_ << " output:" << endl;
-
-        const word& name1 = source1Ptr_->name();
-        const word& name2 = source2Ptr_->name();
-
-        const wordList entries1 = objectResultEntries(name1);
-        const wordList entries2 = objectResultEntries(name2);
-
-        if (entries1.size() != entries2.size())
-        {
-            FatalErrorIn("void Foam::fieldValues::fieldValueDelta::execute()")
-                << name_ << ": objects must generate the same number of results"
-                << nl
-                << "    " << name1 << " objects: " << entries1 << nl
-                << "    " << name2 << " objects: " << entries2 << nl
-                << exit(FatalError);
-        }
-
-        forAll(entries1, i)
-        {
-            const word& entry1(entries1[i]);
-            const word& entry2(entries2[i]);
-            const word type1 = objectResultType(name1, entry1);
-            const word type2 = objectResultType(name2, entry2);
-
-            if (type1 != type2)
-            {
-                FatalErrorIn
-                (
-                    "void Foam::fieldValues::fieldValueDelta::execute()"
-                )
-                    << name_
-                    << ": input values for operation must be of the same type"
-                    << nl
-                    << "    " << entry1 << ": " << type1 << nl
-                    << "    " << entry2 << ": " << type2 << nl
-                    << exit(FatalError);
-            }
-
-            bool found = false;
-
-            apply<scalar>(type1, name1, name2, entry1, entry2, found);
-            apply<vector>(type1, name1, name2, entry1, entry2, found);
-            apply<sphericalTensor>(type1, name1, name2, entry1, entry2, found);
-            apply<symmTensor>(type1, name1, name2, entry1, entry2, found);
-            apply<tensor>(type1, name1, name2, entry1, entry2, found);
-
-            if (log_ && !found)
-            {
-                Info<< "Operation between "
-                    << name1 << " with result " << entry1 << " and "
-                    << name2 << " with result " << entry2 << " not applied"
-                    << endl;
-            }
-        }
-
-        if (log_)
-        {
-            if (entries1.empty())
-            {
-                Info<< "    none";
-            }
-            
-            Info<< endl;
-        }
-
-        file()<< endl;
-    }
+    // Do nothing
 }
 
 
