@@ -2,7 +2,7 @@
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
 |  \\    /   O peration     | Version:  dev                                   |
-|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
@@ -10,46 +10,18 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    location    "system";
-    object      controlDict;
+    location    "chemkin";
+    object      transportProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     chemFoam;
-
-startFrom       startTime;
-
-startTime       0;
-
-stopAt          endTime;
-
-endTime         0.001;
-
-deltaT          1e-05;
-
-maxDeltaT       1;
-
-adjustTimeStep  on;
-
-writeControl    adjustableRunTime;
-
-writeInterval   5e-04;
-
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writeCompression uncompressed;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable yes;
-
-DebugSwitches
+".*"
 {
-    SolverPerformance   0;
+    transport
+    {
+        As 0;
+        Ts 0;
+    }
 }
 
 // ************************************************************************* //
