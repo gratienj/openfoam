@@ -667,7 +667,10 @@ void Foam::fieldValues::faceSource::write()
             surfacePtr_().update();
         }
 
-        file() << obr_.time().value();
+        if (Pstream::master())
+        {
+            writeTime(file());
+        }
 
         if (writeArea_)
         {

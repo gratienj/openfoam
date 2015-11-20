@@ -165,10 +165,8 @@ void Foam::fieldValues::fieldValueDelta::execute()
 {
     if (active_)
     {
-        source1Ptr_->write();
-        source2Ptr_->write();
-
-        file()<< obr_.time().value();
+        writeTime(file());
+    }
 
         if (log_) Info << type() << " " << name_ << " output:" << endl;
 

@@ -240,7 +240,7 @@ void Foam::fieldValues::cellSource::write()
         scalarField weightField;
         if (weightFieldName_ != "none")
         {
-            weightField = setFieldValues<scalar>(weightFieldName_, true);
+            writeTime(file());
         }
         
         if (writeVolume_)

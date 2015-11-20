@@ -351,11 +351,10 @@ void Foam::forceCoeffs::execute()
         << "        Cl(r)    : " << ClrTot << nl
         << endl;
 
-    if (writeToFile())
-    {
-        coeffFilePtr_()
-            << obr_.time().value() << tab << CmTot << tab  << CdTot
-            << tab << ClTot << tab << ClfTot << tab << ClrTot << endl;
+        writeTime(file(0));
+        file(0)
+            << tab << Cm << tab  << Cd
+            << tab << Cl << tab << Clf << tab << Clr << endl;
 
 
         if (nBin_ > 1)
@@ -373,11 +372,7 @@ void Foam::forceCoeffs::execute()
                 }
             }
 
-            writeBinData(dragCoeffs, CdBinFilePtr_());
-            writeBinData(liftCoeffs, ClBinFilePtr_());
-            writeBinData(momentCoeffs, CmBinFilePtr_());
-        }
-    }
+            writeTime(file(1));
 
     // Write state/results information
     {

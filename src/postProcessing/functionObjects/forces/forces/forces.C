@@ -626,45 +626,46 @@ void Foam::forces::writeIntegratedForceMoment
 
 void Foam::forces::writeForces()
 {
-    if (log_) Info << type() << " " << name_ << " output:" << nl;
+    if (log_) Info
+        << type() << " " << name_ << " output:" << nl
+        << "    sum of forces:" << nl
+        << "        pressure : " << sum(force_[0]) << nl
+        << "        viscous  : " << sum(force_[1]) << nl
+        << "        porous   : " << sum(force_[2]) << nl
+        << "    sum of moments:" << nl
+        << "        pressure : " << sum(moment_[0]) << nl
+        << "        viscous  : " << sum(moment_[1]) << nl
+        << "        porous   : " << sum(moment_[2])
+        << endl;
 
-    writeIntegratedForceMoment
-    (
-        "forces",
-        force_[0],
-        force_[1],
-        force_[2],
-        forceFilePtr_
-    );
-
-    writeIntegratedForceMoment
-    (
-        "moments",
-        moment_[0],
-        moment_[1],
-        moment_[2],
-        momentFilePtr_
-    );
+    writeTime(file(0));
+    file(0) << tab << setw(1) << '('
+        << sum(force_[0]) << setw(1) << ' '
+        << sum(force_[1]) << setw(1) << ' '
+        << sum(force_[2]) << setw(3) << ") ("
+        << sum(moment_[0]) << setw(1) << ' '
+        << sum(moment_[1]) << setw(1) << ' '
+        << sum(moment_[2]) << setw(1) << ')'
+        << endl;
 
     if (localSystem_)
     {
-        writeIntegratedForceMoment
-        (
-            "local forces",
-            coordSys_.localVector(force_[0]),
-            coordSys_.localVector(force_[1]),
-            coordSys_.localVector(force_[2]),
-            localForceFilePtr_
-        );
+        vectorField localForceN(coordSys_.localVector(force_[0]));
+        vectorField localForceT(coordSys_.localVector(force_[1]));
+        vectorField localForceP(coordSys_.localVector(force_[2]));
+        vectorField localMomentN(coordSys_.localVector(moment_[0]));
+        vectorField localMomentT(coordSys_.localVector(moment_[1]));
+        vectorField localMomentP(coordSys_.localVector(moment_[2]));
 
-        writeIntegratedForceMoment
-        (
-            "local moments",
-            coordSys_.localVector(moment_[0]),
-            coordSys_.localVector(moment_[1]),
-            coordSys_.localVector(moment_[2]),
-            localMomentFilePtr_
-        );
+        writeTime(file(0));
+        file(0) << tab << setw(1) << '('
+            << sum(localForceN) << setw(1) << ' '
+            << sum(localForceT) << setw(1) << ' '
+            << sum(localForceP) << setw(3) << ") ("
+            << sum(localMomentN) << setw(1) << ' '
+            << sum(localMomentT) << setw(1) << ' '
+            << sum(localMomentP) << setw(1) << ')'
+            << endl;
     }
 
     if (log_) Info << endl;
@@ -694,9 +695,7 @@ void Foam::forces::writeBinnedForceMoment
         }
     }
 
-    Ostream& os = osPtr();
-
-    os  << obr_.time().value();
+    writeTime(file(1));
 
     forAll(f[0], i)
     {

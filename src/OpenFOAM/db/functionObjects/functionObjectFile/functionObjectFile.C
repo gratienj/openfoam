@@ -284,4 +284,10 @@ void Foam::functionObjectFile::writeHeader
 }
 
 
+void Foam::functionObjectFile::writeTime(Ostream& os) const
+{
+    os  << setw(charWidth()) << obr_.time().timeName();
+}
+
+
 // ************************************************************************* //
