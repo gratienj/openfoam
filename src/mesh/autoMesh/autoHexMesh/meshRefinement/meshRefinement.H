@@ -502,20 +502,7 @@ private:
                 const labelList& globalToSlavePatch
             ) const;
 
-            //- Calculate intersections. Return per face -1 or the global
-            //  surface region
-            void getIntersections
-            (
-                const labelList& surfacesToTest,
-                const labelList& neiLevel,
-                const pointField& neiCc,
-                const labelList& testFaces,
-
-                labelList& globalRegion1,
-                labelList& globalRegion2
-            ) const;
-
-            //- Determine patches for baffles
+            //- Determine patches for baffles on all intersected unnamed faces
             void getBafflePatches
             (
                 const labelList& globalToMasterPatch,
@@ -675,6 +662,8 @@ private:
                 labelList& cellToZone
             ) const;
 
+            //- Make namedSurfaceIndex consistent with cellToZone
+            //  - clear out any blocked faces inbetween same cell zone.
             void makeConsistentFaceIndex
             (
                 const labelList& cellToZone,
@@ -717,11 +706,11 @@ private:
 
             // Some patch utilities
 
-            //- Get all faces in namedSurfaceIndex that have no cellZone on
+            //- Get all faces in faceToZone that have no cellZone on
             //  either side.
             labelList freeStandingBaffleFaces
             (
-                const labelList& namedSurfaceIndex,
+                const labelList& faceToZone,
                 const labelList& cellToZone,
                 const labelList& neiCellZone
             ) const;
