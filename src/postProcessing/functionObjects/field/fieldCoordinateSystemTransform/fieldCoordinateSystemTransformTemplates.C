@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -67,7 +67,7 @@ void Foam::fieldCoordinateSystemTransform::transformField
 
     Foam::transform(transField, R, transField);
 
-    Info<< "    writing field " << transField.name() << nl << endl;
+    if (log_) Info<< "    writing field " << transField.name() << nl << endl;
 
     transField.write();
 }
@@ -115,7 +115,7 @@ void Foam::fieldCoordinateSystemTransform::transform
 
         if
         (
-            fieldHeader.typeHeaderOk<vfType>(false)
+            fieldHeader.headerOk()
          && fieldHeader.headerClassName() == vfType::typeName
         )
         {
@@ -129,7 +129,7 @@ void Foam::fieldCoordinateSystemTransform::transform
         }
         else if
         (
-            fieldHeader.typeHeaderOk<sfType>(false)
+            fieldHeader.headerOk()
          && fieldHeader.headerClassName() == sfType::typeName
         )
         {
