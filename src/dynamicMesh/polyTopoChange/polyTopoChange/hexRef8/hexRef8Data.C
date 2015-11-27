@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,11 +41,7 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
     {
         IOobject rio(io);
         rio.rename("cellLevel");
-        bool haveFile = returnReduce
-        (
-            rio.typeHeaderOk<labelIOList>(true),
-            orOp<bool>()
-        );
+        bool haveFile = returnReduce(rio.headerOk(), orOp<bool>());
         if (haveFile)
         {
             Info<< "Reading hexRef8 data : " << rio.name() << endl;
@@ -55,11 +51,7 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
     {
         IOobject rio(io);
         rio.rename("pointLevel");
-        bool haveFile = returnReduce
-        (
-            rio.typeHeaderOk<labelIOList>(true),
-            orOp<bool>()
-        );
+        bool haveFile = returnReduce(rio.headerOk(), orOp<bool>());
         if (haveFile)
         {
             Info<< "Reading hexRef8 data : " << rio.name() << endl;
@@ -69,11 +61,15 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
     {
         IOobject rio(io);
         rio.rename("level0Edge");
-        bool haveFile = returnReduce
-        (
-            rio.typeHeaderOk<uniformDimensionedScalarField>(true),
-            orOp<bool>()
-        );
+
+        // MEJ: temporarily (until global reading of UniformedFields)
+        //      do not read level0Edge on processors that do not have it.
+        bool haveFile = rio.headerOk();
+        if (rio.readOpt() != IOobject::READ_IF_PRESENT)
+        {
+            reduce(haveFile, orOp<bool>());
+        }
+
         if (haveFile)
         {
             Info<< "Reading hexRef8 data : " << rio.name() << endl;
@@ -83,11 +79,7 @@ Foam::hexRef8Data::hexRef8Data(const IOobject& io)
     {
         IOobject rio(io);
         rio.rename("refinementHistory");
-        bool haveFile = returnReduce
-        (
-            rio.typeHeaderOk<refinementHistory>(true),
-            orOp<bool>()
-        );
+        bool haveFile = returnReduce(rio.headerOk(), orOp<bool>());
         if (haveFile)
         {
             Info<< "Reading hexRef8 data : " << rio.name() << endl;
@@ -280,7 +272,7 @@ void Foam::hexRef8Data::sync(const IOobject& io)
     if (hasLevel0Edge)
     {
         // Get master length
-        scalar masterLen = level0EdgePtr_().value();
+        scalar masterLen = (Pstream::master() ? level0EdgePtr_().value() : 0);
         Pstream::scatter(masterLen);
         if (!level0EdgePtr_.valid())
         {
