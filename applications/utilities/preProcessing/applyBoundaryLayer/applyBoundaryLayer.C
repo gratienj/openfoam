@@ -335,6 +335,11 @@ int main(int argc, char *argv[])
         "scalar",
         "boundary-layer thickness as Cbl * mean distance to wall"
     );
+    argList::addBoolOption
+    (
+        "compressible",
+        "apply to compressible case"
+    );
 
     #include "setRootCase.H"
 
@@ -359,6 +364,8 @@ int main(int argc, char *argv[])
     #include "createNamedMesh.H"
     #include "createFields.H"
 
+    const bool compressible = args.optionFound("compressible");
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     // Modify velocity by applying a 1/7th power law boundary-layer
@@ -381,15 +388,7 @@ int main(int argc, char *argv[])
     U.write();
 
 
-    if
-    (
-        IOobject
-        (
-            basicThermo::dictName,
-            runTime.constant(),
-            mesh
-        ).headerOk()
-    )
+    if (compressible)
     {
         calcCompressible(mesh, mask, U, y, ybl);
     }
