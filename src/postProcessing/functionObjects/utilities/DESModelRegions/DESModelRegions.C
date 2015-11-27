@@ -184,7 +184,10 @@ void Foam::DESModelRegions::execute()
 
 void Foam::DESModelRegions::end()
 {
-    // Do nothing
+    if (active_)
+    {
+        execute();
+    }
 }
 
 
