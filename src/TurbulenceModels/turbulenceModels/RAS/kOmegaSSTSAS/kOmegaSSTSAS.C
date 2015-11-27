@@ -175,7 +175,6 @@ kOmegaSSTSAS<BasicTurbulenceModel>::kOmegaSSTSAS
 {
     if (type == typeName)
     {
-        correctNut();
         this->printCoeffs(type);
     }
 }
