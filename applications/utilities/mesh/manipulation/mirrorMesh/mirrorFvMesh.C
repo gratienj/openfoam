@@ -245,7 +245,6 @@ Foam::mirrorFvMesh::mirrorFvMesh(const IOobject& io)
 
 
     labelList newToOldPatch(boundary().size(), -1);
-
     labelList newPatchSizes(boundary().size(), -1);
     labelList newPatchStarts(boundary().size(), -1);
     label nNewPatches = 0;
