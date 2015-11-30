@@ -199,7 +199,7 @@ protected:
             return blend(F1, gamma1_, gamma2_);
         }
 
-        virtual void correctNut(const volScalarField& S2);
+        void correctNut(const volScalarField& S2);
 
         virtual void correctNut();
         virtual tmp<fvScalarMatrix> kSource() const;
