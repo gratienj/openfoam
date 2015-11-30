@@ -131,8 +131,8 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::dTilda
     return max
     (
         dimensionedScalar("SMALL", dimLength, SMALL),
-        fHyb*(1 + fRestore*psi)*this->y_
-      + (1 - fHyb)*psi*this->CDES_*this->delta()
+        fHyb*(1 + fRestore*Psi)*this->y_
+      + (1 - fHyb)*this->psi(chi, fv1)*this->CDES_*Psi*this->delta()
     );
 }
 
