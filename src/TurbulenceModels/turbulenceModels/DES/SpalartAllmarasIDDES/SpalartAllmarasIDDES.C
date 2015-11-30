@@ -37,7 +37,6 @@ namespace LESModels
 template<class BasicTurbulenceModel>
 tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::alpha() const
 {
-    // Equation 9 (plus limits)
     return max
     (
         0.25 - this->y_/static_cast<const volScalarField&>(IDDESDelta_.hmax()),
@@ -52,7 +51,6 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::ft
     const volScalarField& magGradU
 ) const
 {
-    // Equation 13
     return tanh(pow3(sqr(ct_)*rd(this->nut_, magGradU)));
 }
 
@@ -63,7 +61,6 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::fl
     const volScalarField& magGradU
 ) const
 {
-    // Equation 13
     return tanh(pow(sqr(cl_)*rd(this->nu(), magGradU), 10));
 }
 
@@ -93,12 +90,11 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::rd
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
-tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::fdt
+tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::fd
 (
     const volScalarField& magGradU
 ) const
 {
-    // Related to equation 16
     return 1 - tanh(pow3(8*rd(this->nuEff(), magGradU)));
 }
 
@@ -115,28 +111,21 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::dTilda
     const volScalarField expTerm(exp(sqr(alpha)));
     const volScalarField magGradU(mag(gradU));
 
-    // Equation 9
-    tmp<volScalarField> fB = min(2*pow(expTerm, -9.0), scalar(1));
-
-    // Equation 11
-    tmp<volScalarField> fe1 =
+    tmp<volScalarField> fHill =
         2*(pos(alpha)*pow(expTerm, -11.09) + neg(alpha)*pow(expTerm, -9.0));
 
-    // Equation 12
-    tmp<volScalarField> fe2 = 1 - max(ft(magGradU), fl(magGradU));
+    tmp<volScalarField> fStep = min(2*pow(expTerm, -9.0), scalar(1));
+    const volScalarField fHyb(max(1 - fd(magGradU), fStep));
+    tmp<volScalarField> fAmp = 1 - max(ft(magGradU), fl(magGradU));
+    tmp<volScalarField> fRestore = max(fHill - 1, scalar(0))*fAmp;
 
-    // Equation 10
     const volScalarField psi(this->psi(chi, fv1));
-    tmp<volScalarField> fe = max(fe1 - 1, scalar(0))*psi*fe2;
 
-    // Equation 16
-    const volScalarField fdTilda(max(1 - fdt(magGradU), fB));
-
-    // Equation 17 (plus limits)
     return max
     (
-        fdTilda*(1 + fe)*this->y_ + (1 - fdTilda)*psi*this->CDES_*this->delta(),
-        dimensionedScalar("SMALL", dimLength, SMALL)
+        dimensionedScalar("SMALL", dimLength, SMALL),
+        fHyb*(1 + fRestore*psi)*this->y_
+      + (1 - fHyb)*psi*this->CDES_*this->delta()
     );
 }
 
