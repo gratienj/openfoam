@@ -137,7 +137,6 @@ bool kOmegaSSTDES<BasicTurbulenceModel>::read()
 {
     if (kOmegaSSTBase<DESModel<BasicTurbulenceModel> >::read())
     {
-        kappa_.readIfPresent(this->coeffDict());
         CDESkom_.readIfPresent(this->coeffDict());
         CDESkeps_.readIfPresent(this->coeffDict());
 
