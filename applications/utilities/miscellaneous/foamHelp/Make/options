@@ -11,4 +11,7 @@ EXE_LIBS = \
     -lincompressibleTurbulenceModels \
     -lcompressibleTurbulenceModels \
     -lradiationModels \
-    -lfluidThermophysicalModels
+    -lfluidThermophysicalModels \
+    -lfiniteVolume \
+    -lmeshTools \
+    -lfvOptions
