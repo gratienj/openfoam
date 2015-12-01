@@ -5,10 +5,11 @@ EXE_INC = \
 
 EXE_LIBS = \
     -lhelpTypes \
-    -lfiniteVolume \
-    -lmeshTools \
     -lturbulenceModels \
     -lincompressibleTurbulenceModels \
     -lcompressibleTurbulenceModels \
     -lradiationModels \
-    -lfluidThermophysicalModels
+    -lfluidThermophysicalModels \
+    -lfiniteVolume \
+    -lmeshTools \
+    -lfvOptions
