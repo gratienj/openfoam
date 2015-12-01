@@ -70,6 +70,8 @@ int main(int argc, char *argv[])
     #include "createClouds.H"
     #include "createRadiationModel.H"
 
+    turbulence->validate();
+
     if (!LTS)
     {
         #include "compressibleCourantNo.H"

@@ -63,6 +63,8 @@ int main(int argc, char *argv[])
     #include "createFvOptions.H"
     #include "correctPhi.H"
 
+    turbulence->validate();
+
     if (!LTS)
     {
         #include "readTimeControls.H"

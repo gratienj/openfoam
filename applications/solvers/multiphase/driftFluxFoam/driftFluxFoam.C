@@ -66,6 +66,8 @@ int main(int argc, char *argv[])
     #include "createFvOptions.H"
     #include "initContinuityErrs.H"
 
+    turbulence->validate();
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     Info<< "\nStarting time loop\n" << endl;

@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
     #include "createMRF.H"
     #include "createFvOptions.H"
 
+    turbulence->validate();
+
     if (!LTS)
     {
         #include "compressibleCourantNo.H"
