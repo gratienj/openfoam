@@ -125,14 +125,18 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::dTilda
     // Equation 12
     tmp<volScalarField> fe2 = 1 - max(ft(magGradU), fl(magGradU));
 
+    // Equation 10
     const volScalarField psi(this->psi(chi, fv1));
+    tmp<volScalarField> fe = max(fe1 - 1, scalar(0))*psi*fe2;
+
+    // Equation 16
+    const volScalarField fdTilda(max(1 - fdt(magGradU), fB));
 
     // Equation 17 (plus limits)
     return max
     (
-        dimensionedScalar("SMALL", dimLength, SMALL),
-        fHyb*(1 + fRestore*psi)*this->y_
-      + (1 - fHyb)*psi*this->CDES_*this->delta()
+        fdTilda*(1 + fe)*this->y_ + (1 - fdTilda)*psi*this->CDES_*this->delta(),
+        dimensionedScalar("SMALL", dimLength, SMALL)
     );
 }
 
