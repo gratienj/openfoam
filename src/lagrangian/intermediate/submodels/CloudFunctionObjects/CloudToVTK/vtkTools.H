@@ -39,6 +39,7 @@ SourceFiles
 #include "DynamicList.H"
 #include "volFieldsFwd.H"
 #include "pointFieldsFwd.H"
+#include "vtkMesh.H"
 #include "volPointInterpolation.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -64,29 +65,29 @@ public:
 
     // Write ascii or binary. If binary optionally in-place swaps argument
 
-        static void write(std::ostream&, const bool, List<floatScalar>&);
-        static void write(std::ostream&, const bool, DynamicList<floatScalar>&);
-        static void write(std::ostream&, const bool, labelList&);
-        static void write(std::ostream&, const bool, DynamicList<label>&);
+        static void write(Ostream&, const bool, List<floatScalar>&);
+        static void write(Ostream&, const bool, DynamicList<floatScalar>&);
+        static void write(Ostream&, const bool, labelList&);
+        static void write(Ostream&, const bool, DynamicList<label>&);
 
 
     // Write header
 
         static void writeHeader
         (
-            std::ostream&,
+            Ostream&,
             const bool isBinary,
             const std::string& title
         );
         static void writeCellDataHeader
         (
-            std::ostream&,
+            Ostream&,
             const label nCells,
             const label nFields
         );
         static void writePointDataHeader
         (
-            std::ostream&,
+            Ostream&,
             const label nPoints,
             const label nFields
         );
@@ -103,9 +104,72 @@ public:
 
     //- Append elements to DynamicList
     static void insert(const labelList&, DynamicList<label>&);
-
     template<class Type>
     static void insert(const List<Type>&, DynamicList<floatScalar>&);
+
+    //- Write volField with cell values (including decomposed cells)
+    template<class Type>
+    static void write
+    (
+        Ostream&,
+        const bool binary,
+        const DimensionedField<Type, volMesh>&,
+        const vtkMesh&
+    );
+
+    //- Write pointField on all mesh points. Interpolate to cell centre
+    //  for decomposed cell centres.
+    template<class Type>
+    static void write
+    (
+        Ostream&,
+        const bool binary,
+        const GeometricField<Type, pointPatchField, pointMesh>&,
+        const vtkMesh&
+    );
+
+    //- Write interpolated field on points and original cell values on
+    //  decomposed cell centres.
+    template<class Type>
+    static void write
+    (
+        Ostream&,
+        const bool binary,
+        const DimensionedField<Type, volMesh>&,
+        const DimensionedField<Type, pointMesh>&,
+        const vtkMesh&
+    );
+
+    //- Write generic GeometricFields
+    template<class Type, template<class> class PatchField, class GeoMesh>
+    static void write
+    (
+        Ostream&,
+        const bool binary,
+        const PtrList<GeometricField<Type, PatchField, GeoMesh> >&,
+        const vtkMesh&
+    );
+
+    //- Write generic dimensioned internal fields
+    template<class Type>
+    static void write
+    (
+        Ostream&,
+        const bool binary,
+        const PtrList<DimensionedField<Type, volMesh> >&,
+        const vtkMesh&
+    );
+
+    //- Interpolate and write volFields
+    template<class Type>
+    static void write
+    (
+        Ostream&,
+        const bool binary,
+        const volPointInterpolation&,
+        const PtrList<GeometricField<Type, fvPatchField, volMesh> >&,
+        const vtkMesh&
+    );
 };
 
 

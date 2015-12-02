@@ -24,8 +24,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "vtkTools.H"
+#include "vtkTopo.H"
 
-#if defined(__mips)
+#if defined(__mips) && !defined(__SICORTEX__)
 #include <standards.h>
 #include <sys/endian.h>
 #endif
@@ -77,7 +78,7 @@ void Foam::vtkTools::swapWords(const label nWords, label* words32)
 
 void Foam::vtkTools::write
 (
-    std::ostream& os,
+    Ostream& os,
     const bool binary,
     List<floatScalar>& fField
 )
@@ -93,7 +94,7 @@ void Foam::vtkTools::write
             fField.size()*sizeof(float)
         );
 
-        os  << std::endl;
+        os  << endl;
     }
     else
     {
@@ -103,21 +104,21 @@ void Foam::vtkTools::write
 
             if (i > 0 && (i % 10) == 0)
             {
-                os  << std::endl;
+                os  << endl;
             }
             else
             {
                 os  << ' ';
             }
         }
-        os  << std::endl;
+        os << endl;
     }
 }
 
 
 void Foam::vtkTools::write
 (
-    std::ostream& os,
+    Ostream& os,
     const bool binary,
     DynamicList<floatScalar>& fField
 )
@@ -130,7 +131,7 @@ void Foam::vtkTools::write
 
 void Foam::vtkTools::write
 (
-    std::ostream& os,
+    Ostream& os,
     const bool binary,
     labelList& elems
 )
@@ -146,7 +147,7 @@ void Foam::vtkTools::write
             elems.size()*sizeof(label)
         );
 
-        os  << std::endl;
+        os  << endl;
     }
     else
     {
@@ -156,21 +157,21 @@ void Foam::vtkTools::write
 
             if (i > 0 && (i % 10) == 0)
             {
-                os  << std::endl;
+                os  << endl;
             }
             else
             {
                 os  << ' ';
             }
         }
-        os  << std::endl;
+        os  << endl;
     }
 }
 
 
 void Foam::vtkTools::write
 (
-    std::ostream& os,
+    Ostream& os,
     const bool binary,
     DynamicList<label>& elems
 )
@@ -183,46 +184,46 @@ void Foam::vtkTools::write
 
 void Foam::vtkTools::writeHeader
 (
-    std::ostream& os,
+    Ostream& os,
     const bool binary,
     const std::string& title
 )
 {
-    os  << "# vtk DataFile Version 2.0" << std::endl
-        << title << std::endl;
+    os  << "# vtk DataFile Version 2.0" << endl
+        << title << endl;
 
     if (binary)
     {
-        os  << "BINARY" << std::endl;
+        os  << "BINARY" << endl;
     }
     else
     {
-        os  << "ASCII" << std::endl;
+        os  << "ASCII" << endl;
     }
 }
 
 
 void Foam::vtkTools::writeCellDataHeader
 (
-    std::ostream& os,
+    Ostream& os,
     const label nCells,
     const label nFields
 )
 {
-    os  << "CELL_DATA " << nCells << std::endl
-        << "FIELD attributes " << nFields << std::endl;
+    os  << "CELL_DATA " << nCells << endl
+        << "FIELD attributes " << nFields << endl;
 }
 
 
 void Foam::vtkTools::writePointDataHeader
 (
-    std::ostream& os,
+    Ostream& os,
     const label nPoints,
     const label nFields
 )
 {
-    os  << "POINT_DATA  " << nPoints << std::endl
-        << "FIELD attributes " << nFields << std::endl;
+    os  << "POINT_DATA  " << nPoints << endl
+        << "FIELD attributes " << nFields << endl;
 }
 
 

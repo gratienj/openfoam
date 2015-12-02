@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,6 +25,7 @@ License
 
 #include "CloudToVTK.H"
 #include "vtkTools.H"
+//#include "OFstream.H"
 #include "floatScalar.H"
 
 // * * * * * * * * * * * * * Protectd Member Functions * * * * * * * * * * * //
@@ -32,7 +33,7 @@ License
 template<class CloudType>
 void Foam::CloudToVTK<CloudType>::writeData
 (
-    std::ostream& vtkOs,
+    OFstream& os,
     const bool binary,
     const List<floatScalar>& data
 ) const
@@ -49,7 +50,7 @@ void Foam::CloudToVTK<CloudType>::writeData
             accessOp<List<floatScalar> >()
         );
 
-    vtkTools::write(vtkOs, binary, allData);
+    vtkTools::write(os, binary, allData);
 }
 
 
@@ -57,17 +58,16 @@ template<class CloudType>
 template<class Type>
 void Foam::CloudToVTK<CloudType>::writeFieldData
 (
-    std::ostream& vtkOs,
+    OFstream& os,
     const bool binary,
     const List<floatScalar>& data,
     const word& title,
     const label nParcels
 ) const
 {
-    vtkOs
-        << title << ' ' << pTraits<Type>::nComponents << ' '
-        << nParcels << " float" << std::endl;
-    writeData(vtkOs, binary, data);
+    os  << title << ' ' << pTraits<Type>::nComponents << ' '
+        << nParcels << " float" << endl;
+    writeData(os, binary, data);
 }
 
 
@@ -105,25 +105,21 @@ binary_ = false;
         this->setModelProperty("file", fName);
 
         OFstream os(fName, binary_ ? IOstream::BINARY : IOstream::ASCII);
-        std::ostream& vtkOs = os.stdStream();
 
+        vtkTools::writeHeader(os, binary_, this->modelName().c_str());
+        os  << "DATASET POLYDATA" << endl
+            << "POINTS " << nParcels << " float" << endl;
 
-        vtkTools::writeHeader(vtkOs, binary_, this->modelName().c_str());
-        vtkOs
-            << "DATASET POLYDATA" << std::endl
-            << "POINTS " << nParcels << " float" << std::endl;
+        writeData(os, binary_, position);
 
-        writeData(vtkOs, binary_, position);
-
-        vtkOs
-            << "POINT_DATA " << nParcels << std::endl
+        os  << "POINT_DATA " << nParcels << endl
             << "FIELD attributes " << 4
-            << std::endl;
+            << endl;
 
-        writeFieldData<vector>(vtkOs, binary_, U, "U", nParcels);
-        writeFieldData<scalar>(vtkOs, binary_, d, "d", nParcels);
-        writeFieldData<scalar>(vtkOs, binary_, age, "age", nParcels);
-        writeFieldData<scalar>(vtkOs, binary_, rho, "rho", nParcels);
+        writeFieldData<vector>(os, binary_, U, "U", nParcels);
+        writeFieldData<scalar>(os, binary_, d, "d", nParcels);
+        writeFieldData<scalar>(os, binary_, age, "age", nParcels);
+        writeFieldData<scalar>(os, binary_, rho, "rho", nParcels);
     }
 }
 
