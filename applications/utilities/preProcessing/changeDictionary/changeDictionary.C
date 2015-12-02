@@ -628,7 +628,7 @@ int main(int argc, char *argv[])
                 false
             );
 
-            if (fieldHeader.typeHeaderOk<IOdictionary>(false))
+            if (fieldHeader.headerOk())
             {
                 IOdictionary fieldDict(fieldHeader);
 

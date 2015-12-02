@@ -276,7 +276,7 @@ void Foam::calc(const argList& args, const Time& runTime, const fvMesh& mesh)
         Info<< "    No phi" << endl;
     }
 
-    Info<< "\nEnd\n" << endl;
+    Info<< "End" << nl << endl;
 }
 
 
