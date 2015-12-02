@@ -55,7 +55,7 @@ void Foam::calc(const argList& args, const Time& runTime, const fvMesh& mesh)
         IOobject::MUST_READ
     );
 
-    if (phiHeader.typeHeaderOk<surfaceScalarField>(true))
+    if (phiHeader.headerOk())
     {
         autoPtr<surfaceScalarField> PePtr;
 
@@ -87,7 +87,7 @@ void Foam::calc(const argList& args, const Time& runTime, const fvMesh& mesh)
 
         if (phi.dimensions() == dimensionSet(0, 3, -1, 0, 0))
         {
-            if (turbulencePropertiesHeader.typeHeaderOk<IOdictionary>(true))
+            if (turbulencePropertiesHeader.headerOk())
             {
                 singlePhaseTransportModel laminarTransport(U, phi);
 
@@ -144,8 +144,7 @@ void Foam::calc(const argList& args, const Time& runTime, const fvMesh& mesh)
                         (
                             "Pef",
                             runTime.timeName(),
-                            mesh,
-                            IOobject::NO_READ
+                            mesh
                         ),
                         mag(phi)
                        /(
@@ -159,7 +158,7 @@ void Foam::calc(const argList& args, const Time& runTime, const fvMesh& mesh)
         }
         else if (phi.dimensions() == dimensionSet(1, 0, -1, 0, 0))
         {
-            if (turbulencePropertiesHeader.typeHeaderOk<IOdictionary>(true))
+            if (turbulencePropertiesHeader.headerOk())
             {
                 autoPtr<fluidThermo> thermo(fluidThermo::New(mesh));
 
@@ -276,7 +275,7 @@ void Foam::calc(const argList& args, const Time& runTime, const fvMesh& mesh)
         Info<< "    No phi" << endl;
     }
 
-    Info<< "\nEnd\n" << endl;
+    Info<< "End" << nl << endl;
 }
 
 
