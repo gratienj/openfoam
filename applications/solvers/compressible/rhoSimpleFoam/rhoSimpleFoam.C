@@ -37,7 +37,7 @@ Description
 #include "psiThermo.H"
 #include "turbulentFluidThermoModel.H"
 #include "simpleControl.H"
-#include "fvIOoptionList.H"
+#include "fvOptions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

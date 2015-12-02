@@ -40,7 +40,7 @@ Description
 #include "turbulentTransportModel.H"
 #include "pimpleControl.H"
 #include "SRFModel.H"
-#include "fvIOoptionList.H"
+#include "fvOptions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

@@ -52,7 +52,7 @@ Description
 #include "singlePhaseTransportModel.H"
 #include "turbulentTransportModel.H"
 #include "simpleControl.H"
-#include "fvIOoptionList.H"
+#include "fvOptions.H"
 
 template<class Type>
 void zeroCells

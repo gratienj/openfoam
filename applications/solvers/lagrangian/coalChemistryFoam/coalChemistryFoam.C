@@ -42,7 +42,7 @@ Description
 #include "basicThermoCloud.H"
 #include "coalCloud.H"
 #include "psiCombustionModel.H"
-#include "fvIOoptionList.H"
+#include "fvOptions.H"
 #include "radiationModel.H"
 #include "SLGThermo.H"
 #include "pimpleControl.H"
