@@ -324,27 +324,7 @@ bool Foam::regIOobject::upToDate(const regIOobject& a) const
 {
     label da = a.eventNo()-eventNo_;
 
-    // In case of overflow *this.event() might be 2G but a.event() might
-    // have overflowed to 0.
-    // Detect this by detecting a massive difference (labelMax/2) between
-    // the two events.
-    //
-    //  a       *this   return
-    //  -       -----   ------
-    // normal operation:
-    //  11      10      false
-    //  11      11      false
-    //  10      11      true
-    // overflow situation:
-    //  0       big     false
-    //  big     0       true
-
-    if (da > labelMax/2)
-    {
-        // *this.event overflowed but a.event not yet
-        return true;
-    }
-    else if (da < -labelMax/2)
+    if (da >= 0 && da < labelMax/2)
     {
         // a.event overflowed but *this not yet
         return false;
@@ -367,7 +347,22 @@ bool Foam::regIOobject::upToDate
     const regIOobject& b
 ) const
 {
-    return upToDate(a) && upToDate(b);
+    label halfLabelMax = labelMax/2;
+    label da = a.eventNo()-eventNo_;
+    label db = b.eventNo()-eventNo_;
+
+    if
+    (
+        (da >= 0 && da < halfLabelMax)
+     || (db >= 0 && db < halfLabelMax)
+    )
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 
@@ -378,7 +373,24 @@ bool Foam::regIOobject::upToDate
     const regIOobject& c
 ) const
 {
-    return upToDate(a) && upToDate(b) && upToDate(c);
+    label halfLabelMax = labelMax/2;
+    label da = a.eventNo()-eventNo_;
+    label db = b.eventNo()-eventNo_;
+    label dc = c.eventNo()-eventNo_;
+
+    if
+    (
+        (da >= 0 && da < halfLabelMax)
+     || (db >= 0 && db < halfLabelMax)
+     || (dc >= 0 && dc < halfLabelMax)
+    )
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 
@@ -390,7 +402,26 @@ bool Foam::regIOobject::upToDate
     const regIOobject& d
 ) const
 {
-    return upToDate(a) && upToDate(b) && upToDate(c) && upToDate(d);
+    label halfLabelMax = labelMax/2;
+    label da = a.eventNo()-eventNo_;
+    label db = b.eventNo()-eventNo_;
+    label dc = c.eventNo()-eventNo_;
+    label dd = d.eventNo()-eventNo_;
+
+    if
+    (
+        (da >= 0 && da < halfLabelMax)
+     || (db >= 0 && db < halfLabelMax)
+     || (dc >= 0 && dc < halfLabelMax)
+     || (dd >= 0 && dd < halfLabelMax)
+    )
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 
