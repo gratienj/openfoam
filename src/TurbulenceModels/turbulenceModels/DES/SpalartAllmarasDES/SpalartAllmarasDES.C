@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "SpalartAllmarasDES.H"
+#include "fvOptions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -217,6 +218,7 @@ void SpalartAllmarasDES<BasicTurbulenceModel>::correctNut
 {
     this->nut_ = nuTilda_*fv1;
     this->nut_.correctBoundaryConditions();
+    fv::options::New(this->mesh_).correct(this->nut_);
 
     BasicTurbulenceModel::correctNut();
 }
@@ -522,6 +524,7 @@ void SpalartAllmarasDES<BasicTurbulenceModel>::correct()
     const rhoField& rho = this->rho_;
     const surfaceScalarField& alphaRhoPhi = this->alphaRhoPhi_;
     const volVectorField& U = this->U_;
+    fv::options& fvOptions(fv::options::New(this->mesh_));
 
     DESModel<BasicTurbulenceModel>::correct();
 
@@ -548,11 +551,14 @@ void SpalartAllmarasDES<BasicTurbulenceModel>::correct()
            *alpha*rho*nuTilda_/sqr(dTilda),
             nuTilda_
         )
+      + fvOptions(alpha, rho, nuTilda_)
     );
 
     nuTildaEqn().relax();
+    fvOptions.constrain(nuTildaEqn());
     solve(nuTildaEqn);
-    bound(nuTilda_, dimensionedScalar("zero", nuTilda_.dimensions(), 0.0));
+    fvOptions.correct(nuTilda_);
+    bound(nuTilda_, dimensionedScalar("0", nuTilda_.dimensions(), 0.0));
     nuTilda_.correctBoundaryConditions();
 
     correctNut(fv1);
