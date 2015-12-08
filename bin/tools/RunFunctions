@@ -40,6 +40,7 @@ getApplication()
 
 runApplication()
 {
+    LOG_NAME=
     APP_RUN=
     LOG_IGNORE=false
     LOG_APPEND=false
@@ -54,6 +55,10 @@ runApplication()
                 ;;
             -overwrite)
                 LOG_IGNORE=true
+                ;;
+            -log)
+                LOG_NAME=$2
+                shift
                 ;;
             *)
                 APP_RUN="$key"
@@ -63,21 +68,24 @@ runApplication()
     shift
     done
 
-    if [ -f log.$APP_NAME ] && [ "$LOG_IGNORE" = "false" ]
+    LOG_NAME=${LOG_NAME:="log.$APP_NAME"}
+
+    if [ -f $LOG_NAME ] && [ "$LOG_IGNORE" = "false" ]
     then
-        echo "$APP_NAME already run on $PWD: remove log file $APP_LOGFILE to re-run"
+        echo "$APP_NAME already run on $PWD: remove log file $LOG_NAME to re-run"
     else
         echo "Running $APP_RUN on $PWD"
         if [ "$LOG_APPEND" = "true" ]; then
-            $APP_RUN "$@" >> log.$APP_NAME 2>&1
+            $APP_RUN "$@" >> $LOG_NAME 2>&1
         else
-            $APP_RUN "$@" > log.$APP_NAME 2>&1
+            $APP_RUN "$@" > $LOG_NAME 2>&1
         fi
     fi
 }
 
 runParallel()
 {
+    LOG_NAME=
     APP_RUN=
     LOG_IGNORE=false
     LOG_APPEND=false
@@ -92,6 +100,10 @@ runParallel()
                 ;;
             -overwrite)
                 LOG_IGNORE=true
+                ;;
+            -log)
+                LOG_NAME=$2
+                shift
                 ;;
             *)
                 APP_RUN="$key"
@@ -104,15 +116,17 @@ runParallel()
     shift
     done
 
-    if [ -f log.$APP_NAME ] && [ "$LOG_IGNORE" = "false" ]
+    LOG_NAME=${LOG_NAME:="log.$APP_NAME"}
+
+    if [ -f $LOG_NAME ] && [ "$LOG_IGNORE" = "false" ]
     then
-        echo "$APP_NAME already run on $PWD: remove log file $APP_LOGFILE to re-run"
+        echo "$APP_NAME already run on $PWD: remove log file $LOG_NAME to re-run"
     else
         echo "Running $APP_RUN in parallel on $PWD using $nProcs processes"
         if [ "$LOG_APPEND" = "true" ]; then
-            ( mpirun -np $nProcs $APP_RUN -parallel "$@" < /dev/null >> log.$APP_NAME 2>&1 )
+            ( mpirun -np $nProcs $APP_RUN -parallel "$@" < /dev/null >> $LOG_NAME 2>&1 )
         else
-            ( mpirun -np $nProcs $APP_RUN -parallel "$@" < /dev/null > log.$APP_NAME 2>&1 )
+            ( mpirun -np $nProcs $APP_RUN -parallel "$@" < /dev/null > $LOG_NAME 2>&1 )
         fi
     fi
 }
