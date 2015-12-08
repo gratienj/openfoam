@@ -2016,6 +2016,13 @@ void Foam::meshRefinement::makeConsistentFaceIndex
                 label faceI = pp.start()+i;
                 namedSurfaceIndex[faceI] = -1;
             }
+
+            makeConsistentFaceIndex
+            (
+                zoneToNamedSurface,
+                cellToZone,
+                namedSurfaceIndex
+            );
         }
     }
 }
