@@ -300,7 +300,7 @@ void determineDecomposition
 
     if (!decomposer.parallelAware())
     {
-        WarningIn("determineDecomposition(..)")
+        WarningInFunction
             << "You have selected decomposition method "
             << decomposer.typeName
             << " which does" << endl
@@ -543,11 +543,8 @@ void writeProcAddressing
 
     if (!cellOk || !faceOk || !pointOk || !patchOk)
     {
-        WarningIn
-        (
-            "void writeProcAddressing"
-            "(const bool, const fvMesh&, const mapDistributePolyMesh&)"
-        )   << "Failed to write " << cellMap.objectPath()
+        WarningInFunction
+            << "Failed to write " << cellMap.objectPath()
             << ", " << faceMap.objectPath()
             << ", " << pointMap.objectPath()
             << ", " << patchMap.objectPath()
@@ -798,7 +795,7 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
         }
         else
         {
-            FatalErrorIn("correctCoupledBoundaryConditions()")
+            FatalErrorInFunction
                 << "Unsuported communications type "
                 << Pstream::commsTypeNames[Pstream::defaultCommsType]
                 << exit(FatalError);
@@ -884,7 +881,7 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
 
             if (nonProcI == -1)
             {
-                FatalErrorIn("redistributeAndWrite(..)")
+                FatalErrorInFunction
                     << "Cannot find non-processor patch on processor "
                     << Pstream::myProcNo() << endl
                     << " Current patches:" << patches.names()
@@ -1537,11 +1534,8 @@ void readProcAddressing
          || mesh.boundaryMesh().size() != boundaryProcAddressing.size()
         )
         {
-            FatalErrorIn
-            (
-                "readProcAddressing(const fvMesh&, const autoPtr<fvMesh>&,"
-                "autoPtr<mapDistributePolyMesh>&"
-            )   << "Read addressing inconsistent with mesh sizes" << nl
+            FatalErrorInFunction
+                << "Read addressing inconsistent with mesh sizes" << nl
                 << "cells:" << mesh.nCells()
                 << " addressing:" << cellProcAddressing.objectPath()
                 << " size:" << cellProcAddressing.size() << nl
@@ -2186,7 +2180,7 @@ int main(int argc, char *argv[])
 
     if (env("FOAM_SIGFPE"))
     {
-        WarningIn(args.executable())
+        WarningInFunction
             << "Detected floating point exception trapping (FOAM_SIGFPE)."
             << " This might give" << nl
             << "    problems when mapping fields. Switch it off in case"
@@ -2204,7 +2198,7 @@ int main(int argc, char *argv[])
         Info<< "Decomposing case (like decomposePar)" << nl << endl;
         if (reconstruct)
         {
-            FatalErrorIn(args.executable())
+            FatalErrorInFunction
                 << "Cannot specify both -decompose and -reconstruct"
                 << exit(FatalError);
         }
@@ -2219,7 +2213,7 @@ int main(int argc, char *argv[])
     {
         if (!overwrite)
         {
-            WarningIn(args.executable())
+            WarningInFunction
                 << "Working in decompose or reconstruction mode automatically"
                 << " implies -overwrite" << nl << endl;
             overwrite = true;
@@ -2229,7 +2223,7 @@ int main(int argc, char *argv[])
 
     if (!Pstream::parRun())
     {
-        FatalErrorIn(args.executable())
+        FatalErrorInFunction
             << ": This utility can only be run parallel"
             << exit(FatalError);
     }
@@ -2237,7 +2231,7 @@ int main(int argc, char *argv[])
 
     if (!isDir(args.rootPath()))
     {
-        FatalErrorIn(args.executable())
+        FatalErrorInFunction
             << ": cannot open root directory " << args.rootPath()
             << exit(FatalError);
     }
@@ -2388,7 +2382,7 @@ int main(int argc, char *argv[])
 
         if (timeDirs.empty())
         {
-            FatalErrorIn(args.executable())
+            FatalErrorInFunction
                 << "No times selected"
                 << exit(FatalError);
         }

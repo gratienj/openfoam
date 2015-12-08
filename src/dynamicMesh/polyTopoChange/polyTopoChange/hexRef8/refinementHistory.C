@@ -660,8 +660,14 @@ Foam::refinementHistory::refinementHistory
     active_(false),
     freeSplitCells_(0)
 {
-    // Warn for MUST_READ_IF_MODIFIED
-    warnNoRereading<refinementHistory>();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "Specified IOobject::MUST_READ_IF_MODIFIED but class"
+            << " does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
@@ -771,11 +777,8 @@ Foam::refinementHistory::refinementHistory
      || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
     )
     {
-        WarningIn
-        (
-            "refinementHistory::refinementHistory(const IOobject&"
-            ", const labelListList&, const PtrList<refinementHistory>&)"
-        )   << "read option IOobject::MUST_READ, READ_IF_PRESENT or "
+        WarningInFunction
+            << "read option IOobject::MUST_READ, READ_IF_PRESENT or "
             << "MUST_READ_IF_MODIFIED"
             << " suggests that a read constructor would be more appropriate."
             << endl;

@@ -34,9 +34,24 @@ void Foam::mapDistributePolyMesh::calcPatchSizes()
 
     if (oldPatchStarts_.size())
     {
-        FatalErrorInFunction
-            << "Calculated negative old patch size:" << oldPatchSizes_ << nl
-            << "Error in mapping data" << abort(FatalError);
+        // Calculate old patch sizes
+        for (label patchI = 0; patchI < oldPatchStarts_.size() - 1; patchI++)
+        {
+            oldPatchSizes_[patchI] =
+                oldPatchStarts_[patchI + 1] - oldPatchStarts_[patchI];
+        }
+
+        // Set the last one by hand
+        const label lastPatchID = oldPatchStarts_.size() - 1;
+
+        oldPatchSizes_[lastPatchID] = nOldFaces_ - oldPatchStarts_[lastPatchID];
+
+        if (min(oldPatchSizes_) < 0)
+        {
+            FatalErrorInFunction
+                << "Calculated negative old patch size:" << oldPatchSizes_ << nl
+                << "Error in mapping data" << abort(FatalError);
+        }
     }
 }
 

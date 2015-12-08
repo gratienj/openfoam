@@ -73,14 +73,13 @@ void Foam::yPlus::calcYPlus
                 << " y+ : min = " << minYplus << ", max = " << maxYplus
                 << ", average = " << avgYplus << nl;
 
-                writeTime(file());
-                file()
-                    << token::TAB << patch.name()
-                    << token::TAB << minYplus
-                    << token::TAB << maxYplus
-                    << token::TAB << avgYplus
-                    << endl;
-            }
+            writeTime(file());
+            file()
+                << token::TAB << patch.name()
+                << token::TAB << minYplus
+                << token::TAB << maxYplus
+                << token::TAB << avgYplus
+                << endl;
         }
         else if (isA<wallFvPatch>(patch))
         {

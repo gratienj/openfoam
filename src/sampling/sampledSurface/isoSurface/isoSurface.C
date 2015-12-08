@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1389,29 +1389,17 @@ bool Foam::isoSurface::validTri(const triSurface& surf, const label faceI)
      || (f[2] < 0) || (f[2] >= surf.points().size())
     )
     {
-        if (flipState[triI] == 1)
-        {
-            labelledTri tri(surf[triI]);
-
-            surf[triI][0] = tri[0];
-            surf[triI][1] = tri[2];
-            surf[triI][2] = tri[1];
-        }
-        else if (flipState[triI] == -1)
-        {
-            FatalErrorInFunction
-                << "problem" << abort(FatalError);
-        }
-    }
-}
-
+        WarningInFunction
+            << "triangle " << faceI << " vertices " << f
+            << " uses point indices outside point range 0.."
+            << surf.points().size()-1 << endl;
 
         return false;
     }
 
     if ((f[0] == f[1]) || (f[0] == f[2]) || (f[1] == f[2]))
     {
-        WarningIn("validTri(const triSurface&, const label)")
+        WarningInFunction
             << "triangle " << faceI
             << " uses non-unique vertices " << f
             << endl;
@@ -1443,7 +1431,7 @@ bool Foam::isoSurface::validTri(const triSurface& surf, const label faceI)
          && ((f[2] == nbrF[0]) || (f[2] == nbrF[1]) || (f[2] == nbrF[2]))
         )
         {
-            WarningIn("validTri(const triSurface&, const label)")
+            WarningInFunction
                 << "triangle " << faceI << " vertices " << f
                 << " fc:" << f.centre(surf.points())
                 << " has the same vertices as triangle " << nbrFaceI

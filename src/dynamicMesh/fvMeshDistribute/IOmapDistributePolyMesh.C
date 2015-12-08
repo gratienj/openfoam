@@ -39,8 +39,14 @@ Foam::IOmapDistributePolyMesh::IOmapDistributePolyMesh(const IOobject& io)
 :
     regIOobject(io)
 {
-    // Warn for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOmapDistributePolyMesh>();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "Specified IOobject::MUST_READ_IF_MODIFIED but class"
+            << " does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
@@ -65,8 +71,14 @@ Foam::IOmapDistributePolyMesh::IOmapDistributePolyMesh
 :
     regIOobject(io)
 {
-    // Warn for MUST_READ_IF_MODIFIED
-    warnNoRereading<IOmapDistributePolyMesh>();
+    // Temporary warning
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "Specified IOobject::MUST_READ_IF_MODIFIED but class"
+            << " does not support automatic rereading."
+            << endl;
+    }
 
     if
     (
