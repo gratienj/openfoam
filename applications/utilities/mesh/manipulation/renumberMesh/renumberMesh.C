@@ -877,6 +877,53 @@ int main(int argc, char *argv[])
     ReadFields(pointMesh::New(mesh), objects, ptFlds);
 
 
+    // Read sets
+    PtrList<cellSet> cellSets;
+    PtrList<faceSet> faceSets;
+    PtrList<pointSet> pointSets;
+    if (renumberSets)
+    {
+        // Read sets
+        IOobjectList objects(mesh, mesh.facesInstance(), "polyMesh/sets");
+        {
+            IOobjectList cSets(objects.lookupClass(cellSet::typeName));
+            if (cSets.size())
+            {
+                Info<< "Reading cellSets:" << endl;
+                forAllConstIter(IOobjectList, cSets, iter)
+                {
+                    cellSets.append(new cellSet(*iter()));
+                    Info<< "    " << cellSets.last().name() << endl;
+                }
+            }
+        }
+        {
+            IOobjectList fSets(objects.lookupClass(faceSet::typeName));
+            if (fSets.size())
+            {
+                Info<< "Reading faceSets:" << endl;
+                forAllConstIter(IOobjectList, fSets, iter)
+                {
+                    faceSets.append(new faceSet(*iter()));
+                    Info<< "    " << faceSets.last().name() << endl;
+                }
+            }
+        }
+        {
+            IOobjectList pSets(objects.lookupClass(pointSet::typeName));
+            if (pSets.size())
+            {
+                Info<< "Reading pointSets:" << endl;
+                forAllConstIter(IOobjectList, pSets, iter)
+                {
+                    pointSets.append(new pointSet(*iter()));
+                    Info<< "    " << pointSets.last().name() << endl;
+                }
+            }
+        }
+    }
+
+
     Info<< endl;
 
     // From renumbering:
