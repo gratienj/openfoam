@@ -293,8 +293,7 @@ Foam::scalar Foam::radiation::radiativeIntensityRay::correct()
                     (k - absorptionEmission_.aDisp(lambdaI))
                    *blackBody_.bLambda(lambdaI)
 
-                 + absorptionEmission_.ECont(lambdaI)
-                 + absorptionEmission_.EDisp(lambdaI)
+                 + absorptionEmission_.E(lambdaI)/4
                )
             );
         }

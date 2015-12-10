@@ -298,12 +298,8 @@ Foam::radiation::radiationModel::transmissivity() const
 {
     if (!transmissivity_.valid())
     {
-        FatalErrorIn
-        (
-            "const Foam::radiation::transmissivityModel&"
-            "Foam::radiation::radiationModel::transmissivity() const"
-        )
-            << "Requested radiation transmissivity model, but model is "
+        FatalErrorInFunction
+            << "Requested radiation sootModel model, but model is "
             << "not activate" << abort(FatalError);
     }
 
