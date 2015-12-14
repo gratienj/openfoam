@@ -9,43 +9,31 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       polyBoundaryMesh;
-    object      boundary;
+    class       volScalarField;
+    object      boundaryRadiationProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-4
-(
-inlet
-{
-    type patch;
-    physicalType inlet;
-    nFaces 134;
-    startFace 21254;
-}
 
-outlet
-{
-    type patch;
-    physicalType outlet;
-    nFaces 160;
-    startFace 21388;
-}
+dimensions      [0 0 0 0 0 0 0];
 
-walls
-{
-    type wall;
-    physicalType wall;
-    nFaces 78;
-    startFace 21548;
-}
+internalField   uniform 0;
 
-frontAndBack
+boundaryField
 {
-    type empty;
-    physicalType empty;
-    nFaces 21440;
-    startFace 21626;
+    region0_to_pyrolysisRegion_coupledWall
+    {
+        type            boundaryRadiation;
+        mode            solidRadiation;
+    }
+
+    ".*"
+    {
+        type            boundaryRadiation;
+        mode            lookup;
+        emissivity      uniform 1.0;
+        absorptivity    uniform 1.0;
+        transmissivity  uniform 0.0;
+    }
 }
-)
 
 // ************************************************************************* //
