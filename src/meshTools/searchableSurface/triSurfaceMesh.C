@@ -243,7 +243,7 @@ Foam::triSurfaceMesh::triSurfaceMesh(const IOobject& io, const triSurface& s)
 {
     const pointField& pts = triSurface::points();
 
-    bounds() = boundBox(pts);
+    bounds() = boundBox(pts, false);
 }
 
 
@@ -295,7 +295,7 @@ Foam::triSurfaceMesh::triSurfaceMesh(const IOobject& io)
 {
     const pointField& pts = triSurface::points();
 
-    bounds() = boundBox(pts);
+    bounds() = boundBox(pts, false);
 }
 
 
@@ -361,7 +361,7 @@ Foam::triSurfaceMesh::triSurfaceMesh
 
     const pointField& pts = triSurface::points();
 
-    bounds() = boundBox(pts);
+    bounds() = boundBox(pts, false);
 
     // Have optional minimum quality for normal calculation
     if (dict.readIfPresent("minQuality", minQuality_) && minQuality_ > 0)
@@ -469,7 +469,7 @@ void Foam::triSurfaceMesh::movePoints(const pointField& newPoints)
     edgeTree_.clear();
     triSurface::movePoints(newPoints);
 
-    bounds() = boundBox(triSurface::points());
+    bounds() = boundBox(triSurface::points(), false);
 }
 
 
