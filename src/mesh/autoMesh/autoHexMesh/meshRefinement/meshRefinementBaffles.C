@@ -2399,7 +2399,8 @@ void Foam::meshRefinement::zonify
                 label zoneID = mesh_.cellZones().findZoneID(name);
                 if (zoneID == -1)
                 {
-                    FatalErrorIn("meshRefinement::zonify(..)") << "problem"
+                    FatalErrorInFunction
+                        << "problem"
                         << abort(FatalError);
                 }
                 insidePointCellZoneIDs[i] = zoneID;
@@ -2523,7 +2524,7 @@ void Foam::meshRefinement::zonify
             }
             else
             {
-                FatalErrorIn("meshRefinement::getBafflePatches()")
+                FatalErrorInFunction
                     << "problem" << exit(FatalError);
             }
         }
@@ -4176,7 +4177,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
 {
     if (locationsInMesh.size() != zonesInMesh.size())
     {
-        FatalErrorIn("zonify(..)") << "problem" << abort(FatalError);
+        FatalErrorInFunction << "problem" << abort(FatalError);
     }
 
     const polyBoundaryMesh& patches = mesh_.boundaryMesh();
