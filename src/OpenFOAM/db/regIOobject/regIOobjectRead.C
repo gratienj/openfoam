@@ -395,17 +395,7 @@ bool Foam::regIOobject::readIfModified()
     {
         if (time().getState(watchIndices_[i]) != fileMonitor::UNMODIFIED)
         {
-            modified = watchIndices_[i];
-            break;
-        }
-    }
-
-    if (modified != -1)
-    {
-        const fileName& fName = time().getFile(watchIndices_.last());
-
-        if (modified == watchIndices_.last())
-        {
+            const fileName& fName = time().getFile(watchIndex_);
             Info<< "regIOobject::readIfModified() : " << nl
                 << "    Re-reading object " << name()
                 << " from file " << fName << endl;
