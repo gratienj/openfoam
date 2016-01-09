@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenCFD Ltd
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,7 +62,7 @@ greyMeanSolidAbsorptionEmission::X(const word specie) const
     {
         const scalarField& Yi = mixture_.Y()[specieI];
 
-        forAll (rhoInv, iCell)
+        forAll(rhoInv, iCell)
         {
             rhoInv[iCell] +=
                 Yi[iCell]/mixture_.rho(specieI, p[iCell], T[iCell]);
