@@ -107,9 +107,6 @@ protected:
         //wordList fieldSet_;
         List<Tuple2<word, word>> fieldSet_;
 
-        //- Switch to send output to Info as well as to file
-        Switch log_;
-
         //- Locally constructed fields
         PtrList<surfaceScalarField> ssf_;
         PtrList<surfaceVectorField> svf_;

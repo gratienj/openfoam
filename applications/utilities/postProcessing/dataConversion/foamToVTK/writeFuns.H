@@ -150,16 +150,6 @@ public:
         const vtkMesh&
     );
 
-    //- Write generic dimensioned internal fields
-    template<class Type>
-    static void write
-    (
-        std::ostream&,
-        const bool binary,
-        const PtrList<DimensionedField<Type, volMesh> >&,
-        const vtkMesh&
-    );
-
     //- Interpolate and write volFields
     template<class Type>
     static void write

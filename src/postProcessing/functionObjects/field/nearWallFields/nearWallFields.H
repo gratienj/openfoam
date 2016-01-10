@@ -112,9 +112,6 @@ protected:
             //- Fields to process
             List<Tuple2<word, word>> fieldSet_;
 
-            //- Switch to send output to Info as well as to file
-            Switch log_;
-
             //- Patches to sample
             labelHashSet patchSet_;
 

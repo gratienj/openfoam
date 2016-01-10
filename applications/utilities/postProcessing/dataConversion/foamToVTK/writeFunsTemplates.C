@@ -167,22 +167,6 @@ void Foam::writeFuns::write
 {
     forAll(flds, i)
     {
-        write(os, binary, flds[i].dimensionedInternalField(), vMesh);
-    }
-}
-
-
-template<class Type>
-void Foam::writeFuns::write
-(
-    std::ostream& os,
-    const bool binary,
-    const PtrList<DimensionedField<Type, volMesh> >& flds,
-    const vtkMesh& vMesh
-)
-{
-    forAll(flds, i)
-    {
         write(os, binary, flds[i], vMesh);
     }
 }

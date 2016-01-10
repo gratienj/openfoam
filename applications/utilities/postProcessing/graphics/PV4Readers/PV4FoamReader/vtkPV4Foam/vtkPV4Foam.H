@@ -504,17 +504,6 @@ class vtkPV4Foam
                 vtkMultiBlockDataSet* output
             );
 
-            //- Volume internal fields (DimensionedField)- all types
-            template<class Type>
-            void convertDimFields
-            (
-                const fvMesh&,
-                const PtrList<PrimitivePatchInterpolation<primitivePatch> >&,
-                const IOobjectList&,
-                const bool interpFields,
-                vtkMultiBlockDataSet* output
-            );
-
             //- Volume field - all selected parts
             template<class Type>
             void convertVolFieldBlock

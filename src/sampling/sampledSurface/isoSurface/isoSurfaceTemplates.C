@@ -743,69 +743,6 @@ template<class Type>
 Foam::tmp<Foam::Field<Type>>
 Foam::isoSurface::interpolate
 (
-    const label nPoints,
-    const labelList& triPointMergeMap,
-    const labelList& interpolatedPoints,
-    const List<FixedList<label, 3> >& interpolatedOldPoints,
-    const List<FixedList<scalar, 3> >& interpolationWeights,
-    const DynamicList<Type>& unmergedValues
-)
-{
-    // One value per point
-    tmp<Field<Type> > tvalues(new Field<Type>(nPoints, pTraits<Type>::zero));
-    Field<Type>& values = tvalues();
-
-
-    // Pass1: unweighted average of merged point values
-    {
-        labelList nValues(values.size(), 0);
-
-        forAll(unmergedValues, i)
-        {
-            label mergedPointI = triPointMergeMap[i];
-
-            if (mergedPointI >= 0)
-            {
-                values[mergedPointI] += unmergedValues[i];
-                nValues[mergedPointI]++;
-            }
-        }
-
-        forAll(values, i)
-        {
-            if (nValues[i] > 0)
-            {
-                values[i] /= scalar(nValues[i]);
-            }
-        }
-    }
-
-
-    // Pass2: weighted average for remaining values (from clipped triangles)
-
-    forAll(interpolatedPoints, i)
-    {
-        label pointI = interpolatedPoints[i];
-        const FixedList<label, 3>& oldPoints = interpolatedOldPoints[i];
-        const FixedList<scalar, 3>& w = interpolationWeights[i];
-
-        // Note: zeroing should not be necessary if interpolation only done
-        //       for newly introduced points (i.e. not in triPointMergeMap)
-        values[pointI] = pTraits<Type>::zero;
-        forAll(oldPoints, j)
-        {
-            values[pointI] = w[j]*unmergedValues[oldPoints[j]];
-        }
-    }
-
-    return tvalues;
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type> >
-Foam::isoSurface::interpolate
-(
     const GeometricField<Type, fvPatchField, volMesh>& cCoords,
     const Field<Type>& pCoords
 ) const

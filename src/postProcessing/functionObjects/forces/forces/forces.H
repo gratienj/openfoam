@@ -178,32 +178,6 @@ protected:
         //- Pressure, viscous and porous moment per bin
         List<Field<vector>> moment_;
 
-        // File streams
-
-            //- Forces
-            autoPtr<OFstream> forceFilePtr_;
-
-            //- Moments
-            autoPtr<OFstream> momentFilePtr_;
-
-            //- Force bins
-            autoPtr<OFstream> forceBinFilePtr_;
-
-            //- Moment bins
-            autoPtr<OFstream> momentBinFilePtr_;
-
-            //- Local force
-            autoPtr<OFstream> localForceFilePtr_;
-
-            //- Local moment
-            autoPtr<OFstream> localMomentFilePtr_;
-
-            //- Local force bins
-            autoPtr<OFstream> localForceBinFilePtr_;
-
-            //- Local moment bins
-            autoPtr<OFstream> localMomentBinFilePtr_;
-
 
         // Read from dictionary
 
