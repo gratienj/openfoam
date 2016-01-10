@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -335,8 +335,10 @@ void Foam::forceCoeffs::execute()
         ClTot += sum(liftCoeffs[i]);
     }
 
-    scalar ClfTot = ClTot/2.0 + CmTot;
-    scalar ClrTot = ClTot/2.0 - CmTot;
+        List<Field<scalar>> coeffs(3);
+        coeffs[0].setSize(nBin_);
+        coeffs[1].setSize(nBin_);
+        coeffs[2].setSize(nBin_);
 
     if (log_) Info
         << type() << " " << name_ << " output:" << nl

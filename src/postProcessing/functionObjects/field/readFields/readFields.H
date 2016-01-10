@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -112,7 +112,12 @@ protected:
         void operator=(const readFields&);
 
         template<class Type>
-        void loadField(const word&) const;
+        void loadField
+        (
+            const word&,
+            PtrList<GeometricField<Type, fvPatchField, volMesh>>&,
+            PtrList<GeometricField<Type, fvsPatchField, surfaceMesh>>&
+        ) const;
 
 
 public:

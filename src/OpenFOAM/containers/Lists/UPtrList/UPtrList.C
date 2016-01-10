@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,31 +44,7 @@ Foam::UPtrList<T>::UPtrList(const label s)
 
 
 template<class T>
-Foam::UPtrList<T>::UPtrList(UList<T>& lst)
-:
-    ptrs_(lst.size())
-{
-    forAll(lst, i)
-    {
-        ptrs_[i] = &lst[i];
-    }
-}
-
-
-template<class T>
-Foam::UPtrList<T>::UPtrList(PtrList<T>& lst)
-:
-    ptrs_(lst.size())
-{
-    forAll(lst, i)
-    {
-        ptrs_[i] = &lst[i];
-    }
-}
-
-
-template<class T>
-Foam::UPtrList<T>::UPtrList(const Xfer<UPtrList<T> >& lst)
+Foam::UPtrList<T>::UPtrList(const Xfer<UPtrList<T>>& lst)
 {
     transfer(lst());
 }

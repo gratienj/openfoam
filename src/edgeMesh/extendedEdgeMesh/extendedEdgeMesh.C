@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -792,7 +792,7 @@ void Foam::extendedEdgeMesh::nearestFeatureEdgeByType
     List<pointIndexHit>& info
 ) const
 {
-    const PtrList<indexedOctree<treeDataEdge> >& edgeTrees = edgeTreesByType();
+    const PtrList<indexedOctree<treeDataEdge>>& edgeTrees = edgeTreesByType();
 
     info.setSize(edgeTrees.size());
 
@@ -859,7 +859,7 @@ void Foam::extendedEdgeMesh::allNearestFeatureEdges
     List<pointIndexHit>& info
 ) const
 {
-    const PtrList<indexedOctree<treeDataEdge> >& edgeTrees = edgeTreesByType();
+    const PtrList<indexedOctree<treeDataEdge>>& edgeTrees = edgeTreesByType();
 
     info.setSize(edgeTrees.size());
 
@@ -990,7 +990,7 @@ Foam::extendedEdgeMesh::edgeTree() const
 }
 
 
-const Foam::PtrList<Foam::indexedOctree<Foam::treeDataEdge> >&
+const Foam::PtrList<Foam::indexedOctree<Foam::treeDataEdge>>&
 Foam::extendedEdgeMesh::edgeTreesByType() const
 {
     if (edgeTreesByType_.size() == 0)

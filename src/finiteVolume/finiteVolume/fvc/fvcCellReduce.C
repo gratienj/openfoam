@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,7 +42,7 @@ namespace fvc
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type, class CombineOp>
-tmp<GeometricField<Type, fvPatchField, volMesh> > cellReduce
+tmp<GeometricField<Type, fvPatchField, volMesh>> cellReduce
 (
     const GeometricField<Type, fvsPatchField, surfaceMesh>& ssf,
     const CombineOp& cop,
@@ -108,15 +108,15 @@ tmp<GeometricField<Type, fvPatchField, volMesh> > cellReduce
 
 
 template<class Type, class CombineOp>
-tmp<GeometricField<Type, fvPatchField, volMesh> > cellReduce
+tmp<GeometricField<Type, fvPatchField, volMesh>> cellReduce
 (
     const tmp<GeometricField<Type, fvsPatchField, surfaceMesh>&> tssf,
     const CombineOp& cop,
     const Type& nullValue
 )
 {
-    tmp<GeometricField<Type, fvPatchField, volMesh> >
-        tvf(cellReduce(cop, tssf, nullValue));
+    tmp<GeometricField<Type, fvPatchField, volMesh>>
+        tvf(cellReduce(cop, tssf));
 
     tssf.clear();
     return tvf;

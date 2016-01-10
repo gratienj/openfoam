@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,7 +69,7 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Ostream& operator<<
 (
     Ostream&,
-    const tmp<GeometricField<Type, PatchField, GeoMesh> >&
+    const tmp<GeometricField<Type, PatchField, GeoMesh>>&
 );
 
 
@@ -144,12 +144,12 @@ public:
 
             //- Construct from a BoundaryMesh,
             //  reference to the internal field
-            //  and a PtrList<PatchField<Type> >
+            //  and a PtrList<PatchField<Type>>
             GeometricBoundaryField
             (
                 const BoundaryMesh&,
                 const DimensionedInternalField&,
-                const PtrList<PatchField<Type> >&
+                const PtrList<PatchField<Type>>&
             );
 
             //- Construct as copy setting the reference to the internal field
@@ -330,7 +330,7 @@ public:
             const Mesh&,
             const dimensionSet&,
             const Field<Type>&,
-            const PtrList<PatchField<Type> >&
+            const PtrList<PatchField<Type>>&
         );
 
         //- Construct and read given IOobject
@@ -359,7 +359,7 @@ public:
         #ifndef NoConstructFromTmp
         GeometricField
         (
-            const tmp<GeometricField<Type, PatchField, GeoMesh> >&
+            const tmp<GeometricField<Type, PatchField, GeoMesh>>&
         );
         #endif
 
@@ -375,7 +375,7 @@ public:
         GeometricField
         (
             const IOobject&,
-            const tmp<GeometricField<Type, PatchField, GeoMesh> >&
+            const tmp<GeometricField<Type, PatchField, GeoMesh>>&
         );
         #endif
 
@@ -391,7 +391,7 @@ public:
         GeometricField
         (
             const word& newName,
-            const tmp<GeometricField<Type, PatchField, GeoMesh> >&
+            const tmp<GeometricField<Type, PatchField, GeoMesh>>&
         );
         #endif
 
@@ -472,7 +472,7 @@ public:
         bool needReference() const;
 
         //- Return a component of the field
-        tmp<GeometricField<cmptType, PatchField, GeoMesh> > component
+        tmp<GeometricField<cmptType, PatchField, GeoMesh>> component
         (
             const direction
         ) const;
@@ -481,7 +481,7 @@ public:
         bool writeData(Ostream&) const;
 
         //- Return transpose (only if it is a tensor field)
-        tmp<GeometricField<Type, PatchField, GeoMesh> > T() const;
+        tmp<GeometricField<Type, PatchField, GeoMesh>> T() const;
 
         //- Relax field (for steady-state solution).
         //  alpha = 1 : no relaxation
@@ -549,23 +549,23 @@ public:
     // Member operators
 
         void operator=(const GeometricField<Type, PatchField, GeoMesh>&);
-        void operator=(const tmp<GeometricField<Type, PatchField, GeoMesh> >&);
+        void operator=(const tmp<GeometricField<Type, PatchField, GeoMesh>>&);
         void operator=(const dimensioned<Type>&);
 
-        void operator==(const tmp<GeometricField<Type, PatchField, GeoMesh> >&);
+        void operator==(const tmp<GeometricField<Type, PatchField, GeoMesh>>&);
         void operator==(const dimensioned<Type>&);
 
         void operator+=(const GeometricField<Type, PatchField, GeoMesh>&);
-        void operator+=(const tmp<GeometricField<Type, PatchField, GeoMesh> >&);
+        void operator+=(const tmp<GeometricField<Type, PatchField, GeoMesh>>&);
 
         void operator-=(const GeometricField<Type, PatchField, GeoMesh>&);
-        void operator-=(const tmp<GeometricField<Type, PatchField, GeoMesh> >&);
+        void operator-=(const tmp<GeometricField<Type, PatchField, GeoMesh>>&);
 
         void operator*=(const GeometricField<scalar, PatchField, GeoMesh>&);
-        void operator*=(const tmp<GeometricField<scalar,PatchField,GeoMesh> >&);
+        void operator*=(const tmp<GeometricField<scalar,PatchField,GeoMesh>>&);
 
         void operator/=(const GeometricField<scalar, PatchField, GeoMesh>&);
-        void operator/=(const tmp<GeometricField<scalar,PatchField,GeoMesh> >&);
+        void operator/=(const tmp<GeometricField<scalar,PatchField,GeoMesh>>&);
 
         void operator+=(const dimensioned<Type>&);
         void operator-=(const dimensioned<Type>&);
@@ -585,7 +585,7 @@ public:
         friend Ostream& operator<< <Type, PatchField, GeoMesh>
         (
             Ostream&,
-            const tmp<GeometricField<Type, PatchField, GeoMesh> >&
+            const tmp<GeometricField<Type, PatchField, GeoMesh>>&
         );
 };
 

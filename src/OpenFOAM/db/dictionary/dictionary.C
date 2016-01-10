@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,7 +51,7 @@ bool Foam::dictionary::findInPatterns
     const bool patternMatch,
     const word& Keyword,
     DLList<entry*>::const_iterator& wcLink,
-    DLList<autoPtr<regExp> >::const_iterator& reLink
+    DLList<autoPtr<regExp>>::const_iterator& reLink
 ) const
 {
     if (patternEntries_.size())
@@ -82,7 +82,7 @@ bool Foam::dictionary::findInPatterns
     const bool patternMatch,
     const word& Keyword,
     DLList<entry*>::iterator& wcLink,
-    DLList<autoPtr<regExp> >::iterator& reLink
+    DLList<autoPtr<regExp>>::iterator& reLink
 )
 {
     if (patternEntries_.size())
@@ -317,7 +317,7 @@ bool Foam::dictionary::found
         {
             DLList<entry*>::const_iterator wcLink =
                 patternEntries_.begin();
-            DLList<autoPtr<regExp> >::const_iterator reLink =
+            DLList<autoPtr<regExp>>::const_iterator reLink =
                 patternRegexps_.begin();
 
             // Find in patterns using regular expressions only
@@ -354,7 +354,7 @@ const Foam::entry* Foam::dictionary::lookupEntryPtr
         {
             DLList<entry*>::const_iterator wcLink =
                 patternEntries_.begin();
-            DLList<autoPtr<regExp> >::const_iterator reLink =
+            DLList<autoPtr<regExp>>::const_iterator reLink =
                 patternRegexps_.begin();
 
             // Find in patterns using regular expressions only
@@ -393,7 +393,7 @@ Foam::entry* Foam::dictionary::lookupEntryPtr
         {
             DLList<entry*>::iterator wcLink =
                 patternEntries_.begin();
-            DLList<autoPtr<regExp> >::iterator reLink =
+            DLList<autoPtr<regExp>>::iterator reLink =
                 patternRegexps_.begin();
 
             // Find in patterns using regular expressions only
@@ -887,7 +887,7 @@ bool Foam::dictionary::remove(const word& Keyword)
         // Delete from patterns first
         DLList<entry*>::iterator wcLink =
             patternEntries_.begin();
-        DLList<autoPtr<regExp> >::iterator reLink =
+        DLList<autoPtr<regExp>>::iterator reLink =
             patternRegexps_.begin();
 
         // Find in pattern using exact match only
@@ -955,7 +955,7 @@ bool Foam::dictionary::changeKeyword
                 // Delete from patterns first
                 DLList<entry*>::iterator wcLink =
                     patternEntries_.begin();
-                DLList<autoPtr<regExp> >::iterator reLink =
+                DLList<autoPtr<regExp>>::iterator reLink =
                     patternRegexps_.begin();
 
                 // Find in patterns using exact match only

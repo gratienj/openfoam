@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -129,7 +129,7 @@ Foam::List<Foam::UPstream::commsStruct> Foam::UPstream::calcLinearComm
 void Foam::UPstream::collectReceives
 (
     const label procID,
-    const List<DynamicList<label> >& receives,
+    const List<DynamicList<label>>& receives,
     DynamicList<label>& allReceives
 )
 {
@@ -180,7 +180,7 @@ Foam::List<Foam::UPstream::commsStruct> Foam::UPstream::calcTreeComm
         nLevels++;
     }
 
-    List<DynamicList<label> > receives(nProcs);
+    List<DynamicList<label>> receives(nProcs);
     labelList sends(nProcs, -1);
 
     // Info<< "Using " << nLevels << " communication levels" << endl;
@@ -211,7 +211,7 @@ Foam::List<Foam::UPstream::commsStruct> Foam::UPstream::calcTreeComm
 
     // For all processors find the processors it receives data from
     // (and the processors they receive data from etc.)
-    List<DynamicList<label> > allReceives(nProcs);
+    List<DynamicList<label>> allReceives(nProcs);
     for (label procID = 0; procID < nProcs; procID++)
     {
         collectReceives(procID, receives, allReceives[procID]);
@@ -398,7 +398,7 @@ Foam::LIFOStack<Foam::label> Foam::UPstream::freeComms_;
 Foam::DynamicList<int> Foam::UPstream::myProcNo_(10);
 
 // List of process IDs
-Foam::DynamicList<Foam::List<int> > Foam::UPstream::procIDs_(10);
+Foam::DynamicList<Foam::List<int>> Foam::UPstream::procIDs_(10);
 
 // Parent communicator
 Foam::DynamicList<Foam::label> Foam::UPstream::parentCommunicator_(10);
@@ -407,11 +407,11 @@ Foam::DynamicList<Foam::label> Foam::UPstream::parentCommunicator_(10);
 int Foam::UPstream::msgType_(1);
 
 // Linear communication schedule
-Foam::DynamicList<Foam::List<Foam::UPstream::commsStruct> >
+Foam::DynamicList<Foam::List<Foam::UPstream::commsStruct>>
 Foam::UPstream::linearCommunication_(10);
 
 // Multi level communication schedule
-Foam::DynamicList<Foam::List<Foam::UPstream::commsStruct> >
+Foam::DynamicList<Foam::List<Foam::UPstream::commsStruct>>
 Foam::UPstream::treeCommunication_(10);
 
 

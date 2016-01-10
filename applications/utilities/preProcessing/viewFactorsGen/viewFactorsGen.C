@@ -504,7 +504,7 @@ int main(int argc, char *argv[])
     // - construct distribute map
     // - renumber rayEndFace into compact addressing
 
-    List<Map<label> > compactMap(Pstream::nProcs());
+    List<Map<label>> compactMap(Pstream::nProcs());
 
     mapDistribute map(globalNumbering, rayEndFace, compactMap);
 
@@ -527,8 +527,8 @@ int main(int argc, char *argv[])
 
     pointField compactCoarseCf(map.constructSize(), pTraits<vector>::zero);
     pointField compactCoarseSf(map.constructSize(), pTraits<vector>::zero);
-    List<List<point> > compactFineSf(map.constructSize());
-    List<List<point> > compactFineCf(map.constructSize());
+    List<List<point>> compactFineSf(map.constructSize());
+    List<List<point>> compactFineCf(map.constructSize());
 
     DynamicList<label> compactPatchId(map.constructSize());
 

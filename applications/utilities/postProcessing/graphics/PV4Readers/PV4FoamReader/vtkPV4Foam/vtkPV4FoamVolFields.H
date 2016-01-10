@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -46,8 +46,9 @@ InClass
 template<class Type>
 void Foam::vtkPV4Foam::convertVolField
 (
-    const PtrList<PrimitivePatchInterpolation<primitivePatch> >& ppInterpList,
-    const GeometricField<Type, fvPatchField, volMesh>& tf,
+    const fvMesh& mesh,
+    const PtrList<PrimitivePatchInterpolation<primitivePatch>>& ppInterpList,
+    const IOobjectList& objects,
     const bool interpFields,
     vtkMultiBlockDataSet* output
 )
@@ -69,7 +70,22 @@ void Foam::vtkPV4Foam::convertVolField
         (
             volPointInterpolation::New(mesh).interpolate(tf).ptr()
         );
-    }
+
+        // Interpolated field (demand driven)
+        autoPtr<GeometricField<Type, pointPatchField, pointMesh>> ptfPtr;
+        if (interpFields)
+        {
+            if (debug)
+            {
+                Info<< "convertVolFieldBlock interpolating:" << tf.name()
+                    << endl;
+            }
+
+            ptfPtr.reset
+            (
+                volPointInterpolation::New(tf.mesh()).interpolate(tf).ptr()
+            );
+        }
 
 
     // Convert activated internalMesh regions
@@ -138,17 +154,20 @@ void Foam::vtkPV4Foam::convertVolField
 
             tmp<Field<Type> > tpptf
             (
-                fvPatchField<Type>(p, tf).patchInternalField()
-            );
+                isType<emptyFvPatchField<Type>>(ptf)
+             ||
+                (
+                    reader_->GetExtrapolatePatches()
+                && !polyPatch::constraintType(patches[patchId].type())
+                )
+            )
+            {
+                fvPatch p(ptf.patch().patch(), tf.mesh().boundary());
 
-            convertPatchField
-            (
-                tf.name(),
-                tpptf(),
-                output,
-                arrayRangePatches_,
-                datasetNo
-            );
+                tmp<Field<Type>> tpptf
+                (
+                    fvPatchField<Type>(p, tf).patchInternalField()
+                );
 
             if (interpFields)
             {
@@ -361,7 +380,7 @@ template<class Type>
 void Foam::vtkPV4Foam::convertVolFieldBlock
 (
     const GeometricField<Type, fvPatchField, volMesh>& tf,
-    autoPtr<GeometricField<Type, pointPatchField, pointMesh> >& ptfPtr,
+    autoPtr<GeometricField<Type, pointPatchField, pointMesh>>& ptfPtr,
     vtkMultiBlockDataSet* output,
     const arrayRange& range,
     const List<polyDecomp>& decompLst

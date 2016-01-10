@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -132,7 +132,33 @@ class streamLine
         label nSubCycle_;
 
 
-   // Private Member Functions
+            //- Axis of the sampled points to output
+            word sampledSetAxis_;
+
+            //- File writer for scalar data
+            autoPtr<writer<scalar>> scalarFormatterPtr_;
+
+            //- File writer for vector data
+            autoPtr<writer<vector>> vectorFormatterPtr_;
+
+
+        // Generated data
+
+            //- All tracks. Per particle the points it passed through
+            DynamicList<List<point>> allTracks_;
+
+            //- Per scalarField, per particle, the sampled value.
+            List<DynamicList<scalarList>> allScalars_;
+
+            //- Per scalarField, per particle, the sampled value.
+            List<DynamicList<vectorList>> allVectors_;
+
+
+        //- Construct patch out of all wall patch faces
+        autoPtr<indirectPrimitivePatch> wallPatch() const;
+
+        //- Do all seeding and tracking
+        void track();
 
         //- Disallow default bitwise copy construct
         streamLine(const streamLine&);

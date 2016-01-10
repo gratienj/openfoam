@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,10 +52,7 @@ namespace Foam
     );
 
     template<>
-    const word GlobalIOList<Tuple2<scalar, vector> >::typeName
-    (
-        "scalarVectorTable"
-    );
+    const word IOList<Tuple2<scalar, vector>>::typeName("scalarVectorTable");
 }
 
 
@@ -66,7 +63,7 @@ void Foam::displacementInterpolationMotionSolver::calcInterpolation()
     // Get zones and their interpolation tables for displacement
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    List<Pair<word> > faceZoneToTable
+    List<Pair<word>> faceZoneToTable
     (
         coeffDict().lookup("interpolationTables")
     );
@@ -91,7 +88,7 @@ void Foam::displacementInterpolationMotionSolver::calcInterpolation()
 
         const word& tableName = faceZoneToTable[i][1];
 
-        GlobalIOList<Tuple2<scalar, vector> > table
+        IOList<Tuple2<scalar, vector>> table
         (
             IOobject
             (

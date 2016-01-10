@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -110,7 +110,7 @@ public:
         label parent_;
 
         //- Cells this cell was refined into
-        autoPtr<FixedList<label, 8> > addedCellsPtr_;
+        autoPtr<FixedList<label, 8>> addedCellsPtr_;
 
         //- Construct null (parent = -1)
         splitCell8();

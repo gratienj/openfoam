@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenCFD Ltd
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -81,7 +81,7 @@ private:
         const basicSpecieMixture& mixture_;
 
         //- List of solid species data
-        List<FixedList<scalar, 2> > solidData_;
+        List<FixedList<scalar, 2>> solidData_;
 
 
     // Private member functions

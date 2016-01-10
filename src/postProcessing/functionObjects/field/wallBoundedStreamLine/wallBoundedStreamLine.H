@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -117,7 +117,86 @@ class wallBoundedStreamLine
 :
     public streamLineBase
 {
-   // Private Member Functions
+    // Private data
+
+        //- Input dictionary
+        dictionary dict_;
+
+        //- Name of this set of field averages.
+        word name_;
+
+        //- Database this class is registered to
+        const objectRegistry& obr_;
+
+        //- Load fields from files (not from objectRegistry)
+        bool loadFromFiles_;
+
+        //- On/off switch
+        bool active_;
+
+
+        //- List of fields to sample
+        wordList fields_;
+
+        //- Field to transport particle with
+        word UName_;
+
+        //- Interpolation scheme to use
+        word interpolationScheme_;
+
+        //- Whether to use +u or -u
+        bool trackForward_;
+
+        //- Maximum lifetime (= number of cells) of particle
+        label lifeTime_;
+
+        //- Track length
+        scalar trackLength_;
+
+        //- Optional specified name of particles
+        word cloudName_;
+
+        //- Type of seed
+        word seedSet_;
+
+        //- Names of scalar fields
+        wordList scalarNames_;
+
+        //- Names of vector fields
+        wordList vectorNames_;
+
+
+        // Demand driven
+
+            //- Mesh searching enigne
+            autoPtr<meshSearch> meshSearchPtr_;
+
+            //- Seed set engine
+            autoPtr<sampledSet> sampledSetPtr_;
+
+            //- Axis of the sampled points to output
+            word sampledSetAxis_;
+
+            //- File output writer
+            autoPtr<writer<scalar>> scalarFormatterPtr_;
+
+            autoPtr<writer<vector>> vectorFormatterPtr_;
+
+
+        // Generated data
+
+            //- All tracks. Per particle the points it passed through
+            DynamicList<List<point>> allTracks_;
+
+            //- Per scalarField, per particle, the sampled value.
+            List<DynamicList<scalarList>> allScalars_;
+
+            //- Per scalarField, per particle, the sampled value.
+            List<DynamicList<vectorList>> allVectors_;
+
+
+        //- Construct patch out of all wall patch faces
+        autoPtr<indirectPrimitivePatch> wallPatch() const;
 
         //- Find wall tet on cell
         tetIndices findNearestTet

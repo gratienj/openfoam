@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,7 +52,7 @@ using namespace Foam;
 void writeProcStats
 (
     const triSurface& s,
-    const List<List<treeBoundBox> >& meshBb
+    const List<List<treeBoundBox>>& meshBb
 )
 {
     // Determine surface bounding boxes, faces, points
@@ -149,8 +149,7 @@ int main(int argc, char *argv[])
     Random rndGen(653213);
 
     // Determine mesh bounding boxes:
-    List<List<treeBoundBox> > meshBb(Pstream::nProcs());
-    if (distType == distributedTriSurfaceMesh::FOLLOW)
+    List<List<treeBoundBox>> meshBb(Pstream::nProcs());
     {
         #include "createPolyMesh.H"
 

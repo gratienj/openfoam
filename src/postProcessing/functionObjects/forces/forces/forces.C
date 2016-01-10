@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -683,7 +683,8 @@ void Foam::forces::writeBinnedForceMoment
         return;
     }
 
-    List<Field<vector> > f(fm);
+    List<Field<vector>> f(force_);
+    List<Field<vector>> m(moment_);
 
     if (binCumulative_)
     {
@@ -722,8 +723,8 @@ void Foam::forces::writeBins()
 
     if (localSystem_)
     {
-        List<Field<vector> > lf(3);
-        List<Field<vector> > lm(3);
+        List<Field<vector>> lf(3);
+        List<Field<vector>> lm(3);
         lf[0] = coordSys_.localVector(force_[0]);
         lf[1] = coordSys_.localVector(force_[1]);
         lf[2] = coordSys_.localVector(force_[2]);

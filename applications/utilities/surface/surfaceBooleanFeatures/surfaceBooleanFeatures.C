@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -508,27 +508,14 @@ label dupNonManifoldPoints(triSurface& s, labelList& pointMap)
                 label faceI = pFaces[index];
                 const labelList& fEdges = fe[faceI];
 
-                // Find starting edge
-                forAll(fEdges, fEdgeI)
-                {
-                    label edgeI = fEdges[fEdgeI];
-                    const edge& e = edges[edgeI];
-
-                    if (e[0] == pointI || e[1] == pointI)
-                    {
-                        visitPointRegion
-                        (
-                            s,
-                            zoneI,
-                            pointI,
-                            edgeI,
-                            faceI,
-                            pFacesZone
-                        );
-                    }
-                }
-            }
-        }
+    DynamicList<vector> normals(2*nFeatEds);
+    vectorField edgeDirections(nFeatEds, vector::zero);
+    DynamicList<extendedFeatureEdgeMesh::sideVolumeType> normalVolumeTypes
+    (
+        2*nFeatEds
+    );
+    List<DynamicList<label>> edgeNormals(nFeatEds);
+    List<DynamicList<label>> normalDirections(nFeatEds);
 
 
         // Subset

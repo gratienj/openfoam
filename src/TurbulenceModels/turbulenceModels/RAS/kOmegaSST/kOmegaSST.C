@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -96,7 +96,7 @@ kOmegaSST<BasicTurbulenceModel>::kOmegaSST
     const word& type
 )
 :
-    kOmegaSSTBase<eddyViscosity<RASModel<BasicTurbulenceModel> > >
+    eddyViscosity<RASModel<BasicTurbulenceModel>>
     (
         type,
         alpha,
@@ -120,7 +120,7 @@ kOmegaSST<BasicTurbulenceModel>::kOmegaSST
 template<class BasicTurbulenceModel>
 bool kOmegaSST<BasicTurbulenceModel>::read()
 {
-    if (eddyViscosity<RASModel<BasicTurbulenceModel> >::read())
+    if (eddyViscosity<RASModel<BasicTurbulenceModel>>::read())
     {
         alphaK1_.readIfPresent(this->coeffDict());
         alphaK2_.readIfPresent(this->coeffDict());
@@ -161,7 +161,7 @@ void kOmegaSST<BasicTurbulenceModel>::correct()
     volScalarField& nut = this->nut_;
     fv::options& fvOptions(fv::options::New(this->mesh_));
 
-    eddyViscosity<RASModel<BasicTurbulenceModel> >::correct();
+    eddyViscosity<RASModel<BasicTurbulenceModel>>::correct();
 
     volScalarField divU(fvc::div(fvc::absolute(this->phi(), U)));
 

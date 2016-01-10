@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1135,10 +1135,12 @@ void Foam::isoSurface::trimToPlanes
 
 void Foam::isoSurface::trimToBox
 (
-    const treeBoundBox& bb,
-    DynamicList<point>& triPoints,
-    DynamicList<label>& triMap      // trimmed to original tris
-)
+    const triSurface& surf,
+    List<FixedList<label, 3>>& faceEdges,
+    labelList& edgeFace0,
+    labelList& edgeFace1,
+    Map<labelList>& edgeFacesRest
+) const
 {
     if (debug)
     {
@@ -1307,6 +1309,27 @@ void Foam::isoSurface::trimToBox
             }
         }
     }
+}
+
+
+void Foam::isoSurface::walkOrientation
+(
+    const triSurface& surf,
+    const List<FixedList<label, 3>>& faceEdges,
+    const labelList& edgeFace0,
+    const labelList& edgeFace1,
+    const label seedTriI,
+    labelList& flipState
+)
+{
+    // Do walk for consistent orientation.
+    DynamicList<label> changedFaces(surf.size());
+
+    changedFaces.append(seedTriI);
+
+    while (changedFaces.size())
+    {
+        DynamicList<label> newChangedFaces(changedFaces.size());
 
         forAll(changedFaces, i)
         {
@@ -1375,8 +1398,14 @@ void Foam::isoSurface::trimToBox
 }
 
 
-// Does face use valid vertices?
-bool Foam::isoSurface::validTri(const triSurface& surf, const label faceI)
+void Foam::isoSurface::orientSurface
+(
+    triSurface& surf,
+    const List<FixedList<label, 3>>& faceEdges,
+    const labelList& edgeFace0,
+    const labelList& edgeFace1,
+    const Map<labelList>& edgeFacesRest
+)
 {
     // Simple check on indices ok.
 
@@ -1406,7 +1435,18 @@ bool Foam::isoSurface::validTri(const triSurface& surf, const label faceI)
         return false;
     }
 
-    // duplicate triangle check
+// Mark triangles to keep. Returns number of dangling triangles.
+Foam::label Foam::isoSurface::markDanglingTriangles
+(
+    const List<FixedList<label, 3>>& faceEdges,
+    const labelList& edgeFace0,
+    const labelList& edgeFace1,
+    const Map<labelList>& edgeFacesRest,
+    boolList& keepTriangles
+)
+{
+    keepTriangles.setSize(faceEdges.size());
+    keepTriangles = true;
 
     const labelList& fFaces = surf.faceFaces()[faceI];
 
@@ -1799,11 +1839,14 @@ Foam::isoSurface::isoSurface
 
         label nOldPoints = triPoints.size();
 
-        // Trimmed to original triangle
-        DynamicList<label> trimTriMap;
-        // Trimmed to original point
-        labelList trimTriPointMap;
-        if (bounds_ != boundBox::greatBox)
+    if (false)
+    {
+        List<FixedList<label, 3>> faceEdges;
+        labelList edgeFace0, edgeFace1;
+        Map<labelList> edgeFacesRest;
+
+
+        while (true)
         {
             trimToBox
             (

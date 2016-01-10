@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -180,9 +180,10 @@ void Foam::wallBoundedStreamLine::track()
 
     // Read or lookup fields
     PtrList<volScalarField> vsFlds;
-    PtrList<interpolation<scalar> > vsInterp;
+    PtrList<interpolation<scalar>> vsInterp;
     PtrList<volVectorField> vvFlds;
-    PtrList<interpolation<vector> > vvInterp;
+    PtrList<interpolation<vector>> vvInterp;
+
     label UIndex = -1;
 
     if (loadFromFiles_)
@@ -559,6 +560,271 @@ void Foam::wallBoundedStreamLine::read(const dictionary& dict)
         }
     }
 }
+
+
+void Foam::wallBoundedStreamLine::execute()
+{}
+
+
+void Foam::wallBoundedStreamLine::end()
+{}
+
+
+void Foam::wallBoundedStreamLine::timeSet()
+{}
+
+
+void Foam::wallBoundedStreamLine::write()
+{
+    if (active_)
+    {
+        const Time& runTime = obr_.time();
+        const fvMesh& mesh = dynamic_cast<const fvMesh&>(obr_);
+
+
+        // Do all injection and tracking
+        track();
+
+
+        if (Pstream::parRun())
+        {
+            // Append slave tracks to master ones
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            globalIndex globalTrackIDs(allTracks_.size());
+
+            // Construct a distribution map to pull all to the master.
+            labelListList sendMap(Pstream::nProcs());
+            labelListList recvMap(Pstream::nProcs());
+
+            if (Pstream::master())
+            {
+                // Master: receive all. My own first, then consecutive
+                // processors.
+                label trackI = 0;
+
+                forAll(recvMap, procI)
+                {
+                    labelList& fromProc = recvMap[procI];
+                    fromProc.setSize(globalTrackIDs.localSize(procI));
+                    forAll(fromProc, i)
+                    {
+                        fromProc[i] = trackI++;
+                    }
+                }
+            }
+
+            labelList& toMaster = sendMap[0];
+            toMaster.setSize(globalTrackIDs.localSize());
+            forAll(toMaster, i)
+            {
+                toMaster[i] = i;
+            }
+
+            const mapDistribute distMap
+            (
+                globalTrackIDs.size(),
+                sendMap.xfer(),
+                recvMap.xfer()
+            );
+
+
+            // Distribute the track positions. Note: use scheduled comms
+            // to prevent buffering.
+            mapDistribute::distribute
+            (
+                Pstream::scheduled,
+                distMap.schedule(),
+                distMap.constructSize(),
+                distMap.subMap(),
+                distMap.constructMap(),
+                allTracks_
+            );
+
+            // Distribute the scalars
+            forAll(allScalars_, scalarI)
+            {
+                mapDistribute::distribute
+                (
+                    Pstream::scheduled,
+                    distMap.schedule(),
+                    distMap.constructSize(),
+                    distMap.subMap(),
+                    distMap.constructMap(),
+                    allScalars_[scalarI]
+                );
+            }
+            // Distribute the vectors
+            forAll(allVectors_, vectorI)
+            {
+                mapDistribute::distribute
+                (
+                    Pstream::scheduled,
+                    distMap.schedule(),
+                    distMap.constructSize(),
+                    distMap.subMap(),
+                    distMap.constructMap(),
+                    allVectors_[vectorI]
+                );
+            }
+        }
+
+
+        label n = 0;
+        forAll(allTracks_, trackI)
+        {
+            n += allTracks_[trackI].size();
+        }
+
+        Info<< "    Tracks:" << allTracks_.size() << nl
+            << "    Total samples:" << n << endl;
+
+
+        // Massage into form suitable for writers
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        if (Pstream::master() && allTracks_.size())
+        {
+            // Make output directory
+
+            fileName vtkPath
+            (
+                Pstream::parRun()
+              ? runTime.path()/".."/"postProcessing"/"sets"/name()
+              : runTime.path()/"postProcessing"/"sets"/name()
+            );
+            if (mesh.name() != fvMesh::defaultRegion)
+            {
+                vtkPath = vtkPath/mesh.name();
+            }
+            vtkPath = vtkPath/mesh.time().timeName();
+
+            mkDir(vtkPath);
+
+            // Convert track positions
+
+            PtrList<coordSet> tracks(allTracks_.size());
+            forAll(allTracks_, trackI)
+            {
+                tracks.set
+                (
+                    trackI,
+                    new coordSet
+                    (
+                        "track" + Foam::name(trackI),
+                        sampledSetAxis_                 //"xyz"
+                    )
+                );
+                tracks[trackI].transfer(allTracks_[trackI]);
+            }
+
+            // Convert scalar values
+
+            if (allScalars_.size() > 0)
+            {
+                List<List<scalarField>> scalarValues(allScalars_.size());
+
+                forAll(allScalars_, scalarI)
+                {
+                    DynamicList<scalarList>& allTrackVals =
+                        allScalars_[scalarI];
+                    scalarValues[scalarI].setSize(allTrackVals.size());
+
+                    forAll(allTrackVals, trackI)
+                    {
+                        scalarList& trackVals = allTrackVals[trackI];
+                        scalarValues[scalarI][trackI].transfer(trackVals);
+                    }
+                }
+
+                fileName vtkFile
+                (
+                    vtkPath
+                  / scalarFormatterPtr_().getFileName
+                    (
+                        tracks[0],
+                        scalarNames_
+                    )
+                );
+
+                Info<< "Writing data to " << vtkFile.path() << endl;
+
+                scalarFormatterPtr_().write
+                (
+                    true,           // writeTracks
+                    tracks,
+                    scalarNames_,
+                    scalarValues,
+                    OFstream(vtkFile)()
+                );
+            }
+
+            // Convert vector values
+
+            if (allVectors_.size() > 0)
+            {
+                List<List<vectorField>> vectorValues(allVectors_.size());
+
+                forAll(allVectors_, vectorI)
+                {
+                    DynamicList<vectorList>& allTrackVals =
+                        allVectors_[vectorI];
+                    vectorValues[vectorI].setSize(allTrackVals.size());
+
+                    forAll(allTrackVals, trackI)
+                    {
+                        vectorList& trackVals = allTrackVals[trackI];
+                        vectorValues[vectorI][trackI].transfer(trackVals);
+                    }
+                }
+
+                fileName vtkFile
+                (
+                    vtkPath
+                  / vectorFormatterPtr_().getFileName
+                    (
+                        tracks[0],
+                        vectorNames_
+                    )
+                );
+
+                //Info<< "Writing vector data to " << vtkFile << endl;
+
+                vectorFormatterPtr_().write
+                (
+                    true,           // writeTracks
+                    tracks,
+                    vectorNames_,
+                    vectorValues,
+                    OFstream(vtkFile)()
+                );
+            }
+        }
+    }
+}
+
+
+void Foam::wallBoundedStreamLine::updateMesh(const mapPolyMesh&)
+{
+    read(dict_);
+}
+
+
+void Foam::wallBoundedStreamLine::movePoints(const polyMesh&)
+{
+    // Moving mesh affects the search tree
+    read(dict_);
+}
+
+
+//void Foam::wallBoundedStreamLine::readUpdate
+//(const polyMesh::readUpdateState state)
+//{
+//    if (state != UNCHANGED)
+//    {
+//        read(dict_);
+//    }
+//}
 
 
 // ************************************************************************* //

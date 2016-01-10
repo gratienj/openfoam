@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -609,15 +609,15 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::repatch
     // is currently not supported by updateMesh.
 
     // Store boundary fields (we only do this for surfaceFields)
-    PtrList<FieldField<fvsPatchField, scalar> > sFlds;
+    PtrList<FieldField<fvsPatchField, scalar>> sFlds;
     saveBoundaryFields<scalar, surfaceMesh>(sFlds);
-    PtrList<FieldField<fvsPatchField, vector> > vFlds;
+    PtrList<FieldField<fvsPatchField, vector>> vFlds;
     saveBoundaryFields<vector, surfaceMesh>(vFlds);
-    PtrList<FieldField<fvsPatchField, sphericalTensor> > sptFlds;
+    PtrList<FieldField<fvsPatchField, sphericalTensor>> sptFlds;
     saveBoundaryFields<sphericalTensor, surfaceMesh>(sptFlds);
-    PtrList<FieldField<fvsPatchField, symmTensor> > sytFlds;
+    PtrList<FieldField<fvsPatchField, symmTensor>> sytFlds;
     saveBoundaryFields<symmTensor, surfaceMesh>(sytFlds);
-    PtrList<FieldField<fvsPatchField, tensor> > tFlds;
+    PtrList<FieldField<fvsPatchField, tensor>> tFlds;
     saveBoundaryFields<tensor, surfaceMesh>(tFlds);
 
     // Change the mesh (no inflation). Note: parallel comms allowed.
@@ -980,7 +980,7 @@ void Foam::fvMeshDistribute::findCouples
 {
     // Store domain neighbour as map so we can easily look for pair
     // with same face+proc.
-    HashTable<label, labelPair, labelPair::Hash<> > map(domainFace.size());
+    HashTable<label, labelPair, labelPair::Hash<>> map(domainFace.size());
 
     forAll(domainProc, bFaceI)
     {
@@ -1007,7 +1007,7 @@ void Foam::fvMeshDistribute::findCouples
         {
             labelPair myData(sourceFace[bFaceI], sourceProc[bFaceI]);
 
-            HashTable<label, labelPair, labelPair::Hash<> >::const_iterator
+            HashTable<label, labelPair, labelPair::Hash<>>::const_iterator
                 iter = map.find(myData);
 
             if (iter != map.end())
@@ -1157,7 +1157,7 @@ void Foam::fvMeshDistribute::addProcPatches
 (
     const labelList& nbrProc,       // processor that neighbour is now on
     const labelList& referPatchID,  // patchID (or -1) I originated from
-    List<Map<label> >& procPatchID
+    List<Map<label>>& procPatchID
 )
 {
     // Now use the neighbourFace/Proc to repatch the mesh. These lists
@@ -1275,7 +1275,7 @@ Foam::labelList Foam::fvMeshDistribute::getBoundaryPatch
 (
     const labelList& nbrProc,               // new processor per boundary face
     const labelList& referPatchID,          // patchID (or -1) I originated from
-    const List<Map<label> >& procPatchID    // per proc the new procPatches
+    const List<Map<label>>& procPatchID    // per proc the new procPatches
 )
 {
     labelList patchIDs(nbrProc);
@@ -2656,7 +2656,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     // Per neighbour processor, per originating patch, the patchID
     // For faces resulting from internal faces or normal processor patches
     // the originating patch is -1. For cyclics this is the cyclic patchID.
-    List<Map<label> > procPatchID;
+    List<Map<label>> procPatchID;
 
     // Add processor and processorCyclic patches.
     addProcPatches(sourceNewNbrProc, sourcePatch, procPatchID);
@@ -2690,11 +2690,11 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
 
     // Bit of hack: processorFvPatchField does not get reset since created
     // from nothing so explicitly reset.
-    initPatchFields<volScalarField, processorFvPatchField<scalar> >
+    initPatchFields<volScalarField, processorFvPatchField<scalar>>
     (
         pTraits<scalar>::zero
     );
-    initPatchFields<volVectorField, processorFvPatchField<vector> >
+    initPatchFields<volVectorField, processorFvPatchField<vector>>
     (
         pTraits<vector>::zero
     );
@@ -2706,11 +2706,40 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     (
         pTraits<sphericalTensor>::zero
     );
-    initPatchFields<volSymmTensorField, processorFvPatchField<symmTensor> >
+    initPatchFields<volSymmTensorField, processorFvPatchField<symmTensor>>
     (
         pTraits<symmTensor>::zero
     );
-    initPatchFields<volTensorField, processorFvPatchField<tensor> >
+    initPatchFields<volTensorField, processorFvPatchField<tensor>>
+    (
+        pTraits<tensor>::zero
+    );
+
+    initPatchFields<surfaceScalarField, processorFvsPatchField<scalar>>
+    (
+        pTraits<scalar>::zero
+    );
+    initPatchFields<surfaceVectorField, processorFvsPatchField<vector>>
+    (
+        pTraits<vector>::zero
+    );
+    initPatchFields
+    <
+        surfaceSphericalTensorField,
+        processorFvsPatchField<sphericalTensor>
+    >
+    (
+        pTraits<sphericalTensor>::zero
+    );
+    initPatchFields
+    <
+        surfaceSymmTensorField,
+        processorFvsPatchField<symmTensor>
+    >
+    (
+        pTraits<symmTensor>::zero
+    );
+    initPatchFields<surfaceTensorField, processorFvsPatchField<tensor>>
     (
         pTraits<tensor>::zero
     );

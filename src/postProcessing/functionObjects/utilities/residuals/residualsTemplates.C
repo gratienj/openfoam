@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -72,7 +72,7 @@ void Foam::residuals::writeResidual(const word& fieldName)
 
         if (solverDict.found(fieldName))
         {
-            const List<SolverPerformance<Type> > sp
+            const List<SolverPerformance<Type>> sp
             (
                 solverDict.lookup(fieldName)
             );

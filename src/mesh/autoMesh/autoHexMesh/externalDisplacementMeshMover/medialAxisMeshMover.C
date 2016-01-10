@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2014-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -51,6 +51,236 @@ namespace Foam
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+Foam::labelList Foam::medialAxisMeshMover::getFixedValueBCs
+(
+    const pointVectorField& fld
+)
+{
+    DynamicList<label> adaptPatchIDs;
+    forAll(fld.boundaryField(), patchI)
+    {
+        const pointPatchField<vector>& patchFld =
+            fld.boundaryField()[patchI];
+
+        if (isA<valuePointPatchField<vector>>(patchFld))
+        {
+            if (isA<zeroFixedValuePointPatchField<vector>>(patchFld))
+            {
+                // Special condition of fixed boundary condition. Does not
+                // get adapted
+            }
+            else
+            {
+                adaptPatchIDs.append(patchI);
+            }
+        }
+    }
+    return adaptPatchIDs;
+}
+
+
+Foam::autoPtr<Foam::indirectPrimitivePatch>
+Foam::medialAxisMeshMover::getPatch
+(
+    const polyMesh& mesh,
+    const labelList& patchIDs
+)
+{
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+    // Count faces.
+    label nFaces = 0;
+
+    forAll(patchIDs, i)
+    {
+        const polyPatch& pp = patches[patchIDs[i]];
+
+        nFaces += pp.size();
+    }
+
+    // Collect faces.
+    labelList addressing(nFaces);
+    nFaces = 0;
+
+    forAll(patchIDs, i)
+    {
+        const polyPatch& pp = patches[patchIDs[i]];
+
+        label meshFaceI = pp.start();
+
+        forAll(pp, i)
+        {
+            addressing[nFaces++] = meshFaceI++;
+        }
+    }
+
+    return autoPtr<indirectPrimitivePatch>
+    (
+        new indirectPrimitivePatch
+        (
+            IndirectList<face>(mesh.faces(), addressing),
+            mesh.points()
+        )
+    );
+}
+
+
+void Foam::medialAxisMeshMover::smoothPatchNormals
+(
+    const label nSmoothDisp,
+    const PackedBoolList& isPatchMasterPoint,
+    const PackedBoolList& isPatchMasterEdge,
+    pointField& normals
+) const
+{
+    const indirectPrimitivePatch& pp = adaptPatchPtr_();
+    const edgeList& edges = pp.edges();
+    const labelList& meshPoints = pp.meshPoints();
+
+    // Get smoothly varying internal normals field.
+    Info<< typeName << " : Smoothing normals ..." << endl;
+
+    scalarField edgeWeights(edges.size());
+    scalarField invSumWeight(meshPoints.size());
+    meshRefinement::calculateEdgeWeights
+    (
+        mesh(),
+        isPatchMasterEdge,
+        meshPoints,
+        edges,
+        edgeWeights,
+        invSumWeight
+    );
+
+
+    vectorField average;
+    for (label iter = 0; iter < nSmoothDisp; iter++)
+    {
+        meshRefinement::weightedSum
+        (
+            mesh(),
+            isPatchMasterEdge,
+            meshPoints,
+            edges,
+            edgeWeights,
+            normals,
+            average
+        );
+        average *= invSumWeight;
+
+        // Do residual calculation every so often.
+        if ((iter % 10) == 0)
+        {
+            scalar resid = meshRefinement::gAverage
+            (
+                isPatchMasterPoint,
+                mag(normals-average)()
+            );
+            Info<< "    Iteration " << iter << "   residual " << resid << endl;
+        }
+
+        // Transfer to normals vector field
+        forAll(average, pointI)
+        {
+            // full smoothing neighbours + point value
+            average[pointI] = 0.5*(normals[pointI]+average[pointI]);
+            normals[pointI] = average[pointI];
+            normals[pointI] /= mag(normals[pointI]) + VSMALL;
+        }
+    }
+}
+
+
+// Smooth normals in interior.
+void Foam::medialAxisMeshMover::smoothNormals
+(
+    const label nSmoothDisp,
+    const PackedBoolList& isMeshMasterPoint,
+    const PackedBoolList& isMeshMasterEdge,
+    const labelList& fixedPoints,
+    pointVectorField& normals
+) const
+{
+    // Get smoothly varying internal normals field.
+    Info<< typeName
+        << " : Smoothing normals in interior ..." << endl;
+
+    const edgeList& edges = mesh().edges();
+
+    // Points that do not change.
+    PackedBoolList isFixedPoint(mesh().nPoints());
+
+    // Internal points that are fixed
+    forAll(fixedPoints, i)
+    {
+        label meshPointI = fixedPoints[i];
+        isFixedPoint.set(meshPointI, 1);
+    }
+
+    // Make sure that points that are coupled to meshPoints but not on a patch
+    // are fixed as well
+    syncTools::syncPointList(mesh(), isFixedPoint, maxEqOp<unsigned int>(), 0);
+
+
+    // Correspondence between local edges/points and mesh edges/points
+    const labelList meshPoints(identity(mesh().nPoints()));
+
+    // Calculate inverse sum of weights
+
+    scalarField edgeWeights(mesh().nEdges());
+    scalarField invSumWeight(meshPoints.size());
+    meshRefinement::calculateEdgeWeights
+    (
+        mesh(),
+        isMeshMasterEdge,
+        meshPoints,
+        edges,
+        edgeWeights,
+        invSumWeight
+    );
+
+    vectorField average;
+    for (label iter = 0; iter < nSmoothDisp; iter++)
+    {
+        meshRefinement::weightedSum
+        (
+            mesh(),
+            isMeshMasterEdge,
+            meshPoints,
+            edges,
+            edgeWeights,
+            normals,
+            average
+        );
+        average *= invSumWeight;
+
+        // Do residual calculation every so often.
+        if ((iter % 10) == 0)
+        {
+            scalar resid = meshRefinement::gAverage
+            (
+                isMeshMasterPoint,
+                mag(normals-average)()
+            );
+            Info<< "    Iteration " << iter << "   residual " << resid << endl;
+        }
+
+
+        // Transfer to normals vector field
+        forAll(average, pointI)
+        {
+            if (isFixedPoint.get(pointI) == 0)
+            {
+                //full smoothing neighbours + point value
+                average[pointI] = 0.5*(normals[pointI]+average[pointI]);
+                normals[pointI] = average[pointI];
+                normals[pointI] /= mag(normals[pointI]) + VSMALL;
+            }
+        }
+    }
+}
+
 
 // Tries and find a medial axis point. Done by comparing vectors to nearest
 // wall point for both vertices of edge.
@@ -805,8 +1035,8 @@ handleFeatureAngleLayerTerminations
     // edge for extrusion.
 
 
-    List<List<point> > edgeFaceNormals(pp.nEdges());
-    List<List<bool> > edgeFaceExtrude(pp.nEdges());
+    List<List<point>> edgeFaceNormals(pp.nEdges());
+    List<List<bool>> edgeFaceExtrude(pp.nEdges());
 
     const labelListList& edgeFaces = pp.edgeFaces();
     const vectorField& faceNormals = pp.faceNormals();
@@ -830,7 +1060,7 @@ handleFeatureAngleLayerTerminations
         mesh(),
         meshEdges,
         edgeFaceNormals,
-        globalMeshData::ListPlusEqOp<List<point> >(),   // combine operator
+        globalMeshData::ListPlusEqOp<List<point>>(),   // combine operator
         List<point>()               // null value
     );
 
@@ -839,7 +1069,7 @@ handleFeatureAngleLayerTerminations
         mesh(),
         meshEdges,
         edgeFaceExtrude,
-        globalMeshData::ListPlusEqOp<List<bool> >(),    // combine operator
+        globalMeshData::ListPlusEqOp<List<bool>>(),    // combine operator
         List<bool>()                // null value
     );
 

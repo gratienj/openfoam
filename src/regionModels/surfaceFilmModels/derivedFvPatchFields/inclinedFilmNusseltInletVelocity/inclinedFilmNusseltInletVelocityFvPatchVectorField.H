@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -60,13 +60,13 @@ class inclinedFilmNusseltInletVelocityFvPatchVectorField
         word filmRegionName_;
 
         //- Mean mass flow rate per unit length [kg/s/m]
-        autoPtr<DataEntry<scalar> > GammaMean_;
+        autoPtr<DataEntry<scalar>> GammaMean_;
 
         //- Perturbation amplitude [m]
-        autoPtr<DataEntry<scalar> > a_;
+        autoPtr<DataEntry<scalar>> a_;
 
         //- Perturbation frequency [rad/s/m]
-        autoPtr<DataEntry<scalar> > omega_;
+        autoPtr<DataEntry<scalar>> omega_;
 
 
 public:

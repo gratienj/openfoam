@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -128,7 +128,7 @@ public:
         PatchInteractionModel(const PatchInteractionModel<CloudType>& pim);
 
         //- Construct and return a clone
-        virtual autoPtr<PatchInteractionModel<CloudType> > clone() const = 0;
+        virtual autoPtr<PatchInteractionModel<CloudType>> clone() const = 0;
 
 
     //- Destructor
@@ -136,7 +136,7 @@ public:
 
 
     //- Selector
-    static autoPtr<PatchInteractionModel<CloudType> > New
+    static autoPtr<PatchInteractionModel<CloudType>> New
     (
         const dictionary& dict,
         CloudType& owner
@@ -210,7 +210,7 @@ public:
     defineNamedTemplateTypeNameAndDebug(Foam::SS<kinematicCloudType>, 0);     \
                                                                               \
     Foam::PatchInteractionModel<kinematicCloudType>::                         \
-        adddictionaryConstructorToTable<Foam::SS<kinematicCloudType> >        \
+        adddictionaryConstructorToTable<Foam::SS<kinematicCloudType>>        \
             add##SS##CloudType##kinematicCloudType##ConstructorToTable_;
 
 

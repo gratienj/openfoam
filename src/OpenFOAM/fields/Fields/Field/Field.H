@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,7 +65,7 @@ template<class Type>
 Ostream& operator<<(Ostream&, const Field<Type>&);
 
 template<class Type>
-Ostream& operator<<(Ostream&, const tmp<Field<Type> >&);
+Ostream& operator<<(Ostream&, const tmp<Field<Type>>&);
 
 class FieldMapper;
 class dictionary;
@@ -100,7 +100,7 @@ public:
         //- Return a null field
         inline static const Field<Type>& null()
         {
-            return NullObjectRef<Field<Type> >();
+            return NullObjectRef<Field<Type>>();
         }
 
 
@@ -121,7 +121,7 @@ public:
         explicit Field(const UList<Type>&);
 
         //- Construct by transferring the List contents
-        explicit Field(const Xfer<List<Type> >&);
+        explicit Field(const Xfer<List<Type>>&);
 
         //- Construct by 1 to 1 mapping from the given field
         Field
@@ -133,7 +133,7 @@ public:
         //- Construct by 1 to 1 mapping from the given tmp field
         Field
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const labelUList& mapAddressing
         );
 
@@ -148,7 +148,7 @@ public:
         //- Construct by interpolative mapping from the given tmp field
         Field
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const labelListList& mapAddressing,
             const scalarListList& weights
         );
@@ -182,16 +182,15 @@ public:
         //- Construct by mapping from the given tmp field
         Field
         (
-            const tmp<Field<Type> >& tmapF,
-            const FieldMapper& map,
-            const bool applyFlip = true
+            const tmp<Field<Type>>& tmapF,
+            const FieldMapper& map
         );
 
         //- Construct by mapping from the given tmp field. Supplied uniform
         //  value for unmapped items
         Field
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const FieldMapper& map,
             const Type& defaultValue,
             const bool applyFlip = true
@@ -201,7 +200,7 @@ public:
         //  for unmapped items
         Field
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const FieldMapper& map,
             const UList<Type>& defaultValues,
             const bool applyFlip = true
@@ -214,11 +213,11 @@ public:
         Field(Field<Type>&, bool reUse);
 
         //- Construct by transferring the Field contents
-        Field(const Xfer<Field<Type> >&);
+        Field(const Xfer<Field<Type>>&);
 
         //- Construct as copy of tmp<Field>
         #ifndef NoConstructFromTmp
-        Field(const tmp<Field<Type> >&);
+        Field(const tmp<Field<Type>>&);
         #endif
 
         //- Construct from Istream
@@ -228,14 +227,14 @@ public:
         Field(const word& keyword, const dictionary&, const label size);
 
         //- Clone
-        tmp<Field<Type> > clone() const;
+        tmp<Field<Type>> clone() const;
 
         //- Return a pointer to a new calculatedFvPatchFieldField created on
         //  freestore without setting patchField values
         template<class Type2>
-        static tmp<Field<Type> > NewCalculatedType(const Field<Type2>& f)
+        static tmp<Field<Type>> NewCalculatedType(const Field<Type2>& f)
         {
-            return tmp<Field<Type> >(new Field<Type>(f.size()));
+            return tmp<Field<Type>>(new Field<Type>(f.size()));
         }
 
 
@@ -251,7 +250,7 @@ public:
         //- 1 to 1 map from the given tmp field
         void map
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const labelUList& mapAddressing
         );
 
@@ -266,7 +265,7 @@ public:
         //- Interpolative map from the given tmp field
         void map
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const labelListList& mapAddressing,
             const scalarListList& weights
         );
@@ -282,9 +281,8 @@ public:
         //- Map from the given tmp field
         void map
         (
-            const tmp<Field<Type> >& tmapF,
-            const FieldMapper& map,
-            const bool applyFlip = true
+            const tmp<Field<Type>>& tmapF,
+            const FieldMapper& map
         );
 
         //- Map from self
@@ -304,7 +302,7 @@ public:
         //- 1 to 1 reverse-map from the given tmp field
         void rmap
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const labelUList& mapAddressing
         );
 
@@ -319,7 +317,7 @@ public:
         //- Interpolative reverse map from the given tmp field
         void rmap
         (
-            const tmp<Field<Type> >& tmapF,
+            const tmp<Field<Type>>& tmapF,
             const labelUList& mapAddressing,
             const UList<scalar>& weights
         );
@@ -328,19 +326,19 @@ public:
         void negate();
 
         //- Return a component field of the field
-        tmp<Field<cmptType> > component(const direction) const;
+        tmp<Field<cmptType>> component(const direction) const;
 
         //- Replace a component field of the field
         void replace(const direction, const UList<cmptType>&);
 
         //- Replace a component field of the field
-        void replace(const direction, const tmp<Field<cmptType> >&);
+        void replace(const direction, const tmp<Field<cmptType>>&);
 
         //- Replace a component field of the field
         void replace(const direction, const cmptType&);
 
         //- Return the field transpose (only defined for second rank tensors)
-        tmp<Field<Type> > T() const;
+        tmp<Field<Type>> T() const;
 
         //- Write the field as a dictionary entry
         void writeEntry(const word& keyword, Ostream& os) const;
@@ -351,23 +349,23 @@ public:
         void operator=(const Field<Type>&);
         void operator=(const UList<Type>&);
         void operator=(const SubField<Type>&);
-        void operator=(const tmp<Field<Type> >&);
+        void operator=(const tmp<Field<Type>>&);
         void operator=(const Type&);
 
         template<class Form, class Cmpt, int nCmpt>
         void operator=(const VectorSpace<Form,Cmpt,nCmpt>&);
 
         void operator+=(const UList<Type>&);
-        void operator+=(const tmp<Field<Type> >&);
+        void operator+=(const tmp<Field<Type>>&);
 
         void operator-=(const UList<Type>&);
-        void operator-=(const tmp<Field<Type> >&);
+        void operator-=(const tmp<Field<Type>>&);
 
         void operator*=(const UList<scalar>&);
-        void operator*=(const tmp<Field<scalar> >&);
+        void operator*=(const tmp<Field<scalar>>&);
 
         void operator/=(const UList<scalar>&);
-        void operator/=(const tmp<Field<scalar> >&);
+        void operator/=(const tmp<Field<scalar>>&);
 
         void operator+=(const Type&);
         void operator-=(const Type&);
@@ -382,7 +380,7 @@ public:
         (Ostream&, const Field<Type>&);
 
         friend Ostream& operator<< <Type>
-        (Ostream&, const tmp<Field<Type> >&);
+        (Ostream&, const tmp<Field<Type>>&);
 };
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -237,7 +237,7 @@ class isoSurface
         //- Return input field with coupled (and empty) patch values rewritten
         template<class Type>
         tmp<SlicedGeometricField
-        <Type, fvPatchField, slicedFvPatchField, volMesh> >
+        <Type, fvPatchField, slicedFvPatchField, volMesh>>
         adaptPatchFields
         (
             const GeometricField<Type, fvPatchField, volMesh>& fld
@@ -343,20 +343,38 @@ class isoSurface
             labelList& triMap               // merged to unmerged triangle
         ) const;
 
-        //- Trim triangle to planes
-        static void trimToPlanes
+        //- Check single triangle for (topological) validity
+        static bool validTri(const triSurface&, const label);
+
+        //- Determine edge-face addressing
+        void calcAddressing
         (
-            const PtrList<plane>& planes,
-            const triPointRef& tri,
-            DynamicList<point>& newTriPoints
+            const triSurface& surf,
+            List<FixedList<label, 3>>& faceEdges,
+            labelList& edgeFace0,
+            labelList& edgeFace1,
+            Map<labelList>& edgeFacesRest
+        ) const;
+
+        //- Determine orientation
+        static void walkOrientation
+        (
+            const triSurface& surf,
+            const List<FixedList<label, 3>>& faceEdges,
+            const labelList& edgeFace0,
+            const labelList& edgeFace1,
+            const label seedTriI,
+            labelList& flipState
         );
 
         //- Trim all triangles to box
         static void trimToBox
         (
-            const treeBoundBox& bb,
-            DynamicList<point>& triPoints,
-            DynamicList<label>& triMeshCells
+            triSurface&,
+            const List<FixedList<label, 3>>& faceEdges,
+            const labelList& edgeFace0,
+            const labelList& edgeFace1,
+            const Map<labelList>& edgeFacesRest
         );
 
         //- Trim all triangles to box. Determine interpolation
@@ -372,8 +390,15 @@ class isoSurface
             List<FixedList<scalar, 3> >& interpolationWeights
         );
 
-        //- Check single triangle for (topological) validity
-        static bool validTri(const triSurface&, const label);
+        //- Mark all non-fully connected triangles
+        static label markDanglingTriangles
+        (
+            const List<FixedList<label, 3>>& faceEdges,
+            const labelList& edgeFace0,
+            const labelList& edgeFace1,
+            const Map<labelList>& edgeFacesRest,
+            boolList& keepTriangles
+        );
 
         static triSurface subsetMesh
         (
@@ -420,7 +445,7 @@ public:
         //- Interpolates cCoords,pCoords. Uses the references to the original
         //  fields used to create the iso surface.
         template<class Type>
-        tmp<Field<Type> > interpolate
+        tmp<Field<Type>> interpolate
         (
             const GeometricField<Type, fvPatchField, volMesh>& cCoords,
             const Field<Type>& pCoords

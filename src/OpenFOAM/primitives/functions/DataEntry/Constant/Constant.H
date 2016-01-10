@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -101,9 +101,9 @@ public:
         Constant(const Constant<Type>& cnst);
 
         //- Construct and return a clone
-        virtual tmp<DataEntry<Type> > clone() const
+        virtual tmp<DataEntry<Type>> clone() const
         {
-            return tmp<DataEntry<Type> >(new Constant<Type>(*this));
+            return tmp<DataEntry<Type>>(new Constant<Type>(*this));
         }
 
 

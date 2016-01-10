@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -117,7 +117,7 @@ public:
         explicit UPtrList(PtrList<T>&);
 
         //- Construct by transferring the parameter contents
-        UPtrList(const Xfer<UPtrList<T> >&);
+        UPtrList(const Xfer<UPtrList<T>>&);
 
         //- Construct as copy or re-use as specified.
         UPtrList(UPtrList<T>&, bool reUse);
@@ -166,7 +166,7 @@ public:
             void transfer(UPtrList<T>&);
 
             //- Transfer contents to the Xfer container
-            inline Xfer<UPtrList<T> > xfer();
+            inline Xfer<UPtrList<T>> xfer();
 
             //- Is element set
             inline bool set(const label) const;

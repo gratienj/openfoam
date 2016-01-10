@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -302,7 +302,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const Mesh& mesh,
     const dimensionSet& ds,
     const Field<Type>& iField,
-    const PtrList<PatchField<Type> >& ptfl
+    const PtrList<PatchField<Type>>& ptfl
 )
 :
     DimensionedField<Type, GeoMesh>(io, mesh, ds, iField),
@@ -432,7 +432,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
-    const tmp<GeometricField<Type, PatchField, GeoMesh> >& tgf
+    const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 :
     DimensionedField<Type, GeoMesh>
@@ -495,7 +495,7 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     const IOobject& io,
-    const tmp<GeometricField<Type, PatchField, GeoMesh> >& tgf
+    const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 :
     DimensionedField<Type, GeoMesh>
@@ -559,7 +559,7 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     const word& newName,
-    const tmp<GeometricField<Type, PatchField, GeoMesh> >& tgf
+    const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 :
     DimensionedField<Type, GeoMesh>
@@ -958,10 +958,10 @@ writeData(Ostream& os) const
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type, template<class> class PatchField, class GeoMesh>
-Foam::tmp<Foam::GeometricField<Type, PatchField, GeoMesh> >
+Foam::tmp<Foam::GeometricField<Type, PatchField, GeoMesh>>
 Foam::GeometricField<Type, PatchField, GeoMesh>::T() const
 {
-    tmp<GeometricField<Type, PatchField, GeoMesh> > result
+    tmp<GeometricField<Type, PatchField, GeoMesh>> result
     (
         new GeometricField<Type, PatchField, GeoMesh>
         (
@@ -998,7 +998,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::component
     const direction d
 ) const
 {
-    tmp<GeometricField<cmptType, PatchField, GeoMesh> > Component
+    tmp<GeometricField<cmptType, PatchField, GeoMesh>> Component
     (
         new GeometricField<cmptType, PatchField, GeoMesh>
         (
@@ -1106,7 +1106,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
 template<class Type, template<class> class PatchField, class GeoMesh>
 void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
 (
-    const tmp<GeometricField<Type, PatchField, GeoMesh> >& tgf
+    const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 {
     if (this == &(tgf()))
@@ -1150,7 +1150,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
 template<class Type, template<class> class PatchField, class GeoMesh>
 void Foam::GeometricField<Type, PatchField, GeoMesh>::operator==
 (
-    const tmp<GeometricField<Type, PatchField, GeoMesh> >& tgf
+    const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 {
     const GeometricField<Type, PatchField, GeoMesh>& gf = tgf();
@@ -1194,7 +1194,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator op             \
 template<class Type, template<class> class PatchField, class GeoMesh>         \
 void Foam::GeometricField<Type, PatchField, GeoMesh>::operator op             \
 (                                                                             \
-    const tmp<GeometricField<TYPE, PatchField, GeoMesh> >& tgf                \
+    const tmp<GeometricField<TYPE, PatchField, GeoMesh>>& tgf                \
 )                                                                             \
 {                                                                             \
     operator op(tgf());                                                       \
@@ -1247,7 +1247,7 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::Ostream& Foam::operator<<
 (
     Ostream& os,
-    const tmp<GeometricField<Type, PatchField, GeoMesh> >& tgf
+    const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 {
     os << tgf();

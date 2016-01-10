@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -176,7 +176,7 @@ Foam::label Foam::InflationInjection<CloudType>::parcelsToInject
 {
     const polyMesh& mesh = this->owner().mesh();
 
-    List<DynamicList<typename CloudType::parcelType*> >& cellOccupancy =
+    List<DynamicList<typename CloudType::parcelType*>>& cellOccupancy =
         this->owner().cellOccupancy();
 
     scalar gR = growthRate_.value(time1);
@@ -387,7 +387,7 @@ Foam::label Foam::InflationInjection<CloudType>::parcelsToInject
 
     if (Pstream::parRun())
     {
-        List<List<vectorPairScalarPair> > gatheredNewParticles
+        List<List<vectorPairScalarPair>> gatheredNewParticles
         (
             Pstream::nProcs()
         );
@@ -400,10 +400,10 @@ Foam::label Foam::InflationInjection<CloudType>::parcelsToInject
         // Combine
         List<vectorPairScalarPair> combinedNewParticles
         (
-            ListListOps::combine<List<vectorPairScalarPair> >
+            ListListOps::combine<List<vectorPairScalarPair>>
             (
                 gatheredNewParticles,
-                accessOp<List<vectorPairScalarPair> >()
+                accessOp<List<vectorPairScalarPair>>()
             )
         );
 

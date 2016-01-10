@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -197,7 +197,7 @@ private:
 
 
         //- User supplied face based data.
-        List<Tuple2<mapType, labelList> > userFaceData_;
+        List<Tuple2<mapType, labelList>> userFaceData_;
 
         //- Meshed patches - are treated differently. Stored as wordList since
         //  order changes.
@@ -887,12 +887,12 @@ public:
             //  topo changes. Every entry is a list over all faces.
             //  Bit of a hack. Additional flag to say whether to maintain master
             //  only (false) or increase set to account for face-from-face.
-            const List<Tuple2<mapType, labelList> >& userFaceData() const
+            const List<Tuple2<mapType, labelList>>& userFaceData() const
             {
                 return userFaceData_;
             }
 
-            List<Tuple2<mapType, labelList> >& userFaceData()
+            List<Tuple2<mapType, labelList>>& userFaceData()
             {
                 return userFaceData_;
             }

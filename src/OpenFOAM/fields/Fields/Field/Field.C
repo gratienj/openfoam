@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -75,7 +75,7 @@ Foam::Field<Type>::Field
 template<class Type>
 Foam::Field<Type>::Field
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const labelUList& mapAddressing
 )
 :
@@ -102,7 +102,7 @@ Foam::Field<Type>::Field
 template<class Type>
 Foam::Field<Type>::Field
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const labelListList& mapAddressing,
     const scalarListList& mapWeights
 )
@@ -160,9 +160,8 @@ Foam::Field<Type>::Field
 template<class Type>
 Foam::Field<Type>::Field
 (
-    const tmp<Field<Type> >& tmapF,
-    const FieldMapper& mapper,
-    const bool applyFlip
+    const tmp<Field<Type>>& tmapF,
+    const FieldMapper& mapper
 )
 :
     List<Type>(mapper.size())
@@ -174,7 +173,7 @@ Foam::Field<Type>::Field
 template<class Type>
 Foam::Field<Type>::Field
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const FieldMapper& mapper,
     const Type& defaultValue,
     const bool applyFlip
@@ -189,7 +188,7 @@ Foam::Field<Type>::Field
 template<class Type>
 Foam::Field<Type>::Field
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const FieldMapper& mapper,
     const UList<Type>& defaultValues,
     const bool applyFlip
@@ -217,14 +216,14 @@ Foam::Field<Type>::Field(Field<Type>& f, bool reUse)
 
 
 template<class Type>
-Foam::Field<Type>::Field(const Xfer<List<Type> >& f)
+Foam::Field<Type>::Field(const Xfer<List<Type>>& f)
 :
     List<Type>(f)
 {}
 
 
 template<class Type>
-Foam::Field<Type>::Field(const Xfer<Field<Type> >& f)
+Foam::Field<Type>::Field(const Xfer<Field<Type>>& f)
 :
     List<Type>(f)
 {}
@@ -240,7 +239,7 @@ Foam::Field<Type>::Field(const UList<Type>& list)
 // Construct as copy of tmp<Field>
 #ifndef NoConstructFromTmp
 template<class Type>
-Foam::Field<Type>::Field(const tmp<Field<Type> >& tf)
+Foam::Field<Type>::Field(const tmp<Field<Type>>& tf)
 :
     List<Type>(const_cast<Field<Type>&>(tf()), tf.isTmp())
 {
@@ -332,9 +331,9 @@ Foam::Field<Type>::Field
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type> > Foam::Field<Type>::clone() const
+Foam::tmp<Foam::Field<Type>> Foam::Field<Type>::clone() const
 {
-    return tmp<Field<Type> >(new Field<Type>(*this));
+    return tmp<Field<Type>>(new Field<Type>(*this));
 }
 
 
@@ -372,7 +371,7 @@ void Foam::Field<Type>::map
 template<class Type>
 void Foam::Field<Type>::map
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const labelUList& mapAddressing
 )
 {
@@ -421,7 +420,7 @@ void Foam::Field<Type>::map
 template<class Type>
 void Foam::Field<Type>::map
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const labelListList& mapAddressing,
     const scalarListList& mapWeights
 )
@@ -493,9 +492,8 @@ void Foam::Field<Type>::map
 template<class Type>
 void Foam::Field<Type>::map
 (
-    const tmp<Field<Type> >& tmapF,
-    const FieldMapper& mapper,
-    const bool applyFlip
+    const tmp<Field<Type>>& tmapF,
+    const FieldMapper& mapper
 )
 {
     map(tmapF(), mapper, applyFlip);
@@ -590,7 +588,7 @@ void Foam::Field<Type>::rmap
 template<class Type>
 void Foam::Field<Type>::rmap
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const labelUList& mapAddressing
 )
 {
@@ -621,7 +619,7 @@ void Foam::Field<Type>::rmap
 template<class Type>
 void Foam::Field<Type>::rmap
 (
-    const tmp<Field<Type> >& tmapF,
+    const tmp<Field<Type>>& tmapF,
     const labelUList& mapAddressing,
     const UList<scalar>& mapWeights
 )
@@ -639,13 +637,13 @@ void Foam::Field<Type>::negate()
 
 
 template<class Type>
-Foam::tmp<Foam::Field<typename Foam::Field<Type>::cmptType> >
+Foam::tmp<Foam::Field<typename Foam::Field<Type>::cmptType>>
 Foam::Field<Type>::component
 (
     const direction d
 ) const
 {
-    tmp<Field<cmptType> > Component(new Field<cmptType>(this->size()));
+    tmp<Field<cmptType>> Component(new Field<cmptType>(this->size()));
     ::Foam::component(Component(), *this, d);
     return Component;
 }
@@ -667,7 +665,7 @@ template<class Type>
 void Foam::Field<Type>::replace
 (
     const direction d,
-    const tmp<Field<cmptType> >& tsf
+    const tmp<Field<cmptType>>& tsf
 )
 {
     replace(d, tsf());
@@ -688,9 +686,9 @@ void Foam::Field<Type>::replace
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type> > Foam::Field<Type>::T() const
+Foam::tmp<Foam::Field<Type>> Foam::Field<Type>::T() const
 {
-    tmp<Field<Type> > transpose(new Field<Type>(this->size()));
+    tmp<Field<Type>> transpose(new Field<Type>(this->size()));
     ::Foam::T(transpose(), *this);
     return transpose;
 }
@@ -803,7 +801,7 @@ void Foam::Field<Type>::operator op(const UList<TYPE>& f)                     \
 }                                                                             \
                                                                               \
 template<class Type>                                                          \
-void Foam::Field<Type>::operator op(const tmp<Field<TYPE> >& tf)              \
+void Foam::Field<Type>::operator op(const tmp<Field<TYPE>>& tf)              \
 {                                                                             \
     operator op(tf());                                                        \
     tf.clear();                                                               \
@@ -834,7 +832,7 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const Field<Type>& f)
 
 
 template<class Type>
-Foam::Ostream& Foam::operator<<(Ostream& os, const tmp<Field<Type> >& tf)
+Foam::Ostream& Foam::operator<<(Ostream& os, const tmp<Field<Type>>& tf)
 {
     os  << tf();
     tf.clear();

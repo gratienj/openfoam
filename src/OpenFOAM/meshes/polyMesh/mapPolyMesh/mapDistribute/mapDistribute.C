@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -141,7 +141,7 @@ Foam::List<Foam::labelPair> Foam::mapDistribute::schedule
     List<labelPair> allComms;
 
     {
-        HashSet<labelPair, labelPair::Hash<> > commsSet(Pstream::nProcs());
+        HashSet<labelPair, labelPair::Hash<>> commsSet(Pstream::nProcs());
 
         // Find what communication is required
         forAll(subMap, procI)
@@ -336,6 +336,282 @@ void Foam::mapDistribute::printLayout(Ostream& os) const
 }
 
 
+// Construct per processor compact addressing of the global elements
+// needed. The ones from the local processor are not included since
+// these are always all needed.
+void Foam::mapDistribute::calcCompactAddressing
+(
+    const globalIndex& globalNumbering,
+    const labelList& elements,
+    List<Map<label>>& compactMap
+) const
+{
+    compactMap.setSize(Pstream::nProcs());
+
+    // Count all (non-local) elements needed. Just for presizing map.
+    labelList nNonLocal(Pstream::nProcs(), 0);
+
+    forAll(elements, i)
+    {
+        label globalIndex = elements[i];
+
+        if (globalIndex != -1 && !globalNumbering.isLocal(globalIndex))
+        {
+            label procI = globalNumbering.whichProcID(globalIndex);
+            nNonLocal[procI]++;
+        }
+    }
+
+    forAll(compactMap, procI)
+    {
+        compactMap[procI].clear();
+        if (procI != Pstream::myProcNo())
+        {
+            compactMap[procI].resize(2*nNonLocal[procI]);
+        }
+    }
+
+
+    // Collect all (non-local) elements needed.
+    forAll(elements, i)
+    {
+        label globalIndex = elements[i];
+
+        if (globalIndex != -1 && !globalNumbering.isLocal(globalIndex))
+        {
+            label procI = globalNumbering.whichProcID(globalIndex);
+            label index = globalNumbering.toLocal(procI, globalIndex);
+            label nCompact = compactMap[procI].size();
+            compactMap[procI].insert(index, nCompact);
+        }
+    }
+}
+
+
+void Foam::mapDistribute::calcCompactAddressing
+(
+    const globalIndex& globalNumbering,
+    const labelListList& cellCells,
+    List<Map<label>>& compactMap
+) const
+{
+    compactMap.setSize(Pstream::nProcs());
+
+    // Count all (non-local) elements needed. Just for presizing map.
+    labelList nNonLocal(Pstream::nProcs(), 0);
+
+    forAll(cellCells, cellI)
+    {
+        const labelList& cCells = cellCells[cellI];
+
+        forAll(cCells, i)
+        {
+            label globalIndex = cCells[i];
+
+            if (globalIndex != -1 && !globalNumbering.isLocal(globalIndex))
+            {
+                label procI = globalNumbering.whichProcID(globalIndex);
+                nNonLocal[procI]++;
+            }
+        }
+    }
+
+    forAll(compactMap, procI)
+    {
+        compactMap[procI].clear();
+        if (procI != Pstream::myProcNo())
+        {
+            compactMap[procI].resize(2*nNonLocal[procI]);
+        }
+    }
+
+
+    // Collect all (non-local) elements needed.
+    forAll(cellCells, cellI)
+    {
+        const labelList& cCells = cellCells[cellI];
+
+        forAll(cCells, i)
+        {
+            label globalIndex = cCells[i];
+
+            if (globalIndex != -1 && !globalNumbering.isLocal(globalIndex))
+            {
+                label procI = globalNumbering.whichProcID(globalIndex);
+                label index = globalNumbering.toLocal(procI, globalIndex);
+                label nCompact = compactMap[procI].size();
+                compactMap[procI].insert(index, nCompact);
+            }
+        }
+    }
+}
+
+
+void Foam::mapDistribute::exchangeAddressing
+(
+    const int tag,
+    const globalIndex& globalNumbering,
+    labelList& elements,
+    List<Map<label>>& compactMap,
+    labelList& compactStart
+)
+{
+    // The overall compact addressing is
+    // - myProcNo data first (uncompacted)
+    // - all other processors consecutively
+
+    compactStart.setSize(Pstream::nProcs());
+    compactStart[Pstream::myProcNo()] = 0;
+    constructSize_ = globalNumbering.localSize();
+    forAll(compactStart, procI)
+    {
+        if (procI != Pstream::myProcNo())
+        {
+            compactStart[procI] = constructSize_;
+            constructSize_ += compactMap[procI].size();
+        }
+    }
+
+
+
+    // Find out what to receive/send in compact addressing.
+
+    // What I want to receive is what others have to send
+    labelListList wantedRemoteElements(Pstream::nProcs());
+    // Compact addressing for received data
+    constructMap_.setSize(Pstream::nProcs());
+    forAll(compactMap, procI)
+    {
+        if (procI == Pstream::myProcNo())
+        {
+            // All my own elements are used
+            label nLocal = globalNumbering.localSize();
+            wantedRemoteElements[procI] = identity(nLocal);
+            constructMap_[procI] = identity(nLocal);
+        }
+        else
+        {
+            // Remote elements wanted from processor procI
+            labelList& remoteElem = wantedRemoteElements[procI];
+            labelList& localElem = constructMap_[procI];
+            remoteElem.setSize(compactMap[procI].size());
+            localElem.setSize(compactMap[procI].size());
+            label i = 0;
+            forAllIter(Map<label>, compactMap[procI], iter)
+            {
+                const label compactI = compactStart[procI] + iter();
+                remoteElem[i] = iter.key();
+                localElem[i]  = compactI;
+                iter() = compactI;
+                i++;
+            }
+        }
+    }
+
+    subMap_.setSize(Pstream::nProcs());
+    labelListList sendSizes;
+    Pstream::exchange<labelList, label>
+    (
+        wantedRemoteElements,
+        subMap_,
+        sendSizes,
+        tag,
+        Pstream::worldComm  //TBD
+    );
+
+    // Renumber elements
+    forAll(elements, i)
+    {
+        elements[i] = renumber(globalNumbering, compactMap, elements[i]);
+    }
+}
+
+
+void Foam::mapDistribute::exchangeAddressing
+(
+    const int tag,
+    const globalIndex& globalNumbering,
+    labelListList& cellCells,
+    List<Map<label>>& compactMap,
+    labelList& compactStart
+)
+{
+    // The overall compact addressing is
+    // - myProcNo data first (uncompacted)
+    // - all other processors consecutively
+
+    compactStart.setSize(Pstream::nProcs());
+    compactStart[Pstream::myProcNo()] = 0;
+    constructSize_ = globalNumbering.localSize();
+    forAll(compactStart, procI)
+    {
+        if (procI != Pstream::myProcNo())
+        {
+            compactStart[procI] = constructSize_;
+            constructSize_ += compactMap[procI].size();
+        }
+    }
+
+
+
+    // Find out what to receive/send in compact addressing.
+
+    // What I want to receive is what others have to send
+    labelListList wantedRemoteElements(Pstream::nProcs());
+    // Compact addressing for received data
+    constructMap_.setSize(Pstream::nProcs());
+    forAll(compactMap, procI)
+    {
+        if (procI == Pstream::myProcNo())
+        {
+            // All my own elements are used
+            label nLocal = globalNumbering.localSize();
+            wantedRemoteElements[procI] = identity(nLocal);
+            constructMap_[procI] = identity(nLocal);
+        }
+        else
+        {
+            // Remote elements wanted from processor procI
+            labelList& remoteElem = wantedRemoteElements[procI];
+            labelList& localElem = constructMap_[procI];
+            remoteElem.setSize(compactMap[procI].size());
+            localElem.setSize(compactMap[procI].size());
+            label i = 0;
+            forAllIter(Map<label>, compactMap[procI], iter)
+            {
+                const label compactI = compactStart[procI] + iter();
+                remoteElem[i] = iter.key();
+                localElem[i]  = compactI;
+                iter() = compactI;
+                i++;
+            }
+        }
+    }
+
+    subMap_.setSize(Pstream::nProcs());
+    labelListList sendSizes;
+    Pstream::exchange<labelList, label>
+    (
+        wantedRemoteElements,
+        subMap_,
+        sendSizes,
+        tag,
+        Pstream::worldComm      //TBD
+    );
+
+    // Renumber elements
+    forAll(cellCells, cellI)
+    {
+        labelList& cCells = cellCells[cellI];
+
+        forAll(cCells, i)
+        {
+            cCells[i] = renumber(globalNumbering, compactMap, cCells[i]);
+        }
+    }
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 //- Construct null
@@ -467,7 +743,7 @@ Foam::mapDistribute::mapDistribute
 (
     const globalIndex& globalNumbering,
     labelList& elements,
-    List<Map<label> >& compactMap,
+    List<Map<label>>& compactMap,
     const int tag
 )
 :
@@ -485,7 +761,7 @@ Foam::mapDistribute::mapDistribute
 (
     const globalIndex& globalNumbering,
     labelListList& cellCells,
-    List<Map<label> >& compactMap,
+    List<Map<label>>& compactMap,
     const int tag
 )
 :
@@ -506,7 +782,7 @@ Foam::mapDistribute::mapDistribute
     const globalIndexAndTransform& globalTransforms,
     const labelPairList& transformedElements,
     labelList& transformedIndices,
-    List<Map<label> >& compactMap,
+    List<Map<label>>& compactMap,
     const int tag
 )
 :
@@ -611,7 +887,7 @@ Foam::mapDistribute::mapDistribute
     const globalIndexAndTransform& globalTransforms,
     const List<labelPairList>& transformedElements,
     labelListList& transformedIndices,
-    List<Map<label> >& compactMap,
+    List<Map<label>>& compactMap,
     const int tag
 )
 :
@@ -772,7 +1048,12 @@ const
 }
 
 
-void Foam::mapDistribute::transfer(mapDistribute& rhs)
+Foam::label Foam::mapDistribute::renumber
+(
+    const globalIndex& globalNumbering,
+    const List<Map<label>>& compactMap,
+    const label globalI
+)
 {
     mapDistributeBase::transfer(rhs);
     transformElements_.transfer(rhs.transformElements_);

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1038,186 +1038,349 @@ Foam::label Foam::meshRefinement::splitFacesUndo
         // ~~~~~~~~~~~~~~~~
         // (if one of the faces is in the errorFaces set)
 
-        polyTopoChange meshMod(mesh_);
-
-        // Indices (in facePairs) of merged faces
-        labelHashSet mergedIndices(facePairs.size());
-        forAll(facePairs, index)
-        {
-            const labelPair& twoFaces = facePairs[index];
-
-            if
-            (
-                errorFaces.found(twoFaces.first())
-             || errorFaces.found(twoFaces.second())
-            )
-            {
-                const face& originalFace = originalFaces[index];
-
-
-                // Determine face properties
-                label own = mesh_.faceOwner()[twoFaces[0]];
-                label nei = -1;
-                label patchI = -1;
-                if (twoFaces[0] >= mesh_.nInternalFaces())
-                {
-                    patchI = mesh_.boundaryMesh().whichPatch(twoFaces[0]);
-                }
-                else
-                {
-                    nei = mesh_.faceNeighbour()[twoFaces[0]];
-                }
-
-                label zoneI = mesh_.faceZones().whichZone(twoFaces[0]);
-                bool zoneFlip = false;
-                if (zoneI != -1)
-                {
-                    const faceZone& fz = mesh_.faceZones()[zoneI];
-                    zoneFlip = fz.flipMap()[fz.whichFace(twoFaces[0])];
-                }
-
-                // Modify first face
-                meshMod.modifyFace
-                (
-                    originalFace,               // modified face
-                    twoFaces[0],                // label of face
-                    own,                        // owner
-                    nei,                        // neighbour
-                    false,                      // face flip
-                    patchI,                     // patch for face
-                    zoneI,                      // zone for face
-                    zoneFlip                    // face flip in zone
-                );
-                // Merge second face into first
-                meshMod.removeFace(twoFaces[1], twoFaces[0]);
-
-                mergedIndices.insert(index);
-            }
-        }
-
-        label n = returnReduce(mergedIndices.size(), sumOp<label>());
-
-        Info<< "Detected " << n
-            << " split faces that will be restored to their original faces."
-            << nl << endl;
-
-        if (n == 0)
-        {
-            // Nothing to be restored
-            break;
-        }
-
-        nSplit -= n;
-
-
-        // Change the mesh (no inflation)
-        autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
-
-        // Update fields
-        mesh_.updateMesh(map);
-
-        // Move mesh (since morphing might not do this)
-        if (map().hasMotionPoints())
-        {
-            mesh_.movePoints(map().preMotionPoints());
-        }
-
-        // Reset the instance for if in overwrite mode
-        mesh_.setInstance(timeName());
-        setInstance(mesh_.facesInstance());
-
-
-        // Update local mesh data
-        // ~~~~~~~~~~~~~~~~~~~~~~
-
-        {
-            const labelList& oldToNewFaces = map().reverseFaceMap();
-            const labelList& oldToNewPoints = map().reversePointMap();
-
-            // Compact out merged faces
-            DynamicList<label> changedFaces(mergedIndices.size());
-
-            label newIndex = 0;
-            forAll(facePairs, index)
-            {
-                const labelPair& oldSplit = facePairs[index];
-                label new0 = oldToNewFaces[oldSplit[0]];
-                label new1 = oldToNewFaces[oldSplit[1]];
-
-                if (!mergedIndices.found(index))
-                {
-                    // Faces still split
-                    if (new0 < 0 || new1 < 0)
-                    {
-                        FatalErrorInFunction
-                            << "Problem: oldFaces:" << oldSplit
-                            << " newFaces:" << labelPair(new0, new1)
-                            << exit(FatalError);
-                    }
-
-                    facePairs[newIndex] = labelPair(new0, new1);
-                    originalFaces[newIndex] = renumber
-                    (
-                        oldToNewPoints,
-                        originalFaces[index]
-                    );
-                    newIndex++;
-                }
-                else
-                {
-                    // Merged face. Only new0 kept.
-                    if (new0 < 0 || new1 == -1)
-                    {
-                        FatalErrorInFunction
-                            << "Problem: oldFaces:" << oldSplit
-                            << " newFace:" << labelPair(new0, new1)
-                            << exit(FatalError);
-                    }
-                    changedFaces.append(new0);
-                }
-            }
-
-            facePairs.setSize(newIndex);
-            originalFaces.setSize(newIndex);
-
-
-            // Update intersections
-            updateMesh(map, growFaceCellFace(changedFaces));
-        }
-
-        // Update baffle data
-        // ~~~~~~~~~~~~~~~~~~
-        {
-            if (duplicateFace.size())
-            {
-                meshRefinement::updateList
-                (
-                    map().faceMap(),
-                    label(-1),
-                    duplicateFace
-                );
-            }
-
-            const labelList& reverseFaceMap = map().reverseFaceMap();
-            forAll(baffles, i)
-            {
-                labelPair& baffle = baffles[i];
-                baffle.first() = reverseFaceMap[baffle.first()];
-                baffle.second() = reverseFaceMap[baffle.second()];
-
-                if (baffle.first() == -1 || baffle.second() == -1)
-                {
-                    FatalErrorInFunction
-                        << "Removed baffle : faces:" << baffle
-                        << exit(FatalError);
-                }
-            }
-        }
-
-    }
-
-    return nSplit;
-}
+//// Determine for multi-processor regions the lowest numbered cell on the
+//// lowest numbered processor.
+//void Foam::meshRefinement::getCoupledRegionMaster
+//(
+//    const globalIndex& globalCells,
+//    const boolList& blockedFace,
+//    const regionSplit& globalRegion,
+//    Map<label>& regionToMaster
+//) const
+//{
+//    const polyBoundaryMesh& patches = mesh_.boundaryMesh();
+//
+//    forAll(patches, patchI)
+//    {
+//        const polyPatch& pp = patches[patchI];
+//
+//        if (isA<processorPolyPatch>(pp))
+//        {
+//            forAll(pp, i)
+//            {
+//                label faceI = pp.start()+i;
+//
+//                if (!blockedFace[faceI])
+//                {
+//                    // Only if there is a connection to the neighbour
+//                    // will there be a multi-domain region; if not through
+//                    // this face then through another.
+//
+//                    label cellI = mesh_.faceOwner()[faceI];
+//                    label globalCellI = globalCells.toGlobal(cellI);
+//
+//                    Map<label>::iterator iter =
+//                        regionToMaster.find(globalRegion[cellI]);
+//
+//                    if (iter != regionToMaster.end())
+//                    {
+//                        label master = iter();
+//                        iter() = min(master, globalCellI);
+//                    }
+//                    else
+//                    {
+//                        regionToMaster.insert
+//                        (
+//                            globalRegion[cellI],
+//                            globalCellI
+//                        );
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    // Do reduction
+//    Pstream::mapCombineGather(regionToMaster, minEqOp<label>());
+//    Pstream::mapCombineScatter(regionToMaster);
+//}
+//
+//
+//void Foam::meshRefinement::calcLocalRegions
+//(
+//    const globalIndex& globalCells,
+//    const labelList& globalRegion,
+//    const Map<label>& coupledRegionToMaster,
+//    const scalarField& cellWeights,
+//
+//    Map<label>& globalToLocalRegion,
+//    pointField& localPoints,
+//    scalarField& localWeights
+//) const
+//{
+//    globalToLocalRegion.resize(globalRegion.size());
+//    DynamicList<point> localCc(globalRegion.size()/2);
+//    DynamicList<scalar> localWts(globalRegion.size()/2);
+//
+//    forAll(globalRegion, cellI)
+//    {
+//        Map<label>::const_iterator fndMaster =
+//            coupledRegionToMaster.find(globalRegion[cellI]);
+//
+//        if (fndMaster != coupledRegionToMaster.end())
+//        {
+//            // Multi-processor region.
+//            if (globalCells.toGlobal(cellI) == fndMaster())
+//            {
+//                // I am master. Allocate region for me.
+//                globalToLocalRegion.insert
+//                (
+//                    globalRegion[cellI],
+//                    localCc.size()
+//                );
+//                localCc.append(mesh_.cellCentres()[cellI]);
+//                localWts.append(cellWeights[cellI]);
+//            }
+//        }
+//        else
+//        {
+//            // Single processor region.
+//            if
+//            (
+//                globalToLocalRegion.insert
+//                (
+//                    globalRegion[cellI],
+//                    localCc.size()
+//                )
+//            )
+//            {
+//                localCc.append(mesh_.cellCentres()[cellI]);
+//                localWts.append(cellWeights[cellI]);
+//            }
+//        }
+//    }
+//
+//    localPoints.transfer(localCc);
+//    localWeights.transfer(localWts);
+//
+//    if (localPoints.size() != globalToLocalRegion.size())
+//    {
+//        FatalErrorInFunction
+//            << "localPoints:" << localPoints.size()
+//            << " globalToLocalRegion:" << globalToLocalRegion.size()
+//            << exit(FatalError);
+//    }
+//}
+//
+//
+//Foam::label Foam::meshRefinement::getShiftedRegion
+//(
+//    const globalIndex& indexer,
+//    const Map<label>& globalToLocalRegion,
+//    const Map<label>& coupledRegionToShifted,
+//    const label globalRegion
+//)
+//{
+//    Map<label>::const_iterator iter =
+//        globalToLocalRegion.find(globalRegion);
+//
+//    if (iter != globalToLocalRegion.end())
+//    {
+//        // Region is 'owned' locally. Convert local region index into global.
+//        return indexer.toGlobal(iter());
+//    }
+//    else
+//    {
+//        return coupledRegionToShifted[globalRegion];
+//    }
+//}
+//
+//
+//// Add if not yet present
+//void Foam::meshRefinement::addUnique(const label elem, labelList& lst)
+//{
+//    if (findIndex(lst, elem) == -1)
+//    {
+//        label sz = lst.size();
+//        lst.setSize(sz+1);
+//        lst[sz] = elem;
+//    }
+//}
+//
+//
+//void Foam::meshRefinement::calcRegionRegions
+//(
+//    const labelList& globalRegion,
+//    const Map<label>& globalToLocalRegion,
+//    const Map<label>& coupledRegionToMaster,
+//    labelListList& regionRegions
+//) const
+//{
+//    // Global region indexing since we now know the shifted regions.
+//    globalIndex shiftIndexer(globalToLocalRegion.size());
+//
+//    // Redo the coupledRegionToMaster to be in shifted region indexing.
+//    Map<label> coupledRegionToShifted(coupledRegionToMaster.size());
+//    forAllConstIter(Map<label>, coupledRegionToMaster, iter)
+//    {
+//        label region = iter.key();
+//
+//        Map<label>::const_iterator fndRegion = globalToLocalRegion.find
+//        (region);
+//
+//        if (fndRegion != globalToLocalRegion.end())
+//        {
+//            // A local cell is master of this region. Get its shifted region.
+//            coupledRegionToShifted.insert
+//            (
+//                region,
+//                shiftIndexer.toGlobal(fndRegion())
+//            );
+//        }
+//        Pstream::mapCombineGather(coupledRegionToShifted, minEqOp<label>());
+//        Pstream::mapCombineScatter(coupledRegionToShifted);
+//    }
+//
+//
+//    // Determine region-region connectivity.
+//    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//    // This is for all my regions (so my local ones or the ones I am master
+//    // of) the neighbouring region indices.
+//
+//
+//    // Transfer lists.
+//    PtrList<HashSet<edge, Hash<edge>>> regionConnectivity
+//    (Pstream::nProcs());
+//    forAll(regionConnectivity, procI)
+//    {
+//        if (procI != Pstream::myProcNo())
+//        {
+//            regionConnectivity.set
+//            (
+//                procI,
+//                new HashSet<edge, Hash<edge>>
+//                (
+//                    coupledRegionToShifted.size()
+//                  / Pstream::nProcs()
+//                )
+//            );
+//        }
+//    }
+//
+//
+//    // Connectivity. For all my local regions the connected regions.
+//    regionRegions.setSize(globalToLocalRegion.size());
+//
+//    // Add all local connectivity to regionRegions; add all non-local
+//    // to the transferlists.
+//    for (label faceI = 0; faceI < mesh_.nInternalFaces(); faceI++)
+//    {
+//        label ownRegion = globalRegion[mesh_.faceOwner()[faceI]];
+//        label neiRegion = globalRegion[mesh_.faceNeighbour()[faceI]];
+//
+//        if (ownRegion != neiRegion)
+//        {
+//            label shiftOwnRegion = getShiftedRegion
+//            (
+//                shiftIndexer,
+//                globalToLocalRegion,
+//                coupledRegionToShifted,
+//                ownRegion
+//            );
+//            label shiftNeiRegion = getShiftedRegion
+//            (
+//                shiftIndexer,
+//                globalToLocalRegion,
+//                coupledRegionToShifted,
+//                neiRegion
+//            );
+//
+//
+//            // Connection between two regions. Send to owner of region.
+//            // - is ownRegion 'owned' by me
+//            // - is neiRegion 'owned' by me
+//
+//            if (shiftIndexer.isLocal(shiftOwnRegion))
+//            {
+//                label localI = shiftIndexer.toLocal(shiftOwnRegion);
+//                addUnique(shiftNeiRegion, regionRegions[localI]);
+//            }
+//            else
+//            {
+//                label masterProc = shiftIndexer.whichProcID(shiftOwnRegion);
+//                regionConnectivity[masterProc].insert
+//                (
+//                    edge(shiftOwnRegion, shiftNeiRegion)
+//                );
+//            }
+//
+//            if (shiftIndexer.isLocal(shiftNeiRegion))
+//            {
+//                label localI = shiftIndexer.toLocal(shiftNeiRegion);
+//                addUnique(shiftOwnRegion, regionRegions[localI]);
+//            }
+//            else
+//            {
+//                label masterProc = shiftIndexer.whichProcID(shiftNeiRegion);
+//                regionConnectivity[masterProc].insert
+//                (
+//                    edge(shiftOwnRegion, shiftNeiRegion)
+//                );
+//            }
+//        }
+//    }
+//
+//
+//    // Send
+//    forAll(regionConnectivity, procI)
+//    {
+//        if (procI != Pstream::myProcNo())
+//        {
+//            OPstream str(Pstream::blocking, procI);
+//            str << regionConnectivity[procI];
+//        }
+//    }
+//    // Receive
+//    forAll(regionConnectivity, procI)
+//    {
+//        if (procI != Pstream::myProcNo())
+//        {
+//            IPstream str(Pstream::blocking, procI);
+//            str >> regionConnectivity[procI];
+//        }
+//    }
+//
+//    // Add to addressing.
+//    forAll(regionConnectivity, procI)
+//    {
+//        if (procI != Pstream::myProcNo())
+//        {
+//            for
+//            (
+//                HashSet<edge, Hash<edge>>::const_iterator iter =
+//                    regionConnectivity[procI].begin();
+//                iter != regionConnectivity[procI].end();
+//                ++iter
+//            )
+//            {
+//                const edge& e = iter.key();
+//
+//                bool someLocal = false;
+//                if (shiftIndexer.isLocal(e[0]))
+//                {
+//                    label localI = shiftIndexer.toLocal(e[0]);
+//                    addUnique(e[1], regionRegions[localI]);
+//                    someLocal = true;
+//                }
+//                if (shiftIndexer.isLocal(e[1]))
+//                {
+//                    label localI = shiftIndexer.toLocal(e[1]);
+//                    addUnique(e[0], regionRegions[localI]);
+//                    someLocal = true;
+//                }
+//
+//                if (!someLocal)
+//                {
+//                    FatalErrorInFunction
+//                        << "Received from processor " << procI
+//                        << " connection " << e
+//                        << " where none of the elements is local to me."
+//                        << abort(FatalError);
+//                }
+//            }
+//        }
+//    }
+//}
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //

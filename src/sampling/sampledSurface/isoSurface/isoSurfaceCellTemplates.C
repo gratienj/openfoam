@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -523,7 +523,7 @@ void Foam::isoSurfaceCell::generateTriPoints
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::isoSurfaceCell::interpolate
 (
     const Field<Type>& cCoords,
@@ -537,6 +537,59 @@ Foam::isoSurfaceCell::interpolate
     DynamicList<Type> snappedPoints;
     labelList snappedCc(mesh_.nCells(), -1);
     labelList snappedPoint(mesh_.nPoints(), -1);
+
+
+    generateTriPoints
+    (
+        cVals,
+        pVals,
+
+        cCoords,
+        pCoords,
+
+        snappedPoints,
+        snappedCc,
+        snappedPoint,
+
+        triPoints,
+        triMeshCells
+    );
+
+
+    // One value per point
+    tmp<Field<Type>> tvalues(new Field<Type>(points().size()));
+    Field<Type>& values = tvalues();
+
+    forAll(triPoints, i)
+    {
+        label mergedPointI = triPointMergeMap_[i];
+
+        if (mergedPointI >= 0)
+        {
+            values[mergedPointI] = triPoints[i];
+        }
+    }
+
+    return tvalues;
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::isoSurfaceCell::interpolate
+(
+    const Field<Type>& cCoords,
+    const Field<Type>& pCoords
+) const
+{
+    DynamicList<Type> triPoints(nCutCells_);
+    DynamicList<label> triMeshCells(nCutCells_);
+
+    // Dummy snap data
+    DynamicList<Type> snappedPoints;
+    labelList snappedCc(mesh_.nCells(), -1);
+    labelList snappedPoint(mesh_.nPoints(), -1);
+
 
     generateTriPoints
     (
@@ -554,15 +607,22 @@ Foam::isoSurfaceCell::interpolate
         triMeshCells
     );
 
-    return isoSurface::interpolate
-    (
-        points().size(),
-        triPointMergeMap_,
-        interpolatedPoints_,
-        interpolatedOldPoints_,
-        interpolationWeights_,
-        triPoints
-    );
+
+    // One value per point
+    tmp<Field<Type>> tvalues(new Field<Type>(points().size()));
+    Field<Type>& values = tvalues();
+
+    forAll(triPoints, i)
+    {
+        label mergedPointI = triPointMergeMap_[i];
+
+        if (mergedPointI >= 0)
+        {
+            values[mergedPointI] = triPoints[i];
+        }
+    }
+
+    return tvalues;
 }
 
 

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -288,7 +288,7 @@ void Foam::nastranSurfaceWriter::writeGeometry
 (
     const pointField& points,
     const faceList& faces,
-    List<DynamicList<face> >& decomposedFaces,
+    List<DynamicList<face>>& decomposedFaces,
     OFstream& os
 ) const
 {
@@ -403,12 +403,7 @@ Foam::nastranSurfaceWriter::nastranSurfaceWriter(const dictionary& options)
         writeFormat_ = writeFormatNames_.read(options.lookup("format"));
     }
 
-    if (writeFormat_ == wfFree)
-    {
-        separator_ = ",";
-    }
-
-    List<Tuple2<word, word> > fieldSet(options.lookup("fields"));
+    List<Tuple2<word, word>> fieldSet(options.lookup("fields"));
 
     forAll(fieldSet, i)
     {
@@ -453,7 +448,7 @@ Foam::fileName Foam::nastranSurfaceWriter::write
         << "$" << nl
         << "BEGIN BULK" << nl;
 
-    List<DynamicList<face> > decomposedFaces(faces.size());
+    List<DynamicList<face>> decomposedFaces(faces.size());
 
     writeGeometry(points, faces, decomposedFaces, os);
 

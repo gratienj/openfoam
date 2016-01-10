@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -160,8 +160,48 @@ class mapDistribute
         //  gives the elements that need to be transformed
         labelListList transformElements_;
 
-        //- Destination in constructMap for transformed elements
-        labelList transformStart_;
+        //- Schedule
+        mutable autoPtr<List<labelPair>> schedulePtr_;
+
+
+   // Private Member Functions
+
+        static void checkReceivedSize
+        (
+            const label procI,
+            const label expectedSize,
+            const label receivedSize
+        );
+
+        void calcCompactAddressing
+        (
+            const globalIndex& globalNumbering,
+            const labelList& elements,
+            List<Map<label>>& compactMap
+        ) const;
+        void calcCompactAddressing
+        (
+            const globalIndex& globalNumbering,
+            const labelListList& elements,
+            List<Map<label>>& compactMap
+        ) const;
+
+        void exchangeAddressing
+        (
+            const int tag,
+            const globalIndex& globalNumbering,
+            labelList& elements,
+            List<Map<label>>& compactMap,
+            labelList& compactStart
+        );
+        void exchangeAddressing
+        (
+            const int tag,
+            const globalIndex& globalNumbering,
+            labelListList& elements,
+            List<Map<label>>& compactMap,
+            labelList& compactStart
+        );
 
     // Private Member Functions
 
@@ -215,7 +255,7 @@ public:
             (
                 const vectorTensorTransform& vt,
                 const bool forward,
-                List<List<Type> >& flds
+                List<List<Type>>& flds
             ) const
             {
                 forAll(flds, i)
@@ -272,7 +312,7 @@ public:
             (
                 const vectorTensorTransform& vt,
                 const bool forward,
-                List<List<point> >& flds
+                List<List<point>>& flds
             ) const
             {
                 forAll(flds, i)
@@ -353,7 +393,7 @@ public:
         (
             const globalIndex&,
             labelList& elements,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             const int tag = Pstream::msgType()
         );
 
@@ -364,7 +404,7 @@ public:
         (
             const globalIndex&,
             labelListList& cellCells,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             const int tag = Pstream::msgType()
         );
 
@@ -381,7 +421,7 @@ public:
             const globalIndexAndTransform&,
             const labelPairList& transformedElements,
             labelList& transformedIndices,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             const int tag = Pstream::msgType()
         );
 
@@ -393,7 +433,7 @@ public:
             const globalIndexAndTransform&,
             const List<labelPairList>& transformedElements,
             labelListList& transformedIndices,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             const int tag = Pstream::msgType()
         );
 
@@ -444,6 +484,23 @@ public:
             //- Transfer contents to the Xfer container
             Xfer<mapDistribute> xfer();
 
+            //- Helper for construct from globalIndex. Renumbers element
+            //  (in globalIndex numbering) into compact indices.
+            static label renumber
+            (
+                const globalIndex&,
+                const List<Map<label>>& compactMap,
+                const label globalElement
+            );
+
+            //- Compact maps. Gets per field a bool whether it is used (locally)
+            //  and works out itself what this side and sender side can remove
+            //  from maps.
+            void compact
+            (
+                const boolList& elemIsUsed,
+                const int tag = UPstream::msgType()
+            );
 
             //- Distribute data using default commsType.
             template<class T>

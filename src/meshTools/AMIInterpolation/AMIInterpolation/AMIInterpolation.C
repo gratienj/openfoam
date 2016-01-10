@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -970,7 +970,7 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::update
 
 
         // calculate AMI interpolation
-        autoPtr<AMIMethod<SourcePatch, TargetPatch> > AMIPtr
+        autoPtr<AMIMethod<SourcePatch, TargetPatch>> AMIPtr
         (
             AMIMethod<SourcePatch, TargetPatch>::New
             (
@@ -1065,14 +1065,14 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::update
         normaliseWeights(AMIPtr->conformal(), true);
 
         // cache maps and reset addresses
-        List<Map<label> > cMap;
+        List<Map<label>> cMap;
         srcMapPtr_.reset(new mapDistribute(globalSrcFaces, tgtAddress_, cMap));
         tgtMapPtr_.reset(new mapDistribute(globalTgtFaces, srcAddress_, cMap));
     }
     else
     {
         // calculate AMI interpolation
-        autoPtr<AMIMethod<SourcePatch, TargetPatch> > AMIPtr
+        autoPtr<AMIMethod<SourcePatch, TargetPatch>> AMIPtr
         (
             AMIMethod<SourcePatch, TargetPatch>::New
             (
@@ -1494,7 +1494,7 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 
 template<class SourcePatch, class TargetPatch>
 template<class Type, class CombineOp>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 (
     const Field<Type>& fld,
@@ -1502,7 +1502,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
     const UList<Type>& defaultValues
 ) const
 {
-    tmp<Field<Type> > tresult
+    tmp<Field<Type>> tresult
     (
         new Field<Type>
         (
@@ -1525,10 +1525,10 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 
 template<class SourcePatch, class TargetPatch>
 template<class Type, class CombineOp>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 (
-    const tmp<Field<Type> >& tFld,
+    const tmp<Field<Type>>& tFld,
     const CombineOp& cop,
     const UList<Type>& defaultValues
 ) const
@@ -1539,7 +1539,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 
 template<class SourcePatch, class TargetPatch>
 template<class Type, class CombineOp>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 (
     const Field<Type>& fld,
@@ -1547,7 +1547,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
     const UList<Type>& defaultValues
 ) const
 {
-    tmp<Field<Type> > tresult
+    tmp<Field<Type>> tresult
     (
         new Field<Type>
         (
@@ -1570,10 +1570,10 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 
 template<class SourcePatch, class TargetPatch>
 template<class Type, class CombineOp>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 (
-    const tmp<Field<Type> >& tFld,
+    const tmp<Field<Type>>& tFld,
     const CombineOp& cop,
     const UList<Type>& defaultValues
 ) const
@@ -1584,7 +1584,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 
 template<class SourcePatch, class TargetPatch>
 template<class Type>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 (
     const Field<Type>& fld,
@@ -1597,10 +1597,10 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 
 template<class SourcePatch, class TargetPatch>
 template<class Type>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 (
-    const tmp<Field<Type> >& tFld,
+    const tmp<Field<Type>>& tFld,
     const UList<Type>& defaultValues
 ) const
 {
@@ -1610,7 +1610,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
 
 template<class SourcePatch, class TargetPatch>
 template<class Type>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 (
     const Field<Type>& fld,
@@ -1623,10 +1623,10 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 
 template<class SourcePatch, class TargetPatch>
 template<class Type>
-Foam::tmp<Foam::Field<Type> >
+Foam::tmp<Foam::Field<Type>>
 Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
 (
-    const tmp<Field<Type> >& tFld,
+    const tmp<Field<Type>>& tFld,
     const UList<Type>& defaultValues
 ) const
 {

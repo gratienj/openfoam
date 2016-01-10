@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,7 +30,7 @@ License
 template<class Type>
 void Foam::nearWallFields::createFields
 (
-    PtrList<GeometricField<Type, fvPatchField, volMesh> >& sflds
+    PtrList<GeometricField<Type, fvPatchField, volMesh>>& sflds
 ) const
 {
     typedef GeometricField<Type, fvPatchField, volMesh> vfType;
@@ -123,7 +123,7 @@ void Foam::nearWallFields::sampleBoundaryField
 template<class Type>
 void Foam::nearWallFields::sampleFields
 (
-    PtrList<GeometricField<Type, fvPatchField, volMesh> >& sflds
+    PtrList<GeometricField<Type, fvPatchField, volMesh>>& sflds
 ) const
 {
     typedef GeometricField<Type, fvPatchField, volMesh> vfType;
