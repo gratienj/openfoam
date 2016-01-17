@@ -128,6 +128,12 @@ class kOmegaSST
 :
     public eddyViscosity<RASModel<BasicTurbulenceModel>>
 {
+    // Private Member Functions
+
+        // Disallow default bitwise copy construct and assignment
+        kOmegaSST(const kOmegaSST&);
+        void operator=(const kOmegaSST&);
+
 
 protected:
 

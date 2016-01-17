@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -78,7 +78,7 @@ class SpalartAllmarasDES
 
         // Disallow default bitwise copy construct and assignment
         SpalartAllmarasDES(const SpalartAllmarasDES&);
-        SpalartAllmarasDES& operator=(const SpalartAllmarasDES&);
+        void operator=(const SpalartAllmarasDES&);
 
 
 protected:
