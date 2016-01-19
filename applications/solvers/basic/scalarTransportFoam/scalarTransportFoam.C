@@ -28,28 +28,7 @@ Group
     grpBasicSolvers
 
 Description
-    Passive scalar transport equation solver.
-
-    \heading Solver details
-    The equation is given by:
-
-    \f[
-        \ddt{T} + \div \left(\vec{U} T\right) - \div \left(D_T \grad T \right)
-        = S_{T}
-    \f]
-
-    Where:
-    \vartable
-        T       | Passive scalar
-        D_T     | Diffusion coefficient
-        S_T     | Source
-    \endvartable
-
-    \heading Required fields
-    \plaintable
-        T       | Passive scalar
-        U       | Velocity [m/s]
-    \endplaintable
+    Solves the steady or transient transport equation for a passive scalar.
 
 \*---------------------------------------------------------------------------*/
 
@@ -91,10 +70,10 @@ int main(int argc, char *argv[])
                 fvOptions(T)
             );
 
+            TEqn.relax();
             fvOptions.constrain(TEqn);
-
             TEqn.solve();
-
+            fvOptions.correct(T);
         }
 
         runTime.write();
