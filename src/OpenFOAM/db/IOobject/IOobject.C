@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -210,7 +210,8 @@ Foam::IOobject::IOobject
 {
     if (objectRegistry::debug)
     {
-        Info<< "Constructing IOobject called " << name_
+        InfoInFunction
+            << "Constructing IOobject called " << name_
             << " of type " << headerClassName_
             << endl;
     }
@@ -243,7 +244,8 @@ Foam::IOobject::IOobject
 {
     if (objectRegistry::debug)
     {
-        Info<< "Constructing IOobject called " << name_
+        InfoInFunction
+            << "Constructing IOobject called " << name_
             << " of type " << headerClassName_
             << endl;
     }
@@ -281,7 +283,8 @@ Foam::IOobject::IOobject
 
     if (objectRegistry::debug)
     {
-        Info<< "Constructing IOobject called " << name_
+        InfoInFunction
+            << "Constructing IOobject called " << name_
             << " of type " << headerClassName_
             << endl;
     }
@@ -606,9 +609,8 @@ bool Foam::IOobject::headerOk()
     {
         if (objectRegistry::debug)
         {
-            Info
-                << "IOobject::headerOk() : "
-                << "file " << objectPath() << " could not be opened"
+            InfoInFunction
+                << "File " << objectPath() << " could not be opened"
                 << endl;
         }
 
@@ -622,7 +624,7 @@ bool Foam::IOobject::headerOk()
             if (objectRegistry::debug)
             {
                 IOWarningInFunction((*isPtr))
-                    << "failed to read header of file " << objectPath()
+                    << "Failed to read header of file " << objectPath()
                     << endl;
             }
 
@@ -641,14 +643,14 @@ void Foam::IOobject::setBad(const string& s)
     if (objState_ != GOOD)
     {
         FatalErrorInFunction
-            << "recurrent failure for object " << s
+            << "Recurrent failure for object " << s
             << exit(FatalError);
     }
 
     if (error::level)
     {
-        Info<< "IOobject::setBad(const string&) : "
-            << "broken object " << s << info() << endl;
+        InfoInFunction
+            << "Broken object " << s << info() << endl;
     }
 
     objState_ = BAD;
