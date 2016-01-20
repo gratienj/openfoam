@@ -83,7 +83,7 @@ void kinematicSingleLayer::resetPrimaryRegionSourceTerms()
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::resetPrimaryRegionSourceTerms()" << endl;
+        InfoInFunction << endl;
     }
 
     rhoSpPrimary_ == dimensionedScalar("zero", rhoSp_.dimensions(), 0.0);
@@ -96,8 +96,7 @@ void kinematicSingleLayer::transferPrimaryRegionThermoFields()
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::"
-            << "transferPrimaryRegionThermoFields()" << endl;
+        InfoInFunction << endl;
     }
 
     // Update fields from primary region via direct mapped
@@ -113,8 +112,7 @@ void kinematicSingleLayer::transferPrimaryRegionSourceFields()
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::"
-            << "transferPrimaryRegionSourceFields()" << endl;
+        InfoInFunction << endl;
     }
 
     // Convert accummulated source terms into per unit area per unit time
@@ -208,7 +206,7 @@ void kinematicSingleLayer::updateSubmodels()
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::updateSubmodels()" << endl;
+        InfoInFunction << endl;
     }
 
     // Update injection model - mass returned is mass available for injection
@@ -247,7 +245,8 @@ void kinematicSingleLayer::continuityCheck()
 
         cumulativeContErr_ += globalContErr;
 
-        Info<< "Surface film: " << type() << nl
+        InfoInFunction
+            << "Surface film: " << type() << nl
             << "    time step continuity errors: sum local = "
             << sumLocalContErr << ", global = " << globalContErr
             << ", cumulative = " << cumulativeContErr_ << endl;
@@ -259,7 +258,7 @@ void kinematicSingleLayer::solveContinuity()
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::solveContinuity()" << endl;
+        InfoInFunction << endl;
     }
 
     solve
@@ -297,7 +296,7 @@ tmp<Foam::fvVectorMatrix> kinematicSingleLayer::solveMomentum
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::solveMomentum()" << endl;
+        InfoInFunction << endl;
     }
 
     // Momentum
@@ -356,7 +355,7 @@ void kinematicSingleLayer::solveThickness
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::solveThickness()" << endl;
+        InfoInFunction << endl;
     }
 
     volScalarField rUA(1.0/UEqn.A());
@@ -846,7 +845,8 @@ void kinematicSingleLayer::addSources
 {
     if (debug)
     {
-        Info<< "\nSurface film: " << type() << ": adding to film source:" << nl
+        InfoInFunction
+            << "\nSurface film: " << type() << ": adding to film source:" << nl
             << "    mass     = " << massSource << nl
             << "    momentum = " << momentumSource << nl
             << "    pressure = " << pressureSource << endl;
@@ -864,7 +864,7 @@ void kinematicSingleLayer::preEvolveRegion()
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::preEvolveRegion()" << endl;
+        InfoInFunction << endl;
     }
 
     surfaceFilmModel::preEvolveRegion();
@@ -891,7 +891,7 @@ void kinematicSingleLayer::evolveRegion()
 {
     if (debug)
     {
-        Info<< "kinematicSingleLayer::evolveRegion()" << endl;
+        InfoInFunction << endl;
     }
 
     // Update sub-models to provide updated source contributions

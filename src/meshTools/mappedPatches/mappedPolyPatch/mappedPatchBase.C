@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -478,8 +478,9 @@ void Foam::mappedPatchBase::findSamples
 
     if (debug)
     {
-        Info<< "mappedPatchBase::findSamples on mesh " << sampleRegion()
-            << " : " << endl;
+        InfoInFunction
+            << "mesh " << sampleRegion() << " : " << endl;
+
         forAll(nearest, sampleI)
         {
             label procI = nearest[sampleI].second().second();

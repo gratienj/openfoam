@@ -90,7 +90,7 @@ void thermoSingleLayer::resetPrimaryRegionSourceTerms()
 {
     if (debug)
     {
-        Info<< "thermoSingleLayer::resetPrimaryRegionSourceTerms()" << endl;
+        InfoInFunction << endl;
     }
 
     kinematicSingleLayer::resetPrimaryRegionSourceTerms();
@@ -147,7 +147,7 @@ void thermoSingleLayer::transferPrimaryRegionThermoFields()
 {
     if (debug)
     {
-        Info<< "thermoSingleLayer::transferPrimaryRegionThermoFields()" << endl;
+        InfoInFunction << endl;
     }
 
     kinematicSingleLayer::transferPrimaryRegionThermoFields();
@@ -166,7 +166,7 @@ void thermoSingleLayer::transferPrimaryRegionSourceFields()
 {
     if (debug)
     {
-        Info<< "thermoSingleLayer::transferPrimaryRegionSourceFields()" << endl;
+        InfoInFunction << endl;
     }
 
     kinematicSingleLayer::transferPrimaryRegionSourceFields();
@@ -233,7 +233,7 @@ void thermoSingleLayer::updateSubmodels()
 {
     if (debug)
     {
-        Info<< "thermoSingleLayer::updateSubmodels()" << endl;
+        InfoInFunction << endl;
     }
 
     // Update heat transfer coefficient sub-models
@@ -288,7 +288,7 @@ void thermoSingleLayer::solveEnergy()
 {
     if (debug)
     {
-        Info<< "thermoSingleLayer::solveEnergy()" << endl;
+        InfoInFunction << endl;
     }
 
 
@@ -636,7 +636,7 @@ void thermoSingleLayer::preEvolveRegion()
 {
     if (debug)
     {
-        Info<< "thermoSingleLayer::preEvolveRegion()" << endl;
+        InfoInFunction << endl;
     }
 
     kinematicSingleLayer::preEvolveRegion();
@@ -653,7 +653,7 @@ void thermoSingleLayer::evolveRegion()
 {
     if (debug)
     {
-        Info<< "thermoSingleLayer::evolveRegion()" << endl;
+        InfoInFunction << endl;
     }
 
     // Update sub-models to provide updated source contributions
