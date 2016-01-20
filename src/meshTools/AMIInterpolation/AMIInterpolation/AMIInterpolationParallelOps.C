@@ -61,7 +61,7 @@ Foam::label Foam::AMIInterpolation<SourcePatch, TargetPatch>::calcDistribution
             procI = -1;
             if (debug)
             {
-                Info<< "AMIInterpolation::calcDistribution: "
+                InfoInFunction
                     << "AMI split across multiple processors" << endl;
             }
         }
@@ -70,7 +70,7 @@ Foam::label Foam::AMIInterpolation<SourcePatch, TargetPatch>::calcDistribution
             procI = findIndex(facesPresentOnProc, 1);
             if (debug)
             {
-                Info<< "AMIInterpolation::calcDistribution: "
+                InfoInFunction
                     << "AMI local to processor" << procI << endl;
             }
         }

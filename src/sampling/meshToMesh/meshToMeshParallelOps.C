@@ -64,7 +64,7 @@ Foam::label Foam::meshToMesh::calcDistribution
             procI = -1;
             if (debug)
             {
-                Info<< "meshToMesh::calcDistribution: "
+                InfoInFunction
                     << "Meshes split across multiple processors" << endl;
             }
         }
@@ -73,7 +73,7 @@ Foam::label Foam::meshToMesh::calcDistribution
             procI = findIndex(cellsPresentOnProc, 1);
             if (debug)
             {
-                Info<< "meshToMesh::calcDistribution: "
+                InfoInFunction
                     << "Meshes local to processor" << procI << endl;
             }
         }
@@ -143,7 +143,8 @@ Foam::autoPtr<Foam::mapDistribute> Foam::meshToMesh::calcProcMap
 
     if (debug)
     {
-        Info<< "Determining extent of src mesh per processor:" << nl
+        InfoInFunction
+            << "Determining extent of src mesh per processor:" << nl
             << "\tproc\tbb" << endl;
         forAll(procBb, procI)
         {
