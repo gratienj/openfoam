@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -86,16 +86,7 @@ bool Foam::regIOobject::writeObject
 
     if (OFstream::debug)
     {
-        if (isGlobal)
-        {
-            Pout<< "regIOobject::write() : "
-                << "writing (global) file " << objectPath();
-        }
-        else
-        {
-            Pout<< "regIOobject::write() : "
-                << "writing (local) file " << objectPath();
-        }
+        InfoInFunction << "Writing file " << objectPath();
     }
 
 
