@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -109,18 +109,23 @@ protected:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        residuals(const residuals&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const residuals&);
-
         //- Output field header information
         template<class Type>
         void writeFileHeader(const word& fieldName);
 
         //- Output file header information
         virtual void writeFileHeader(Ostream& os) const;
+
+
+private:
+
+    // Private member functions
+
+        //- Disallow default bitwise copy construct
+        residuals(const residuals&);
+
+        //- Disallow default bitwise assignment
+        void operator=(const residuals&);
 
 
 public:

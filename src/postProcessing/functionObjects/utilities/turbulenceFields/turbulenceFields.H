@@ -158,12 +158,6 @@ protected:
 
     // Protected Member Functions
 
-        //- Disallow default bitwise copy construct
-        turbulenceFields(const turbulenceFields&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const turbulenceFields&);
-
         //- Return true if compressible turbulence model is identified
         bool compressible();
 
@@ -174,6 +168,17 @@ protected:
             const word& fieldName,
             const tmp<GeometricField<Type, fvPatchField, volMesh>>& tvalue
         );
+
+
+private:
+
+    // Private member functions
+
+        //- Disallow default bitwise copy construct
+        turbulenceFields(const turbulenceFields&);
+
+        //- Disallow default bitwise assignment
+        void operator=(const turbulenceFields&);
 
 
 public:

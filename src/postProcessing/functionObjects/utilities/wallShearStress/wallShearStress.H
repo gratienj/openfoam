@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -135,6 +135,11 @@ protected:
             const volSymmTensorField& Reff,
             volVectorField& shearStress
         );
+
+
+private:
+
+    // Private member functions
 
         //- Disallow default bitwise copy construct
         wallShearStress(const wallShearStress&);
