@@ -8,7 +8,9 @@ runApplication blockMesh
 
 runApplication decomposePar
 
-runParallel snappyHexMesh 8 -overwrite
+runParallel $(getApplication) &
+
+./externalSolver
 
 runApplication reconstructParMesh -constant
 
