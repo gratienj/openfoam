@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -105,6 +105,21 @@ void Foam::fieldAverage::initialize()
 }
 
 
+void Foam::fieldAverage::restart()
+{
+    Info<< "    Restarting averaging at time " << obr_.time().timeName()
+        << nl << endl;
+
+    totalIter_.clear();
+    totalIter_.setSize(faItems_.size(), 1);
+
+    totalTime_.clear();
+    totalTime_.setSize(faItems_.size(), obr_.time().deltaTValue());
+
+    initialize();
+}
+
+
 void Foam::fieldAverage::calcAverages()
 {
     if (!initialised_)
@@ -112,8 +127,8 @@ void Foam::fieldAverage::calcAverages()
         initialize();
     }
 
-    const label currentTimeIndex =
-        static_cast<const fvMesh&>(obr_).time().timeIndex();
+    const label currentTimeIndex = obr_.time().timeIndex();
+    const scalar currentTime = obr_.time().value();
 
     if (prevTimeIndex_ == currentTimeIndex)
     {
@@ -124,9 +139,15 @@ void Foam::fieldAverage::calcAverages()
         prevTimeIndex_ = currentTimeIndex;
     }
 
-    if (log_) Info
-        << type() << " " << name_ << " output:" << nl
-        << "    Calculating averages" << nl;
+    if (periodicRestart_ && currentTime > restartPeriod_*periodIndex_)
+    {
+        restart();
+        periodIndex_++;
+    }
+
+    Info<< type() << " " << name_ << " output:" << nl;
+
+    Info<< "    Calculating averages" << nl;
 
     addMeanSqrToPrime2Mean<scalar, scalar>();
     addMeanSqrToPrime2Mean<vector, symmTensor>();
@@ -182,7 +203,7 @@ void Foam::fieldAverage::readAveragingProperties()
     totalTime_.clear();
     totalTime_.setSize(faItems_.size(), obr_.time().deltaTValue());
 
-    if (log_ && (resetOnRestart_ || resetOnOutput_))
+    if (restartOnRestart_ || restartOnOutput_)
     {
         Info<< "    Starting averaging at time " << obr_.time().timeName()
             << nl;
@@ -232,13 +253,15 @@ Foam::fieldAverage::fieldAverage
     functionObjectState(obr, name),
     obr_(obr),
     prevTimeIndex_(-1),
-    resetOnRestart_(false),
-    resetOnOutput_(false),
-    log_(true),
+    restartOnRestart_(false),
+    restartOnOutput_(false),
+    periodicRestart_(false),
+    restartPeriod_(GREAT),
     initialised_(false),
     faItems_(),
     totalIter_(),
-    totalTime_()
+    totalTime_(),
+    periodIndex_(1)
 {
     // Only active if a fvMesh is available
     if (setActive<fvMesh>())
@@ -273,9 +296,15 @@ void Foam::fieldAverage::read(const dictionary& dict)
 
         if (log_) Info << type() << " " << name_ << ":" << nl;
 
-        dict.readIfPresent("resetOnRestart", resetOnRestart_);
-        dict.readIfPresent("resetOnOutput", resetOnOutput_);
+        dict.readIfPresent("restartOnRestart", restartOnRestart_);
+        dict.readIfPresent("restartOnOutput", restartOnOutput_);
+        dict.readIfPresent("periodicRestart", periodicRestart_);
         dict.lookup("fields") >> faItems_;
+
+        if (periodicRestart_)
+        {
+            dict.lookup("restartPeriod") >> restartPeriod_;
+        }
 
         readAveragingProperties();
 
@@ -309,19 +338,9 @@ void Foam::fieldAverage::write()
         writeAverages();
         writeAveragingProperties();
 
-        if (resetOnOutput_)
+        if (restartOnOutput_)
         {
-            if (log_) Info
-                << "    Restarting averaging at time " << obr_.time().timeName()
-                << nl << endl;
-
-            totalIter_.clear();
-            totalIter_.setSize(faItems_.size(), 1);
-
-            totalTime_.clear();
-            totalTime_.setSize(faItems_.size(), obr_.time().deltaTValue());
-
-            initialize();
+            restart();
         }
 
         if (log_) Info << endl;
