@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,6 +51,12 @@ class rawSurfaceWriter
 :
     public surfaceWriter
 {
+    // Private data
+
+        //- Output compression, defaults to uncompressed
+        IOstream::compressionType writeCompression_;
+
+
     // Private Member Functions
 
         static inline void writeLocation
@@ -105,6 +111,9 @@ public:
 
         //- Construct null
         rawSurfaceWriter();
+
+        //- Construct with some output options
+        rawSurfaceWriter(const dictionary& options);
 
 
     //- Destructor

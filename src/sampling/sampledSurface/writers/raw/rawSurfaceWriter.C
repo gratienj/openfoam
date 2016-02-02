@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,6 +31,7 @@ License
 namespace Foam
 {
     makeSurfaceWriterType(rawSurfaceWriter);
+    addToRunTimeSelectionTable(surfaceWriter, rawSurfaceWriter, wordDict);
 }
 
 
@@ -203,12 +204,92 @@ namespace Foam
 }
 
 
+template<class Type>
+void Foam::rawSurfaceWriter::writeTemplate
+(
+    const fileName& outputDir,
+    const fileName& surfaceName,
+    const pointField& points,
+    const faceList& faces,
+    const word& fieldName,
+    const Field<Type>& values,
+    const bool isNodeValues,
+    const bool verbose
+) const
+{
+    if (!isDir(outputDir))
+    {
+        mkDir(outputDir);
+    }
+
+    OFstream os
+    (
+        outputDir/fieldName + '_' + surfaceName + ".raw",
+        IOstream::ASCII,
+        IOstream::currentVersion,
+        writeCompression_
+    );
+
+    if (verbose)
+    {
+        Info<< "Writing field " << fieldName << " to " << os.name() << endl;
+    }
+
+    // Header
+    os  << "# " << fieldName;
+    if (isNodeValues)
+    {
+        os  << "  POINT_DATA ";
+    }
+    else
+    {
+        os  << "  FACE_DATA ";
+    }
+
+    // Header
+    writeHeader(os, fieldName, values);
+
+    // Values
+    if (isNodeValues)
+    {
+        forAll(values, elemI)
+        {
+            writeLocation(os, points, elemI);
+            writeData(os, values[elemI]);
+        }
+    }
+    else
+    {
+        forAll(values, elemI)
+        {
+            writeLocation(os, points, faces, elemI);
+            writeData(os, values[elemI]);
+        }
+    }
+}
+
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::rawSurfaceWriter::rawSurfaceWriter()
 :
-    surfaceWriter()
+    surfaceWriter(),
+    writeCompression_(IOstream::UNCOMPRESSED)
 {}
+
+
+Foam::rawSurfaceWriter::rawSurfaceWriter(const dictionary& options)
+:
+    surfaceWriter(),
+    writeCompression_(IOstream::UNCOMPRESSED)
+{
+    if (options.found("compression"))
+    {
+        writeCompression_ =
+            IOstream::compressionEnum(options.lookup("compression"));
+    }
+}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -233,7 +314,13 @@ Foam::fileName Foam::rawSurfaceWriter::write
         mkDir(outputDir);
     }
 
-    OFstream os(outputDir/surfaceName + ".raw");
+    OFstream os
+    (
+        outputDir/surfaceName + ".raw",
+        IOstream::ASCII,
+        IOstream::currentVersion,
+        writeCompression_
+    );
 
     if (verbose)
     {
@@ -241,7 +328,7 @@ Foam::fileName Foam::rawSurfaceWriter::write
     }
 
 
-    // header
+    // Header
     os  << "# geometry NO_DATA " << faces.size() << nl
         << "#  x  y  z" << nl;
 
@@ -258,7 +345,9 @@ Foam::fileName Foam::rawSurfaceWriter::write
 }
 
 
-// create write methods
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Create write methods
 defineSurfaceWriterWriteFields(Foam::rawSurfaceWriter);
 
 
