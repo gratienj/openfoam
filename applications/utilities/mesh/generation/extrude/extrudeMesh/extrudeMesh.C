@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -549,24 +549,15 @@ int main(int argc, char *argv[])
             {
                 label nbrProcI = patchToNbrProc[patchI];
 
-                word name =
-                        "procBoundary"
-                      + Foam::name(Pstream::myProcNo())
-                      + "to"
-                      + Foam::name(nbrProcI);
-
                 Pout<< "Adding patch " << patchI
-                    << " name:" << name
                     << " between " << Pstream::myProcNo()
                     << " and " << nbrProcI
                     << endl;
-
 
                 newPatches.append
                 (
                     new processorPolyPatch
                     (
-                        name,
                         0,                  // size
                         mesh.nFaces(),      // start
                         patchI,             // index

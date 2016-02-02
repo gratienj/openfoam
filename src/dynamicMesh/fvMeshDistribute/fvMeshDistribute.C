@@ -46,40 +46,7 @@ License
 
 namespace Foam
 {
-defineTypeNameAndDebug(fvMeshDistribute, 0);
-
-//- Less function class that can be used for sorting processor patches
-class lessProcPatches
-{
-    const labelList& nbrProc_;
-    const labelList& referPatchID_;
-
-public:
-
-    lessProcPatches( const labelList& nbrProc, const labelList& referPatchID)
-    :
-        nbrProc_(nbrProc),
-        referPatchID_(referPatchID)
-    {}
-
-    bool operator()(const label a, const label b)
-    {
-        if (nbrProc_[a] < nbrProc_[b])
-        {
-            return true;
-        }
-        else if (nbrProc_[a] > nbrProc_[b])
-        {
-            return false;
-        }
-        else
-        {
-            // Equal neighbour processor
-            return referPatchID_[a] < referPatchID_[b];
-        }
-    }
-};
-
+    defineTypeNameAndDebug(fvMeshDistribute, 0);
 }
 
 
@@ -1188,16 +1155,8 @@ void Foam::fvMeshDistribute::addProcPatches
                 if (referPatchID[bFaceI] == -1)
                 {
                     // Ordinary processor boundary
-
-                    const word patchName =
-                        "procBoundary"
-                      + name(Pstream::myProcNo())
-                      + "to"
-                      + name(procI);
-
                     processorPolyPatch pp
                     (
-                        patchName,
                         0,              // size
                         mesh_.nFaces(),
                         mesh_.boundaryMesh().size(),
@@ -1227,27 +1186,15 @@ void Foam::fvMeshDistribute::addProcPatches
                               mesh_.boundaryMesh()[referPatchID[bFaceI]]
                           );
 
-                    // Processor boundary originating from cyclic
-                    const word& cycName = pcPatch.name();
-
-                    const word patchName =
-                        "procBoundary"
-                      + name(Pstream::myProcNo())
-                      + "to"
-                      + name(procI)
-                      + "through"
-                      + cycName;
-
                     processorCyclicPolyPatch pp
                     (
-                        patchName,
                         0,              // size
                         mesh_.nFaces(),
                         mesh_.boundaryMesh().size(),
                         mesh_.boundaryMesh(),
                         Pstream::myProcNo(),
-                        procI,
-                        cycName,
+                        nbrProc[bFaceI],
+                        pcPatch.name(),
                         pcPatch.transform()
                     );
 
