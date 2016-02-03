@@ -183,6 +183,20 @@ void Foam::fieldAverage::writeAverages() const
 
 void Foam::fieldAverage::writeAveragingProperties()
 {
+    IOdictionary propsDict
+    (
+        IOobject
+        (
+            name() + "Properties",
+            obr_.time().timeName(),
+            "uniform",
+            obr_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        )
+    );
+
     forAll(faItems_, fieldI)
     {
         const word& fieldName = faItems_[fieldI].fieldName();
@@ -210,7 +224,25 @@ void Foam::fieldAverage::readAveragingProperties()
     }
     else
     {
-        if (log_) Info << "    Restarting averaging for fields:" << nl;
+        IOobject propsDictHeader
+        (
+            name() + "Properties",
+            obr_.time().timeName(obr_.time().startTime().value()),
+            "uniform",
+            obr_,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE,
+            false
+        );
+
+        if (!propsDictHeader.headerOk())
+        {
+            Info<< "    Starting averaging at time " << obr_.time().timeName()
+                << nl;
+            return;
+        }
+
+        IOdictionary propsDict(propsDictHeader);
 
         forAll(faItems_, fieldI)
         {
