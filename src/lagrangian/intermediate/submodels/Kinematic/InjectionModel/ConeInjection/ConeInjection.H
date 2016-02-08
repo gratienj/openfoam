@@ -48,7 +48,7 @@ SourceFiles
 #include "InjectionModel.H"
 #include "distributionModel.H"
 #include "vectorList.H"
-#include "TimeDataEntry.H"
+#include "TimeFunction1.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -85,16 +85,16 @@ class ConeInjection
         const label parcelsPerInjector_;
 
         //- Flow rate profile relative to SOI []
-        const TimeDataEntry<scalar> flowRateProfile_;
+        const TimeFunction1<scalar> flowRateProfile_;
 
         //- Parcel velocity magnitude relative to SOI [m/s]
-        const TimeDataEntry<scalar> Umag_;
+        const TimeFunction1<scalar> Umag_;
 
         //- Inner half-cone angle relative to SOI [deg]
-        const TimeDataEntry<scalar> thetaInner_;
+        const TimeFunction1<scalar> thetaInner_;
 
         //- Outer half-cone angle relative to SOI [deg]
-        const TimeDataEntry<scalar> thetaOuter_;
+        const TimeFunction1<scalar> thetaOuter_;
 
         //- Parcel size distribution model
         const autoPtr<distributionModels::distributionModel> sizeDistribution_;

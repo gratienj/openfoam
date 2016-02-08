@@ -55,7 +55,7 @@ namespace Foam
 {
 
 template<class Type>
-class TimeDataEntry;
+class TimeFunction1;
 
 class distributionModel;
 
@@ -81,7 +81,7 @@ class PatchInjection
         const vector U0_;
 
         //- Flow rate profile relative to SOI []
-        const TimeDataEntry<scalar> flowRateProfile_;
+        const TimeFunction1<scalar> flowRateProfile_;
 
         //- Parcel size distribution model
         const autoPtr<distributionModels::distributionModel> sizeDistribution_;

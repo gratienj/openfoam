@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ConeNozzleInjection.H"
-#include "TimeDataEntry.H"
+#include "TimeFunction1.H"
 #include "mathematicalConstants.H"
 #include "distributionModel.H"
 
@@ -119,7 +119,7 @@ Foam::ConeNozzleInjection<CloudType>::ConeNozzleInjection
     ),
     flowRateProfile_
     (
-        TimeDataEntry<scalar>
+        TimeFunction1<scalar>
         (
             owner.db().time(),
             "flowRateProfile",
@@ -128,7 +128,7 @@ Foam::ConeNozzleInjection<CloudType>::ConeNozzleInjection
     ),
     thetaInner_
     (
-        TimeDataEntry<scalar>
+        TimeFunction1<scalar>
         (
             owner.db().time(),
             "thetaInner",
@@ -137,7 +137,7 @@ Foam::ConeNozzleInjection<CloudType>::ConeNozzleInjection
     ),
     thetaOuter_
     (
-        TimeDataEntry<scalar>
+        TimeFunction1<scalar>
         (
             owner.db().time(),
             "thetaOuter",
