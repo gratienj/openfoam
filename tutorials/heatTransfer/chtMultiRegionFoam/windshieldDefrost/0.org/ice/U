@@ -23,22 +23,19 @@ boundaryField
 {
     symmetry
     {
-        type            symmetryPlane;
+        type            noSlip;
     }
     walls
     {
-        type            fixedValue;
-        value           uniform (0 0 0);
+        type            noSlip;
     }
     ice_to_cabin
     {
-        type            fixedValue;
-        value           uniform (0 0 0);
+        type            noSlip;
     }
     ice_to_exterior
     {
-        type            slip;
-        value           uniform (0 0 0);
+        type            noSlip;
     }
 }
 
