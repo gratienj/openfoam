@@ -11,35 +11,25 @@
     thermo.rho() -= psi*p_rgh;
 
     volScalarField rAU(1.0/UEqn.A());
-    surfaceScalarField rAUf("rAUf", fvc::interpolate(rho*rAU));
+    surfaceScalarField rhorAUf("rhorAUf", fvc::interpolate(rho*rAU));
+    volVectorField HbyA(constrainHbyA(rAU*UEqn.H(), U, p_rgh));
 
-    volVectorField HbyA("HbyA", U);
-    HbyA = rAU*UEqn.H();
-
-    surfaceScalarField phig(-rAUf*ghf*fvc::snGrad(rho)*mesh.magSf());
+    surfaceScalarField phig(-rhorAUf*ghf*fvc::snGrad(rho)*mesh.magSf());
 
     surfaceScalarField phiHbyA
     (
         "phiHbyA",
         (
             (fvc::interpolate(rho*HbyA) & mesh.Sf())
-          + rAUf*fvc::ddtCorr(rho, U, phi)
+          + rhorAUf*fvc::ddtCorr(rho, U, phi)
         )
       + phig
     );
 
     MRF.makeRelative(fvc::interpolate(rho), phiHbyA);
 
-    // Update the fixedFluxPressure BCs to ensure flux consistency
-    setSnGrad<fixedFluxPressureFvPatchScalarField>
-    (
-        p_rgh.boundaryField(),
-        (
-            phiHbyA.boundaryField()
-          - MRF.relative(mesh.Sf().boundaryField() & U.boundaryField())
-           *rho.boundaryField()
-        )/(mesh.magSf().boundaryField()*rAUf.boundaryField())
-    );
+    // Update the pressure BCs to ensure flux consistency
+    constrainPressure(p_rgh, rho, U, phiHbyA, rhorAUf, MRF);
 
     tmp<fvScalarMatrix> p_rghDDtEqn
     (
@@ -60,9 +50,8 @@
     {
         fvScalarMatrix p_rghEqn
         (
-            p_rghDDtEqn()
-          + fvc::div(phiHbyA)
-          - fvm::laplacian(rAUf, p_rgh)
+            p_rghDDtEqn
+          - fvm::laplacian(rhorAUf, p_rgh)
         );
 
         p_rghEqn.solve(mesh.solver(p_rgh.select(pimple.finalInnerIter())));
@@ -77,7 +66,7 @@
 
             // Correct the momentum source with the pressure gradient flux
             // calculated from the relaxed pressure
-            U = HbyA + rAU*fvc::reconstruct((phig + p_rghEqn.flux())/rAUf);
+            U = HbyA + rAU*fvc::reconstruct((phig + p_rghEqn.flux())/rhorAUf);
             U.correctBoundaryConditions();
             fvOptions.correct(U);
             K = 0.5*magSqr(U);

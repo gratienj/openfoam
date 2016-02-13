@@ -136,6 +136,7 @@ $(derivedFvPatchFields)/cylindricalInletVelocity/cylindricalInletVelocityFvPatch
 $(derivedFvPatchFields)/fan/fanFvPatchFields.C
 $(derivedFvPatchFields)/fanPressure/fanPressureFvPatchScalarField.C
 $(derivedFvPatchFields)/fixedFluxPressure/fixedFluxPressureFvPatchScalarField.C
+$(derivedFvPatchFields)/fixedFluxExtrapolatedPressure/fixedFluxExtrapolatedPressureFvPatchScalarField.C
 $(derivedFvPatchFields)/fixedInternalValueFvPatchField/fixedInternalValueFvPatchFields.C
 $(derivedFvPatchFields)/fixedJump/fixedJumpFvPatchFields.C
 $(derivedFvPatchFields)/fixedJumpAMI/fixedJumpAMIFvPatchFields.C
@@ -393,6 +394,7 @@ finiteVolume/fvc/fvcReconstructMag.C
 
 general = cfdTools/general
 $(general)/findRefCell/findRefCell.C
+$(general)/constrainHbyA/constrainHbyA.C
 $(general)/adjustPhi/adjustPhi.C
 $(general)/bound/bound.C
 $(general)/CorrectPhi/correctUphiBCs.C
