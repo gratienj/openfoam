@@ -23,4 +23,4 @@ runApplication -log log.collapseFaceSet collapseEdges -latestTime -collapseFaceS
 runApplication collapseEdges -latestTime -collapseFaces
 
 
-# ----------------------------------------------------------------- end-of-file
+#------------------------------------------------------------------------------
