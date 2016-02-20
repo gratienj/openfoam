@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,6 +27,7 @@ License
 #include "demandDrivenData.H"
 #include "thermoSingleLayer.H"
 #include "SLGThermo.H"
+#include "extrapolatedCalculatedFvPatchFields.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -250,7 +251,7 @@ tmp<volScalarField> liquidFilmThermo::rho() const
             ),
             owner().regionMesh(),
             dimensionedScalar("0", dimDensity, 0.0),
-            zeroGradientFvPatchScalarField::typeName
+            extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
 
@@ -295,7 +296,7 @@ tmp<volScalarField> liquidFilmThermo::mu() const
             ),
             owner().regionMesh(),
             dimensionedScalar("0", dimPressure*dimTime, 0.0),
-            zeroGradientFvPatchScalarField::typeName
+            extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
 
@@ -340,7 +341,7 @@ tmp<volScalarField> liquidFilmThermo::sigma() const
             ),
             owner().regionMesh(),
             dimensionedScalar("0", dimMass/sqr(dimTime), 0.0),
-            zeroGradientFvPatchScalarField::typeName
+            extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
 
@@ -385,7 +386,7 @@ tmp<volScalarField> liquidFilmThermo::Cp() const
             ),
             owner().regionMesh(),
             dimensionedScalar("0", dimEnergy/dimMass/dimTemperature, 0.0),
-            zeroGradientFvPatchScalarField::typeName
+            extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
 
@@ -430,7 +431,7 @@ tmp<volScalarField> liquidFilmThermo::kappa() const
             ),
             owner().regionMesh(),
             dimensionedScalar("0", dimPower/dimLength/dimTemperature, 0.0),
-            zeroGradientFvPatchScalarField::typeName
+            extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
 

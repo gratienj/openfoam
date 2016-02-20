@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -264,329 +264,18 @@ void writeDecomposition
             false                   // do not register
         ),
         mesh,
-        dimensionedScalar(name, dimless, -1),
-        zeroGradientFvPatchScalarField::typeName
+        dimensionedScalar(name, dimless, -1)
     );
 
     forAll(procCells, cI)
     {
         procCells[cI] = decomp[cI];
     }
+
     procCells.write();
 }
 
 
-void determineDecomposition
-(
-    const Time& baseRunTime,
-    const fileName& decompDictFile, // optional location for decomposeParDict
-    const bool decompose,       // decompose, i.e. read from undecomposed case
-    const fileName& proc0CaseName,
-    const fvMesh& mesh,
-    const bool writeCellDist,
-
-    label& nDestProcs,
-    labelList& decomp
-)
-{
-    // Read decomposeParDict (on all processors)
-    const decompositionModel& method = decompositionModel::New
-    (
-        mesh,
-        decompDictFile
-    );
-
-    decompositionMethod& decomposer = method.decomposer();
-
-    if (!decomposer.parallelAware())
-    {
-        WarningInFunction
-            << "You have selected decomposition method "
-            << decomposer.typeName
-            << " which does" << endl
-            << "not synchronise the decomposition across"
-            << " processor patches." << endl
-            << "    You might want to select a decomposition method"
-            << " which is aware of this. Continuing."
-            << endl;
-    }
-
-    if (Pstream::master() && decompose)
-    {
-        Info<< "Setting caseName to " << baseRunTime.caseName()
-            << " to read decomposeParDict" << endl;
-        const_cast<Time&>(mesh.time()).TimePaths::caseName() =
-            baseRunTime.caseName();
-    }
-
-    scalarField cellWeights;
-    if (method.found("weightField"))
-    {
-        word weightName = method.lookup("weightField");
-
-        volScalarField weights
-        (
-            IOobject
-            (
-                weightName,
-                mesh.time().timeName(),
-                mesh,
-                IOobject::MUST_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh
-        );
-        cellWeights = weights.internalField();
-    }
-
-    nDestProcs = decomposer.nDomains();
-    decomp = decomposer.decompose(mesh, cellWeights);
-
-    if (Pstream::master() && decompose)
-    {
-        Info<< "Restoring caseName to " << proc0CaseName << endl;
-        const_cast<Time&>(mesh.time()).TimePaths::caseName() =
-            proc0CaseName;
-    }
-
-    // Dump decomposition to volScalarField
-    if (writeCellDist)
-    {
-        // Note: on master make sure to write to processor0
-        if (decompose)
-        {
-            if (Pstream::master())
-            {
-                Info<< "Setting caseName to " << baseRunTime.caseName()
-                    << " to write undecomposed cellDist" << endl;
-
-                Time& tm = const_cast<Time&>(mesh.time());
-
-                tm.TimePaths::caseName() = baseRunTime.caseName();
-                writeDecomposition("cellDist", mesh, decomp);
-                Info<< "Restoring caseName to " << proc0CaseName << endl;
-                tm.TimePaths::caseName() = proc0CaseName;
-            }
-        }
-        else
-        {
-            writeDecomposition("cellDist", mesh, decomp);
-        }
-    }
-}
-
-
-// Write addressing if decomposing (1 to many) or reconstructing (many to 1)
-void writeProcAddressing
-(
-    const bool decompose,
-    const fileName& meshSubDir,
-    const fvMesh& mesh,
-    const mapDistributePolyMesh& map
-)
-{
-    Info<< "Writing procAddressing files to " << mesh.facesInstance()
-        << endl;
-
-    labelIOList cellMap
-    (
-        IOobject
-        (
-            "cellProcAddressing",
-            mesh.facesInstance(),
-            meshSubDir,
-            mesh,
-            IOobject::NO_READ
-        ),
-        0
-    );
-
-    labelIOList faceMap
-    (
-        IOobject
-        (
-            "faceProcAddressing",
-            mesh.facesInstance(),
-            meshSubDir,
-            mesh,
-            IOobject::NO_READ
-        ),
-        0
-    );
-
-    labelIOList pointMap
-    (
-        IOobject
-        (
-            "pointProcAddressing",
-            mesh.facesInstance(),
-            meshSubDir,
-            mesh,
-            IOobject::NO_READ
-        ),
-        0
-    );
-
-    labelIOList patchMap
-    (
-        IOobject
-        (
-            "boundaryProcAddressing",
-            mesh.facesInstance(),
-            meshSubDir,
-            mesh,
-            IOobject::NO_READ
-        ),
-        0
-    );
-
-    // Decomposing: see how cells moved from undecomposed case
-    if (decompose)
-    {
-        cellMap = identity(map.nOldCells());
-        map.distributeCellData(cellMap);
-
-        faceMap = identity(map.nOldFaces());
-        {
-            const mapDistribute& faceDistMap = map.faceMap();
-
-            if (faceDistMap.subHasFlip() || faceDistMap.constructHasFlip())
-            {
-                // Offset by 1
-                faceMap = faceMap + 1;
-            }
-            // Apply face flips
-            mapDistributeBase::distribute
-            (
-                Pstream::nonBlocking,
-                List<labelPair>(),
-                faceDistMap.constructSize(),
-                faceDistMap.subMap(),
-                faceDistMap.subHasFlip(),
-                faceDistMap.constructMap(),
-                faceDistMap.constructHasFlip(),
-                faceMap,
-                flipLabelOp()
-            );
-        }
-
-        pointMap = identity(map.nOldPoints());
-        map.distributePointData(pointMap);
-
-        patchMap = identity(map.oldPatchSizes().size());
-        const mapDistribute& patchDistMap = map.patchMap();
-        // Use explicit distribute since we need to provide a null value
-        // (for new patches) and this is the only call that allow us to
-        // provide one ...
-        mapDistributeBase::distribute
-        (
-            Pstream::nonBlocking,
-            List<labelPair>(),
-            patchDistMap.constructSize(),
-            patchDistMap.subMap(),
-            patchDistMap.subHasFlip(),
-            patchDistMap.constructMap(),
-            patchDistMap.constructHasFlip(),
-            patchMap,
-            eqOp<label>(),
-            flipOp(),
-            label(-1),
-            UPstream::msgType()
-        );
-    }
-    else    // if (nDestProcs == 1)
-    {
-        cellMap = identity(mesh.nCells());
-        map.cellMap().reverseDistribute(map.nOldCells(), cellMap);
-
-        faceMap = identity(mesh.nFaces());
-        {
-            const mapDistribute& faceDistMap = map.faceMap();
-
-            if (faceDistMap.subHasFlip() || faceDistMap.constructHasFlip())
-            {
-                // Offset by 1
-                faceMap = faceMap + 1;
-            }
-
-            mapDistributeBase::distribute
-            (
-                Pstream::nonBlocking,
-                List<labelPair>(),
-                map.nOldFaces(),
-                faceDistMap.constructMap(),
-                faceDistMap.constructHasFlip(),
-                faceDistMap.subMap(),
-                faceDistMap.subHasFlip(),
-                faceMap,
-                flipLabelOp()
-            );
-        }
-
-        pointMap = identity(mesh.nPoints());
-        map.pointMap().reverseDistribute(map.nOldPoints(), pointMap);
-
-        const mapDistribute& patchDistMap = map.patchMap();
-        patchMap = identity(mesh.boundaryMesh().size());
-        patchDistMap.reverseDistribute
-        (
-            map.oldPatchSizes().size(),
-            label(-1),
-            patchMap
-        );
-    }
-
-    bool cellOk = cellMap.write();
-    bool faceOk = faceMap.write();
-    bool pointOk = pointMap.write();
-    bool patchOk = patchMap.write();
-
-    if (!cellOk || !faceOk || !pointOk || !patchOk)
-    {
-        WarningInFunction
-            << "Failed to write " << cellMap.objectPath()
-            << ", " << faceMap.objectPath()
-            << ", " << pointMap.objectPath()
-            << ", " << patchMap.objectPath()
-            << endl;
-    }
-}
-
-
-
-// Generic mesh-based field reading
-template<class GeoField>
-void readField
-(
-    const IOobject& io,
-    const fvMesh& mesh,
-    const label i,
-    PtrList<GeoField>& fields
-)
-{
-    fields.set(i, new GeoField(io, mesh));
-}
-
-
-// Definition of readField for GeometricFields only
-template<class Type, template<class> class PatchField, class GeoMesh>
-void readField
-(
-    const IOobject& io,
-    const fvMesh& mesh,
-    const label i,
-    PtrList<GeometricField<Type, PatchField, GeoMesh> >& fields
-)
-{
-    fields.set
-    (
-        i,
-        new GeometricField<Type, PatchField, GeoMesh>(io, mesh, false)
-    );
-}
-
-
-// Read vol or surface fields
 template<class GeoField>
 void readFields
 (
@@ -597,12 +286,12 @@ void readFields
     PtrList<GeoField>& fields
 )
 {
-    //typedef GeometricField<T, fvPatchField, Mesh> fldType;
-
     // Get my objects of type
     IOobjectList objects(allObjects.lookupClass(GeoField::typeName));
+
     // Check that we all have all objects
-    wordList objectNames = objects.sortedNames();
+    wordList objectNames = objects.toc();
+
     // Get master names
     wordList masterNames(objectNames);
     Pstream::scatter(masterNames);
