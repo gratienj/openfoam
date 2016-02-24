@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,7 +66,7 @@ void Foam::LESModels::IDDESDelta::calcDelta()
         )
     );
 
-    scalarField& faceToFacenMax = tfaceToFacenMax().internalField();
+    scalarField& faceToFacenMax = tfaceToFacenMax.ref().internalField();
 
     const cellList& cells = mesh.cells();
     const vectorField& faceCentres = mesh.faceCentres();

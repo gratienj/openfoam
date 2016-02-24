@@ -1515,7 +1515,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToSource
     (
         fld,
         multiplyWeightedOp<Type, CombineOp>(cop),
-        tresult(),
+        tresult.ref(),
         defaultValues
     );
 
@@ -1560,7 +1560,7 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::interpolateToTarget
     (
         fld,
         multiplyWeightedOp<Type, CombineOp>(cop),
-        tresult(),
+        tresult.ref(),
         defaultValues
     );
 

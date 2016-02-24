@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -129,7 +129,7 @@ tmp<volScalarField> SpalartAllmarasDES<BasicTurbulenceModel>::r
             scalar(10)
         )
     );
-    tr().boundaryField() == 0.0;
+    tr.ref().boundaryField() == 0.0;
 
     return tr;
 }
@@ -204,8 +204,8 @@ tmp<volScalarField> SpalartAllmarasDES<BasicTurbulenceModel>::dTilda
     const volTensorField& gradU
 ) const
 {
-    tmp<volScalarField> tdTilda(psi(chi, fv1)*CDES_*this->delta());
-    min(tdTilda().dimensionedInternalField(), tdTilda(), y_);
+    tmp<volScalarField> tdTilda(CDES_*this->delta());
+    min(tdTilda.ref().dimensionedInternalField(), tdTilda(), y_);
     return tdTilda;
 }
 
@@ -554,8 +554,8 @@ void SpalartAllmarasDES<BasicTurbulenceModel>::correct()
       + fvOptions(alpha, rho, nuTilda_)
     );
 
-    nuTildaEqn().relax();
-    fvOptions.constrain(nuTildaEqn());
+    nuTildaEqn.ref().relax();
+    fvOptions.constrain(nuTildaEqn.ref());
     solve(nuTildaEqn);
     fvOptions.correct(nuTilda_);
     bound(nuTilda_, dimensionedScalar("0", nuTilda_.dimensions(), 0.0));

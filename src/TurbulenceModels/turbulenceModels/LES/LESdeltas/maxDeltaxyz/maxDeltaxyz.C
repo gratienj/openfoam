@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,24 +46,8 @@ void Foam::LESModels::maxDeltaxyz::calcDelta()
 
     label nD = mesh.nGeometricD();
 
-    tmp<volScalarField> hmax
-    (
-        new volScalarField
-        (
-            IOobject
-            (
-                "hmax",
-                mesh.time().timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedScalar("zrero", dimLength, 0.0)
-        )
-    );
-
     const cellList& cells = mesh.cells();
+    scalarField hmax(cells.size());
 
     forAll(cells,cellI)
     {
@@ -81,12 +65,13 @@ void Foam::LESModels::maxDeltaxyz::calcDelta()
                 deltaMaxTmp = tmp;
             }
         }
-        hmax()[cellI] = deltaCoeff_*deltaMaxTmp;
+
+        hmax[cellI] = deltaCoeff_*deltaMaxTmp;
     }
 
     if (nD == 3)
     {
-        delta_.internalField() = hmax();
+        delta_.internalField() = hmax;
     }
     else if (nD == 2)
     {
@@ -94,7 +79,7 @@ void Foam::LESModels::maxDeltaxyz::calcDelta()
             << "Case is 2D, LES is not strictly applicable\n"
             << endl;
 
-        delta_.internalField() = hmax();
+        delta_.internalField() = hmax;
     }
     else
     {
