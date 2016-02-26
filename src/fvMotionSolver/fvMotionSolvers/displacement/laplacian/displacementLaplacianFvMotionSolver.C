@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -393,6 +393,7 @@ Foam::displacementLaplacianFvMotionSolver::curPoints() const
         (
             points0() + pointDisplacement_.internalField()
         );
+        pointField& curPoints = tcurPoints.ref();
 
         // Implement frozen points
         if (frozenPointsZone_ != -1)
@@ -401,11 +402,11 @@ Foam::displacementLaplacianFvMotionSolver::curPoints() const
 
             forAll(pz, i)
             {
-                tcurPoints()[pz[i]] = points0()[pz[i]];
+                curPoints[pz[i]] = points0()[pz[i]];
             }
         }
 
-        twoDCorrectPoints(tcurPoints());
+        twoDCorrectPoints(curPoints);
 
         return tcurPoints;
     }

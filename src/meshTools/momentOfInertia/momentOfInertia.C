@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -353,7 +353,7 @@ Foam::tmp<Foam::tensorField> Foam::momentOfInertia::meshInertia
 {
     tmp<tensorField> tTf = tmp<tensorField>(new tensorField(mesh.nCells()));
 
-    tensorField& tf = tTf();
+    tensorField& tf = tTf.ref();
 
     forAll(tf, cI)
     {

@@ -689,7 +689,7 @@ template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::Field<Type>::T() const
 {
     tmp<Field<Type>> transpose(new Field<Type>(this->size()));
-    ::Foam::T(transpose(), *this);
+    ::Foam::T(transpose.ref(), *this);
     return transpose;
 }
 

@@ -83,7 +83,7 @@ Foam::tmp<Foam::Field<Type>> Foam::fieldValues::faceSource::getFieldValues
                 (
                     new Field<Type>(faces.size(), pTraits<Type>::zero)
                 );
-                Field<Type>& avg = tavg();
+                Field<Type>& avg = tavg.ref();
 
                 forAll(faces, faceI)
                 {
@@ -363,7 +363,7 @@ Foam::tmp<Foam::Field<Type>> Foam::fieldValues::faceSource::filterField
 ) const
 {
     tmp<Field<Type>> tvalues(new Field<Type>(faceId_.size()));
-    Field<Type>& values = tvalues();
+    Field<Type>& values = tvalues.ref();
 
     forAll(values, i)
     {
@@ -404,7 +404,7 @@ Foam::tmp<Foam::Field<Type>> Foam::fieldValues::faceSource::filterField
 ) const
 {
     tmp<Field<Type>> tvalues(new Field<Type>(faceId_.size()));
-    Field<Type>& values = tvalues();
+    Field<Type>& values = tvalues.ref();
 
     forAll(values, i)
     {

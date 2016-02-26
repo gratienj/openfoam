@@ -212,7 +212,7 @@ Foam::radiation::greyMeanAbsorptionEmission::aCont(const label bandI) const
         )
     );
 
-    scalarField& a = ta().internalField();
+    scalarField& a = ta.ref().internalField();
 
     forAll(a, cellI)
     {
@@ -260,7 +260,7 @@ Foam::radiation::greyMeanAbsorptionEmission::aCont(const label bandI) const
                 );
         }
     }
-    ta().correctBoundaryConditions();
+    ta.ref().correctBoundaryConditions();
     return ta;
 }
 
@@ -299,11 +299,11 @@ Foam::radiation::greyMeanAbsorptionEmission::ECont(const label bandI) const
 
         if (dQ.dimensions() == dimEnergy/dimTime)
         {
-            E().internalField() = EhrrCoeff_*dQ/mesh_.V();
+            E.ref().internalField() = EhrrCoeff_*dQ/mesh_.V();
         }
         else if (dQ.dimensions() == dimEnergy/dimTime/dimVolume)
         {
-            E().internalField() = EhrrCoeff_*dQ;
+            E.ref().internalField() = EhrrCoeff_*dQ;
         }
         else
         {

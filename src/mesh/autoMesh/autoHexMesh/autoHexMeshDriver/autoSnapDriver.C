@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -685,7 +685,7 @@ Foam::tmp<Foam::scalarField> Foam::autoSnapDriver::edgePatchDist
 
     // Copy edge values into scalarField
     tmp<scalarField> tedgeDist(new scalarField(mesh.nEdges()));
-    scalarField& edgeDist = tedgeDist();
+    scalarField& edgeDist = tedgeDist.ref();
 
     forAll(allEdgeInfo, edgeI)
     {
@@ -999,7 +999,7 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::avgCellCentres
     (
         new pointField(pointFaces.size(), vector::zero)
     );
-    pointField& avgBoundary = tavgBoundary();
+    pointField& avgBoundary = tavgBoundary.ref();
     labelList nBoundary(pointFaces.size(), 0);
 
     forAll(pointFaces, pointI)

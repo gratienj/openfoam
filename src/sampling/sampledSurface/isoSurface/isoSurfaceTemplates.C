@@ -70,7 +70,7 @@ Foam::isoSurface::adaptPatchFields
             true        // preserveCouples
         )
     );
-    FieldType& sliceFld = tsliceFld();
+    FieldType& sliceFld = tsliceFld.ref();
 
     const fvMesh& mesh = fld.mesh();
 
@@ -792,7 +792,7 @@ Foam::isoSurface::interpolate
         interpolationWeights_,
         triPoints
     );
-    Field<Type>& values = tvalues();
+    Field<Type>& values = tvalues.ref();
     labelList nValues(values.size(), 0);
 
     forAll(triPoints, i)
