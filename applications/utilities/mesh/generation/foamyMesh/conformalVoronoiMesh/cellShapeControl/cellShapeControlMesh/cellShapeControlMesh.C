@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -262,7 +262,7 @@ Foam::label Foam::cellShapeControlMesh::removePoints()
 Foam::tmp<Foam::pointField> Foam::cellShapeControlMesh::cellCentres() const
 {
     tmp<pointField> tcellCentres(new pointField(number_of_finite_cells()));
-    pointField& cellCentres = tcellCentres();
+    pointField& cellCentres = tcellCentres.ref();
 
     label count = 0;
     for

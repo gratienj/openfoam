@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -383,9 +383,70 @@ int main(int argc, char *argv[])
     scalar ck0 = pow025(Cmu)*kappa;
     scalarField kBL(sqr(nut/(ck0*min(y, ybl))));
 
-    // Boundary layer turbulence dissipation
-    scalar ce0 = ::pow(Cmu, 0.75)/kappa;
-    scalarField epsilonBL(ce0*kBL*sqrt(kBL)/min(y, ybl));
+    if (isA<incompressible::RASModel>(turbulence()))
+    {
+        // Calculate nut - reference nut is calculated by the turbulence model
+        // on its construction
+        tmp<volScalarField> tnut = turbulence->nut();
+        volScalarField& nut = tnut.ref();
+        volScalarField S(mag(dev(symm(fvc::grad(U)))));
+        nut = (1 - mask)*nut + mask*sqr(kappa*min(y, ybl))*::sqrt(2)*S;
+
+        // do not correct BC - wall functions will 'undo' manipulation above
+        // by using nut from turbulence model
+
+        if (args.optionFound("writenut"))
+        {
+            Info<< "Writing nut" << endl;
+            nut.write();
+        }
+
+
+        //--- Read and modify turbulence fields
+
+        // Turbulence k
+        tmp<volScalarField> tk = turbulence->k();
+        volScalarField& k = tk.ref();
+        scalar ck0 = pow025(Cmu)*kappa;
+        k = (1 - mask)*k + mask*sqr(nut/(ck0*min(y, ybl)));
+
+        // do not correct BC - operation may use inconsistent fields wrt these
+        // local manipulations
+        // k.correctBoundaryConditions();
+
+        Info<< "Writing k\n" << endl;
+        k.write();
+
+
+        // Turbulence epsilon
+        tmp<volScalarField> tepsilon = turbulence->epsilon();
+        volScalarField& epsilon = tepsilon.ref();
+        scalar ce0 = ::pow(Cmu, 0.75)/kappa;
+        epsilon = (1 - mask)*epsilon + mask*ce0*k*sqrt(k)/min(y, ybl);
+
+        // do not correct BC - wall functions will use non-updated k from
+        // turbulence model
+        // epsilon.correctBoundaryConditions();
+
+        Info<< "Writing epsilon\n" << endl;
+        epsilon.write();
+
+        // Turbulence omega
+        IOobject omegaHeader
+        (
+            "omega",
+            runTime.timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE,
+            false
+        );
+
+        if (omegaHeader.headerOk())
+        {
+            volScalarField omega(omegaHeader, mesh);
+            dimensionedScalar k0("VSMALL", k.dimensions(), VSMALL);
+            omega = (1 - mask)*omega + mask*epsilon/(Cmu*k + k0);
 
     // Process fields if they are present
     blendField("k", mesh, mask, kBL);
