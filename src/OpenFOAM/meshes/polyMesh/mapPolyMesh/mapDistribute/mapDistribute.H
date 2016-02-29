@@ -173,12 +173,16 @@ class mapDistribute
             const label receivedSize
         );
 
+        //- Construct per processor compact addressing of the global elements
+        //  needed. The ones from the local processor are not included since
+        //  these are always all needed.
         void calcCompactAddressing
         (
             const globalIndex& globalNumbering,
             const labelList& elements,
             List<Map<label>>& compactMap
         ) const;
+
         void calcCompactAddressing
         (
             const globalIndex& globalNumbering,

@@ -47,6 +47,57 @@ registerOptSwitch
 );
 
 
+const Foam::NamedEnum<Foam::regIOobject::fileCheckTypes, 4>
+    Foam::regIOobject::fileCheckTypesNames;
+
+Foam::regIOobject::fileCheckTypes Foam::regIOobject::fileModificationChecking
+(
+    fileCheckTypesNames.read
+    (
+        debug::optimisationSwitches().lookup
+        (
+            "fileModificationChecking"
+        )
+    )
+);
+
+namespace Foam
+{
+    // Register re-reader
+    class addfileModificationCheckingToOpt
+    :
+        public ::Foam::simpleRegIOobject
+    {
+    public:
+
+        addfileModificationCheckingToOpt(const char* name)
+        :
+            ::Foam::simpleRegIOobject(Foam::debug::addOptimisationObject, name)
+        {}
+
+        virtual ~addfileModificationCheckingToOpt()
+        {}
+
+        virtual void readData(Foam::Istream& is)
+        {
+            regIOobject::fileModificationChecking =
+                regIOobject::fileCheckTypesNames.read(is);
+        }
+
+        virtual void writeData(Foam::Ostream& os) const
+        {
+            os <<  regIOobject::fileCheckTypesNames
+                [regIOobject::fileModificationChecking];
+        }
+    };
+
+    addfileModificationCheckingToOpt addfileModificationCheckingToOpt_
+    (
+        "fileModificationChecking"
+    );
+}
+
+
 bool Foam::regIOobject::masterOnlyReading = false;
 
 

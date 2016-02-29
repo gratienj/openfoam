@@ -47,23 +47,9 @@ namespace Foam
 
 class IOobjectList;
 
-
-//- Get sorted names of fields of type. If syncPar and running in parallel
-//  check for identical names
-wordList fieldNames(const IOobjectList& objects, const bool syncPar);
-
-//- Helper routine to read Geometric fields
-template<class Type, template<class> class PatchField, class GeoMesh>
-wordList ReadFields
-(
-    const typename GeoMesh::Mesh& mesh,
-    const IOobjectList& objects,
-    PtrList<GeometricField<Type, PatchField, GeoMesh> >& fields,
-    const bool syncPar = true,
-    const bool readOldTime = false
-);
-
-//- Helper routine to read other mesh fields
+//- Helper routine to read fields
+//  Reads all fields of type. Returns names of fields read. Guarantees all
+//  processors to read fields in same order.
 template<class GeoField, class Mesh>
 wordList ReadFields
 (

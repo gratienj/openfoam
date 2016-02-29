@@ -753,9 +753,6 @@ Foam::dimensioned<Type> Foam::operator/
 }
 
 
-// Products
-// ~~~~~~~~
-
 #define PRODUCT_OPERATOR(product, op, opFunc)                                  \
                                                                                \
 template<class Type1, class Type2>                                             \
