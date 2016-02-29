@@ -560,7 +560,6 @@ void Foam::fvPatchField<Type>::operator/=
 }
 
 
-// Force an assignment, overriding fixedValue status
 template<class Type>
 void Foam::fvPatchField<Type>::operator==
 (
