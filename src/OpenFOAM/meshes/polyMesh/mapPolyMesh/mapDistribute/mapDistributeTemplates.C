@@ -32,7 +32,6 @@ License
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-// Distribute list.
 template<class T>
 void Foam::mapDistribute::distribute
 (
@@ -382,7 +381,6 @@ void Foam::mapDistribute::distribute
 }
 
 
-// Distribute list.
 template<class T, class CombineOp>
 void Foam::mapDistribute::distribute
 (
@@ -784,7 +782,6 @@ void Foam::mapDistribute::receive(PstreamBuffers& pBufs, List<T>& field) const
 }
 
 
-// In case of no transform: copy elements
 template<class T>
 void Foam::mapDistribute::applyDummyTransforms(List<T>& field) const
 {
@@ -802,7 +799,6 @@ void Foam::mapDistribute::applyDummyTransforms(List<T>& field) const
 }
 
 
-// In case of no transform: copy elements
 template<class T>
 void Foam::mapDistribute::applyDummyInverseTransforms(List<T>& field) const
 {
@@ -819,7 +815,6 @@ void Foam::mapDistribute::applyDummyInverseTransforms(List<T>& field) const
 }
 
 
-// Calculate transformed elements.
 template<class T, class TransformOp>   //, class CombineOp>
 void Foam::mapDistribute::applyTransforms
 (
@@ -850,7 +845,6 @@ void Foam::mapDistribute::applyTransforms
 }
 
 
-// Calculate transformed elements.
 template<class T, class TransformOp>   //, class CombineOp>
 void Foam::mapDistribute::applyInverseTransforms
 (
@@ -881,8 +875,7 @@ void Foam::mapDistribute::applyInverseTransforms
 }
 
 
-//- Distribute data using default commsType.
-template<class T, class negateOp>
+template<class T>
 void Foam::mapDistribute::distribute
 (
     List<T>& fld,
@@ -914,7 +907,6 @@ void Foam::mapDistribute::distribute
 }
 
 
-//- Distribute data using default commsType.
 template<class T>
 void Foam::mapDistribute::distribute
 (
@@ -925,15 +917,14 @@ void Foam::mapDistribute::distribute
 {
     fld.shrink();
 
-    List<T>& fldList = static_cast<List<T>& >(fld);
-
-    distribute(fldList, dummyTransform, tag);
-
-    fld.setCapacity(fldList.size());
+    // Fill in transformed slots with copies
+    if (dummyTransform)
+    {
+        applyDummyTransforms(fld);
+    }
 }
 
 
-//- Reverse distribute data using default commsType.
 template<class T>
 void Foam::mapDistribute::reverseDistribute
 (
@@ -952,9 +943,6 @@ void Foam::mapDistribute::reverseDistribute
 }
 
 
-//- Reverse distribute data using default commsType.
-//  Since constructSize might be larger than supplied size supply
-//  a nullValue
 template<class T>
 void Foam::mapDistribute::reverseDistribute
 (
@@ -974,7 +962,6 @@ void Foam::mapDistribute::reverseDistribute
 }
 
 
-//- Distribute data using default commsType.
 template<class T, class TransformOp>
 void Foam::mapDistribute::distribute
 (

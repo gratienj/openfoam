@@ -33,14 +33,11 @@ License
 
 namespace Foam
 {
-
-defineTypeNameAndDebug(refinementHistory, 0);
-
+    defineTypeNameAndDebug(refinementHistory, 0);
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-//- Construct null
 Foam::refinementHistory::splitCell8::splitCell8()
 :
     parent_(-1),
@@ -48,7 +45,6 @@ Foam::refinementHistory::splitCell8::splitCell8()
 {}
 
 
-//- Construct as child element of parent
 Foam::refinementHistory::splitCell8::splitCell8(const label parent)
 :
     parent_(parent),
@@ -56,14 +52,12 @@ Foam::refinementHistory::splitCell8::splitCell8(const label parent)
 {}
 
 
-//- Construct from Istream
 Foam::refinementHistory::splitCell8::splitCell8(Istream& is)
 {
     is >> *this;
 }
 
 
-//- Construct as (deep) copy.
 Foam::refinementHistory::splitCell8::splitCell8(const splitCell8& sc)
 :
     parent_(sc.parent_),
@@ -598,7 +592,6 @@ Foam::refinementHistory::refinementHistory(const IOobject& io)
 }
 
 
-//- Read or construct
 Foam::refinementHistory::refinementHistory
 (
     const IOobject& io,

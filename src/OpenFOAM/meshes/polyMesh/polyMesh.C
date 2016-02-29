@@ -1147,7 +1147,6 @@ Foam::tmp<Foam::scalarField> Foam::polyMesh::movePoints
 }
 
 
-// Reset motion by deleting old points
 void Foam::polyMesh::resetMotion() const
 {
     curMotionTimeIndex_ = 0;
@@ -1155,7 +1154,6 @@ void Foam::polyMesh::resetMotion() const
 }
 
 
-// Return parallel info
 const Foam::globalMeshData& Foam::polyMesh::globalData() const
 {
     if (globalMeshDataPtr_.empty())

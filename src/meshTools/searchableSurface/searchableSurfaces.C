@@ -35,13 +35,12 @@ License
 
 namespace Foam
 {
-defineTypeNameAndDebug(searchableSurfaces, 0);
+    defineTypeNameAndDebug(searchableSurfaces, 0);
 }
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-//- Is edge connected to triangle
 bool Foam::searchableSurfaces::connected
 (
     const triSurface& s,
@@ -323,8 +322,6 @@ void Foam::searchableSurfaces::findAnyIntersection
 }
 
 
-//- Find all intersections in order from start to end. Returns for
-//  every hit the surface and the hit info.
 void Foam::searchableSurfaces::findAllIntersections
 (
     const pointField& start,
@@ -370,7 +367,6 @@ void Foam::searchableSurfaces::findNearestIntersection
 }
 
 
-// Find nearest. Return -1 or nearest point
 void Foam::searchableSurfaces::findNearest
 (
     const pointField& samples,
@@ -391,7 +387,6 @@ void Foam::searchableSurfaces::findNearest
 }
 
 
-// Find nearest. Return -1 or nearest point
 void Foam::searchableSurfaces::findNearest
 (
     const labelListList& regionIndices,
@@ -415,7 +410,7 @@ void Foam::searchableSurfaces::findNearest
     );
 }
 
-//- Calculate bounding box
+
 Foam::boundBox Foam::searchableSurfaces::bounds() const
 {
     return searchableSurfacesQueries::bounds
@@ -426,7 +421,6 @@ Foam::boundBox Foam::searchableSurfaces::bounds() const
 }
 
 
-//- Calculate point which is on a set of surfaces.
 Foam::pointIndexHit Foam::searchableSurfaces::facesIntersection
 (
     const scalar initDistSqr,

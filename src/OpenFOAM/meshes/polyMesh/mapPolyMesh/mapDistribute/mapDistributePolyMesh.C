@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -57,21 +57,6 @@ void Foam::mapDistributePolyMesh::calcPatchSizes()
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::mapDistributePolyMesh::mapDistributePolyMesh()
-:
-    nOldPoints_(0),
-    nOldFaces_(0),
-    nOldCells_(0),
-    oldPatchSizes_(0),
-    oldPatchStarts_(0),
-    oldPatchNMeshPoints_(0),
-    pointMap_(),
-    faceMap_(),
-    cellMap_(),
-    patchMap_()
-{}
-
 
 Foam::mapDistributePolyMesh::mapDistributePolyMesh
 (

@@ -2396,7 +2396,6 @@ Foam::label Foam::autoLayerDriver::checkAndUnmark
 }
 
 
-//- Count global number of extruded faces
 Foam::label Foam::autoLayerDriver::countExtrusion
 (
     const indirectPrimitivePatch& pp,
