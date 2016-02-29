@@ -357,7 +357,7 @@ public:
 #include "DimensionedFieldFunctions.H"
 
 #ifdef NoRepository
-#   include "DimensionedField.C"
+    #include "DimensionedField.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

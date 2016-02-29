@@ -619,7 +619,7 @@ Ostream& operator<<
 #include "GeometricFieldI.H"
 
 #ifdef NoRepository
-#   include "GeometricField.C"
+    #include "GeometricField.C"
 #endif
 
 #include "GeometricFieldFunctions.H"
