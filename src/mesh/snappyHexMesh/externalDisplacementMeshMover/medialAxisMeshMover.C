@@ -854,18 +854,18 @@ bool Foam::medialAxisMeshMover::unmarkExtrusion
 (
     const label patchPointI,
     pointField& patchDisp,
-    List<autoLayerDriver::extrudeMode>& extrudeStatus
+    List<snappyLayerDriver::extrudeMode>& extrudeStatus
 )
 {
-    if (extrudeStatus[patchPointI] == autoLayerDriver::EXTRUDE)
+    if (extrudeStatus[patchPointI] == snappyLayerDriver::EXTRUDE)
     {
-        extrudeStatus[patchPointI] = autoLayerDriver::NOEXTRUDE;
+        extrudeStatus[patchPointI] = snappyLayerDriver::NOEXTRUDE;
         patchDisp[patchPointI] = vector::zero;
         return true;
     }
-    else if (extrudeStatus[patchPointI] == autoLayerDriver::EXTRUDEREMOVE)
+    else if (extrudeStatus[patchPointI] == snappyLayerDriver::EXTRUDEREMOVE)
     {
-        extrudeStatus[patchPointI] = autoLayerDriver::NOEXTRUDE;
+        extrudeStatus[patchPointI] = snappyLayerDriver::NOEXTRUDE;
         patchDisp[patchPointI] = vector::zero;
         return true;
     }
@@ -880,7 +880,7 @@ void Foam::medialAxisMeshMover::syncPatchDisplacement
 (
     const scalarField& minThickness,
     pointField& patchDisp,
-    List<autoLayerDriver::extrudeMode>& extrudeStatus
+    List<snappyLayerDriver::extrudeMode>& extrudeStatus
 ) const
 {
     const indirectPrimitivePatch& pp = adaptPatchPtr_();
@@ -1000,7 +1000,7 @@ handleFeatureAngleLayerTerminations
     const scalar minCos,
     const PackedBoolList& isPatchMasterPoint,
     const labelList& meshEdges,
-    List<autoLayerDriver::extrudeMode>& extrudeStatus,
+    List<snappyLayerDriver::extrudeMode>& extrudeStatus,
     pointField& patchDisp,
     label& nPointCounter
 ) const
@@ -1018,7 +1018,7 @@ handleFeatureAngleLayerTerminations
 
         forAll(f, fp)
         {
-            if (extrudeStatus[f[fp]] == autoLayerDriver::NOEXTRUDE)
+            if (extrudeStatus[f[fp]] == snappyLayerDriver::NOEXTRUDE)
             {
                 extrudedFaces[faceI] = false;
                 break;
@@ -1087,8 +1087,8 @@ handleFeatureAngleLayerTerminations
 
             if
             (
-                extrudeStatus[v0] != autoLayerDriver::NOEXTRUDE
-             || extrudeStatus[v1] != autoLayerDriver::NOEXTRUDE
+                extrudeStatus[v0] != snappyLayerDriver::NOEXTRUDE
+             || extrudeStatus[v1] != snappyLayerDriver::NOEXTRUDE
             )
             {
                 if (!eFaceExtrude[0] || !eFaceExtrude[1])
@@ -1135,7 +1135,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
     const PackedBoolList& isPatchMasterEdge,
     const labelList& meshEdges,
     const scalarField& minThickness,
-    List<autoLayerDriver::extrudeMode>& extrudeStatus,
+    List<snappyLayerDriver::extrudeMode>& extrudeStatus,
     pointField& patchDisp
 ) const
 {
@@ -1204,7 +1204,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
 
                 forAll(f, fp)
                 {
-                    if (extrudeStatus[f[fp]] != autoLayerDriver::NOEXTRUDE)
+                    if (extrudeStatus[f[fp]] != snappyLayerDriver::NOEXTRUDE)
                     {
                         if (islandPoint[faceI] == -1)
                         {
@@ -1228,7 +1228,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
             // Check all surrounding faces that I am the islandPoint
             forAll(pointFaces, patchPointI)
             {
-                if (extrudeStatus[patchPointI] != autoLayerDriver::NOEXTRUDE)
+                if (extrudeStatus[patchPointI] != snappyLayerDriver::NOEXTRUDE)
                 {
                     const labelList& pFaces = pointFaces[patchPointI];
 
@@ -1256,7 +1256,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
                 const face& f = pp.localFaces()[faceI];
                 forAll(f, fp)
                 {
-                    if (extrudeStatus[f[fp]] == autoLayerDriver::NOEXTRUDE)
+                    if (extrudeStatus[f[fp]] == snappyLayerDriver::NOEXTRUDE)
                     {
                         extrudedFaces[faceI] = false;
                         break;
@@ -1330,11 +1330,11 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
             label v0 = e[0];
             label v1 = e[1];
 
-            if (extrudeStatus[v1] != autoLayerDriver::NOEXTRUDE)
+            if (extrudeStatus[v1] != snappyLayerDriver::NOEXTRUDE)
             {
                 isolatedPoint[v0] += 1;
             }
-            if (extrudeStatus[v0] != autoLayerDriver::NOEXTRUDE)
+            if (extrudeStatus[v0] != snappyLayerDriver::NOEXTRUDE)
             {
                 isolatedPoint[v1] += 1;
             }
@@ -1369,7 +1369,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
         {
             forAll(f, fp)
             {
-                if (extrudeStatus[f[fp]] == autoLayerDriver::NOEXTRUDE)
+                if (extrudeStatus[f[fp]] == snappyLayerDriver::NOEXTRUDE)
                 {
                     allPointsExtruded = false;
                     break;
@@ -1515,7 +1515,7 @@ void Foam::medialAxisMeshMover::calculateDisplacement
 (
     const dictionary& coeffDict,
     const scalarField& minThickness,
-    List<autoLayerDriver::extrudeMode>& extrudeStatus,
+    List<snappyLayerDriver::extrudeMode>& extrudeStatus,
     pointField& patchDisp
 )
 {
@@ -1609,7 +1609,7 @@ void Foam::medialAxisMeshMover::calculateDisplacement
 
     forAll(thickness, patchPointI)
     {
-        if (extrudeStatus[patchPointI] == autoLayerDriver::NOEXTRUDE)
+        if (extrudeStatus[patchPointI] == snappyLayerDriver::NOEXTRUDE)
         {
             thickness[patchPointI] = 0.0;
         }
@@ -1658,7 +1658,7 @@ void Foam::medialAxisMeshMover::calculateDisplacement
 
     forAll(meshPoints, patchPointI)
     {
-        if (extrudeStatus[patchPointI] != autoLayerDriver::NOEXTRUDE)
+        if (extrudeStatus[patchPointI] != snappyLayerDriver::NOEXTRUDE)
         {
             label pointI = meshPoints[patchPointI];
 
@@ -1752,7 +1752,7 @@ void Foam::medialAxisMeshMover::calculateDisplacement
     // Update thickess for changed extrusion
     forAll(thickness, patchPointI)
     {
-        if (extrudeStatus[patchPointI] == autoLayerDriver::NOEXTRUDE)
+        if (extrudeStatus[patchPointI] == snappyLayerDriver::NOEXTRUDE)
         {
             thickness[patchPointI] = 0.0;
         }
@@ -1962,16 +1962,16 @@ bool Foam::medialAxisMeshMover::move
         pp.meshPoints()
     );
 
-    List<autoLayerDriver::extrudeMode> extrudeStatus
+    List<snappyLayerDriver::extrudeMode> extrudeStatus
     (
         pp.nPoints(),
-        autoLayerDriver::EXTRUDE
+        snappyLayerDriver::EXTRUDE
     );
     forAll(extrudeStatus, pointI)
     {
         if (mag(patchDisp[pointI]) <= minThickness[pointI]+SMALL)
         {
-            extrudeStatus[pointI] = autoLayerDriver::NOEXTRUDE;
+            extrudeStatus[pointI] = snappyLayerDriver::NOEXTRUDE;
         }
     }
 

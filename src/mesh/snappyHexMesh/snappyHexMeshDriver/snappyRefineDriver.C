@@ -23,7 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "autoRefineDriver.H"
+#include "snappyRefineDriver.H"
 #include "meshRefinement.H"
 #include "fvMesh.H"
 #include "Time.H"
@@ -45,7 +45,7 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(autoRefineDriver, 0);
+defineTypeNameAndDebug(snappyRefineDriver, 0);
 
 } // End namespace Foam
 
@@ -53,7 +53,7 @@ defineTypeNameAndDebug(autoRefineDriver, 0);
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 // Construct from components
-Foam::autoRefineDriver::autoRefineDriver
+Foam::snappyRefineDriver::snappyRefineDriver
 (
     meshRefinement& meshRefiner,
     decompositionMethod& decomposer,
@@ -72,7 +72,7 @@ Foam::autoRefineDriver::autoRefineDriver
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::label Foam::autoRefineDriver::featureEdgeRefine
+Foam::label Foam::snappyRefineDriver::featureEdgeRefine
 (
     const refinementParameters& refineParams,
     const label maxIter,
@@ -182,129 +182,7 @@ Foam::label Foam::autoRefineDriver::featureEdgeRefine
 }
 
 
-Foam::label Foam::autoRefineDriver::smallFeatureRefine
-(
-    const refinementParameters& refineParams,
-    const label maxIter
-)
-{
-    const fvMesh& mesh = meshRefiner_.mesh();
-
-
-    label iter = 0;
-
-    // See if any surface has an extendedGapLevel
-    labelList surfaceMaxLevel(meshRefiner_.surfaces().maxGapLevel());
-    labelList shellMaxLevel(meshRefiner_.shells().maxGapLevel());
-
-    if (max(surfaceMaxLevel) == 0 && max(shellMaxLevel) == 0)
-    {
-        return iter;
-    }
-
-    for (; iter < maxIter; iter++)
-    {
-        Info<< nl
-            << "Small surface feature refinement iteration " << iter << nl
-            << "--------------------------------------------" << nl
-            << endl;
-
-
-        // Determine cells to refine
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        labelList candidateCells
-        (
-            meshRefiner_.refineCandidates
-            (
-                refineParams.locationsInMesh(),
-                refineParams.curvature(),
-                refineParams.planarAngle(),
-
-                false,              // featureRefinement
-                false,              // featureDistanceRefinement
-                false,              // internalRefinement
-                false,              // surfaceRefinement
-                false,              // curvatureRefinement
-                true,               // smallFeatureRefinement
-                false,              // gapRefinement
-                false,              // bigGapRefinement
-                false,              // spreadGapSize
-                refineParams.maxGlobalCells(),
-                refineParams.maxLocalCells()
-            )
-        );
-
-        labelList cellsToRefine
-        (
-            meshRefiner_.meshCutter().consistentRefinement
-            (
-                candidateCells,
-                true
-            )
-        );
-        Info<< "Determined cells to refine in = "
-            << mesh.time().cpuTimeIncrement() << " s" << endl;
-
-
-        label nCellsToRefine = cellsToRefine.size();
-        reduce(nCellsToRefine, sumOp<label>());
-
-        Info<< "Selected for refinement : " << nCellsToRefine
-            << " cells (out of " << mesh.globalData().nTotalCells()
-            << ')' << endl;
-
-        // Stop when no cells to refine or have done minimum necessary
-        // iterations and not enough cells to refine.
-        if (nCellsToRefine == 0)
-        {
-            Info<< "Stopping refining since too few cells selected."
-                << nl << endl;
-            break;
-        }
-
-
-        if (debug)
-        {
-            const_cast<Time&>(mesh.time())++;
-        }
-
-
-        if
-        (
-            returnReduce
-            (
-                (mesh.nCells() >= refineParams.maxLocalCells()),
-                orOp<bool>()
-            )
-        )
-        {
-            meshRefiner_.balanceAndRefine
-            (
-                "small feature refinement iteration " + name(iter),
-                decomposer_,
-                distributor_,
-                cellsToRefine,
-                refineParams.maxLoadUnbalance()
-            );
-        }
-        else
-        {
-            meshRefiner_.refineAndBalance
-            (
-                "small feature refinement iteration " + name(iter),
-                decomposer_,
-                distributor_,
-                cellsToRefine,
-                refineParams.maxLoadUnbalance()
-            );
-        }
-    }
-    return iter;
-}
-
-
-Foam::label Foam::autoRefineDriver::surfaceOnlyRefine
+Foam::label Foam::snappyRefineDriver::surfaceOnlyRefine
 (
     const refinementParameters& refineParams,
     const label maxIter
@@ -427,7 +305,7 @@ Foam::label Foam::autoRefineDriver::surfaceOnlyRefine
 }
 
 
-Foam::label Foam::autoRefineDriver::gapOnlyRefine
+Foam::label Foam::snappyRefineDriver::gapOnlyRefine
 (
     const refinementParameters& refineParams,
     const label maxIter
@@ -658,149 +536,7 @@ Foam::label Foam::autoRefineDriver::gapOnlyRefine
 }
 
 
-Foam::label Foam::autoRefineDriver::bigGapOnlyRefine
-(
-    const refinementParameters& refineParams,
-    const bool spreadGapSize,
-    const label maxIter
-)
-{
-    const fvMesh& mesh = meshRefiner_.mesh();
-
-    label iter = 0;
-
-    // See if any surface has an extendedGapLevel
-    labelList surfaceMaxLevel(meshRefiner_.surfaces().maxGapLevel());
-    labelList shellMaxLevel(meshRefiner_.shells().maxGapLevel());
-
-    label overallMaxLevel(max(max(surfaceMaxLevel), max(shellMaxLevel)));
-
-    if (overallMaxLevel == 0)
-    {
-        return iter;
-    }
-
-
-    for (; iter < maxIter; iter++)
-    {
-        Info<< nl
-            << "Big gap refinement iteration " << iter << nl
-            << "------------------------------" << nl
-            << endl;
-
-
-        // Determine cells to refine
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        labelList candidateCells
-        (
-            meshRefiner_.refineCandidates
-            (
-                refineParams.locationsInMesh(),
-                refineParams.curvature(),
-                refineParams.planarAngle(),
-
-                false,              // featureRefinement
-                false,              // featureDistanceRefinement
-                false,              // internalRefinement
-                false,              // surfaceRefinement
-                false,              // curvatureRefinement
-                false,              // smallFeatureRefinement
-                false,              // gapRefinement
-                true,               // bigGapRefinement
-                spreadGapSize,      // spreadGapSize
-                refineParams.maxGlobalCells(),
-                refineParams.maxLocalCells()
-            )
-        );
-
-
-        if (debug&meshRefinement::MESH)
-        {
-            Pout<< "Dumping " << candidateCells.size()
-                << " cells to cellSet candidateCellsFromBigGap." << endl;
-            cellSet c(mesh, "candidateCellsFromBigGap", candidateCells);
-            c.instance() = meshRefiner_.timeName();
-            c.write();
-        }
-
-        labelList cellsToRefine
-        (
-            meshRefiner_.meshCutter().consistentRefinement
-            (
-                candidateCells,
-                true
-            )
-        );
-        Info<< "Determined cells to refine in = "
-            << mesh.time().cpuTimeIncrement() << " s" << endl;
-
-
-        label nCellsToRefine = cellsToRefine.size();
-        reduce(nCellsToRefine, sumOp<label>());
-
-        Info<< "Selected for refinement : " << nCellsToRefine
-            << " cells (out of " << mesh.globalData().nTotalCells()
-            << ')' << endl;
-
-        // Stop when no cells to refine or have done minimum necessary
-        // iterations and not enough cells to refine.
-        if
-        (
-            nCellsToRefine == 0
-         || (
-                iter >= overallMaxLevel
-             && nCellsToRefine <= refineParams.minRefineCells()
-            )
-        )
-        {
-            Info<< "Stopping refining since too few cells selected."
-                << nl << endl;
-            break;
-        }
-
-
-        if (debug)
-        {
-            const_cast<Time&>(mesh.time())++;
-        }
-
-
-        if
-        (
-            returnReduce
-            (
-                (mesh.nCells() >= refineParams.maxLocalCells()),
-                orOp<bool>()
-            )
-        )
-        {
-            meshRefiner_.balanceAndRefine
-            (
-                "big gap refinement iteration " + name(iter),
-                decomposer_,
-                distributor_,
-                cellsToRefine,
-                refineParams.maxLoadUnbalance()
-            );
-        }
-        else
-        {
-            meshRefiner_.refineAndBalance
-            (
-                "big gap refinement iteration " + name(iter),
-                decomposer_,
-                distributor_,
-                cellsToRefine,
-                refineParams.maxLoadUnbalance()
-            );
-        }
-    }
-    return iter;
-}
-
-
-Foam::label Foam::autoRefineDriver::danglingCellRefine
+Foam::label Foam::snappyRefineDriver::danglingCellRefine
 (
     const refinementParameters& refineParams,
     const label nFaces,
@@ -944,349 +680,7 @@ Foam::label Foam::autoRefineDriver::danglingCellRefine
 }
 
 
-// Detect cells with opposing intersected faces of differing refinement
-// level and refine them.
-Foam::label Foam::autoRefineDriver::refinementInterfaceRefine
-(
-    const refinementParameters& refineParams,
-    const label maxIter
-)
-{
-    const fvMesh& mesh = meshRefiner_.mesh();
-
-    label iter = 0;
-
-    if (refineParams.interfaceRefine())
-    {
-        for (;iter < maxIter; iter++)
-        {
-            Info<< nl
-                << "Refinement transition refinement iteration " << iter << nl
-                << "--------------------------------------------" << nl
-                << endl;
-
-            const labelList& surfaceIndex = meshRefiner_.surfaceIndex();
-            const hexRef8& cutter = meshRefiner_.meshCutter();
-            const vectorField& fA = mesh.faceAreas();
-            const labelList& faceOwner = mesh.faceOwner();
-
-
-            // Determine cells to refine
-            // ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-            const cellList& cells = mesh.cells();
-
-            labelList candidateCells;
-            {
-                // Pass1: pick up cells with differing face level
-
-                cellSet transitionCells
-                (
-                    mesh,
-                    "transitionCells",
-                    cells.size()/100
-                );
-
-                forAll(cells, cellI)
-                {
-                    const cell& cFaces = cells[cellI];
-                    label cLevel = cutter.cellLevel()[cellI];
-
-                    forAll(cFaces, cFaceI)
-                    {
-                        label faceI = cFaces[cFaceI];
-
-                        if (surfaceIndex[faceI] != -1)
-                        {
-                            label fLevel = cutter.faceLevel(faceI);
-                            if (fLevel != cLevel)
-                            {
-                                transitionCells.insert(cellI);
-                            }
-                        }
-                    }
-                }
-
-
-                cellSet candidateCellSet
-                (
-                    mesh,
-                    "candidateCells",
-                    cells.size()/1000
-                );
-
-                // Pass2: check for oppositeness
-
-                //forAllConstIter(cellSet, transitionCells, iter)
-                //{
-                //    label cellI = iter.key();
-                //    const cell& cFaces = cells[cellI];
-                //    const point& cc = cellCentres[cellI];
-                //    const scalar rCVol = pow(cellVolumes[cellI], -5.0/3.0);
-                //
-                //    // Determine principal axes of cell
-                //    symmTensor R(symmTensor::zero);
-                //
-                //    forAll(cFaces, i)
-                //    {
-                //        label faceI = cFaces[i];
-                //
-                //        const point& fc = faceCentres[faceI];
-                //
-                //        // Calculate face-pyramid volume
-                //        scalar pyrVol = 1.0/3.0 * fA[faceI] & (fc-cc);
-                //
-                //        if (faceOwner[faceI] != cellI)
-                //        {
-                //            pyrVol = -pyrVol;
-                //        }
-                //
-                //        // Calculate face-pyramid centre
-                //        vector pc = (3.0/4.0)*fc + (1.0/4.0)*cc;
-                //
-                //        R += pyrVol*sqr(pc-cc)*rCVol;
-                //    }
-                //
-                //    //- MEJ: Problem: truncation errors cause complex evs
-                //    vector lambdas(eigenValues(R));
-                //    const tensor axes(eigenVectors(R, lambdas));
-                //
-                //
-                //    // Check if this cell has
-                //    // - opposing sides intersected
-                //    // - which are of different refinement level
-                //    // - plus the inbetween face
-                //
-                //    labelVector plusFaceLevel(labelVector(-1, -1, -1));
-                //    labelVector minFaceLevel(labelVector(-1, -1, -1));
-                //
-                //    forAll(cFaces, cFaceI)
-                //    {
-                //        label faceI = cFaces[cFaceI];
-                //
-                //        if (surfaceIndex[faceI] != -1)
-                //        {
-                //            label fLevel = cutter.faceLevel(faceI);
-                //
-                //            // Get outwards pointing normal
-                //            vector n = fA[faceI]/mag(fA[faceI]);
-                //            if (faceOwner[faceI] != cellI)
-                //            {
-                //                n = -n;
-                //            }
-                //
-                //            // What is major direction and sign
-                //            direction cmpt = vector::X;
-                //            scalar maxComp = (n&axes.x());
-                //
-                //            scalar yComp = (n&axes.y());
-                //            scalar zComp = (n&axes.z());
-                //
-                //            if (mag(yComp) > mag(maxComp))
-                //            {
-                //                maxComp = yComp;
-                //                cmpt = vector::Y;
-                //            }
-                //
-                //            if (mag(zComp) > mag(maxComp))
-                //            {
-                //                maxComp = zComp;
-                //                cmpt = vector::Z;
-                //            }
-                //
-                //            if (maxComp > 0)
-                //            {
-                //                plusFaceLevel[cmpt] = max
-                //                (
-                //                    plusFaceLevel[cmpt],
-                //                    fLevel
-                //                );
-                //            }
-                //            else
-                //            {
-                //                minFaceLevel[cmpt] = max
-                //                (
-                //                    minFaceLevel[cmpt],
-                //                    fLevel
-                //                );
-                //            }
-                //        }
-                //    }
-                //
-                //    // Check if we picked up any opposite differing level
-                //    for (direction dir = 0; dir < vector::nComponents; dir++)
-                //    {
-                //        if
-                //        (
-                //            plusFaceLevel[dir] != -1
-                //         && minFaceLevel[dir] != -1
-                //         && plusFaceLevel[dir] != minFaceLevel[dir]
-                //        )
-                //        {
-                //            candidateCellSet.insert(cellI);
-                //        }
-                //    }
-                //}
-
-                const scalar oppositeCos = Foam::cos(Foam::degToRad(135));
-
-                forAllConstIter(cellSet, transitionCells, iter)
-                {
-                    label cellI = iter.key();
-                    const cell& cFaces = cells[cellI];
-                    label cLevel = cutter.cellLevel()[cellI];
-
-                    // Detect opposite intersection
-                    bool foundOpposite = false;
-
-                    forAll(cFaces, cFaceI)
-                    {
-                        label faceI = cFaces[cFaceI];
-
-                        if
-                        (
-                            surfaceIndex[faceI] != -1
-                         && cutter.faceLevel(faceI) > cLevel
-                        )
-                        {
-                            // Get outwards pointing normal
-                            vector n = fA[faceI]/mag(fA[faceI]);
-                            if (faceOwner[faceI] != cellI)
-                            {
-                                n = -n;
-                            }
-
-                            // Check for any opposite intersection
-                            forAll(cFaces, cFaceI2)
-                            {
-                                label face2I = cFaces[cFaceI2];
-
-                                if
-                                (
-                                    face2I != faceI
-                                 && surfaceIndex[face2I] != -1
-                                )
-                                {
-                                    // Get outwards pointing normal
-                                    vector n2 = fA[face2I]/mag(fA[face2I]);
-                                    if (faceOwner[face2I] != cellI)
-                                    {
-                                        n2 = -n2;
-                                    }
-
-
-                                    if ((n&n2) < oppositeCos)
-                                    {
-                                        foundOpposite = true;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (foundOpposite)
-                            {
-                                break;
-                            }
-                        }
-                    }
-
-
-                    if (foundOpposite)
-                    {
-                        candidateCellSet.insert(cellI);
-                    }
-                }
-
-                if (debug&meshRefinement::MESH)
-                {
-                    Pout<< "Dumping " << candidateCellSet.size()
-                        << " cells to cellSet candidateCellSet." << endl;
-                    candidateCellSet.instance() = meshRefiner_.timeName();
-                    candidateCellSet.write();
-                }
-                candidateCells = candidateCellSet.toc();
-            }
-
-
-
-            labelList cellsToRefine
-            (
-                meshRefiner_.meshCutter().consistentRefinement
-                (
-                    candidateCells,
-                    true
-                )
-            );
-            Info<< "Determined cells to refine in = "
-                << mesh.time().cpuTimeIncrement() << " s" << endl;
-
-
-            label nCellsToRefine = cellsToRefine.size();
-            reduce(nCellsToRefine, sumOp<label>());
-
-            Info<< "Selected for refinement : " << nCellsToRefine
-                << " cells (out of " << mesh.globalData().nTotalCells()
-                << ')' << endl;
-
-            // Stop when no cells to refine. After a few iterations check if too
-            // few cells
-            if
-            (
-                nCellsToRefine == 0
-             || (
-                    iter >= 1
-                 && nCellsToRefine <= refineParams.minRefineCells()
-                )
-            )
-            {
-                Info<< "Stopping refining since too few cells selected."
-                    << nl << endl;
-                break;
-            }
-
-
-            if (debug)
-            {
-                const_cast<Time&>(mesh.time())++;
-            }
-
-
-            if
-            (
-                returnReduce
-                (
-                    (mesh.nCells() >= refineParams.maxLocalCells()),
-                    orOp<bool>()
-                )
-            )
-            {
-                meshRefiner_.balanceAndRefine
-                (
-                    "interface cell refinement iteration " + name(iter),
-                    decomposer_,
-                    distributor_,
-                    cellsToRefine,
-                    refineParams.maxLoadUnbalance()
-                );
-            }
-            else
-            {
-                meshRefiner_.refineAndBalance
-                (
-                    "interface cell refinement iteration " + name(iter),
-                    decomposer_,
-                    distributor_,
-                    cellsToRefine,
-                    refineParams.maxLoadUnbalance()
-                );
-            }
-        }
-    }
-    return iter;
-}
-
-
-void Foam::autoRefineDriver::removeInsideCells
+void Foam::snappyRefineDriver::removeInsideCells
 (
     const refinementParameters& refineParams,
     const label nBufferLayers
@@ -1334,7 +728,7 @@ void Foam::autoRefineDriver::removeInsideCells
 }
 
 
-Foam::label Foam::autoRefineDriver::shellRefine
+Foam::label Foam::snappyRefineDriver::shellRefine
 (
     const refinementParameters& refineParams,
     const label maxIter
@@ -1507,7 +901,7 @@ Foam::label Foam::autoRefineDriver::shellRefine
 }
 
 
-void Foam::autoRefineDriver::baffleAndSplitMesh
+void Foam::snappyRefineDriver::baffleAndSplitMesh
 (
     const refinementParameters& refineParams,
     const snapParameters& snapParams,
@@ -1570,7 +964,7 @@ void Foam::autoRefineDriver::baffleAndSplitMesh
 }
 
 
-void Foam::autoRefineDriver::zonify
+void Foam::snappyRefineDriver::zonify
 (
     const refinementParameters& refineParams,
     wordPairHashTable& zonesToFaceZone
@@ -1633,7 +1027,7 @@ void Foam::autoRefineDriver::zonify
 }
 
 
-void Foam::autoRefineDriver::splitAndMergeBaffles
+void Foam::snappyRefineDriver::splitAndMergeBaffles
 (
     const refinementParameters& refineParams,
     const snapParameters& snapParams,
@@ -1758,81 +1152,7 @@ void Foam::autoRefineDriver::splitAndMergeBaffles
 }
 
 
-void Foam::autoRefineDriver::addFaceZones
-(
-    meshRefinement& meshRefiner,
-    const refinementParameters& refineParams,
-    const HashTable<Pair<word> >& faceZoneToPatches
-)
-{
-    if (faceZoneToPatches.size())
-    {
-        Info<< nl
-            << "Adding patches for face zones" << nl
-            << "-----------------------------" << nl
-            << endl;
-
-        Info<< setf(ios_base::left)
-            << setw(6) << "Patch"
-            << setw(20) << "Type"
-            << setw(30) << "Name"
-            << setw(30) << "FaceZone"
-            << setw(10) << "FaceType"
-            << nl
-            << setw(6) << "-----"
-            << setw(20) << "----"
-            << setw(30) << "----"
-            << setw(30) << "--------"
-            << setw(10) << "--------"
-            << endl;
-
-        const polyMesh& mesh = meshRefiner.mesh();
-
-        // Add patches for added inter-region faceZones
-        forAllConstIter(HashTable<Pair<word> >, faceZoneToPatches, iter)
-        {
-            const word& fzName = iter.key();
-            const Pair<word>& patchNames = iter();
-
-            // Get any user-defined faceZone data
-            surfaceZonesInfo::faceZoneType fzType;
-            dictionary patchInfo = refineParams.getZoneInfo(fzName, fzType);
-
-            const word& masterName = fzName;
-            //const word slaveName = fzName + "_slave";
-            //const word slaveName = czNames.second()+"_to_"+czNames.first();
-            const word& slaveName = patchNames.second();
-
-            label mpI = meshRefiner.addMeshedPatch(masterName, patchInfo);
-
-            Info<< setf(ios_base::left)
-                << setw(6) << mpI
-                << setw(20) << mesh.boundaryMesh()[mpI].type()
-                << setw(30) << masterName
-                << setw(30) << fzName
-                << setw(10) << surfaceZonesInfo::faceZoneTypeNames[fzType]
-                << nl;
-
-
-            label slI = meshRefiner.addMeshedPatch(slaveName, patchInfo);
-
-            Info<< setf(ios_base::left)
-                << setw(6) << slI
-                << setw(20) << mesh.boundaryMesh()[slI].type()
-                << setw(30) << slaveName
-                << setw(30) << fzName
-                << setw(10) << surfaceZonesInfo::faceZoneTypeNames[fzType]
-                << nl;
-
-            meshRefiner.addFaceZone(fzName, masterName, slaveName, fzType);
-        }
-
-        Info<< endl;
-    }
-}
-
-
-void Foam::autoRefineDriver::mergePatchFaces
+void Foam::snappyRefineDriver::mergePatchFaces
 (
     const bool geometricMerge,
     const refinementParameters& refineParams,
@@ -1883,7 +1203,7 @@ void Foam::autoRefineDriver::mergePatchFaces
 }
 
 
-void Foam::autoRefineDriver::doRefine
+void Foam::snappyRefineDriver::doRefine
 (
     const dictionary& refineDict,
     const refinementParameters& refineParams,

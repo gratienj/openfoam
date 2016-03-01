@@ -32,9 +32,9 @@ Description
 #include "argList.H"
 #include "Time.H"
 #include "fvMesh.H"
-#include "autoRefineDriver.H"
-#include "autoSnapDriver.H"
-#include "autoLayerDriver.H"
+#include "snappyRefineDriver.H"
+#include "snappySnapDriver.H"
+#include "snappyLayerDriver.H"
 #include "searchableSurfaces.H"
 #include "refinementSurfaces.H"
 #include "refinementFeatures.H"
@@ -884,9 +884,9 @@ int main(int argc, char *argv[])
     if (debugLevel > 0)
     {
         meshRefinement::debug   = debugLevel;
-        autoRefineDriver::debug = debugLevel;
-        autoSnapDriver::debug   = debugLevel;
-        autoLayerDriver::debug  = debugLevel;
+        snappyRefineDriver::debug = debugLevel;
+        snappySnapDriver::debug   = debugLevel;
+        snappyLayerDriver::debug  = debugLevel;
     }
 
     // Set file writing level
@@ -1493,7 +1493,7 @@ int main(int argc, char *argv[])
     {
         cpuTime timer;
 
-        autoRefineDriver refineDriver
+        snappyRefineDriver refineDriver
         (
             meshRefiner,
             decomposer,
@@ -1541,7 +1541,7 @@ int main(int argc, char *argv[])
     {
         cpuTime timer;
 
-        autoSnapDriver snapDriver
+        snappySnapDriver snapDriver
         (
             meshRefiner,
             globalToMasterPatch,
@@ -1589,10 +1589,7 @@ int main(int argc, char *argv[])
     {
         cpuTime timer;
 
-        // Layer addition parameters
-        const layerParameters layerParams(layerDict, mesh.boundaryMesh());
-
-        autoLayerDriver layerDriver
+        snappyLayerDriver layerDriver
         (
             meshRefiner,
             globalToMasterPatch,

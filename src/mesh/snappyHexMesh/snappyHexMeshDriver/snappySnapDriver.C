@@ -26,7 +26,7 @@ Description
 
 \*----------------------------------------------------------------------------*/
 
-#include "autoSnapDriver.H"
+#include "snappySnapDriver.H"
 #include "motionSmoother.H"
 #include "polyTopoChange.H"
 #include "syncTools.H"
@@ -51,7 +51,7 @@ Description
 namespace Foam
 {
 
-defineTypeNameAndDebug(autoSnapDriver, 0);
+defineTypeNameAndDebug(snappySnapDriver, 0);
 
 } // End namespace Foam
 
@@ -60,7 +60,7 @@ defineTypeNameAndDebug(autoSnapDriver, 0);
 
 // Calculate geometrically collocated points, Requires PackedList to be
 // sized and initalised!
-Foam::label Foam::autoSnapDriver::getCollocatedPoints
+Foam::label Foam::snappySnapDriver::getCollocatedPoints
 (
     const scalar tol,
     const pointField& points,
@@ -300,7 +300,7 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::smoothInternalDisplacement
 
 
 // Calculate displacement as average of patch points.
-Foam::tmp<Foam::pointField> Foam::autoSnapDriver::smoothPatchDisplacement
+Foam::pointField Foam::snappySnapDriver::smoothPatchDisplacement
 (
     const motionSmoother& meshMover,
     const List<labelPair>& baffles
@@ -588,7 +588,7 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::smoothPatchDisplacement
     return tpatchDisp;
 }
 //XXXXXXX
-//Foam::tmp<Foam::pointField> Foam::autoSnapDriver::avg
+//Foam::tmp<Foam::pointField> Foam::snappySnapDriver::avg
 //(
 //    const indirectPrimitivePatch& pp,
 //    const pointField& localPoints
@@ -620,7 +620,7 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::smoothPatchDisplacement
 //    return tavg;
 //}
 //Foam::tmp<Foam::pointField>
-//Foam::autoSnapDriver::smoothLambdaMuPatchDisplacement
+//Foam::snappySnapDriver::smoothLambdaMuPatchDisplacement
 //(
 //    const motionSmoother& meshMover,
 //    const List<labelPair>& baffles
@@ -650,7 +650,7 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::smoothPatchDisplacement
 //XXXXXXX
 
 
-Foam::tmp<Foam::scalarField> Foam::autoSnapDriver::edgePatchDist
+Foam::tmp<Foam::scalarField> Foam::snappySnapDriver::edgePatchDist
 (
     const pointMesh& pMesh,
     const indirectPrimitivePatch& pp
@@ -696,7 +696,7 @@ Foam::tmp<Foam::scalarField> Foam::autoSnapDriver::edgePatchDist
 }
 
 
-void Foam::autoSnapDriver::dumpMove
+void Foam::snappySnapDriver::dumpMove
 (
     const fileName& fName,
     const pointField& meshPts,
@@ -725,7 +725,7 @@ void Foam::autoSnapDriver::dumpMove
 
 // Check whether all displacement vectors point outwards of patch. Return true
 // if so.
-bool Foam::autoSnapDriver::outwardsDisplacement
+bool Foam::snappySnapDriver::outwardsDisplacement
 (
     const indirectPrimitivePatch& pp,
     const vectorField& patchDisp
@@ -768,7 +768,7 @@ bool Foam::autoSnapDriver::outwardsDisplacement
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::autoSnapDriver::autoSnapDriver
+Foam::snappySnapDriver::snappySnapDriver
 (
     meshRefinement& meshRefiner,
     const labelList& globalToMasterPatch,
@@ -783,7 +783,36 @@ Foam::autoSnapDriver::autoSnapDriver
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::scalarField Foam::autoSnapDriver::calcSnapDistance
+Foam::autoPtr<Foam::mapPolyMesh> Foam::snappySnapDriver::mergeZoneBaffles
+(
+    const List<labelPair>& baffles
+)
+{
+    labelList zonedSurfaces =
+        surfaceZonesInfo::getNamedSurfaces(meshRefiner_.surfaces().surfZones());
+
+    autoPtr<mapPolyMesh> map;
+
+    // No need to sync; all processors will have all same zonedSurfaces.
+    label nBaffles = returnReduce(baffles.size(), sumOp<label>());
+    if (zonedSurfaces.size() && nBaffles > 0)
+    {
+        // Merge any baffles
+        Info<< "Converting " << nBaffles << " baffles back into zoned faces ..."
+            << endl;
+
+        map = meshRefiner_.mergeBaffles(baffles);
+
+        Info<< "Converted baffles in = "
+            << meshRefiner_.mesh().time().cpuTimeIncrement()
+            << " s\n" << nl << endl;
+    }
+
+    return map;
+}
+
+
+Foam::scalarField Foam::snappySnapDriver::calcSnapDistance
 (
     const fvMesh& mesh,
     const snapParameters& snapParams,
@@ -823,7 +852,7 @@ Foam::scalarField Foam::autoSnapDriver::calcSnapDistance
 }
 
 
-void Foam::autoSnapDriver::preSmoothPatch
+void Foam::snappySnapDriver::preSmoothPatch
 (
     const meshRefinement& meshRefiner,
     const snapParameters& snapParams,
@@ -939,7 +968,7 @@ void Foam::autoSnapDriver::preSmoothPatch
 
 
 // Get (pp-local) indices of points that are both on zone and on patched surface
-Foam::labelList Foam::autoSnapDriver::getZoneSurfacePoints
+Foam::labelList Foam::snappySnapDriver::getZoneSurfacePoints
 (
     const fvMesh& mesh,
     const indirectPrimitivePatch& pp,
@@ -986,7 +1015,7 @@ Foam::labelList Foam::autoSnapDriver::getZoneSurfacePoints
 }
 
 
-Foam::tmp<Foam::pointField> Foam::autoSnapDriver::avgCellCentres
+Foam::tmp<Foam::pointField> Foam::snappySnapDriver::avgCellCentres
 (
     const fvMesh& mesh,
     const indirectPrimitivePatch& pp
@@ -1042,14 +1071,14 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::avgCellCentres
 }
 
 
-//Foam::tmp<Foam::scalarField> Foam::autoSnapDriver::calcEdgeLen
+//Foam::tmp<Foam::scalarField> Foam::snappySnapDriver::calcEdgeLen
 //(
 //    const indirectPrimitivePatch& pp
 //) const
 //{
 //    // Get local edge length based on refinement level
 //    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//    // (Ripped from autoLayerDriver)
+//    // (Ripped from snappyLayerDriver)
 //
 //    tmp<scalarField> tedgeLen(new scalarField(pp.nPoints()));
 //    scalarField& edgeLen = tedgeLen();
@@ -1090,7 +1119,7 @@ Foam::tmp<Foam::pointField> Foam::autoSnapDriver::avgCellCentres
 //}
 
 
-void Foam::autoSnapDriver::detectNearSurfaces
+void Foam::snappySnapDriver::detectNearSurfaces
 (
     const scalar planarCos,
     const indirectPrimitivePatch& pp,
@@ -1688,87 +1717,7 @@ void Foam::autoSnapDriver::detectNearSurfaces
 }
 
 
-void Foam::autoSnapDriver::calcNearestSurface
-(
-    const refinementSurfaces& surfaces,
-
-    const labelList& surfacesToTest,
-    const labelListList& regionsToTest,
-
-    const pointField& localPoints,
-    const labelList& zonePointIndices,
-
-    scalarField& minSnapDist,
-    labelList& snapSurf,
-    vectorField& patchDisp,
-
-    // Optional: nearest point, normal
-    pointField& nearestPoint,
-    vectorField& nearestNormal
-)
-{
-    // Find nearest for points both on faceZone and pp.
-    List<pointIndexHit> hitInfo;
-    labelList hitSurface;
-
-    if (nearestNormal.size() == localPoints.size())
-    {
-        labelList hitRegion;
-        vectorField hitNormal;
-        surfaces.findNearestRegion
-        (
-            surfacesToTest,
-            regionsToTest,
-
-            pointField(localPoints, zonePointIndices),
-            sqr(scalarField(minSnapDist, zonePointIndices)),
-
-            hitSurface,
-            hitInfo,
-            hitRegion,
-            hitNormal
-        );
-
-        forAll(hitInfo, i)
-        {
-            if (hitInfo[i].hit())
-            {
-                label pointI = zonePointIndices[i];
-                nearestPoint[pointI] = hitInfo[i].hitPoint();
-                nearestNormal[pointI] = hitNormal[i];
-            }
-        }
-    }
-    else
-    {
-        surfaces.findNearest
-        (
-            surfacesToTest,
-            regionsToTest,
-
-            pointField(localPoints, zonePointIndices),
-            sqr(scalarField(minSnapDist, zonePointIndices)),
-
-            hitSurface,
-            hitInfo
-        );
-    }
-
-    forAll(hitInfo, i)
-    {
-        if (hitInfo[i].hit())
-        {
-            label pointI = zonePointIndices[i];
-
-            patchDisp[pointI] = hitInfo[i].hitPoint() - localPoints[pointI];
-            minSnapDist[pointI] = mag(patchDisp[pointI]);
-            snapSurf[pointI] = hitSurface[i];
-        }
-    }
-}
-
-
-Foam::vectorField Foam::autoSnapDriver::calcNearestSurface
+Foam::vectorField Foam::snappySnapDriver::calcNearestSurface
 (
     const bool strictRegionSnap,
     const meshRefinement& meshRefiner,
@@ -2093,7 +2042,7 @@ Foam::vectorField Foam::autoSnapDriver::calcNearestSurface
 
 ////XXXXXXXXX
 //// Get (pp-local) indices of points that are on both patches
-//Foam::labelList Foam::autoSnapDriver::getPatchSurfacePoints
+//Foam::labelList Foam::snappySnapDriver::getPatchSurfacePoints
 //(
 //    const fvMesh& mesh,
 //    const indirectPrimitivePatch& allPp,
@@ -2126,7 +2075,7 @@ Foam::vectorField Foam::autoSnapDriver::calcNearestSurface
 //
 //    return findIndices(pointOnZone, true);
 //}
-//Foam::vectorField Foam::autoSnapDriver::calcNearestLocalSurface
+//Foam::vectorField Foam::snappySnapDriver::calcNearestLocalSurface
 //(
 //    const meshRefinement& meshRefiner,
 //    const scalarField& snapDist,
@@ -2339,7 +2288,7 @@ Foam::vectorField Foam::autoSnapDriver::calcNearestSurface
 //}
 ////XXXXXXXXX
 
-void Foam::autoSnapDriver::smoothDisplacement
+void Foam::snappySnapDriver::smoothDisplacement
 (
     const snapParameters& snapParams,
     motionSmoother& meshMover
@@ -2408,7 +2357,7 @@ void Foam::autoSnapDriver::smoothDisplacement
 }
 
 
-bool Foam::autoSnapDriver::scaleMesh
+bool Foam::snappySnapDriver::scaleMesh
 (
     const snapParameters& snapParams,
     const label nInitErrors,
@@ -2474,7 +2423,7 @@ bool Foam::autoSnapDriver::scaleMesh
 // - calculate face-wise snap distance as max of point-wise
 // - calculate face-wise nearest surface point
 // - repatch face according to patch for surface point.
-Foam::autoPtr<Foam::mapPolyMesh> Foam::autoSnapDriver::repatchToSurface
+Foam::autoPtr<Foam::mapPolyMesh> Foam::snappySnapDriver::repatchToSurface
 (
     const snapParameters& snapParams,
     const labelList& adaptPatchIDs,
@@ -2644,7 +2593,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::autoSnapDriver::repatchToSurface
 }
 
 
-void Foam::autoSnapDriver::detectWarpedFaces
+void Foam::snappySnapDriver::detectWarpedFaces
 (
     const scalar featureCos,
     const indirectPrimitivePatch& pp,
@@ -2738,41 +2687,7 @@ void Foam::autoSnapDriver::detectWarpedFaces
 }
 
 
-Foam::labelList Foam::autoSnapDriver::getInternalOrBaffleDuplicateFace() const
-{
-    const fvMesh& mesh = meshRefiner_.mesh();
-
-    labelList internalOrBaffleFaceZones;
-    {
-        List<surfaceZonesInfo::faceZoneType> fzTypes(2);
-        fzTypes[0] = surfaceZonesInfo::INTERNAL;
-        fzTypes[1] = surfaceZonesInfo::BAFFLE;
-        internalOrBaffleFaceZones = meshRefiner_.getZones(fzTypes);
-    }
-
-    List<labelPair> baffles
-    (
-        meshRefiner_.subsetBaffles
-        (
-            mesh,
-            internalOrBaffleFaceZones,
-            localPointRegion::findDuplicateFacePairs(mesh)
-        )
-    );
-
-    labelList faceToDuplicate(mesh.nFaces(), -1);
-    forAll(baffles, i)
-    {
-        const labelPair& p = baffles[i];
-        faceToDuplicate[p[0]] = p[1];
-        faceToDuplicate[p[1]] = p[0];
-    }
-
-    return faceToDuplicate;
-}
-
-
-void Foam::autoSnapDriver::doSnap
+void Foam::snappySnapDriver::doSnap
 (
     const dictionary& snapDict,
     const dictionary& motionDict,
