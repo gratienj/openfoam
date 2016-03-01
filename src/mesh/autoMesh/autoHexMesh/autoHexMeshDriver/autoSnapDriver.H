@@ -97,20 +97,6 @@ class autoSnapDriver
                 const List<labelPair>&
             );
 
-            static tmp<pointField> avg
-            (
-                const indirectPrimitivePatch&,
-                const pointField&
-            );
-
-            //- Calculate displacement per patch point. Wip.
-            static pointField smoothLambdaMuPatchDisplacement
-            (
-                const motionSmoother& meshMover,
-                const List<labelPair>& baffles
-            );
-
-
             //- Check that face zones are synced
             void checkCoupledFaceZones() const;
 
@@ -207,13 +193,7 @@ class autoSnapDriver
                     const List<pointConstraint>& constraints,
                     vectorField& disp
                 ) const;
-                //void smoothAndConstrain2
-                //(
-                //    const bool applyConstraints,
-                //    const indirectPrimitivePatch& pp,
-                //    const List<pointConstraint>& constraints,
-                //    vectorField& disp
-                //) const;
+
                 void calcNearest
                 (
                     const label iter,
@@ -222,6 +202,7 @@ class autoSnapDriver
                     vectorField& pointSurfaceNormal,
                     vectorField& pointRotation
                 ) const;
+
                 void calcNearestFace
                 (
                     const label iter,
@@ -232,6 +213,12 @@ class autoSnapDriver
                     labelList& faceSurfaceRegion
                     //vectorField& faceRotation
                 ) const;
+
+                //- Collect (possibly remote) per point data of all surrounding
+                //  faces
+                //  - faceSurfaceNormal
+                //  - faceDisp
+                //  - faceCentres&faceNormal
                 void calcNearestFacePointProperties
                 (
                     const label iter,
@@ -246,6 +233,11 @@ class autoSnapDriver
                     List<List<point>>& pointFaceCentres,
                     List<labelList>&    pointFacePatchID
                 ) const;
+
+                //- Gets passed in offset to nearest point on feature
+                //  edge. Calculates if the point has a different number of
+                //  faces on either side of the feature and if so attracts the
+                //  point to that non-dominant plane.
                 void correctAttraction
                 (
                     const DynamicList<point>& surfacePoints,
@@ -414,6 +406,12 @@ class autoSnapDriver
 
                 //- Return hit if faces-on-the-same-normalplane are on multiple
                 //  patches
+                //  - false, index=-1 : single patch
+                //  - true , index=0  : multiple patches but on different
+                //                      normals planes (so geometric feature
+                //                      edge is also a region edge)
+                //  - true , index=1  : multiple patches on same normals plane
+                //                      i.e. flat region edge
                 pointIndexHit findMultiPatchPoint
                 (
                     const point& pt,
@@ -521,6 +519,7 @@ class autoSnapDriver
                     vectorField& patchAttraction,
                     List<pointConstraint>& patchConstraints
                 ) const;
+
                 void reverseAttractMeshPoints
                 (
                     const label iter,
@@ -731,16 +730,6 @@ public:
                 vectorField& nearestNormal
             );
 
-            ////- Per patch point calculate point on nearest surface. Set as
-            ////  boundary conditions of motionSmoother displacement field.
-            ////  Return displacement of patch points.
-            //static vectorField calcNearestLocalSurface
-            //(
-            //    const meshRefinement& meshRefiner,
-            //    const scalarField& snapDist,
-            //    const indirectPrimitivePatch&
-            //);
-
             //- Smooth the displacement field to the internal.
             void smoothDisplacement
             (
@@ -776,7 +765,6 @@ public:
                 const scalar planarAngle,
                 const snapParameters& snapParams
             );
-
 };
 
 
