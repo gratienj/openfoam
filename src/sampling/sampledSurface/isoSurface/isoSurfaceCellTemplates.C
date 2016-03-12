@@ -114,7 +114,7 @@ void Foam::isoSurfaceCell::generateTriPoints
         triIndex |= 8;
     }
 
-    // Form the vertices of the triangles for each case
+    /* Form the vertices of the triangles for each case */
     switch (triIndex)
     {
         case 0x00:
@@ -511,7 +511,7 @@ void Foam::isoSurfaceCell::generateTriPoints
 
     if (countNotFoundTets > 0)
     {
-        WarningInFunction
+        WarningIn("Foam::isoSurfaceCell::generateTriPoints(..)")
             << "Could not find " << countNotFoundTets
             << " tet base points, which may lead to inverted triangles."
             << endl;
@@ -523,7 +523,7 @@ void Foam::isoSurfaceCell::generateTriPoints
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>>
+Foam::tmp<Foam::Field<Type> >
 Foam::isoSurfaceCell::interpolate
 (
     const Field<Type>& cCoords,
@@ -537,59 +537,6 @@ Foam::isoSurfaceCell::interpolate
     DynamicList<Type> snappedPoints;
     labelList snappedCc(mesh_.nCells(), -1);
     labelList snappedPoint(mesh_.nPoints(), -1);
-
-
-    generateTriPoints
-    (
-        cVals,
-        pVals,
-
-        cCoords,
-        pCoords,
-
-        snappedPoints,
-        snappedCc,
-        snappedPoint,
-
-        triPoints,
-        triMeshCells
-    );
-
-
-    // One value per point
-    tmp<Field<Type>> tvalues(new Field<Type>(points().size()));
-    Field<Type>& values = tvalues();
-
-    forAll(triPoints, i)
-    {
-        label mergedPointI = triPointMergeMap_[i];
-
-        if (mergedPointI >= 0)
-        {
-            values[mergedPointI] = triPoints[i];
-        }
-    }
-
-    return tvalues;
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::isoSurfaceCell::interpolate
-(
-    const Field<Type>& cCoords,
-    const Field<Type>& pCoords
-) const
-{
-    DynamicList<Type> triPoints(nCutCells_);
-    DynamicList<label> triMeshCells(nCutCells_);
-
-    // Dummy snap data
-    DynamicList<Type> snappedPoints;
-    labelList snappedCc(mesh_.nCells(), -1);
-    labelList snappedPoint(mesh_.nPoints(), -1);
-
 
     generateTriPoints
     (
@@ -607,22 +554,12 @@ Foam::isoSurfaceCell::interpolate
         triMeshCells
     );
 
-
-    // One value per point
-    tmp<Field<Type>> tvalues(new Field<Type>(points().size()));
-    Field<Type>& values = tvalues.ref();
-
-    forAll(triPoints, i)
-    {
-        label mergedPointI = triPointMergeMap_[i];
-
-        if (mergedPointI >= 0)
-        {
-            values[mergedPointI] = triPoints[i];
-        }
-    }
-
-    return tvalues;
+    return isoSurface::interpolate
+    (
+        points().size(),
+        triPointMergeMap_,
+        triPoints
+    );
 }
 
 

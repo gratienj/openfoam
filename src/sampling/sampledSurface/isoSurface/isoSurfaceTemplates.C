@@ -731,16 +731,45 @@ void Foam::isoSurface::generateTriPoints
 }
 
 
-//template<class Type>
-//Foam::tmp<Foam::Field<Type>>
-//Foam::isoSurface::sample(const Field<Type>& vField) const
-//{
-//    return tmp<Field<Type>>(new Field<Type>(vField, meshCells()));
-//}
+template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::isoSurface::interpolate
+(
+    const label nPoints,
+    const labelList& triPointMergeMap,
+    const DynamicList<Type>& unmergedValues
+)
+{
+    // One value per point
+    tmp<Field<Type> > tvalues(new Field<Type>(nPoints, pTraits<Type>::zero));
+    Field<Type>& values = tvalues.ref();
+    labelList nValues(values.size(), 0);
+
+    forAll(unmergedValues, i)
+    {
+        label mergedPointI = triPointMergeMap[i];
+
+        if (mergedPointI >= 0)
+        {
+            values[mergedPointI] += unmergedValues[i];
+            nValues[mergedPointI]++;
+        }
+    }
+
+    forAll(values, i)
+    {
+        if (nValues[i] > 0)
+        {
+            values[i] /= scalar(nValues[i]);
+        }
+    }
+
+    return tvalues;
+}
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>>
+Foam::tmp<Foam::Field<Type> >
 Foam::isoSurface::interpolate
 (
     const GeometricField<Type, fvPatchField, volMesh>& cCoords,
@@ -781,57 +810,12 @@ Foam::isoSurface::interpolate
         triMeshCells
     );
 
-
-    // One value per point
-    tmp<Field<Type>> tvalues
+    return interpolate
     (
         points().size(),
         triPointMergeMap_,
-        interpolatedPoints_,
-        interpolatedOldPoints_,
-        interpolationWeights_,
         triPoints
     );
-    Field<Type>& values = tvalues.ref();
-    labelList nValues(values.size(), 0);
-
-    forAll(triPoints, i)
-    {
-        label mergedPointI = triPointMergeMap_[i];
-
-        if (mergedPointI >= 0)
-        {
-            values[mergedPointI] += triPoints[i];
-            nValues[mergedPointI]++;
-        }
-    }
-
-    if (debug)
-    {
-        Pout<< "nValues:" << values.size() << endl;
-        label nMult = 0;
-        forAll(nValues, i)
-        {
-            if (nValues[i] == 0)
-            {
-                FatalErrorInFunction
-                    << "point:" << i << " nValues:" << nValues[i]
-                    << abort(FatalError);
-            }
-            else if (nValues[i] > 1)
-            {
-                nMult++;
-            }
-        }
-        Pout<< "Of which mult:" << nMult << endl;
-    }
-
-    forAll(values, i)
-    {
-        values[i] /= scalar(nValues[i]);
-    }
-
-    return tvalues;
 }
 
 

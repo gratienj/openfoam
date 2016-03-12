@@ -186,6 +186,7 @@ class isoSurface
             const bool neiLower
         ) const;
 
+        //- Get neighbour value and position.
         void getNeighbour
         (
             const labelList& boundaryRegion,
@@ -197,7 +198,8 @@ class isoSurface
             point& nbrPoint
         ) const;
 
-        //- Set faceCutType,cellCutType.
+        //- Determine for every face/cell whether it (possibly) generates
+        //  triangles.
         void calcCutTypes
         (
             const labelList& boundaryRegion,
@@ -258,6 +260,9 @@ class isoSurface
             const Type& snapP1
         ) const;
 
+
+        //- Note: cannot use simpler isoSurfaceCell::generateTriPoints since
+        //  the need here to sometimes pass in remote 'snappedPoints'
         template<class Type>
         void generateTriPoints
         (
@@ -325,13 +330,10 @@ class isoSurface
         ) const;
 
         template<class Type>
-        static tmp<Field<Type> > interpolate
+        static tmp<Field<Type>> interpolate
         (
             const label nPoints,
             const labelList& triPointMergeMap,
-            const labelList& interpolatedPoints,
-            const List<FixedList<label, 3> >& interpolatedOldPoints,
-            const List<FixedList<scalar, 3> >& interpolationWeights,
             const DynamicList<Type>& unmergedValues
         );
 
@@ -345,60 +347,6 @@ class isoSurface
 
         //- Check single triangle for (topological) validity
         static bool validTri(const triSurface&, const label);
-
-        //- Determine edge-face addressing
-        void calcAddressing
-        (
-            const triSurface& surf,
-            List<FixedList<label, 3>>& faceEdges,
-            labelList& edgeFace0,
-            labelList& edgeFace1,
-            Map<labelList>& edgeFacesRest
-        ) const;
-
-        //- Determine orientation
-        static void walkOrientation
-        (
-            const triSurface& surf,
-            const List<FixedList<label, 3>>& faceEdges,
-            const labelList& edgeFace0,
-            const labelList& edgeFace1,
-            const label seedTriI,
-            labelList& flipState
-        );
-
-        //- Trim all triangles to box
-        static void trimToBox
-        (
-            triSurface&,
-            const List<FixedList<label, 3>>& faceEdges,
-            const labelList& edgeFace0,
-            const labelList& edgeFace1,
-            const Map<labelList>& edgeFacesRest
-        );
-
-        //- Trim all triangles to box. Determine interpolation
-        //  for existing and new points
-        static void trimToBox
-        (
-            const treeBoundBox& bb,
-            DynamicList<point>& triPoints,
-            DynamicList<label>& triMap,
-            labelList& triPointMap,
-            labelList& interpolatedPoints,
-            List<FixedList<label, 3> >& interpolatedOldPoints,
-            List<FixedList<scalar, 3> >& interpolationWeights
-        );
-
-        //- Mark all non-fully connected triangles
-        static label markDanglingTriangles
-        (
-            const List<FixedList<label, 3>>& faceEdges,
-            const labelList& edgeFace0,
-            const labelList& edgeFace1,
-            const Map<labelList>& edgeFacesRest,
-            boolList& keepTriangles
-        );
 
         static triSurface subsetMesh
         (

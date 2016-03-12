@@ -128,8 +128,7 @@ void Foam::sampledIsoSurface::getIsoFields() const
     // "volPointInterpolate(p)" so register it and re-use it. This is the
     // same as the 'cache' functionality from volPointInterpolate but
     // unfortunately that one does not guarantee that the field pointer
-    // remain: e.g. some other
-    // functionObject might delete the cached version.
+    // remain: e.g. some other functionObject might delete the cached version.
     // (volPointInterpolation::interpolate with cache=false deletes any
     //  registered one or if mesh.changing())
 
@@ -147,7 +146,7 @@ void Foam::sampledIsoSurface::getIsoFields() const
             if (debug)
             {
                 InfoInFunction
-                    << "Lookup pointField " << pointFldName << endl;
+                    << "lookup pointField " << pointFldName << endl;
             }
             const pointScalarField& pfld = fvm.lookupObject<pointScalarField>
             (
@@ -158,8 +157,9 @@ void Foam::sampledIsoSurface::getIsoFields() const
             {
                 if (debug)
                 {
-                    Info<< "sampledIsoSurface::getIsoFields() :"
-                        << " updating pointField " << pointFldName << endl;
+                    InfoInFunction
+                        << "updating pointField "
+                        << pointFldName << endl;
                 }
                 // Update the interpolated value
                 volPointInterpolation::New(fvm).interpolate
@@ -183,20 +183,12 @@ void Foam::sampledIsoSurface::getIsoFields() const
                     << endl;
             }
 
+            // Interpolate without cache. Note that we're registering it
+            // below so next time round it goes into the condition
+            // above.
             tmp<pointScalarField> tpfld
             (
-                storedPointFieldPtr_.empty()
-             || (fvm.time().timeName() != storedPointFieldPtr_().instance())
-            )
-            {
-                if (debug)
-                {
-                    InfoInFunction
-                        << "Interpolating volField " << volFieldPtr_->name()
-                        << " to get pointField " << pointFldName << endl;
-                }
-
-                storedPointFieldPtr_.reset
+                volPointInterpolation::New(fvm).interpolate
                 (
                     *volFieldPtr_,
                     pointFldName,
