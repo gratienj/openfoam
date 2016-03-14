@@ -25,16 +25,17 @@ Class
     Foam::CellZoneInjection
 
 Description
-    Injection positions specified by a particle number density within a cell set
+    Injection positions specified by a particle number density within a cell
+    set.
 
-    User specifies
-    - Number density of particles in cell set (effective)
-    - Total mass to inject
-    - Initial parcel velocity
+    \li User specifies:
+        - Number density of particles in cell set (effective)
+        - Total mass to inject
+        - Initial parcel velocity
 
-    Additional
-    - Parcel diameters obtained by PDF model
-    - All parcels introduced at SOI
+    \li Parcel diameters obtained by PDF model
+
+    \li All parcels introduced at SOI
 
 SourceFiles
     CellZoneInjection.C

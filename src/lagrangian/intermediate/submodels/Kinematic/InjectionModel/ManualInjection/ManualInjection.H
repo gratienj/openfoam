@@ -25,16 +25,16 @@ Class
     Foam::ManualInjection
 
 Description
-    Manual injection
+    Manual injection.
 
-    User specifies
-    - Total mass to inject
-    - Parcel positions in file \c positionsFile
-    - Initial parcel velocity
+    \li User specifies:
+        - Total mass to inject
+        - Parcel positions in file \c positionsFile
+        - Initial parcel velocity
 
-    Additional
-    - Parcel diameters obtained by distribution model
-    - All parcels introduced at SOI
+    \li Parcel diameters obtained by distribution model
+
+    \li All parcels introduced at SOI
 
 SourceFiles
     ManualInjection.C
