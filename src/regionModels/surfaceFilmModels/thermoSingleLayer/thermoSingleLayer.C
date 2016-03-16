@@ -305,9 +305,9 @@ void thermoSingleLayer::solveEnergy()
       + fvm::div(phi_, hs_)
      ==
       - hsSp_
-      + alpha_*q(hs_)
-      + alpha_*radiation_->Shs()
-//      - fvm::SuSp(rhoSp_, hs_)
+      + q(hs_)
+      + radiation_->Shs()
+   // - fvm::SuSp(rhoSp_, hs_)
       - rhoSp_*hs_
       + fvc::ddt(residualDeltaRho + deltaRho_, hs_)
       - fvm::ddt(residualDeltaRho + deltaRho_, hs_)
@@ -740,7 +740,9 @@ void thermoSingleLayer::info()
 
     const scalarField& Tinternal = T_.internalField();
 
-    Info<< indent << "min/max(T)         = " << gMin(Tinternal) << ", "
+    Info<< indent << "min/mean/max(T)    = "
+        << gMin(Tinternal) << ", "
+        << gAverage(Tinternal) << ", "
         << gMax(Tinternal) << nl;
 
     phaseChange_->info(Info);
