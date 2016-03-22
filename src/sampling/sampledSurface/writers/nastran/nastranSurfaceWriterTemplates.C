@@ -231,7 +231,7 @@ Foam::fileName Foam::nastranSurfaceWriter::writeTemplate
             const DynamicList<face>& dFaces = decomposedFaces[i];
             forAll(dFaces, faceI)
             {
-                Type v = pTraits<Type>::zero;
+                Type v = Zero;
                 const face& f = dFaces[faceI];
 
                 forAll(f, fptI)

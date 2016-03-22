@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,12 +36,7 @@ void Foam::fieldValues::fieldValueDelta::apply
     bool& found
 )
 {
-    if (pTraits<Type>::typeName != resultType)
-    {
-        return;
-    }
-
-    Type result = pTraits<Type>::zero;
+    Type result = Zero;
 
     Type value1 = this->getObjectResult<Type>(name1, entryName1);
     Type value2 = this->getObjectResult<Type>(name2, entryName2);
@@ -84,8 +79,36 @@ void Foam::fieldValues::fieldValueDelta::apply
         }
     }
 
-    const word
-    	resultName(opName + '(' + entryName1 + ',' + entryName2 + ')');
+    return result;
+}
+
+
+template<class Type>
+void Foam::fieldValues::fieldValueDelta::processFields(bool& found)
+{
+    typedef GeometricField<Type, fvPatchField, volMesh> vf;
+    typedef GeometricField<Type, fvsPatchField, surfaceMesh> sf;
+
+    const wordList& fields1 = source1Ptr_->fields();
+
+    const dictionary& results1 = source1Ptr_->resultDict();
+    const dictionary& results2 = source2Ptr_->resultDict();
+
+    Type r1(Zero);
+    Type r2(Zero);
+
+    forAll(fields1, i)
+    {
+        const word& fieldName = fields1[i];
+
+        if
+        (
+            (obr_.foundObject<vf>(fieldName) || obr_.foundObject<sf>(fieldName))
+         && results2.found(fieldName)
+        )
+        {
+            results1.lookup(fieldName) >> r1;
+            results2.lookup(fieldName) >> r2;
 
     if (log_) Info << "    " << resultName << " = " << result << endl;
 

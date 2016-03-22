@@ -63,7 +63,7 @@ void zeroCells
 {
     forAll(cells, i)
     {
-        vf[cells[i]] = pTraits<Type>::zero;
+        vf[cells[i]] = Zero;
     }
 }
 
