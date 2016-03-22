@@ -622,7 +622,6 @@ int main(int argc, char *argv[])
     scalarSquareMatrix sumViewFactorPatch
     (
         totalPatches,
-        totalPatches,
         0.0
     );
 
@@ -839,12 +838,7 @@ int main(int argc, char *argv[])
     // in F to the global matrix Fmatrix
     forAll(globalFaceFaces, faceI)
     {
-        globalFaceFaces[faceI] = renumber
-        (
-            compactToGlobal,
-            visibleFaceFaces[faceI]
-        );
-    }
+        scalarSquareMatrix Fmatrix(totalNCoarseFaces, 0.0);
 
     labelListIOList IOglobalFaceFaces
     (

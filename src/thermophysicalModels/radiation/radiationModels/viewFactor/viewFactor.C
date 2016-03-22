@@ -133,7 +133,7 @@ void Foam::radiation::viewFactor::initialise()
     {
         Fmatrix_.reset
         (
-            new scalarSquareMatrix(totalNCoarseFaces_, totalNCoarseFaces_, 0.0)
+            new scalarSquareMatrix(totalNCoarseFaces_, 0.0)
         );
 
         if (debug)
@@ -184,12 +184,7 @@ void Foam::radiation::viewFactor::initialise()
         {
             CLU_.reset
             (
-                new scalarSquareMatrix
-                (
-                    totalNCoarseFaces_,
-                    totalNCoarseFaces_,
-                    0.0
-                )
+                new scalarSquareMatrix(totalNCoarseFaces_, 0.0)
             );
 
             pivotIndices_.setSize(CLU_().m());
@@ -527,7 +522,7 @@ void Foam::radiation::viewFactor::calculate()
         // Variable emissivity
         if (!constEmissivity_)
         {
-            scalarSquareMatrix C(totalNCoarseFaces_, totalNCoarseFaces_, 0.0);
+            scalarSquareMatrix C(totalNCoarseFaces_, 0.0);
 
             for (label i=0; i<totalNCoarseFaces_; i++)
             {
