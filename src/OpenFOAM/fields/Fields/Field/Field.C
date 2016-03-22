@@ -62,7 +62,7 @@ Foam::Field<Type>::Field(const label size, const Type& t)
 template<class Type>
 Foam::Field<Type>::Field(const label size, const zero)
 :
-    List<Type>(size, pTraits<Type>::zero)
+    List<Type>(size, Zero)
 {}
 
 
@@ -784,6 +784,13 @@ template<class Type>
 void Foam::Field<Type>::operator=(const Type& t)
 {
     List<Type>::operator=(t);
+}
+
+
+template<class Type>
+void Foam::Field<Type>::operator=(const zero)
+{
+    List<Type>::operator=(Zero);
 }
 
 
