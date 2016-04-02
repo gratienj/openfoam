@@ -359,10 +359,49 @@ bool Foam::regIOobject::read()
 
     bool ok = read(masterOnly, IOstream::BINARY, type());
 
-    if (oldWatchFiles.size())
-    {
-        // Re-watch master file
-        addWatch();
+        // Get my communication order
+        const Pstream::commsStruct& myComm = comms[Pstream::myProcNo()];
+
+        // Reveive from up
+        if (myComm.above() != -1)
+        {
+            if (IFstream::debug)
+            {
+                Pout<< "regIOobject::read() : "
+                    << "reading object " << name()
+                    << " from processor " << myComm.above()
+                    << endl;
+            }
+
+            // Note: use ASCII for now - binary IO of dictionaries is
+            // not currently supported
+            IPstream fromAbove
+            (
+                Pstream::scheduled,
+                myComm.above(),
+                0,
+                Pstream::msgType(),
+                Pstream::worldComm,
+                IOstream::ASCII
+            );
+            ok = readData(fromAbove);
+        }
+
+        // Send to my downstairs neighbours. Note reverse order not
+        // nessecary here - just for consistency reasons.
+        forAllReverse(myComm.below(), belowI)
+        {
+            OPstream toBelow
+            (
+                Pstream::scheduled,
+                myComm.below()[belowI],
+                0,
+                Pstream::msgType(),
+                Pstream::worldComm,
+                IOstream::ASCII
+            );
+            writeData(toBelow);
+        }
     }
 
     return ok;
