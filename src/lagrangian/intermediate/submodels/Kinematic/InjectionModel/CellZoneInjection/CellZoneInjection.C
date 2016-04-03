@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -115,7 +115,7 @@ void Foam::CellZoneInjection<CloudType>::setPositions
         allPositions,
         globalPositions.localSize(Pstream::myProcNo()),
         globalPositions.offset(Pstream::myProcNo())
-    ).assign(positions);
+    ) = positions;
 
     Pstream::listCombineGather(allPositions, minEqOp<point>());
     Pstream::listCombineScatter(allPositions);
@@ -126,19 +126,19 @@ void Foam::CellZoneInjection<CloudType>::setPositions
         allInjectorCells,
         globalPositions.localSize(Pstream::myProcNo()),
         globalPositions.offset(Pstream::myProcNo())
-    ).assign(injectorCells);
+    ) = injectorCells;
     SubList<label>
     (
         allInjectorTetFaces,
         globalPositions.localSize(Pstream::myProcNo()),
         globalPositions.offset(Pstream::myProcNo())
-    ).assign(injectorTetFaces);
+    ) = injectorTetFaces;
     SubList<label>
     (
         allInjectorTetPts,
         globalPositions.localSize(Pstream::myProcNo()),
         globalPositions.offset(Pstream::myProcNo())
-    ).assign(injectorTetPts);
+    ) = injectorTetPts;
 
     // Transfer data
     positions_.transfer(allPositions);

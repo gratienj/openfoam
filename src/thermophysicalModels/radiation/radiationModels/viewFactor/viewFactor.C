@@ -465,10 +465,9 @@ void Foam::radiation::viewFactor::calculate()
     }
 
     // Fill the local values to distribute
-    SubList<scalar>(compactCoarseT,nLocalCoarseFaces_).assign(localCoarseTave);
-    SubList<scalar>(compactCoarseE,nLocalCoarseFaces_).assign(localCoarseEave);
-    SubList<scalar>
-        (compactCoarseHo,nLocalCoarseFaces_).assign(localCoarseHoave);
+    SubList<scalar>(compactCoarseT,nLocalCoarseFaces_) = localCoarseTave;
+    SubList<scalar>(compactCoarseE,nLocalCoarseFaces_) = localCoarseEave;
+    SubList<scalar>(compactCoarseHo,nLocalCoarseFaces_) = localCoarseHoave;
 
     // Distribute data
     map_->distribute(compactCoarseT);
@@ -489,7 +488,7 @@ void Foam::radiation::viewFactor::calculate()
     (
         compactGlobalIds,
         nLocalCoarseFaces_
-    ).assign(localGlobalIds);
+    ) = localGlobalIds;
 
     map_->distribute(compactGlobalIds);
 
