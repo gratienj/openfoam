@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
                 surfaceScalarField phiHbyA
                 (
                     "phiHbyA",
-                    (fvc::interpolate(HbyA) & mesh.Sf())
+                    fvc::flux(HbyA)
                   + rAUf*fvc::ddtCorr(U, phi)
                 );
 
@@ -150,8 +150,7 @@ int main(int argc, char *argv[])
             volScalarField rAB(1.0/BEqn.A());
             surfaceScalarField rABf("rABf", fvc::interpolate(rAB));
 
-            phiB = (fvc::interpolate(B) & mesh.Sf())
-                + rABf*fvc::ddtCorr(B, phiB);
+            phiB = fvc::flux(B) + rABf*fvc::ddtCorr(B, phiB);
 
             while (bpiso.correctNonOrthogonal())
             {
