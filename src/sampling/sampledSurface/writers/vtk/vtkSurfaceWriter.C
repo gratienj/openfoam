@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,7 +51,7 @@ void Foam::vtkSurfaceWriter::writeGeometry
         << "DATASET POLYDATA" << nl;
 
     // Write vertex coords
-    os  << "POINTS " << points.size() << " float" << nl;
+    os  << "POINTS " << points.size() << " double" << nl;
     forAll(points, pointI)
     {
         const point& pt = points[pointI];
