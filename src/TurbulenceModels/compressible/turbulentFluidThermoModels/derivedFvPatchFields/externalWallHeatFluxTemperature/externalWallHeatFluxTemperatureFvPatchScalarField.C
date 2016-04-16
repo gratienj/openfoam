@@ -70,7 +70,7 @@ externalWallHeatFluxTemperatureFvPatchScalarField
     q_(p.size(), 0.0),
     h_(p.size(), 0.0),
     Ta_(p.size(), 0.0),
-    QrPrevious_(p.size()),
+    QrPrevious_(p.size(), 0.0),
     QrRelaxation_(1),
     QrName_("undefined-Qr"),
     thicknessLayers_(),
@@ -240,6 +240,7 @@ void Foam::externalWallHeatFluxTemperatureFvPatchScalarField::autoMap
     q_.autoMap(m);
     h_.autoMap(m);
     Ta_.autoMap(m);
+    QrPrevious_.autoMap(m);
 }
 
 
@@ -257,6 +258,7 @@ void Foam::externalWallHeatFluxTemperatureFvPatchScalarField::rmap
     q_.rmap(tiptf.q_, addr);
     h_.rmap(tiptf.h_, addr);
     Ta_.rmap(tiptf.Ta_, addr);
+    QrPrevious_.rmap(tiptf.QrPrevious_, addr);
 }
 
 
