@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,9 +44,9 @@ waveDisplacementPointPatchVectorField
 )
 :
     fixedValuePointPatchField<vector>(p, iF),
-    amplitude_(vector::zero),
+    amplitude_(Zero),
     omega_(0.0),
-    waveNumber_(vector::zero)
+    waveNumber_(Zero)
 {}
 
 
@@ -61,7 +61,7 @@ waveDisplacementPointPatchVectorField
     fixedValuePointPatchField<vector>(p, iF, dict),
     amplitude_(dict.lookup("amplitude")),
     omega_(readScalar(dict.lookup("omega"))),
-    waveNumber_(dict.lookupOrDefault<vector>("waveLength", vector::zero))
+    waveNumber_(dict.lookupOrDefault<vector>("waveNumber", Zero))
 {
     if (!dict.found("value"))
     {

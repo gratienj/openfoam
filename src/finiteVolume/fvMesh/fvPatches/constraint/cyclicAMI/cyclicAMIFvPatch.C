@@ -109,7 +109,7 @@ Foam::tmp<Foam::vectorField> Foam::cyclicAMIFvPatch::delta() const
                 interpolate
                 (
                     nbrPatch.coupledFvPatch::delta(),
-                    vectorField(this->size(), vector::zero)
+                    vectorField(this->size(), Zero)
                 );
         }
         else

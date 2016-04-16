@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -197,7 +197,7 @@ bool Foam::LocalInteraction<CloudType>::correct
 
                 keepParticle = false;
                 active = false;
-                U = vector::zero;
+                U = Zero;
                 nEscape_[patchI]++;
                 massEscape_[patchI] += dm;
                 if (writeFields_)
@@ -214,7 +214,7 @@ bool Foam::LocalInteraction<CloudType>::correct
 
                 keepParticle = true;
                 active = false;
-                U = vector::zero;
+                U = Zero;
                 nStick_[patchI]++;
                 massStick_[patchI] += dm;
                 if (writeFields_)

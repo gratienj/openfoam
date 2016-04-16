@@ -79,7 +79,7 @@ Foam::displacementLaplacianFvMotionSolver::displacementLaplacianFvMotionSolver
         (
             "cellDisplacement",
             pointDisplacement_.dimensions(),
-            vector::zero
+            Zero
         ),
         cellMotionBoundaryTypes<vector>(pointDisplacement_.boundaryField())
     ),

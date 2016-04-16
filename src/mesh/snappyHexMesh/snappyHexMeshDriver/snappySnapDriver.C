@@ -370,7 +370,7 @@ Foam::pointField Foam::snappySnapDriver::smoothPatchDisplacement
     // Get average position of boundary face centres
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    vectorField avgBoundary(pointFaces.size(), vector::zero);
+    vectorField avgBoundary(pointFaces.size(), Zero);
     labelList nBoundary(pointFaces.size(), 0);
 
     forAll(pointFaces, patchPointI)
@@ -418,7 +418,7 @@ Foam::pointField Foam::snappySnapDriver::smoothPatchDisplacement
     vectorField avgInternal;
     labelList nInternal;
     {
-        vectorField globalSum(mesh.nPoints(), vector::zero);
+        vectorField globalSum(mesh.nPoints(), Zero);
         labelList globalNum(mesh.nPoints(), 0);
 
         // Note: no use of pointFaces
@@ -521,8 +521,7 @@ Foam::pointField Foam::snappySnapDriver::smoothPatchDisplacement
 
 
     // Displacement to calculate.
-    tmp<pointField> tpatchDisp(new pointField(meshPoints.size(), vector::zero));
-    pointField& patchDisp = tpatchDisp();
+    pointField patchDisp(meshPoints.size(), Zero);
 
     forAll(pointFaces, i)
     {
@@ -597,7 +596,7 @@ Foam::pointField Foam::snappySnapDriver::smoothPatchDisplacement
 //    const labelListList& pointEdges = pp.pointEdges();
 //    const edgeList& edges = pp.edges();
 //
-//    tmp<pointField> tavg(new pointField(pointEdges.size(), vector::zero));
+//    tmp<pointField> tavg(new pointField(pointEdges.size(), Zero));
 //    pointField& avg = tavg();
 //
 //    forAll(pointEdges, vertI)
@@ -1026,7 +1025,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::avgCellCentres
 
     tmp<pointField> tavgBoundary
     (
-        new pointField(pointFaces.size(), vector::zero)
+        new pointField(pointFaces.size(), Zero)
     );
     pointField& avgBoundary = tavgBoundary.ref();
     labelList nBoundary(pointFaces.size(), 0);
@@ -1754,7 +1753,7 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurface
     const fvMesh& mesh = meshRefiner.mesh();
 
     // Displacement per patch point
-    vectorField patchDisp(localPoints.size(), vector::zero);
+    vectorField patchDisp(localPoints.size(), Zero);
 
     if (returnReduce(localPoints.size(), sumOp<label>()) > 0)
     {
@@ -2129,7 +2128,7 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurface
 //    // the patch.
 //
 //    // Displacement per patch point
-//    vectorField patchDisp(localPoints.size(), vector::zero);
+//    vectorField patchDisp(localPoints.size(), Zero);
 //    // Current best snap distance
 //    scalarField minSnapDist(snapDist);
 //    // Current surface snapped to
@@ -2875,10 +2874,229 @@ void Foam::snappySnapDriver::doSnap
         List<pointConstraint> patchConstraints;
 
 
-        //- Any faces to split
-        DynamicList<label> splitFaces;
-        //- Indices in face to split across
-        DynamicList<labelPair> splits;
+        for (label iter = 0; iter < nFeatIter; iter++)
+        {
+            //if (doFeatures && (iter == 0 || iter == nFeatIter/2))
+            //{
+            //    Info<< "Splitting diagonal attractions" << endl;
+            //
+            //    indirectPrimitivePatch& pp = ppPtr();
+            //    motionSmoother& meshMover = meshMoverPtr();
+            //
+            //    // Calculate displacement at every patch point. Insert into
+            //    // meshMover.
+            //    // Calculate displacement at every patch point
+            //    pointField nearestPoint;
+            //    vectorField nearestNormal;
+            //
+            //    if (snapParams.detectNearSurfacesSnap())
+            //    {
+            //        nearestPoint.setSize(pp.nPoints(), vector::max);
+            //        nearestNormal.setSize(pp.nPoints(), Zero);
+            //    }
+            //
+            //    vectorField disp = calcNearestSurface
+            //    (
+            //        meshRefiner_,
+            //        snapDist,
+            //        pp,
+            //        nearestPoint,
+            //        nearestNormal
+            //    );
+            //
+            //
+            //    // Override displacement at thin gaps
+            //    if (snapParams.detectNearSurfacesSnap())
+            //    {
+            //        detectNearSurfaces
+            //        (
+            //            Foam::cos(degToRad(planarAngle)),// planar gaps
+            //            pp,
+            //            nearestPoint,   // surfacepoint from nearest test
+            //            nearestNormal,  // surfacenormal from nearest test
+            //
+            //            disp
+            //        );
+            //    }
+            //
+            //    // Override displacement with feature edge attempt
+            //    const label iter = 0;
+            //    calcNearestSurfaceFeature
+            //    (
+            //        snapParams,
+            //        false,   // avoidSnapProblems
+            //        iter,
+            //        featureCos,
+            //        scalar(iter+1)/nFeatIter,
+            //        snapDist,
+            //        disp,
+            //        meshMover,
+            //        patchAttraction,
+            //        patchConstraints
+            //    );
+            //
+            //
+            //    const labelList& bFaces = ppPtr().addressing();
+            //    DynamicList<label> splitFaces(bFaces.size());
+            //    DynamicList<labelPair> splits(bFaces.size());
+            //
+            //    forAll(bFaces, faceI)
+            //    {
+            //        const labelPair split
+            //        (
+            //            findDiagonalAttraction
+            //            (
+            //                ppPtr(),
+            //                patchAttraction,
+            //                patchConstraints,
+            //                faceI
+            //            )
+            //        );
+            //
+            //        if (split != labelPair(-1, -1))
+            //        {
+            //            splitFaces.append(bFaces[faceI]);
+            //            splits.append(split);
+            //        }
+            //    }
+            //
+            //    Info<< "Splitting "
+            //        << returnReduce(splitFaces.size(), sumOp<label>())
+            //        << " faces along diagonal attractions" << endl;
+            //
+            //    autoPtr<mapPolyMesh> mapPtr = meshRefiner_.splitFaces
+            //    (
+            //        splitFaces,
+            //        splits
+            //    );
+            //
+            //    const labelList& faceMap = mapPtr().faceMap();
+            //    meshRefinement::updateList(faceMap, -1, duplicateFace);
+            //    const labelList& reverseFaceMap = mapPtr().reverseFaceMap();
+            //    forAll(baffles, i)
+            //    {
+            //        labelPair& baffle = baffles[i];
+            //        baffle.first() = reverseFaceMap[baffle.first()];
+            //        baffle.second() = reverseFaceMap[baffle.second()];
+            //    }
+            //
+            //    meshMoverPtr.clear();
+            //    ppPtr.clear();
+            //
+            //    ppPtr = meshRefinement::makePatch(mesh, adaptPatchIDs);
+            //    meshMoverPtr.reset
+            //    (
+            //        new motionSmoother
+            //        (
+            //            mesh,
+            //            ppPtr(),
+            //            adaptPatchIDs,
+            //            meshRefinement::makeDisplacementField
+            //            (
+            //                pointMesh::New(mesh),
+            //                adaptPatchIDs
+            //            ),
+            //            motionDict
+            //        )
+            //    );
+            //
+            //    if (debug&meshRefinement::MESH)
+            //    {
+            //        const_cast<Time&>(mesh.time())++;
+            //        Info<< "Writing split diagonal mesh to time "
+            //            << meshRefiner_.timeName() << endl;
+            //        meshRefiner_.write
+            //        (
+            //            meshRefinement::debugType(debug),
+            //            meshRefinement::writeType
+            //            (
+            //                meshRefinement::writeLevel()
+            //              | meshRefinement::WRITEMESH
+            //            ),
+            //            mesh.time().path()/meshRefiner_.timeName()
+            //        );
+            //    }
+            //}
+            //else
+            //if
+            //(
+            //    doFeatures
+            // && (iter == 1 || iter == nFeatIter/2+1 || iter == nFeatIter-1)
+            //)
+            //{
+            //    Info<< "Splitting warped faces" << endl;
+            //
+            //    const labelList& bFaces = ppPtr().addressing();
+            //    DynamicList<label> splitFaces(bFaces.size());
+            //    DynamicList<labelPair> splits(bFaces.size());
+            //
+            //    detectWarpedFaces
+            //    (
+            //        featureCos,
+            //        ppPtr(),
+            //
+            //        splitFaces,
+            //        splits
+            //    );
+            //
+            //    Info<< "Splitting "
+            //        << returnReduce(splitFaces.size(), sumOp<label>())
+            //        << " faces along diagonal to avoid warpage" << endl;
+            //
+            //    autoPtr<mapPolyMesh> mapPtr = meshRefiner_.splitFaces
+            //    (
+            //        splitFaces,
+            //        splits
+            //    );
+            //
+            //    const labelList& faceMap = mapPtr().faceMap();
+            //    meshRefinement::updateList(faceMap, -1, duplicateFace);
+            //    const labelList& reverseFaceMap = mapPtr().reverseFaceMap();
+            //    forAll(baffles, i)
+            //    {
+            //        labelPair& baffle = baffles[i];
+            //        baffle.first() = reverseFaceMap[baffle.first()];
+            //        baffle.second() = reverseFaceMap[baffle.second()];
+            //    }
+            //
+            //    meshMoverPtr.clear();
+            //    ppPtr.clear();
+            //
+            //    ppPtr = meshRefinement::makePatch(mesh, adaptPatchIDs);
+            //    meshMoverPtr.reset
+            //    (
+            //        new motionSmoother
+            //        (
+            //            mesh,
+            //            ppPtr(),
+            //            adaptPatchIDs,
+            //            meshRefinement::makeDisplacementField
+            //            (
+            //                pointMesh::New(mesh),
+            //                adaptPatchIDs
+            //            ),
+            //            motionDict
+            //        )
+            //    );
+            //
+            //    if (debug&meshRefinement::MESH)
+            //    {
+            //        const_cast<Time&>(mesh.time())++;
+            //        Info<< "Writing split warped mesh to time "
+            //            << meshRefiner_.timeName() << endl;
+            //        meshRefiner_.write
+            //        (
+            //            meshRefinement::debugType(debug),
+            //            meshRefinement::writeType
+            //            (
+            //                meshRefinement::writeLevel()
+            //              | meshRefinement::WRITEMESH
+            //            ),
+            //            mesh.time().path()/meshRefiner_.timeName()
+            //        );
+            //    }
+            //}
+
 
 
         for (label iter = 0; iter < nFeatIter; iter++)
@@ -2917,7 +3135,7 @@ void Foam::snappySnapDriver::doSnap
             if (snapParams.detectNearSurfacesSnap())
             {
                 nearestPoint.setSize(pp.nPoints(), vector::max);
-                nearestNormal.setSize(pp.nPoints(), vector::zero);
+                nearestNormal.setSize(pp.nPoints(), Zero);
             }
 
             vectorField disp = calcNearestSurface

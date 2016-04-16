@@ -12,8 +12,7 @@ volVectorField U
     mesh
 );
 
-// Initialise the velocity internal field to zero
-U = dimensionedVector("0", U.dimensions(), vector::zero);
+U = dimensionedVector("0", U.dimensions(), Zero);
 
 surfaceScalarField phi
 (

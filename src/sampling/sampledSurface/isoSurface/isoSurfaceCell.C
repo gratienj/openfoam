@@ -253,7 +253,7 @@ Foam::labelPair Foam::isoSurfaceCell::findCommonPoints
 
 Foam::point Foam::isoSurfaceCell::calcCentre(const triSurface& s)
 {
-    vector sum = vector::zero;
+    vector sum = Zero;
 
     forAll(s, i)
     {
@@ -270,7 +270,7 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
     DynamicList<labelledTri, 64>& localTris
 ) const
 {
-    pointIndexHit info(false, vector::zero, localTris.size());
+    pointIndexHit info(false, Zero, localTris.size());
 
     if (localTris.size() == 1)
     {

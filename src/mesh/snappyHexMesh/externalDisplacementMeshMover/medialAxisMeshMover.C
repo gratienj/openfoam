@@ -556,7 +556,9 @@ void Foam::medialAxisMeshMover::update(const dictionary& coeffDict)
                             pointEdgePoint
                             (
                                 points[pointI],
-                                0.0
+                                0.0,
+                                pointI,         // passive data
+                                Zero    // passive data
                             )
                         );
                         pointMedialDist[pointI] = maxInfo.last();
@@ -610,7 +612,9 @@ void Foam::medialAxisMeshMover::update(const dictionary& coeffDict)
                                 pointEdgePoint
                                 (
                                     medialAxisPt,   //points[pointI],
-                                    magSqr(points[pointI]-medialAxisPt)//0.0
+                                    magSqr(points[pointI]-medialAxisPt),//0.0,
+                                    pointI,         // passive data
+                                    Zero    // passive data
                                 )
                             );
                             pointMedialDist[pointI] = maxInfo.last();
@@ -665,7 +669,9 @@ void Foam::medialAxisMeshMover::update(const dictionary& coeffDict)
                                 pointEdgePoint
                                 (
                                     points[pointI],
-                                    0.0
+                                    0.0,
+                                    pointI,         // passive data
+                                    Zero    // passive data
                                 )
                             );
                             pointMedialDist[pointI] = maxInfo.last();
@@ -720,7 +726,9 @@ void Foam::medialAxisMeshMover::update(const dictionary& coeffDict)
                                     pointEdgePoint
                                     (
                                         points[pointI],
-                                        0.0
+                                        0.0,
+                                        pointI,         // passive data
+                                        Zero    // passive data
                                     )
                                 );
                                 pointMedialDist[pointI] = maxInfo.last();
@@ -860,13 +868,13 @@ bool Foam::medialAxisMeshMover::unmarkExtrusion
     if (extrudeStatus[patchPointI] == snappyLayerDriver::EXTRUDE)
     {
         extrudeStatus[patchPointI] = snappyLayerDriver::NOEXTRUDE;
-        patchDisp[patchPointI] = vector::zero;
+        patchDisp[patchPointI] = Zero;
         return true;
     }
     else if (extrudeStatus[patchPointI] == snappyLayerDriver::EXTRUDEREMOVE)
     {
         extrudeStatus[patchPointI] = snappyLayerDriver::NOEXTRUDE;
-        patchDisp[patchPointI] = vector::zero;
+        patchDisp[patchPointI] = Zero;
         return true;
     }
     else
@@ -1454,7 +1462,7 @@ Foam::medialAxisMeshMover::medialAxisMeshMover
             false
         ),
         pMesh(),
-        dimensionedVector("dispVec", dimLength, vector::zero)
+        dimensionedVector("dispVec", dimLength, Zero)
     ),
     medialRatio_
     (
@@ -1496,7 +1504,7 @@ Foam::medialAxisMeshMover::medialAxisMeshMover
             false
         ),
         pMesh(),
-        dimensionedVector("medialVec", dimLength, vector::zero)
+        dimensionedVector("medialVec", dimLength, Zero)
     )
 {
     update(dict);
@@ -1798,7 +1806,8 @@ void Foam::medialAxisMeshMover::calculateDisplacement
             (
                 points[pointI],
                 0.0,
-                thickness[patchPointI]        // transport layer thickness
+                thickness[patchPointI],       // transport layer thickness
+                Zero                  // passive vector
             );
         }
 
@@ -1824,7 +1833,7 @@ void Foam::medialAxisMeshMover::calculateDisplacement
     {
         if (!pointWallDist[pointI].valid(dummyTrackData))
         {
-            displacement[pointI] = vector::zero;
+            displacement[pointI] = Zero;
         }
         else
         {
