@@ -2744,7 +2744,7 @@ bool Foam::autoLayerDriver::writeLayerData
             }
             const polyBoundaryMesh& pbm = mesh.boundaryMesh();
 
-            typename volScalarField::GeometricBoundaryField& fldBf =
+            volScalarField::GeometricBoundaryField& fldBf =
                 fld.boundaryFieldRef();
 
             forAll(patchIDs, i)
@@ -2783,7 +2783,7 @@ bool Foam::autoLayerDriver::writeLayerData
 
             const polyBoundaryMesh& pbm = mesh.boundaryMesh();
 
-            typename volScalarField::GeometricBoundaryField& fldBf =
+            volScalarField::GeometricBoundaryField& fldBf =
                 fld.boundaryFieldRef();
 
             forAll(patchIDs, i)
@@ -2818,7 +2818,7 @@ bool Foam::autoLayerDriver::writeLayerData
 
             const polyBoundaryMesh& pbm = mesh.boundaryMesh();
 
-            typename volScalarField::GeometricBoundaryField& fldBf =
+            volScalarField::GeometricBoundaryField& fldBf =
                 fld.boundaryFieldRef();
 
             forAll(patchIDs, i)
