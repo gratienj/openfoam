@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,6 +50,9 @@ void Foam::yPlus::calcYPlus
 
     const fvPatchList& patches = mesh.boundary();
 
+    volScalarField::GeometricBoundaryField& yPlusBf =
+        yPlus.boundaryFieldRef();
+
     forAll(patches, patchi)
     {
         const fvPatch& patch = patches[patchi];
@@ -62,8 +65,8 @@ void Foam::yPlus::calcYPlus
                     nutBf[patchi]
                 );
 
-            yPlus.boundaryField()[patchi] = nutPf.yPlus();
-            const scalarField& yPlusp = yPlus.boundaryField()[patchi];
+            yPlusBf[patchi] = nutPf.yPlus();
+            const scalarField& yPlusp = yPlusBf[patchi];
 
             const scalar minYplus = gMin(yPlusp);
             const scalar maxYplus = gMax(yPlusp);
@@ -83,14 +86,14 @@ void Foam::yPlus::calcYPlus
         }
         else if (isA<wallFvPatch>(patch))
         {
-            yPlus.boundaryField()[patchi] =
+            yPlusBf[patchi] =
                 d[patchi]
                *sqrt
                 (
                     nuEffBf[patchi]
                    *mag(turbulenceModel.U().boundaryField()[patchi].snGrad())
                 )/nuBf[patchi];
-            const scalarField& yPlusp = yPlus.boundaryField()[patchi];
+            const scalarField& yPlusp = yPlusBf[patchi];
 
             const scalar minYplus = gMin(yPlusp);
             const scalar maxYplus = gMax(yPlusp);
