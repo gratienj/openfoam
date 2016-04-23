@@ -108,7 +108,7 @@ tmp<GeometricField<Type, fvPatchField, volMesh>> fvMeshSubset::interpolate
     //  constructor (with reference to the now correct internal field)
 
     typename GeometricField<Type, fvPatchField, volMesh>::
-        GeometricBoundaryField& bf = resF.boundaryField();
+        GeometricBoundaryField& bf = resF.boundaryFieldRef();
 
     forAll(bf, patchI)
     {
@@ -253,7 +253,7 @@ tmp<GeometricField<Type, fvsPatchField, surfaceMesh>> fvMeshSubset::interpolate
     //  constructor (with reference to the now correct internal field)
 
     typename GeometricField<Type, fvsPatchField, surfaceMesh>::
-        GeometricBoundaryField& bf = resF.boundaryField();
+        GeometricBoundaryField& bf = resF.boundaryFieldRef();
 
     forAll(bf, patchI)
     {
@@ -429,7 +429,7 @@ fvMeshSubset::interpolate
     //  constructor (with reference to the now correct internal field)
 
     typename GeometricField<Type, pointPatchField, pointMesh>::
-        GeometricBoundaryField& bf = resF.boundaryField();
+        GeometricBoundaryField& bf = resF.boundaryFieldRef();
 
     forAll(bf, patchI)
     {
