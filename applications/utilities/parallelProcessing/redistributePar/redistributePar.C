@@ -419,36 +419,16 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
                 << abort(FatalError);
         }
     }
-    forAll(a.boundaryField(), patchI)
+    forAll(a.boundaryField(), patchi)
     {
         // We have real mesh cellcentre and
         // mapped original cell centre.
 
-            forAll(bfld, patchi)
-            {
-                typename GeoField::PatchFieldType& pfld = bfld[patchi];
+        const fvPatchVectorField& aBoundary =
+            a.boundaryField()[patchi];
 
-                //if (pfld.coupled())
-                //if (isA<CoupledPatchType>(pfld))
-                if (pfld.patch().coupled())
-                {
-                    pfld.initEvaluate(Pstream::defaultCommsType);
-                }
-            }
-
-            // Block for any outstanding requests
-            if
-            (
-                Pstream::parRun()
-             && Pstream::defaultCommsType == Pstream::nonBlocking
-            )
-            {
-                Pstream::waitRequests(nReq);
-            }
-
-            forAll(bfld, patchi)
-            {
-                typename GeoField::PatchFieldType& pfld = bfld[patchi];
+        const fvPatchVectorField& bBoundary =
+            b.boundaryField()[patchi];
 
                 //if (pfld.coupled())
                 //if (isA<CoupledPatchType>(pfld))
@@ -475,7 +455,7 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
                     WarningInFunction
                         << "Did not map volVectorField correctly:"
                         << endl
-                        << "patch:" << patchI << " patchFace:" << i
+                        << "patch:" << patchi << " patchFace:" << i
                         << " cc:" << endl
                         << "    real    :" << aBoundary[i] << endl
                         << "    mapped  :" << bBoundary[i] << endl
@@ -873,10 +853,13 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     // Refinement data
     {
 
-        // Read refinement data
-        if (Pstream::master() && decompose)
+        forAll(patches, patchi)
         {
-            runTime.TimePaths::caseName() = baseRunTime.caseName();
+            if (isA<processorPolyPatch>(patches[patchi]))
+            {
+                break;
+            }
+            nonProcI++;
         }
         IOobject io
         (

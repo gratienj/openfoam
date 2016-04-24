@@ -1380,9 +1380,9 @@ int main(int argc, char *argv[])
     label nBoundaries = 0;
 
 
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        const faceList& bFaces = patches[patchI];
+        const faceList& bFaces = patches[patchi];
 
         label sz = bFaces.size();
         labelList meshFaces(sz,-1);
@@ -1405,7 +1405,7 @@ int main(int argc, char *argv[])
 
         if
         (
-            patchTypes[patchI] != "internal"
+            patchTypes[patchi] != "internal"
          && !pShapeMesh.isInternalFace(meshFaces[0])
         )
         {
@@ -1421,7 +1421,7 @@ int main(int argc, char *argv[])
                 {
                     FatalErrorInFunction
                         << "Face " << faceI << " on new patch "
-                        << patchNames[patchI]
+                        << patchNames[patchi]
                         << " is not an external face of the mesh." << endl
                         << exit(FatalError);
                 }
@@ -1430,7 +1430,7 @@ int main(int argc, char *argv[])
                 {
                     FatalErrorInFunction
                         << "Face " << faceI << " on new patch "
-                        << patchNames[patchI]
+                        << patchNames[patchi]
                         << " has already been marked for repatching to"
                         << " patch "
                         << facePatchID[faceI - pShapeMesh.nInternalFaces()]
@@ -1441,8 +1441,8 @@ int main(int argc, char *argv[])
 
             //add to boundary patch
 
-            Info<< "Adding new patch " << patchNames[patchI]
-                << " of type " << patchTypes[patchI]
+            Info<< "Adding new patch " << patchNames[patchi]
+                << " of type " << patchTypes[patchi]
                 << " as patch " << nBoundaries << endl;
 
             // Add patch to new patch list
@@ -1450,8 +1450,8 @@ int main(int argc, char *argv[])
             (
                 polyPatch::New
                 (
-                    patchTypes[patchI],
-                    patchNames[patchI],
+                    patchTypes[patchi],
+                    patchNames[patchi],
                     sz,
                     cMeshFace,
                     nBoundaries,
@@ -1463,7 +1463,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            Info<< "Patch " << patchNames[patchI]
+            Info<< "Patch " << patchNames[patchi]
                  << " is internal to the mesh "
                  << " and is not being added to the boundary."
                  << endl;
@@ -1538,12 +1538,12 @@ int main(int argc, char *argv[])
     // Re-do face matching to write sets
     if (writeSets)
     {
-        forAll(patches, patchI)
+        forAll(patches, patchi)
         {
-            const faceList& bFaces = patches[patchI];
+            const faceList& bFaces = patches[patchi];
             label sz = bFaces.size();
 
-            faceSet pFaceSet(pShapeMesh, patchNames[patchI], sz);
+            faceSet pFaceSet(pShapeMesh, patchNames[patchi], sz);
 
             forAll(bFaces, j)
             {
@@ -1551,7 +1551,7 @@ int main(int argc, char *argv[])
                 label cMeshFace = findFace(pShapeMesh, f);
                 pFaceSet.insert(cMeshFace);
             }
-            Info<< "Writing patch " << patchNames[patchI]
+            Info<< "Writing patch " << patchNames[patchi]
                 << " of size " << sz << " to faceSet" << endl;
 
             pFaceSet.instance() = pShapeMesh.instance();

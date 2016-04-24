@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -139,11 +139,11 @@ wordList addProcessorPatches
 
     const polyBoundaryMesh& pbm = meshTarget.boundaryMesh();
 
-    forAll(pbm, patchI)
+    forAll(pbm, patchi)
     {
-        if (isA<processorPolyPatch>(pbm[patchI]))
+        if (isA<processorPolyPatch>(pbm[patchi]))
         {
-            const word& patchName = pbm[patchI].name();
+            const word& patchName = pbm[patchi].name();
             cuttingPatchTable.insert(patchName);
         }
     }

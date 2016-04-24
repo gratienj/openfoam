@@ -104,10 +104,12 @@ bool setCellFieldType
             }
         }
 
+        typename GeometricField<Type, fvPatchField, volMesh>::
+            GeometricBoundaryField& fieldBf = field.boundaryFieldRef();
+
         forAll(field.boundaryField(), patchi)
         {
-            field.boundaryField()[patchi] =
-                field.boundaryField()[patchi].patchInternalField();
+            fieldBf[patchi] = fieldBf[patchi].patchInternalField();
         }
 
         if (!field.write())
@@ -280,6 +282,9 @@ bool setFaceFieldType
         Pstream::listCombineGather(nChanged, plusEqOp<label>());
         Pstream::listCombineScatter(nChanged);
 
+        typename GeometricField<Type, fvPatchField, volMesh>::
+            GeometricBoundaryField& fieldBf = field.boundaryFieldRef();
+
         // Reassign.
         forAll(field.boundaryField(), patchi)
         {
@@ -288,11 +293,11 @@ bool setFaceFieldType
                 Info<< "    On patch "
                     << field.boundaryField()[patchi].patch().name()
                     << " set " << nChanged[patchi] << " values" << endl;
-                field.boundaryField()[patchi] == SubField<Type>
+                fieldBf[patchi] == SubField<Type>
                 (
                     allBoundaryValues,
-                    field.boundaryField()[patchi].size(),
-                    field.boundaryField()[patchi].patch().start()
+                    fieldBf[patchi].size(),
+                    fieldBf[patchi].patch().start()
                   - mesh.nInternalFaces()
                 );
             }

@@ -23,17 +23,17 @@ Foam::label Foam::findOppositeWedge
 
     scalar wppCosAngle = wpp.cosAngle();
 
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
         if
         (
-            patchI != wpp.index()
-         && patches[patchI].size()
-         && isA<wedgePolyPatch>(patches[patchI])
+            patchi != wpp.index()
+         && patches[patchi].size()
+         && isA<wedgePolyPatch>(patches[patchi])
         )
         {
             const wedgePolyPatch& pp =
-                refCast<const wedgePolyPatch>(patches[patchI]);
+                refCast<const wedgePolyPatch>(patches[patchi]);
 
             // Calculate (cos of) angle to wpp (not pp!) centre normal
             scalar ppCosAngle = wpp.centreNormal() & pp.n();
@@ -45,7 +45,7 @@ Foam::label Foam::findOppositeWedge
              && mag(ppCosAngle - wppCosAngle) >= 1e-3
             )
             {
-                return patchI;
+                return patchi;
             }
         }
     }
@@ -69,12 +69,12 @@ bool Foam::checkWedges
 
 
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        if (patches[patchI].size() && isA<wedgePolyPatch>(patches[patchI]))
+        if (patches[patchi].size() && isA<wedgePolyPatch>(patches[patchi]))
         {
             const wedgePolyPatch& pp =
-                refCast<const wedgePolyPatch>(patches[patchI]);
+                refCast<const wedgePolyPatch>(patches[patchi]);
 
             scalar wedgeAngle = acos(pp.cosAngle());
 
@@ -342,13 +342,13 @@ bool Foam::checkCoupledPoints
     List<pointField> nbrPoints(fcs.size() - mesh.nInternalFaces());
 
     // Exchange zero point
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        if (patches[patchI].coupled())
+        if (patches[patchi].coupled())
         {
             const coupledPolyPatch& cpp = refCast<const coupledPolyPatch>
             (
-                patches[patchI]
+                patches[patchi]
             );
 
             forAll(cpp, i)
@@ -377,12 +377,12 @@ bool Foam::checkCoupledPoints
     scalar avgMismatch = 0;
     label nCoupledPoints = 0;
 
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        if (patches[patchI].coupled())
+        if (patches[patchi].coupled())
         {
             const coupledPolyPatch& cpp =
-                refCast<const coupledPolyPatch>(patches[patchI]);
+                refCast<const coupledPolyPatch>(patches[patchi]);
 
             if (cpp.owner())
             {

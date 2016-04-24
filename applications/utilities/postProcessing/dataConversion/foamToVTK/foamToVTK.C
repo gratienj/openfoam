@@ -205,9 +205,9 @@ labelList getSelectedPatches
 
     Info<< "Combining patches:" << endl;
 
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        const polyPatch& pp = patches[patchI];
+        const polyPatch& pp = patches[patchi];
 
         if
         (
@@ -215,18 +215,18 @@ labelList getSelectedPatches
             || (Pstream::parRun() && isType<processorPolyPatch>(pp))
         )
         {
-            Info<< "    discarding empty/processor patch " << patchI
+            Info<< "    discarding empty/processor patch " << patchi
                 << " " << pp.name() << endl;
         }
         else if (findStrings(excludePatches, pp.name()))
         {
-            Info<< "    excluding patch " << patchI
+            Info<< "    excluding patch " << patchi
                 << " " << pp.name() << endl;
         }
         else
         {
-            patchIDs.append(patchI);
-            Info<< "    patch " << patchI << " " << pp.name() << endl;
+            patchIDs.append(patchi);
+            Info<< "    patch " << patchi << " " << pp.name() << endl;
         }
     }
     return patchIDs.shrink();
@@ -937,9 +937,9 @@ int main(int argc, char *argv[])
         }
         else
         {
-            forAll(patches, patchI)
+            forAll(patches, patchi)
             {
-                const polyPatch& pp = patches[patchI];
+                const polyPatch& pp = patches[patchi];
 
                 if (!findStrings(excludePatches, pp.name()))
                 {
@@ -972,7 +972,7 @@ int main(int argc, char *argv[])
                         binary,
                         nearCellValue,
                         patchFileName,
-                        labelList(1, patchI)
+                        labelList(1, patchi)
                     );
 
                     if (!isA<emptyPolyPatch>(pp))

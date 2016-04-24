@@ -23,6 +23,21 @@ dict.add
 );
 dict.add("mergeDistance", SMALL);
 
+labelHashSet includePatches;
+forAll(patches, patchi)
+{
+    const polyPatch& pp = patches[patchi];
+    if
+    (
+        !pp.coupled()
+     && !isA<cyclicAMIPolyPatch>(pp)
+     && !isA<emptyPolyPatch>(pp)
+    )
+    {
+        includePatches.insert(patchi);
+    }
+}
+
 labelList triSurfaceToAgglom(5*nFineFaces);
 
 const triSurface localSurface = triangulate

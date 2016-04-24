@@ -56,11 +56,11 @@ Foam::label Foam::checkTopology
     // Check that empty patches cover all sides of the mesh
     {
         label nEmpty = 0;
-        forAll(mesh.boundaryMesh(), patchI)
+        forAll(mesh.boundaryMesh(), patchi)
         {
-            if (isA<emptyPolyPatch>(mesh.boundaryMesh()[patchI]))
+            if (isA<emptyPolyPatch>(mesh.boundaryMesh()[patchi]))
             {
-                nEmpty += mesh.boundaryMesh()[patchI].size();
+                nEmpty += mesh.boundaryMesh()[patchi].size();
             }
         }
         reduce(nEmpty, sumOp<label>());
@@ -254,11 +254,11 @@ Foam::label Foam::checkTopology
             nInternalFaces[mesh.faceNeighbour()[faceI]]++;
         }
         const polyBoundaryMesh& patches = mesh.boundaryMesh();
-        forAll(patches, patchI)
+        forAll(patches, patchi)
         {
-            if (patches[patchI].coupled())
+            if (patches[patchi].coupled())
             {
-                const labelUList& owners = patches[patchI].faceCells();
+                const labelUList& owners = patches[patchi].faceCells();
 
                 forAll(owners, i)
                 {
@@ -479,9 +479,9 @@ Foam::label Foam::checkTopology
         }
         Info<< endl;
 
-        forAll(patches, patchI)
+        forAll(patches, patchi)
         {
-            const polyPatch& pp = patches[patchI];
+            const polyPatch& pp = patches[patchi];
 
             if (!isA<processorPolyPatch>(pp))
             {

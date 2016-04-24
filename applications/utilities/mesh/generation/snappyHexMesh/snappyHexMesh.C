@@ -416,10 +416,10 @@ void extractSurface
     labelList patchToCompactZone(bMesh.size(), -1);
     forAllConstIter(HashTable<label>, compactZoneID, iter)
     {
-        label patchI = bMesh.findPatchID(iter.key());
-        if (patchI != -1)
+        label patchi = bMesh.findPatchID(iter.key());
+        if (patchi != -1)
         {
-            patchToCompactZone[patchI] = iter();
+            patchToCompactZone[patchi] = iter();
         }
     }
 
@@ -1251,11 +1251,11 @@ int main(int argc, char *argv[])
                 {
                     label globalRegionI = surfaces.globalRegion(surfI, i);
 
-                    label patchI;
+                    label patchi;
 
                     if (surfacePatchInfo.set(globalRegionI))
                     {
-                        patchI = meshRefiner.addMeshedPatch
+                        patchi = meshRefiner.addMeshedPatch
                         (
                             regNames[i],
                             surfacePatchInfo[globalRegionI]
@@ -1266,7 +1266,7 @@ int main(int argc, char *argv[])
                         dictionary patchInfo;
                         patchInfo.set("type", wallPolyPatch::typeName);
 
-                        patchI = meshRefiner.addMeshedPatch
+                        patchi = meshRefiner.addMeshedPatch
                         (
                             regNames[i],
                             patchInfo
@@ -1274,12 +1274,12 @@ int main(int argc, char *argv[])
                     }
 
                     Info<< setf(ios_base::left)
-                        << setw(6) << patchI
-                        << setw(20) << pbm[patchI].type()
+                        << setw(6) << patchi
+                        << setw(20) << mesh.boundaryMesh()[patchi].type()
                         << setw(30) << regNames[i] << nl;
 
-                    globalToMasterPatch[globalRegionI] = patchI;
-                    globalToSlavePatch[globalRegionI] = patchI;
+                    globalToMasterPatch[globalRegionI] = patchi;
+                    globalToSlavePatch[globalRegionI] = patchi;
                 }
             }
             else
@@ -1291,11 +1291,11 @@ int main(int argc, char *argv[])
 
                     // Add master side patch
                     {
-                        label patchI;
+                        label patchi;
 
                         if (surfacePatchInfo.set(globalRegionI))
                         {
-                            patchI = meshRefiner.addMeshedPatch
+                            patchi = meshRefiner.addMeshedPatch
                             (
                                 regNames[i],
                                 surfacePatchInfo[globalRegionI]
@@ -1306,7 +1306,7 @@ int main(int argc, char *argv[])
                             dictionary patchInfo;
                             patchInfo.set("type", wallPolyPatch::typeName);
 
-                            patchI = meshRefiner.addMeshedPatch
+                            patchi = meshRefiner.addMeshedPatch
                             (
                                 regNames[i],
                                 patchInfo
@@ -1314,20 +1314,20 @@ int main(int argc, char *argv[])
                         }
 
                         Info<< setf(ios_base::left)
-                            << setw(6) << patchI
-                            << setw(20) << pbm[patchI].type()
+                            << setw(6) << patchi
+                            << setw(20) << mesh.boundaryMesh()[patchi].type()
                             << setw(30) << regNames[i] << nl;
 
-                        globalToMasterPatch[globalRegionI] = patchI;
+                        globalToMasterPatch[globalRegionI] = patchi;
                     }
                     // Add slave side patch
                     {
                         const word slaveName = regNames[i] + "_slave";
-                        label patchI;
+                        label patchi;
 
                         if (surfacePatchInfo.set(globalRegionI))
                         {
-                            patchI = meshRefiner.addMeshedPatch
+                            patchi = meshRefiner.addMeshedPatch
                             (
                                 slaveName,
                                 surfacePatchInfo[globalRegionI]
@@ -1338,7 +1338,7 @@ int main(int argc, char *argv[])
                             dictionary patchInfo;
                             patchInfo.set("type", wallPolyPatch::typeName);
 
-                            patchI = meshRefiner.addMeshedPatch
+                            patchi = meshRefiner.addMeshedPatch
                             (
                                 slaveName,
                                 patchInfo
@@ -1346,11 +1346,11 @@ int main(int argc, char *argv[])
                         }
 
                         Info<< setf(ios_base::left)
-                            << setw(6) << patchI
-                            << setw(20) << pbm[patchI].type()
+                            << setw(6) << patchi
+                            << setw(20) << mesh.boundaryMesh()[patchi].type()
                             << setw(30) << slaveName << nl;
 
-                        globalToSlavePatch[globalRegionI] = patchI;
+                        globalToSlavePatch[globalRegionI] = patchi;
                     }
                 }
 
@@ -1693,13 +1693,13 @@ int main(int argc, char *argv[])
         }
         else
         {
-            forAll(bMesh, patchI)
+            forAll(bMesh, patchi)
             {
-                const polyPatch& patch = bMesh[patchI];
+                const polyPatch& patch = bMesh[patchi];
 
                 if (!isA<processorPolyPatch>(patch))
                 {
-                    includePatches.insert(patchI);
+                    includePatches.insert(patchi);
                 }
             }
         }

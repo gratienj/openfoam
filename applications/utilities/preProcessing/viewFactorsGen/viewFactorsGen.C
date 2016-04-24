@@ -92,8 +92,8 @@ triSurface triangulate
 
     forAllConstIter(labelHashSet, includePatches, iter)
     {
-        const label patchI = iter.key();
-        const polyPatch& patch = bMesh[patchI];
+        const label patchi = iter.key();
+        const polyPatch& patch = bMesh[patchi];
         const pointField& points = patch.points();
 
         label nTriTotal = 0;
@@ -119,8 +119,8 @@ triSurface triangulate
                 triSurfaceToAgglom[localTriFaceI++] = globalNumbering.toGlobal
                 (
                     Pstream::myProcNo(),
-                    finalAgglom[patchI][patchFaceI]
-                  + coarsePatches[patchI].start()
+                    finalAgglom[patchi][patchFaceI]
+                  + coarsePatches[patchi].start()
                 );
             }
         }
@@ -149,10 +149,10 @@ triSurface triangulate
 
     forAllConstIter(labelHashSet, includePatches, iter)
     {
-        const label patchI = iter.key();
-        const polyPatch& patch = bMesh[patchI];
+        const label patchi = iter.key();
+        const polyPatch& patch = bMesh[patchi];
 
-        surface.patches()[newPatchI].index() = patchI;
+        surface.patches()[newPatchI].index() = patchi;
         surface.patches()[newPatchI].name() = patch.name();
         surface.patches()[newPatchI].geometricType() = patch.type();
 
@@ -343,12 +343,23 @@ int main(int argc, char *argv[])
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
     const polyBoundaryMesh& coarsePatches = coarseMesh.boundaryMesh();
 
-    labelList viewFactorsPatches(patches.findIndices(viewFactorWall));
-    forAll (viewFactorsPatches, i)
+    labelList viewFactorsPatches(patches.size());
+
+    const volScalarField::GeometricBoundaryField& Qrb = Qr.boundaryField();
+
+    label count = 0;
+    forAll(Qrb, patchi)
     {
-        label patchI = viewFactorsPatches[i];
-        nCoarseFaces += coarsePatches[patchI].size();
-        nFineFaces += patches[patchI].size();
+        const polyPatch& pp = patches[patchi];
+        const fvPatchScalarField& QrpI = Qrb[patchi];
+
+        if ((isA<fixedValueFvPatchScalarField>(QrpI)) && (pp.size() > 0))
+        {
+            viewFactorsPatches[count] = QrpI.patch().index();
+            nCoarseFaces += coarsePatches[patchi].size();
+            nFineFaces += patches[patchi].size();
+            count ++;
+        }
     }
 
     // total number of coarse faces
@@ -754,12 +765,12 @@ int main(int argc, char *argv[])
     {
         forAll(viewFactorsPatches, i)
         {
-            label patchI =  viewFactorsPatches[i];
+            label patchi =  viewFactorsPatches[i];
             forAll(viewFactorsPatches, i)
             {
                 label patchJ =  viewFactorsPatches[i];
-                Info << "F" << patchI << patchJ << ": "
-                     << sumViewFactorPatch[patchI][patchJ]/patchArea[patchI]
+                Info << "F" << patchi << patchJ << ": "
+                     << sumViewFactorPatch[patchi][patchJ]/patchArea[patchi]
                      << endl;
             }
         }
@@ -782,6 +793,9 @@ int main(int argc, char *argv[])
             dimensionedScalar("viewFactorField", dimless, 0)
         );
 
+        volScalarField::GeometricBoundaryField& viewFactorFieldBf =
+            viewFactorField.boundaryFieldRef();
+
         label compactI = 0;
         forAll(viewFactorsPatches, i)
         {
@@ -794,15 +808,8 @@ int main(int argc, char *argv[])
                 const labelList& fineFaces = coarseToFine[coarseFaceID];
                 forAll(fineFaces, fineId)
                 {
-                    const scalar Fij = sum(F[compactI]);
-                    const label coarseFaceID = coarsePatchFace[coarseI];
-                    const labelList& fineFaces = coarseToFine[coarseFaceID];
-                    forAll (fineFaces, fineId)
-                    {
-                        const label faceID = fineFaces[fineId];
-                        viewFactorField.boundaryField()[patchID][faceID] = Fij;
-                    }
-                    compactI++;
+                    const label faceID = fineFaces[fineId];
+                    viewFactorFieldBf[patchID][faceID] = Fij;
                 }
             }
         }

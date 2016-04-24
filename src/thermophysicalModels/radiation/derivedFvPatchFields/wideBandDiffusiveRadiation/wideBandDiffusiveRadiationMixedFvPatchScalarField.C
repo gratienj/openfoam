@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -159,7 +159,7 @@ updateCoeffs()
 
     const scalarField nAve(n & ray.dAve());
 
-    ray.Qr().boundaryField()[patchI] += Iw*nAve;
+    ray.Qr().boundaryFieldRef()[patchI] += Iw*nAve;
 
     const scalarField Eb
     (
@@ -177,8 +177,8 @@ updateCoeffs()
 
     const scalarField& emissivity = temissivity();
 
-    scalarField& Qem = ray.Qem().boundaryField()[patchI];
-    scalarField& Qin = ray.Qin().boundaryField()[patchI];
+    scalarField& Qem = ray.Qem().boundaryFieldRef()[patchI];
+    scalarField& Qin = ray.Qin().boundaryFieldRef()[patchI];
 
     // Use updated Ir while iterating over rays
     // avoids to used lagged Qin

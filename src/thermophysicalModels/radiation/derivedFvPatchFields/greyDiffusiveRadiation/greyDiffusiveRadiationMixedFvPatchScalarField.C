@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -172,7 +172,7 @@ updateCoeffs()
 
     const scalarField nAve(n & ray.dAve());
 
-    ray.Qr().boundaryField()[patchI] += Iw*nAve;
+    ray.Qr().boundaryFieldRef()[patchI] += Iw*nAve;
 
     const boundaryRadiationProperties& boundaryRadiation =
         boundaryRadiationProperties::New(dimensionedInternalField().mesh());
@@ -184,8 +184,8 @@ updateCoeffs()
 
     const scalarField& emissivity = temissivity();
 
-    scalarField& Qem = ray.Qem().boundaryField()[patchI];
-    scalarField& Qin = ray.Qin().boundaryField()[patchI];
+    scalarField& Qem = ray.Qem().boundaryFieldRef()[patchI];
+    scalarField& Qin = ray.Qin().boundaryFieldRef()[patchI];
 
     const vector& myRayId = dom.IRay(rayId).d();
 

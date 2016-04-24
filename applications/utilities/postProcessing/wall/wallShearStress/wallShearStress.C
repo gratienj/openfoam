@@ -63,13 +63,16 @@ void calcIncompressible
 
     const volSymmTensorField Reff(model->devReff());
 
-    forAll(wallShearStress.boundaryField(), patchI)
+    volVectorField::GeometricBoundaryField& wallShearStressBf =
+        wallShearStress.boundaryFieldRef();
+
+    forAll(wallShearStressBf, patchi)
     {
-        wallShearStress.boundaryField()[patchI] =
+        wallShearStressBf[patchi] =
         (
-           -mesh.Sf().boundaryField()[patchI]
-           /mesh.magSf().boundaryField()[patchI]
-        ) & Reff.boundaryField()[patchI];
+           -mesh.Sf().boundaryField()[patchi]
+           /mesh.magSf().boundaryField()[patchi]
+        ) & Reff.boundaryField()[patchi];
     }
 }
 
@@ -112,13 +115,16 @@ void calcCompressible
 
     const volSymmTensorField Reff(model->devRhoReff());
 
-    forAll(wallShearStress.boundaryField(), patchI)
+    volVectorField::GeometricBoundaryField& wallShearStressBf =
+        wallShearStress.boundaryFieldRef();
+
+    forAll(wallShearStressBf, patchi)
     {
-        wallShearStress.boundaryField()[patchI] =
+        wallShearStressBf[patchi] =
         (
-           -mesh.Sf().boundaryField()[patchI]
-           /mesh.magSf().boundaryField()[patchI]
-        ) & Reff.boundaryField()[patchI];
+           -mesh.Sf().boundaryField()[patchi]
+           /mesh.magSf().boundaryField()[patchi]
+        ) & Reff.boundaryField()[patchi];
     }
 }
 

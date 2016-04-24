@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -291,9 +291,9 @@ void Foam::ensightMesh::correct()
             1
         );
 
-        forAll(mesh_.boundaryMesh(), patchI)
+        forAll(mesh_.boundaryMesh(), patchi)
         {
-            const polyPatch& pp = mesh_.boundaryMesh()[patchI];
+            const polyPatch& pp = mesh_.boundaryMesh()[patchi];
             if
             (
                 isA<processorPolyPatch>(pp)

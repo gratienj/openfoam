@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -459,10 +459,10 @@ int main(int argc, char *argv[])
 
         Info<< "Region\tSize" << nl
             << "------\t----" << nl;
-        forAll(surf.patches(), patchI)
+        forAll(surf.patches(), patchi)
         {
-            Info<< surf.patches()[patchI].name() << '\t'
-                << regionSize[patchI] << nl;
+            Info<< surf.patches()[patchi].name() << '\t'
+                << regionSize[patchi] << nl;
         }
         Info<< nl << endl;
     }
