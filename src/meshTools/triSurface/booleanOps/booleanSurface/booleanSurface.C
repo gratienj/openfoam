@@ -153,9 +153,9 @@ Foam::geometricSurfacePatchList Foam::booleanSurface::mergePatches
 
     // Copy all patches of surf1
     label combinedPatchI = 0;
-    forAll(surf1.patches(), patchI)
+    forAll(surf1.patches(), patchi)
     {
-        combinedPatches[combinedPatchI++] = surf1.patches()[patchI];
+        combinedPatches[combinedPatchI++] = surf1.patches()[patchi];
     }
 
     // (inefficiently) add unique patches from surf2
@@ -324,15 +324,15 @@ void Foam::booleanSurface::propagateSide
 (
     const triSurface& surf,
     const label prevState,
-    const label faceI,
+    const label facei,
     labelList& side
 )
 {
-    if (side[faceI] == UNVISITED)
+    if (side[facei] == UNVISITED)
     {
-        side[faceI] = prevState;
+        side[facei] = prevState;
 
-        const labelledTri& tri = surf.localFaces()[faceI];
+        const labelledTri& tri = surf.localFaces()[facei];
 
         // Get copy of face labels
         label a = tri[0];
@@ -341,7 +341,7 @@ void Foam::booleanSurface::propagateSide
 
         // Go and visit my edges' face-neighbours.
 
-        const labelList& myEdges = surf.faceEdges()[faceI];
+        const labelList& myEdges = surf.faceEdges()[facei];
 
         label edgeAB = findEdge(surf.edges(), myEdges, edge(a, b));
 
@@ -349,7 +349,7 @@ void Foam::booleanSurface::propagateSide
         (
             surf,
             a,
-            faceI,
+            facei,
             prevState,
             edgeAB,
             side
@@ -361,7 +361,7 @@ void Foam::booleanSurface::propagateSide
         (
             surf,
             b,
-            faceI,
+            facei,
             prevState,
             edgeBC,
             side
@@ -373,7 +373,7 @@ void Foam::booleanSurface::propagateSide
         (
             surf,
             c,
-            faceI,
+            facei,
             prevState,
             edgeCA,
             side
@@ -501,11 +501,11 @@ Foam::booleanSurface::booleanSurface
     // Subset zone which includes cutSurf2FaceI
     boolList includedFaces1(cutSurf1.size(), false);
 
-    forAll(faceZone1, faceI)
+    forAll(faceZone1, facei)
     {
-        if (faceZone1[faceI] == faceZone1[cutSurf1FaceI])
+        if (faceZone1[facei] == faceZone1[cutSurf1FaceI])
         {
-            includedFaces1[faceI] = true;
+            includedFaces1[facei] = true;
         }
     }
 
@@ -549,11 +549,11 @@ Foam::booleanSurface::booleanSurface
     // Subset zone which includes cutSurf2FaceI
     boolList includedFaces2(cutSurf2.size(), false);
 
-    forAll(faceZone2, faceI)
+    forAll(faceZone2, facei)
     {
-        if (faceZone2[faceI] == faceZone2[cutSurf2FaceI])
+        if (faceZone2[facei] == faceZone2[cutSurf2FaceI])
         {
-            includedFaces2[faceI] = true;
+            includedFaces2[facei] = true;
         }
     }
 
@@ -667,18 +667,18 @@ Foam::booleanSurface::booleanSurface
 
     // Copy faces from subSurf1. No need for renumbering.
     label combinedFaceI = 0;
-    forAll(subSurf1, faceI)
+    forAll(subSurf1, facei)
     {
-        faceMap_[combinedFaceI] = faceMap1[faceI];
-        combinedFaces[combinedFaceI++] = subSurf1[faceI];
+        faceMap_[combinedFaceI] = faceMap1[facei];
+        combinedFaces[combinedFaceI++] = subSurf1[facei];
     }
 
     // Copy and renumber faces from subSurf2.
-    forAll(subSurf2, faceI)
+    forAll(subSurf2, facei)
     {
-        const labelledTri& f = subSurf2[faceI];
+        const labelledTri& f = subSurf2[facei];
 
-        faceMap_[combinedFaceI] = -faceMap2[faceI]-1;
+        faceMap_[combinedFaceI] = -faceMap2[facei]-1;
 
         combinedFaces[combinedFaceI++] =
             labelledTri
@@ -874,16 +874,16 @@ Foam::booleanSurface::booleanSurface
 
     label combinedFaceI = 0;
 
-    forAll(cutSurf1, faceI)
+    forAll(cutSurf1, facei)
     {
-        combinedFaces[combinedFaceI++] = cutSurf1[faceI];
+        combinedFaces[combinedFaceI++] = cutSurf1[facei];
     }
 
-    forAll(cutSurf2, faceI)
+    forAll(cutSurf2, facei)
     {
         labelledTri& combinedTri = combinedFaces[combinedFaceI++];
 
-        const labelledTri& tri = cutSurf2[faceI];
+        const labelledTri& tri = cutSurf2[facei];
 
         forAll(tri, fp)
         {
@@ -934,13 +934,13 @@ Foam::booleanSurface::booleanSurface
 
         label combinedFaceI = 0;
 
-        forAll(cutSurf1, faceI)
+        forAll(cutSurf1, facei)
         {
-            faceMap_[combinedFaceI++] = cutSurf1.faceMap()[faceI];
+            faceMap_[combinedFaceI++] = cutSurf1.faceMap()[facei];
         }
-        forAll(cutSurf2, faceI)
+        forAll(cutSurf2, facei)
         {
-            faceMap_[combinedFaceI++] = -cutSurf2.faceMap()[faceI] - 1;
+            faceMap_[combinedFaceI++] = -cutSurf2.faceMap()[facei] - 1;
         }
 
         triSurface::operator=(combinedSurf);
@@ -961,14 +961,14 @@ Foam::booleanSurface::booleanSurface
     label minFaceI = -1;
     pointHit minHit(false, Zero, GREAT, true);
 
-    forAll(combinedSurf, faceI)
+    forAll(combinedSurf, facei)
     {
-        pointHit curHit = combinedSurf[faceI].nearestPoint(outsidePoint, pts);
+        pointHit curHit = combinedSurf[facei].nearestPoint(outsidePoint, pts);
 
         if (curHit.distance() < minHit.distance())
         {
             minHit = curHit;
-            minFaceI = faceI;
+            minFaceI = facei;
         }
     }
 
@@ -997,43 +997,43 @@ Foam::booleanSurface::booleanSurface
 
     boolList include(combinedSurf.size(), false);
 
-    forAll(side, faceI)
+    forAll(side, facei)
     {
-        if (side[faceI] == UNVISITED)
+        if (side[facei] == UNVISITED)
         {
             FatalErrorInFunction
-                << "Face " << faceI << " has not been reached by walking from"
+                << "Face " << facei << " has not been reached by walking from"
                 << " nearest point " << minHit.rawPoint()
                 << " nearest face " << minFaceI << exit(FatalError);
         }
-        else if (side[faceI] == OUTSIDE)
+        else if (side[facei] == OUTSIDE)
         {
             if (booleanOp == booleanSurface::UNION)
             {
-                include[faceI] = true;
+                include[facei] = true;
             }
             else if (booleanOp == booleanSurface::INTERSECTION)
             {
-                include[faceI] = false;
+                include[facei] = false;
             }
             else    // difference
             {
-                include[faceI] = (faceI < cutSurf1.size()); // face from surf1
+                include[facei] = (facei < cutSurf1.size()); // face from surf1
             }
         }
         else    // inside
         {
             if (booleanOp == booleanSurface::UNION)
             {
-                include[faceI] = false;
+                include[facei] = false;
             }
             else if (booleanOp == booleanSurface::INTERSECTION)
             {
-                include[faceI] = true;
+                include[facei] = true;
             }
             else    // difference
             {
-                include[faceI] = (faceI >= cutSurf1.size()); // face from surf2
+                include[facei] = (facei >= cutSurf1.size()); // face from surf2
             }
         }
     }
@@ -1054,10 +1054,10 @@ Foam::booleanSurface::booleanSurface
     // Create face map
     faceMap_.setSize(subSurf.size());
 
-    forAll(subToCombinedFace, faceI)
+    forAll(subToCombinedFace, facei)
     {
         // Get label in combinedSurf
-        label combinedFaceI = subToCombinedFace[faceI];
+        label combinedFaceI = subToCombinedFace[facei];
 
         // First faces in combinedSurf come from cutSurf1.
 
@@ -1065,13 +1065,13 @@ Foam::booleanSurface::booleanSurface
         {
             label cutSurf1Face = combinedFaceI;
 
-            faceMap_[faceI] = cutSurf1.faceMap()[cutSurf1Face];
+            faceMap_[facei] = cutSurf1.faceMap()[cutSurf1Face];
         }
         else
         {
             label cutSurf2Face = combinedFaceI - cutSurf1.size();
 
-            faceMap_[faceI] = - cutSurf2.faceMap()[cutSurf2Face] - 1;
+            faceMap_[facei] = - cutSurf2.faceMap()[cutSurf2Face] - 1;
         }
     }
 

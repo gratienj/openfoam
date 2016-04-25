@@ -52,26 +52,24 @@ void Foam::LESModels::maxDeltaxyz::calcDelta()
     const vectorField faceN(mesh.faceAreas()/mag(mesh.faceAreas()));
     scalarField hmax(cells.size());
 
-    forAll(cells, celli)
+    forAll(cells,celli)
     {
         scalar deltaMaxTmp = 0.0;
-        const labelList& cFaces = cells[celli];
-        const point& cc = cellC[celli];
+        const labelList& cFaces = mesh.cells()[celli];
+        const point& centrevector = mesh.cellCentres()[celli];
 
         forAll(cFaces, cFacei)
         {
-            label facei = cFaces[cFacei];
-            const point& fc = faceC[facei];
-            const vector& n = faceN[facei];
-
-            scalar tmp = magSqr(n*(n & (fc - cc)));
+            label facei = cFaces[cFaceI];
+            const point& facevector = mesh.faceCentres()[facei];
+            scalar tmp = mag(facevector - centrevector);
             if (tmp > deltaMaxTmp)
             {
                 deltaMaxTmp = tmp;
             }
         }
 
-        hmax[celli] = deltaCoeff_*Foam::sqrt(deltaMaxTmp);
+        hmax[celli] = deltaCoeff_*deltaMaxTmp;
     }
 
     if (nD == 3)

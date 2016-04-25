@@ -32,7 +32,19 @@ void Foam::mapDistributePolyMesh::calcPatchSizes()
 {
     oldPatchSizes_.setSize(oldPatchStarts_.size());
 
-    if (oldPatchStarts_.size())
+    // Calculate old patch sizes
+    for (label patchi = 0; patchi < oldPatchStarts_.size() - 1; patchi++)
+    {
+        oldPatchSizes_[patchi] =
+            oldPatchStarts_[patchi + 1] - oldPatchStarts_[patchi];
+    }
+
+    // Set the last one by hand
+    const label lastPatchID = oldPatchStarts_.size() - 1;
+
+    oldPatchSizes_[lastPatchID] = nOldFaces_ - oldPatchStarts_[lastPatchID];
+
+    if (min(oldPatchSizes_) < 0)
     {
         // Calculate old patch sizes
         for (label patchI = 0; patchI < oldPatchStarts_.size() - 1; patchI++)

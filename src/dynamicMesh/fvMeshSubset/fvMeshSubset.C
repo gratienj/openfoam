@@ -457,20 +457,20 @@ void Foam::fvMeshSubset::setCellSubset
 
     Map<label> facesToSubset(avgNFacesPerCell*nCellsInSet);
 
-    forAll(cellMap_, cellI)
+    forAll(cellMap_, celli)
     {
         // Mark all faces from the cell
-        const labelList& curFaces = oldCells[cellMap_[cellI]];
+        const labelList& curFaces = oldCells[cellMap_[celli]];
 
-        forAll(curFaces, faceI)
+        forAll(curFaces, facei)
         {
-            if (!facesToSubset.found(curFaces[faceI]))
+            if (!facesToSubset.found(curFaces[facei]))
             {
-                facesToSubset.insert(curFaces[faceI], 1);
+                facesToSubset.insert(curFaces[facei], 1);
             }
             else
             {
-                facesToSubset[curFaces[faceI]]++;
+                facesToSubset[curFaces[facei]]++;
             }
         }
     }
@@ -489,16 +489,16 @@ void Foam::fvMeshSubset::setCellSubset
     faceMap_.setSize(facesToc.size());
 
     // 1. Get all faces that will be internal to the submesh.
-    forAll(facesToc, faceI)
+    forAll(facesToc, facei)
     {
-        if (facesToSubset[facesToc[faceI]] == 2)
+        if (facesToSubset[facesToc[facei]] == 2)
         {
             // Mark face and increment number of points in set
-            faceMap_[globalFaceMap.size()] = facesToc[faceI];
-            globalFaceMap.insert(facesToc[faceI], globalFaceMap.size());
+            faceMap_[globalFaceMap.size()] = facesToc[facei];
+            globalFaceMap.insert(facesToc[facei], globalFaceMap.size());
 
             // Mark all points from the face
-            markPoints(oldFaces[facesToc[faceI]], globalPointMap);
+            markPoints(oldFaces[facesToc[facei]], globalPointMap);
         }
     }
 
@@ -514,27 +514,27 @@ void Foam::fvMeshSubset::setCellSubset
     }
 
 
-    label faceI = 0;
+    label facei = 0;
 
     // 2. Boundary faces up to where we want to insert old internal faces
-    for (; faceI< facesToc.size(); faceI++)
+    for (; facei< facesToc.size(); facei++)
     {
-        if (facesToc[faceI] >= oldPatchStart)
+        if (facesToc[facei] >= oldPatchStart)
         {
             break;
         }
         if
         (
-            !baseMesh().isInternalFace(facesToc[faceI])
-         && facesToSubset[facesToc[faceI]] == 1
+            !baseMesh().isInternalFace(facesToc[facei])
+         && facesToSubset[facesToc[facei]] == 1
         )
         {
             // Mark face and increment number of points in set
-            faceMap_[globalFaceMap.size()] = facesToc[faceI];
-            globalFaceMap.insert(facesToc[faceI], globalFaceMap.size());
+            faceMap_[globalFaceMap.size()] = facesToc[facei];
+            globalFaceMap.insert(facesToc[facei], globalFaceMap.size());
 
             // Mark all points from the face
-            markPoints(oldFaces[facesToc[faceI]], globalPointMap);
+            markPoints(oldFaces[facesToc[facei]], globalPointMap);
         }
     }
 
@@ -557,20 +557,20 @@ void Foam::fvMeshSubset::setCellSubset
     }
 
     // 4. Remaining boundary faces
-    for (; faceI< facesToc.size(); faceI++)
+    for (; facei< facesToc.size(); facei++)
     {
         if
         (
-            !baseMesh().isInternalFace(facesToc[faceI])
-         && facesToSubset[facesToc[faceI]] == 1
+            !baseMesh().isInternalFace(facesToc[facei])
+         && facesToSubset[facesToc[facei]] == 1
         )
         {
             // Mark face and increment number of points in set
-            faceMap_[globalFaceMap.size()] = facesToc[faceI];
-            globalFaceMap.insert(facesToc[faceI], globalFaceMap.size());
+            faceMap_[globalFaceMap.size()] = facesToc[facei];
+            globalFaceMap.insert(facesToc[facei], globalFaceMap.size());
 
             // Mark all points from the face
-            markPoints(oldFaces[facesToc[faceI]], globalPointMap);
+            markPoints(oldFaces[facesToc[facei]], globalPointMap);
         }
     }
 
@@ -605,9 +605,9 @@ void Foam::fvMeshSubset::setCellSubset
     label nNewFaces = 0;
 
     // Make internal faces
-    for (label faceI = 0; faceI < nInternalFaces; faceI++)
+    for (label facei = 0; facei < nInternalFaces; facei++)
     {
-        const face& oldF = oldFaces[faceMap_[faceI]];
+        const face& oldF = oldFaces[faceMap_[facei]];
 
         face newF(oldF.size());
 
@@ -645,9 +645,9 @@ void Foam::fvMeshSubset::setCellSubset
     labelList boundaryPatchSizes(nbSize, 0);
 
     // Assign boundary faces. Visited in order of faceMap_.
-    for (label faceI = nInternalFaces; faceI < faceMap_.size(); faceI++)
+    for (label facei = nInternalFaces; facei < faceMap_.size(); facei++)
     {
-        label oldFaceI = faceMap_[faceI];
+        label oldFaceI = faceMap_[facei];
 
         face oldF = oldFaces[oldFaceI];
 
@@ -694,9 +694,9 @@ void Foam::fvMeshSubset::setCellSubset
 
     label nNewCells = 0;
 
-    forAll(cellMap_, cellI)
+    forAll(cellMap_, celli)
     {
-        const labelList& oldC = oldCells[cellMap_[cellI]];
+        const labelList& oldC = oldCells[cellMap_[celli]];
 
         labelList newC(oldC.size());
 
@@ -738,21 +738,21 @@ void Foam::fvMeshSubset::setCellSubset
     label nNewPatches = 0;
     label patchStart = nInternalFaces;
 
-    forAll(oldPatches, patchI)
+    forAll(oldPatches, patchi)
     {
-        if (boundaryPatchSizes[patchI] > 0)
+        if (boundaryPatchSizes[patchi] > 0)
         {
             // Patch still exists. Add it
-            newBoundary[nNewPatches] = oldPatches[patchI].clone
+            newBoundary[nNewPatches] = oldPatches[patchi].clone
             (
                 fvMeshSubsetPtr_().boundaryMesh(),
                 nNewPatches,
-                boundaryPatchSizes[patchI],
+                boundaryPatchSizes[patchi],
                 patchStart
             ).ptr();
 
-            patchStart += boundaryPatchSizes[patchI];
-            patchMap_[nNewPatches] = patchI;
+            patchStart += boundaryPatchSizes[patchi];
+            patchMap_[nNewPatches] = patchi;
             nNewPatches++;
         }
     }
@@ -913,11 +913,11 @@ void Foam::fvMeshSubset::setLargeCellSubset
         // processorPatches)
         // and put all exposed internal faces in there.
 
-        forAll(oldPatches, patchI)
+        forAll(oldPatches, patchi)
         {
-            if (isA<processorPolyPatch>(oldPatches[patchI]))
+            if (isA<processorPolyPatch>(oldPatches[patchi]))
             {
-                nextPatchID = patchI;
+                nextPatchID = patchi;
                 break;
             }
             oldInternalPatchID++;
@@ -956,15 +956,15 @@ void Foam::fvMeshSubset::setLargeCellSubset
     labelList globalPointMap(oldPoints.size(), -1);
 
     labelList globalFaceMap(oldFaces.size(), -1);
-    label faceI = 0;
+    label facei = 0;
 
     // 1. Pick up all preserved internal faces.
     for (label oldFaceI = 0; oldFaceI < oldNInternalFaces; oldFaceI++)
     {
         if (nCellsUsingFace[oldFaceI] == 2)
         {
-            globalFaceMap[oldFaceI] = faceI;
-            faceMap_[faceI++] = oldFaceI;
+            globalFaceMap[oldFaceI] = facei;
+            faceMap_[facei++] = oldFaceI;
 
             // Mark all points from the face
             markPoints(oldFaces[oldFaceI], globalPointMap);
@@ -972,7 +972,7 @@ void Foam::fvMeshSubset::setLargeCellSubset
     }
 
     // These are all the internal faces in the mesh.
-    label nInternalFaces = faceI;
+    label nInternalFaces = facei;
 
     // 2. Boundary faces up to where we want to insert old internal faces
     for
@@ -994,8 +994,8 @@ void Foam::fvMeshSubset::setLargeCellSubset
                 // Boundary face is kept.
 
                 // Mark face and increment number of points in set
-                globalFaceMap[oldFaceI] = faceI;
-                faceMap_[faceI++] = oldFaceI;
+                globalFaceMap[oldFaceI] = facei;
+                faceMap_[facei++] = oldFaceI;
 
                 // Mark all points from the face
                 markPoints(oldFaces[oldFaceI], globalPointMap);
@@ -1012,8 +1012,8 @@ void Foam::fvMeshSubset::setLargeCellSubset
     {
         if (nCellsUsingFace[oldFaceI] == 1)
         {
-            globalFaceMap[oldFaceI] = faceI;
-            faceMap_[faceI++] = oldFaceI;
+            globalFaceMap[oldFaceI] = facei;
+            faceMap_[facei++] = oldFaceI;
 
             // Mark all points from the face
             markPoints(oldFaces[oldFaceI], globalPointMap);
@@ -1033,8 +1033,8 @@ void Foam::fvMeshSubset::setLargeCellSubset
     {
         if (nCellsUsingFace[oldFaceI] == 3)
         {
-            globalFaceMap[oldFaceI] = faceI;
-            faceMap_[faceI++] = oldFaceI;
+            globalFaceMap[oldFaceI] = facei;
+            faceMap_[facei++] = oldFaceI;
 
             // Mark all points from the face
             markPoints(oldFaces[oldFaceI], globalPointMap);
@@ -1063,8 +1063,8 @@ void Foam::fvMeshSubset::setLargeCellSubset
                 // Boundary face is kept.
 
                 // Mark face and increment number of points in set
-                globalFaceMap[oldFaceI] = faceI;
-                faceMap_[faceI++] = oldFaceI;
+                globalFaceMap[oldFaceI] = facei;
+                faceMap_[facei++] = oldFaceI;
 
                 // Mark all points from the face
                 markPoints(oldFaces[oldFaceI], globalPointMap);
@@ -1076,7 +1076,7 @@ void Foam::fvMeshSubset::setLargeCellSubset
         }
     }
 
-    if (faceI != nFacesInSet)
+    if (facei != nFacesInSet)
     {
         FatalErrorInFunction
             << "Problem" << abort(FatalError);
@@ -1127,9 +1127,9 @@ void Foam::fvMeshSubset::setLargeCellSubset
     label nNewFaces = 0;
 
     // Make internal faces
-    for (label faceI = 0; faceI < nInternalFaces; faceI++)
+    for (label facei = 0; facei < nInternalFaces; facei++)
     {
-        const face& oldF = oldFaces[faceMap_[faceI]];
+        const face& oldF = oldFaces[faceMap_[facei]];
 
         face newF(oldF.size());
 
@@ -1145,9 +1145,9 @@ void Foam::fvMeshSubset::setLargeCellSubset
 
     // Make boundary faces. (different from internal since might need to be
     // flipped)
-    for (label faceI = nInternalFaces; faceI < faceMap_.size(); faceI++)
+    for (label facei = nInternalFaces; facei < faceMap_.size(); facei++)
     {
-        label oldFaceI = faceMap_[faceI];
+        label oldFaceI = faceMap_[facei];
 
         face oldF = oldFaces[oldFaceI];
 
@@ -1184,9 +1184,9 @@ void Foam::fvMeshSubset::setLargeCellSubset
 
     label nNewCells = 0;
 
-    forAll(cellMap_, cellI)
+    forAll(cellMap_, celli)
     {
-        const labelList& oldC = oldCells[cellMap_[cellI]];
+        const labelList& oldC = oldCells[cellMap_[celli]];
 
         labelList newC(oldC.size());
 

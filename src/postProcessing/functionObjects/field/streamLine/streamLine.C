@@ -38,6 +38,57 @@ defineTypeNameAndDebug(streamLine, 0);
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
+Foam::autoPtr<Foam::indirectPrimitivePatch>
+Foam::streamLine::wallPatch() const
+{
+    const fvMesh& mesh = dynamic_cast<const fvMesh&>(obr_);
+
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+    label nFaces = 0;
+
+    forAll(patches, patchi)
+    {
+        //if (!polyPatch::constraintType(patches[patchi].type()))
+        if (isA<wallPolyPatch>(patches[patchi]))
+        {
+            nFaces += patches[patchi].size();
+        }
+    }
+
+    labelList addressing(nFaces);
+
+    nFaces = 0;
+
+    forAll(patches, patchi)
+    {
+        //if (!polyPatch::constraintType(patches[patchi].type()))
+        if (isA<wallPolyPatch>(patches[patchi]))
+        {
+            const polyPatch& pp = patches[patchi];
+
+            forAll(pp, i)
+            {
+                addressing[nFaces++] = pp.start()+i;
+            }
+        }
+    }
+
+    return autoPtr<indirectPrimitivePatch>
+    (
+        new indirectPrimitivePatch
+        (
+            IndirectList<face>
+            (
+                mesh.faces(),
+                addressing
+            ),
+            mesh.points()
+        )
+    );
+}
+
+
 void Foam::streamLine::track()
 {
     const fvMesh& mesh = dynamic_cast<const fvMesh&>(obr_);

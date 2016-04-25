@@ -128,9 +128,9 @@ label findFace(const primitivePatch& pp, const labelList& meshF)
     // meshF vertices (in any order ;-)
     forAll(pFaces, i)
     {
-        label faceI = pFaces[i];
+        label facei = pFaces[i];
 
-        const face& f = pp[faceI];
+        const face& f = pp[facei];
 
         // Count uses of vertices of meshF for f
         label nMatched = 0;
@@ -145,7 +145,7 @@ label findFace(const primitivePatch& pp, const labelList& meshF)
 
         if (nMatched == meshF.size())
         {
-            return faceI;
+            return facei;
         }
     }
 
@@ -160,9 +160,9 @@ label findInternalFace(const primitiveMesh& mesh, const labelList& meshF)
 
     forAll(pFaces, i)
     {
-        label faceI = pFaces[i];
+        label facei = pFaces[i];
 
-        const face& f = mesh.faces()[faceI];
+        const face& f = mesh.faces()[facei];
 
         // Count uses of vertices of meshF for f
         label nMatched = 0;
@@ -177,7 +177,7 @@ label findInternalFace(const primitiveMesh& mesh, const labelList& meshF)
 
         if (nMatched == meshF.size())
         {
-            return faceI;
+            return facei;
         }
     }
     return -1;
@@ -215,7 +215,7 @@ bool correctOrientation(const pointField& points, const cellShape& shape)
 void storeCellInZone
 (
     const label regPhys,
-    const label cellI,
+    const label celli,
     Map<label>& physToZone,
 
     labelList& zoneToPhys,
@@ -236,12 +236,12 @@ void storeCellInZone
         physToZone.insert(regPhys, zoneI);
 
         zoneToPhys[zoneI] = regPhys;
-        zoneCells[zoneI].append(cellI);
+        zoneCells[zoneI].append(celli);
     }
     else
     {
         // Existing zone for region
-        zoneCells[zoneFnd()].append(cellI);
+        zoneCells[zoneFnd()].append(celli);
     }
 }
 
@@ -462,7 +462,7 @@ void readCells
     // Storage for all cells. Too big. Shrink later
     cells.setSize(nElems);
 
-    label cellI = 0;
+    label celli = 0;
     label nTet = 0;
     label nPyr = 0;
     label nPrism = 0;
@@ -582,7 +582,7 @@ void readCells
             storeCellInZone
             (
                 regPhys,
-                cellI,
+                celli,
                 physToZone,
                 zoneToPhys,
                 zoneCells
@@ -594,7 +594,7 @@ void readCells
 
             renumber(mshToFoam, tetPoints);
 
-            cells[cellI++] = cellShape(tet, tetPoints);
+            cells[celli++] = cellShape(tet, tetPoints);
 
             nTet++;
         }
@@ -603,7 +603,7 @@ void readCells
             storeCellInZone
             (
                 regPhys,
-                cellI,
+                celli,
                 physToZone,
                 zoneToPhys,
                 zoneCells
@@ -615,7 +615,7 @@ void readCells
 
             renumber(mshToFoam, pyrPoints);
 
-            cells[cellI++] = cellShape(pyr, pyrPoints);
+            cells[celli++] = cellShape(pyr, pyrPoints);
 
             nPyr++;
         }
@@ -624,7 +624,7 @@ void readCells
             storeCellInZone
             (
                 regPhys,
-                cellI,
+                celli,
                 physToZone,
                 zoneToPhys,
                 zoneCells
@@ -636,13 +636,13 @@ void readCells
 
             renumber(mshToFoam, prismPoints);
 
-            cells[cellI] = cellShape(prism, prismPoints);
+            cells[celli] = cellShape(prism, prismPoints);
 
-            const cellShape& cell = cells[cellI];
+            const cellShape& cell = cells[celli];
 
             if (!keepOrientation && !correctOrientation(points, cell))
             {
-                Info<< "Inverting prism " << cellI << endl;
+                Info<< "Inverting prism " << celli << endl;
                 // Reorder prism.
                 prismPoints[0] = cell[0];
                 prismPoints[1] = cell[2];
@@ -651,10 +651,10 @@ void readCells
                 prismPoints[4] = cell[4];
                 prismPoints[5] = cell[5];
 
-                cells[cellI] = cellShape(prism, prismPoints);
+                cells[celli] = cellShape(prism, prismPoints);
             }
 
-            cellI++;
+            celli++;
 
             nPrism++;
         }
@@ -663,7 +663,7 @@ void readCells
             storeCellInZone
             (
                 regPhys,
-                cellI,
+                celli,
                 physToZone,
                 zoneToPhys,
                 zoneCells
@@ -677,13 +677,13 @@ void readCells
 
             renumber(mshToFoam, hexPoints);
 
-            cells[cellI] = cellShape(hex, hexPoints);
+            cells[celli] = cellShape(hex, hexPoints);
 
-            const cellShape& cell = cells[cellI];
+            const cellShape& cell = cells[celli];
 
             if (!keepOrientation && !correctOrientation(points, cell))
             {
-                Info<< "Inverting hex " << cellI << endl;
+                Info<< "Inverting hex " << celli << endl;
                 // Reorder hex.
                 hexPoints[0] = cell[4];
                 hexPoints[1] = cell[5];
@@ -694,10 +694,10 @@ void readCells
                 hexPoints[6] = cell[2];
                 hexPoints[7] = cell[3];
 
-                cells[cellI] = cellShape(hex, hexPoints);
+                cells[celli] = cellShape(hex, hexPoints);
             }
 
-            cellI++;
+            celli++;
 
             nHex++;
         }
@@ -721,7 +721,7 @@ void readCells
     }
 
 
-    cells.setSize(cellI);
+    cells.setSize(celli);
 
     forAll(patchFaces, patchi)
     {

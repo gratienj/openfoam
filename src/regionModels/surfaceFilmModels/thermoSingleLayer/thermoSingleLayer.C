@@ -611,7 +611,7 @@ thermoSingleLayer::~thermoSingleLayer()
 void thermoSingleLayer::addSources
 (
     const label patchi,
-    const label faceI,
+    const label facei,
     const scalar massSource,
     const vector& momentumSource,
     const scalar pressureSource,
@@ -621,7 +621,7 @@ void thermoSingleLayer::addSources
     kinematicSingleLayer::addSources
     (
         patchi,
-        faceI,
+        facei,
         massSource,
         momentumSource,
         pressureSource,
@@ -633,7 +633,7 @@ void thermoSingleLayer::addSources
         Info<< "    energy   = " << energySource << nl << endl;
     }
 
-    hsSpPrimary_.boundaryFieldRef()[patchi][faceI] -= energySource;
+    hsSpPrimary_.boundaryFieldRef()[patchi][facei] -= energySource;
 }
 
 

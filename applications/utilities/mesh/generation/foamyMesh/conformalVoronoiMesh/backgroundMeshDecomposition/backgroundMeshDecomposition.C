@@ -166,13 +166,13 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
         while (true)
         {
             // Determine/update the status of each cell
-            forAll(volumeStatus, cellI)
+            forAll(volumeStatus, celli)
             {
-                if (volumeStatus[cellI] == volumeType::UNKNOWN)
+                if (volumeStatus[celli] == volumeType::UNKNOWN)
                 {
                     treeBoundBox cellBb
                     (
-                        mesh_.cells()[cellI].points
+                        mesh_.cells()[celli].points
                         (
                             mesh_.faces(),
                             mesh_.points()
@@ -181,15 +181,15 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
 
                     if (geometry.overlaps(cellBb))
                     {
-                        volumeStatus[cellI] = volumeType::MIXED;
+                        volumeStatus[celli] = volumeType::MIXED;
                     }
                     else if (geometry.inside(cellBb.midpoint()))
                     {
-                        volumeStatus[cellI] = volumeType::INSIDE;
+                        volumeStatus[celli] = volumeType::INSIDE;
                     }
                     else
                     {
-                        volumeStatus[cellI] = volumeType::OUTSIDE;
+                        volumeStatus[celli] = volumeType::OUTSIDE;
                     }
                 }
             }
@@ -213,17 +213,17 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
 
                 forAll(newCellsToRefine, nCTRI)
                 {
-                    label cellI = newCellsToRefine[nCTRI];
+                    label celli = newCellsToRefine[nCTRI];
 
-                    if (volumeStatus[cellI] == volumeType::MIXED)
+                    if (volumeStatus[celli] == volumeType::MIXED)
                     {
-                        volumeStatus[cellI] = volumeType::UNKNOWN;
+                        volumeStatus[celli] = volumeType::UNKNOWN;
                     }
 
-                    icellWeights[cellI] = max
+                    icellWeights[celli] = max
                     (
                         1.0,
-                        icellWeights[cellI]/8.0
+                        icellWeights[celli]/8.0
                     );
                 }
 
@@ -285,13 +285,13 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
             }
 
             // Determine/update the status of each cell
-            forAll(volumeStatus, cellI)
+            forAll(volumeStatus, celli)
             {
-                if (volumeStatus[cellI] == volumeType::UNKNOWN)
+                if (volumeStatus[celli] == volumeType::UNKNOWN)
                 {
                     treeBoundBox cellBb
                     (
-                        mesh_.cells()[cellI].points
+                        mesh_.cells()[celli].points
                         (
                             mesh_.faces(),
                             mesh_.points()
@@ -300,15 +300,15 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
 
                     if (geometry.overlaps(cellBb))
                     {
-                        volumeStatus[cellI] = volumeType::MIXED;
+                        volumeStatus[celli] = volumeType::MIXED;
                     }
                     else if (geometry.inside(cellBb.midpoint()))
                     {
-                        volumeStatus[cellI] = volumeType::INSIDE;
+                        volumeStatus[celli] = volumeType::INSIDE;
                     }
                     else
                     {
-                        volumeStatus[cellI] = volumeType::OUTSIDE;
+                        volumeStatus[celli] = volumeType::OUTSIDE;
                     }
                 }
             }
@@ -320,11 +320,11 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
             {
                 DynamicList<label> cellsToRemove;
 
-                forAll(volumeStatus, cellI)
+                forAll(volumeStatus, celli)
                 {
-                    if (volumeStatus[cellI] == volumeType::OUTSIDE)
+                    if (volumeStatus[celli] == volumeType::OUTSIDE)
                     {
-                        cellsToRemove.append(cellI);
+                        cellsToRemove.append(celli);
                     }
                 }
 
@@ -505,7 +505,7 @@ void Foam::backgroundMeshDecomposition::printMeshData
 
 bool Foam::backgroundMeshDecomposition::refineCell
 (
-    label cellI,
+    label celli,
     volumeType volType,
     scalar& weightEstimate
 ) const
@@ -517,7 +517,7 @@ bool Foam::backgroundMeshDecomposition::refineCell
 
     treeBoundBox cellBb
     (
-        mesh_.cells()[cellI].points
+        mesh_.cells()[celli].points
         (
             mesh_.faces(),
             mesh_.points()
@@ -639,29 +639,29 @@ Foam::labelList Foam::backgroundMeshDecomposition::selectRefinementCells
     labelHashSet cellsToRefine;
 
     // Determine/update the status of each cell
-    forAll(volumeStatus, cellI)
+    forAll(volumeStatus, celli)
     {
-        if (volumeStatus[cellI] == volumeType::MIXED)
+        if (volumeStatus[celli] == volumeType::MIXED)
         {
-            if (meshCutter_.cellLevel()[cellI] < minLevels_)
+            if (meshCutter_.cellLevel()[celli] < minLevels_)
             {
-                cellsToRefine.insert(cellI);
+                cellsToRefine.insert(celli);
             }
         }
 
-        if (volumeStatus[cellI] != volumeType::OUTSIDE)
+        if (volumeStatus[celli] != volumeType::OUTSIDE)
         {
             if
             (
                 refineCell
                 (
-                    cellI,
-                    volumeStatus[cellI],
-                    icellWeights[cellI]
+                    celli,
+                    volumeStatus[celli],
+                    icellWeights[celli]
                 )
             )
             {
-                cellsToRefine.insert(cellI);
+                cellsToRefine.insert(celli);
             }
         }
     }
@@ -937,9 +937,9 @@ Foam::backgroundMeshDecomposition::distribute
 
         forAll(newCellsToRefine, nCTRI)
         {
-            label cellI = newCellsToRefine[nCTRI];
+            label celli = newCellsToRefine[nCTRI];
 
-            icellWeights[cellI] /= 8.0;
+            icellWeights[celli] /= 8.0;
         }
 
         // Mesh changing engine.

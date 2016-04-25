@@ -45,10 +45,9 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
 
     const polyBoundaryMesh& bm = mesh.boundaryMesh();
 
-    // All the info for nearest. Construct to miss
-    List<mappedPatchBase::nearInfo> nearest(this->size());
+    label patchi = bm.findPatchID(patchName_);
 
-    if (patchI == -1)
+    if (patchi == -1)
     {
         FatalErrorInFunction
             << " Unknown patch name "
@@ -58,11 +57,7 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
 
     const labelList patchIDs(bm.patchSet(patchNames_).sortedToc());
 
-    label nFaces = 0;
-    forAll(patchIDs, i)
-    {
-        nFaces += bm[patchIDs[i]].size();
-    }
+    const polyPatch& pp = bm[patchi];
 
     if (nFaces > 0)
     {
@@ -124,9 +119,9 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
                 info = boundaryTree.findNearest(sample, Foam::sqr(GREAT));
             }
 
-            label faceI = boundaryTree.shapes().faceLabels()[info.index()];
+            label facei = boundaryTree.shapes().faceLabels()[info.index()];
 
-            const label patchi = bm.whichPatch(faceI);
+            const label patchi = bm.whichPatch(facei);
 
             if (isA<emptyPolyPatch>(bm[patchi]))
             {
@@ -139,21 +134,15 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
             }
             else if (info.hit())
             {
-                // Note: do we store the face centre or the actual nearest?
-                // We interpolate using the faceI only though (no
-                // interpolation) so it does not actually matter much, just for
-                // the location written to the header.
-
-                //const point& facePt = mesh.faceCentres()[faceI];
-                const point& facePt = info.hitPoint();
+                const point& fc = mesh.faceCentres()[facei];
 
                 mappedPatchBase::nearInfo sampleInfo;
 
                 sampleInfo.first() = pointIndexHit
                 (
                     true,
-                    facePt,
-                    faceI
+                    fc,
+                    facei
                 );
 
                 sampleInfo.second().first() = magSqr(facePt-sample);

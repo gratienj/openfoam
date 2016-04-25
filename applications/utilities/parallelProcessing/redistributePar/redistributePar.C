@@ -394,28 +394,15 @@ void readFields
 template<class GeoField, class CoupledPatchType>
 void correctCoupledBoundaryConditions(fvMesh& mesh)
 {
-    HashTable<GeoField*> flds
-    (
-        mesh.objectRegistry::lookupClass<GeoField>()
-    );
-
-    forAllIter(typename HashTable<GeoField*>, flds, iter)
+    forAll(a, celli)
     {
-        GeoField& fld = *iter();
-
-        typename GeoField::GeometricBoundaryField& bfld =
-            fld.boundaryField();
-        if
-        (
-            Pstream::defaultCommsType == Pstream::blocking
-         || Pstream::defaultCommsType == Pstream::nonBlocking
-        )
+        if (mag(b[celli] - a[celli]) > tolDim)
         {
             FatalErrorInFunction
                 << "Did not map volVectorField correctly:" << nl
-                << "cell:" << cellI
-                << " transfer b:" << b[cellI]
-                << " real cc:" << a[cellI]
+                << "cell:" << celli
+                << " transfer b:" << b[celli]
+                << " real cc:" << a[celli]
                 << abort(FatalError);
         }
     }

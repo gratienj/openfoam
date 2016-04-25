@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -124,17 +124,17 @@ void Foam::localPointRegion::countPointRegions
 
     forAllConstIter(Map<label>, candidateFace, iter)
     {
-        label faceI = iter.key();
+        label facei = iter.key();
 
-        if (!mesh.isInternalFace(faceI))
+        if (!mesh.isInternalFace(facei))
         {
-            const face& f = mesh.faces()[faceI];
+            const face& f = mesh.faces()[facei];
 
-            if (minRegion[faceI].empty())
+            if (minRegion[facei].empty())
             {
                 FatalErrorInFunction
                     << "Face from candidateFace without minRegion set." << endl
-                    << "Face:" << faceI << " fc:" << mesh.faceCentres()[faceI]
+                    << "Face:" << facei << " fc:" << mesh.faceCentres()[facei]
                     << " verts:" << f << abort(FatalError);
             }
 
@@ -147,7 +147,7 @@ void Foam::localPointRegion::countPointRegions
 
                 if (candidatePoint[pointI])
                 {
-                    label region = minRegion[faceI][fp];
+                    label region = minRegion[facei][fp];
 
                     if (minPointRegion[pointI] == -1)
                     {
@@ -178,7 +178,7 @@ void Foam::localPointRegion::countPointRegions
                         }
 
                         label meshFaceMapI = meshFaceMap_.size();
-                        meshFaceMap_.insert(faceI, meshFaceMapI);
+                        meshFaceMap_.insert(facei, meshFaceMapI);
                     }
                 }
             }
@@ -190,11 +190,11 @@ void Foam::localPointRegion::countPointRegions
     // region!
     forAllConstIter(Map<label>, candidateFace, iter)
     {
-        label faceI = iter.key();
+        label facei = iter.key();
 
-        if (mesh.isInternalFace(faceI))
+        if (mesh.isInternalFace(facei))
         {
-            const face& f = mesh.faces()[faceI];
+            const face& f = mesh.faces()[facei];
 
             forAll(f, fp)
             {
@@ -203,7 +203,7 @@ void Foam::localPointRegion::countPointRegions
                 if (candidatePoint[f[fp]] && meshPointMap_.found(f[fp]))
                 {
                     label meshFaceMapI = meshFaceMap_.size();
-                    meshFaceMap_.insert(faceI, meshFaceMapI);
+                    meshFaceMap_.insert(facei, meshFaceMapI);
                 }
             }
         }
@@ -226,9 +226,9 @@ void Foam::localPointRegion::countPointRegions
 
         //// Print a bit
         //{
-        //    label faceI = iter.key();
-        //    const face& f = mesh.faces()[faceI];
-        //    Pout<< "Face:" << faceI << " fc:" << mesh.faceCentres()[faceI]
+        //    label facei = iter.key();
+        //    const face& f = mesh.faces()[facei];
+        //    Pout<< "Face:" << facei << " fc:" << mesh.faceCentres()[facei]
         //        << " verts:" << f << endl;
         //    forAll(f, fp)
         //    {
@@ -274,29 +274,29 @@ void Foam::localPointRegion::calcPointRegions
     Map<label> candidateCell(nBnd);
     label candidateCellI = 0;
 
-    forAll(mesh.faces(), faceI)
+    forAll(mesh.faces(), facei)
     {
-        const face& f = mesh.faces()[faceI];
+        const face& f = mesh.faces()[facei];
 
         forAll(f, fp)
         {
             if (candidatePoint[f[fp]])
             {
                 // Mark face
-                if (candidateFace.insert(faceI, candidateFaceI))
+                if (candidateFace.insert(facei, candidateFaceI))
                 {
                     candidateFaceI++;
                 }
 
                 // Mark cells
-                if (candidateCell.insert(faceOwner[faceI], candidateCellI))
+                if (candidateCell.insert(faceOwner[facei], candidateCellI))
                 {
                     candidateCellI++;
                 }
 
-                if (mesh.isInternalFace(faceI))
+                if (mesh.isInternalFace(facei))
                 {
-                    label nei = faceNeighbour[faceI];
+                    label nei = faceNeighbour[facei];
                     if (candidateCell.insert(nei, candidateCellI))
                     {
                         candidateCellI++;
@@ -321,19 +321,19 @@ void Foam::localPointRegion::calcPointRegions
     faceList minRegion(mesh.nFaces());
     forAllConstIter(Map<label>, candidateFace, iter)
     {
-        label faceI = iter.key();
-        const face& f = mesh.faces()[faceI];
+        label facei = iter.key();
+        const face& f = mesh.faces()[facei];
 
-        if (mesh.isInternalFace(faceI))
+        if (mesh.isInternalFace(facei))
         {
-            label globOwn = globalCells.toGlobal(faceOwner[faceI]);
-            label globNei = globalCells.toGlobal(faceNeighbour[faceI]);
-            minRegion[faceI].setSize(f.size(), min(globOwn, globNei));
+            label globOwn = globalCells.toGlobal(faceOwner[facei]);
+            label globNei = globalCells.toGlobal(faceNeighbour[facei]);
+            minRegion[facei].setSize(f.size(), min(globOwn, globNei));
         }
         else
         {
-            label globOwn = globalCells.toGlobal(faceOwner[faceI]);
-            minRegion[faceI].setSize(f.size(), globOwn);
+            label globOwn = globalCells.toGlobal(faceOwner[facei]);
+            minRegion[facei].setSize(f.size(), globOwn);
         }
     }
 
@@ -352,17 +352,17 @@ void Foam::localPointRegion::calcPointRegions
         {
             minPointValue.clear();
 
-            label cellI = iter.key();
-            const cell& cFaces = mesh.cells()[cellI];
+            label celli = iter.key();
+            const cell& cFaces = mesh.cells()[celli];
 
             // Determine minimum per point
             forAll(cFaces, cFaceI)
             {
-                label faceI = cFaces[cFaceI];
+                label facei = cFaces[cFaceI];
 
-                if (minRegion[faceI].size())
+                if (minRegion[facei].size())
                 {
-                    const face& f = mesh.faces()[faceI];
+                    const face& f = mesh.faces()[facei];
 
                     forAll(f, fp)
                     {
@@ -371,12 +371,12 @@ void Foam::localPointRegion::calcPointRegions
 
                         if (iter == minPointValue.end())
                         {
-                            minPointValue.insert(pointI, minRegion[faceI][fp]);
+                            minPointValue.insert(pointI, minRegion[facei][fp]);
                         }
                         else
                         {
                             label currentMin = iter();
-                            iter() = min(currentMin, minRegion[faceI][fp]);
+                            iter() = min(currentMin, minRegion[facei][fp]);
                         }
                     }
                 }
@@ -385,19 +385,19 @@ void Foam::localPointRegion::calcPointRegions
             // Set face minimum from point minimum
             forAll(cFaces, cFaceI)
             {
-                label faceI = cFaces[cFaceI];
+                label facei = cFaces[cFaceI];
 
-                if (minRegion[faceI].size())
+                if (minRegion[facei].size())
                 {
-                    const face& f = mesh.faces()[faceI];
+                    const face& f = mesh.faces()[facei];
 
                     forAll(f, fp)
                     {
                         label minVal = minPointValue[f[fp]];
 
-                        if (minVal != minRegion[faceI][fp])
+                        if (minVal != minRegion[facei][fp])
                         {
-                            minRegion[faceI][fp] = minVal;
+                            minRegion[facei][fp] = minVal;
                             nChanged++;
                         }
                     }
@@ -469,11 +469,11 @@ Foam::localPointRegion::localPointRegion(const polyMesh& mesh)
     // Get any point on the outside which is on a non-coupled boundary
     boolList candidatePoint(mesh.nPoints(), false);
 
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        if (!patches[patchI].coupled())
+        if (!patches[patchi].coupled())
         {
-            const polyPatch& pp = patches[patchI];
+            const polyPatch& pp = patches[patchi];
 
             forAll(pp.meshPoints(), i)
             {

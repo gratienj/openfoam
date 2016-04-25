@@ -981,22 +981,18 @@ void Foam::forces::read(const dictionary& dict)
 
         obr_.store(tforce.ptr());
 
-        tmp<volVectorField> tmoment
-        (
-            new volVectorField
-            (
-                IOobject
-                (
-                    fieldName("moment"),
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedVector("0", dimForce*dimLength, vector::zero)
-            )
-        );
+                binMin_ = GREAT;
+                scalar binMax = -GREAT;
+                forAllConstIter(labelHashSet, patchSet_, iter)
+                {
+                    label patchi = iter.key();
+                    const polyPatch& pp = pbm[patchi];
+                    scalarField d(pp.faceCentres() & binDir_);
+                    binMin_ = min(min(d), binMin_);
+                    binMax = max(max(d), binMax);
+                }
+                reduce(binMin_, minOp<scalar>());
+                reduce(binMax, maxOp<scalar>());
 
         obr_.store(tmoment.ptr());
     }
@@ -1104,33 +1100,31 @@ void Foam::forces::calcForcesMoment()
 
         forAllConstIter(labelHashSet, patchSet_, iter)
         {
-            label patchI = iter.key();
+            label patchi = iter.key();
 
             vectorField Md
             (
-                mesh.C().boundaryField()[patchI] - coordSys_.origin()
+                mesh.C().boundaryField()[patchi] - coordSys_.origin()
             );
 
-            scalarField sA(mag(Sfb[patchI]));
+            scalarField sA(mag(Sfb[patchi]));
 
             // Normal force = surfaceUnitNormal*(surfaceNormal & forceDensity)
             vectorField fN
             (
-                Sfb[patchI]/sA
+                Sfb[patchi]/sA
                *(
-                    Sfb[patchI] & fD.boundaryField()[patchI]
+                    Sfb[patchi] & fD.boundaryField()[patchi]
                 )
             );
 
             // Tangential force (total force minus normal fN)
-            vectorField fT(sA*fD.boundaryField()[patchI] - fN);
+            vectorField fT(sA*fD.boundaryField()[patchi] - fN);
 
             //- Porous force
             vectorField fP(Md.size(), Zero);
 
-            addToFields(patchI, Md, fN, fT, fP);
-
-            applyBins(Md, fN, fT, fP, mesh.C().boundaryField()[patchI]);
+            applyBins(Md, fN, fT, fP, mesh.C().boundaryField()[patchi]);
         }
     }
     else
@@ -1152,25 +1146,23 @@ void Foam::forces::calcForcesMoment()
 
         forAllConstIter(labelHashSet, patchSet_, iter)
         {
-            label patchI = iter.key();
+            label patchi = iter.key();
 
             vectorField Md
             (
-                mesh.C().boundaryField()[patchI] - coordSys_.origin()
+                mesh.C().boundaryField()[patchi] - coordSys_.origin()
             );
 
             vectorField fN
             (
-                rho(p)*Sfb[patchI]*(p.boundaryField()[patchI] - pRef)
+                rho(p)*Sfb[patchi]*(p.boundaryField()[patchi] - pRef)
             );
 
-            vectorField fT(Sfb[patchI] & devRhoReffb[patchI]);
+            vectorField fT(Sfb[patchi] & devRhoReffb[patchi]);
 
             vectorField fP(Md.size(), Zero);
 
-            addToFields(patchI, Md, fN, fT, fP);
-
-            applyBins(Md, fN, fT, fP, mesh.C().boundaryField()[patchI]);
+            applyBins(Md, fN, fT, fP, mesh.C().boundaryField()[patchi]);
         }
     }
 

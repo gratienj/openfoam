@@ -203,7 +203,7 @@ class wallBoundedStreamLine
         (
             const PackedBoolList& isWallPatch,
             const point& seedPt,
-            const label cellI
+            const label celli
         ) const;
 
         //- Disallow default bitwise copy construct

@@ -113,7 +113,7 @@ void modifyOrAddFace
 (
     polyTopoChange& meshMod,
     const face& f,
-    const label faceI,
+    const label facei,
     const label own,
     const bool flipFaceFlux,
     const label newPatchI,
@@ -123,7 +123,7 @@ void modifyOrAddFace
     PackedBoolList& modifiedFace
 )
 {
-    if (!modifiedFace[faceI])
+    if (!modifiedFace[facei])
     {
         // First usage of face. Modify.
         meshMod.setAction
@@ -131,7 +131,7 @@ void modifyOrAddFace
             polyModifyFace
             (
                 f,                          // modified face
-                faceI,                      // label of face
+                facei,                      // label of face
                 own,                        // owner
                 -1,                         // neighbour
                 flipFaceFlux,               // face flip
@@ -141,7 +141,7 @@ void modifyOrAddFace
                 zoneFlip                    // face flip in zone
             )
         );
-        modifiedFace[faceI] = 1;
+        modifiedFace[facei] = 1;
     }
     else
     {
@@ -155,7 +155,7 @@ void modifyOrAddFace
                 -1,                         // neighbour
                 -1,                         // master point
                 -1,                         // master edge
-                faceI,                      // master face
+                facei,                      // master face
                 flipFaceFlux,               // face flip
                 newPatchI,                  // patch for face
                 zoneID,                     // zone for face
@@ -187,9 +187,9 @@ void createFaces
         // Pass 1. Do selected side of zone
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        for (label faceI = 0; faceI < mesh.nInternalFaces(); faceI++)
+        for (label facei = 0; facei < mesh.nInternalFaces(); facei++)
         {
-            label zoneFaceI = fZone.whichFace(faceI);
+            label zoneFaceI = fZone.whichFace(facei);
 
             if (zoneFaceI != -1)
             {
@@ -199,9 +199,9 @@ void createFaces
                     modifyOrAddFace
                     (
                         meshMod,
-                        mesh.faces()[faceI],    // modified face
-                        faceI,                  // label of face
-                        mesh.faceOwner()[faceI],// owner
+                        mesh.faces()[facei],    // modified face
+                        facei,                  // label of face
+                        mesh.faceOwner()[facei],// owner
                         false,                  // face flip
                         newMasterPatches[i],    // patch for face
                         fZone.index(),          // zone for face
@@ -218,9 +218,9 @@ void createFaces
                     modifyOrAddFace
                     (
                         meshMod,
-                        mesh.faces()[faceI].reverseFace(),  // modified face
-                        faceI,                      // label of face
-                        mesh.faceNeighbour()[faceI],// owner
+                        mesh.faces()[facei].reverseFace(),  // modified face
+                        facei,                      // label of face
+                        mesh.faceNeighbour()[facei],// owner
                         true,                       // face flip
                         newMasterPatches[i],        // patch for face
                         fZone.index(),              // zone for face
@@ -237,9 +237,9 @@ void createFaces
         // Pass 2. Do other side of zone
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        for (label faceI = 0; faceI < mesh.nInternalFaces(); faceI++)
+        for (label facei = 0; facei < mesh.nInternalFaces(); facei++)
         {
-            label zoneFaceI = fZone.whichFace(faceI);
+            label zoneFaceI = fZone.whichFace(facei);
 
             if (zoneFaceI != -1)
             {
@@ -249,9 +249,9 @@ void createFaces
                     modifyOrAddFace
                     (
                         meshMod,
-                        mesh.faces()[faceI].reverseFace(),  // modified face
-                        faceI,                          // label of face
-                        mesh.faceNeighbour()[faceI],    // owner
+                        mesh.faces()[facei].reverseFace(),  // modified face
+                        facei,                          // label of face
+                        mesh.faceNeighbour()[facei],    // owner
                         true,                           // face flip
                         newSlavePatches[i],             // patch for face
                         fZone.index(),                  // zone for face
@@ -265,9 +265,9 @@ void createFaces
                     modifyOrAddFace
                     (
                         meshMod,
-                        mesh.faces()[faceI],    // modified face
-                        faceI,                  // label of face
-                        mesh.faceOwner()[faceI],// owner
+                        mesh.faces()[facei],    // modified face
+                        facei,                  // label of face
+                        mesh.faceOwner()[facei],// owner
                         false,                  // face flip
                         newSlavePatches[i],     // patch for face
                         fZone.index(),          // zone for face
@@ -308,9 +308,9 @@ void createFaces
             {
                 forAll(pp, i)
                 {
-                    label faceI = pp.start()+i;
+                    label facei = pp.start()+i;
 
-                    label zoneFaceI = fZone.whichFace(faceI);
+                    label zoneFaceI = fZone.whichFace(facei);
 
                     if (zoneFaceI != -1)
                     {
@@ -331,9 +331,9 @@ void createFaces
                         modifyOrAddFace
                         (
                             meshMod,
-                            mesh.faces()[faceI],        // modified face
-                            faceI,                      // label of face
-                            mesh.faceOwner()[faceI],    // owner
+                            mesh.faces()[facei],        // modified face
+                            facei,                      // label of face
+                            mesh.faceOwner()[facei],    // owner
                             false,                      // face flip
                             newPatchI,                  // patch for face
                             fZone.index(),              // zone for face
@@ -497,9 +497,9 @@ int main(int argc, char *argv[])
 
     // Add faces to faceZones
     labelList nFaces(mesh.faceZones().size(), 0);
-    forAll(faceToZoneID, faceI)
+    forAll(faceToZoneID, facei)
     {
-        label zoneID = faceToZoneID[faceI];
+        label zoneID = faceToZoneID[facei];
         if (zoneID != -1)
         {
             nFaces[zoneID]++;
@@ -515,13 +515,13 @@ int main(int argc, char *argv[])
         labelList addr(n);
         boolList flip(n);
         n = 0;
-        forAll(faceToZoneID, faceI)
+        forAll(faceToZoneID, facei)
         {
-            label zone = faceToZoneID[faceI];
+            label zone = faceToZoneID[facei];
             if (zone == zoneID)
             {
-                addr[n] = faceI;
-                flip[n] = faceToFlip[faceI];
+                addr[n] = facei;
+                flip[n] = faceToFlip[facei];
                 n++;
             }
         }

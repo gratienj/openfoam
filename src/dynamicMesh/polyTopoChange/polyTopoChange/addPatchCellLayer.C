@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -51,14 +51,14 @@ Foam::label Foam::addPatchCellLayer::nbrFace
 (
     const labelListList& edgeFaces,
     const label edgeI,
-    const label faceI
+    const label facei
 )
 {
     const labelList& eFaces = edgeFaces[edgeI];
 
     if (eFaces.size() == 2)
     {
-        return (eFaces[0] != faceI ? eFaces[0] : eFaces[1]);
+        return (eFaces[0] != facei ? eFaces[0] : eFaces[1]);
     }
     else
     {
@@ -250,6 +250,38 @@ Foam::label Foam::addPatchCellLayer::addSideFace
     {
         // External edge so external face.
 
+        const polyBoundaryMesh& patches = mesh_.boundaryMesh();
+
+        // Loop over all faces connected to edge to inflate and
+        // see if we can find a face that is otherPatchID
+
+        // Get my mesh face and its zone.
+        label meshFaceI = pp.addressing()[ownFaceI];
+
+        forAll(meshFaces, k)
+        {
+            label facei = meshFaces[k];
+
+            if
+            (
+                (facei != meshFaceI)
+             && (patches.whichPatch(facei) == newPatchID)
+            )
+            {
+                // Found the patch face. Use it to inflate from
+                inflateEdgeI = -1;
+                inflateFaceI = facei;
+
+                zoneI = mesh_.faceZones().whichZone(facei);
+                if (zoneI != -1)
+                {
+                    label index = mesh_.faceZones()[zoneI].whichFace(facei);
+                    flip = mesh_.faceZones()[zoneI].flipMap()[index];
+                }
+                break;
+            }
+        }
+
         // Determine if different number of layer on owner and neighbour side
         // (relevant only for coupled faces). See section for internal edge
         // below.
@@ -399,15 +431,15 @@ Foam::label Foam::addPatchCellLayer::findProcPatch
 
     forAll(mesh.globalData().processorPatches(), i)
     {
-        label patchI = mesh.globalData().processorPatches()[i];
+        label patchi = mesh.globalData().processorPatches()[i];
 
         if
         (
-            refCast<const processorPolyPatch>(patches[patchI]).neighbProcNo()
+            refCast<const processorPolyPatch>(patches[patchi]).neighbProcNo()
          == nbrProcID
         )
         {
-            return patchI;
+            return patchi;
         }
     }
     return -1;
@@ -417,18 +449,18 @@ Foam::label Foam::addPatchCellLayer::findProcPatch
 void Foam::addPatchCellLayer::setFaceProps
 (
     const polyMesh& mesh,
-    const label faceI,
+    const label facei,
 
-    label& patchI,
+    label& patchi,
     label& zoneI,
     bool& zoneFlip
 )
 {
-    patchI = mesh.boundaryMesh().whichPatch(faceI);
-    zoneI = mesh.faceZones().whichZone(faceI);
+    patchi = mesh.boundaryMesh().whichPatch(facei);
+    zoneI = mesh.faceZones().whichZone(facei);
     if (zoneI != -1)
     {
-        label index = mesh.faceZones()[zoneI].whichFace(faceI);
+        label index = mesh.faceZones()[zoneI].whichFace(facei);
         zoneFlip = mesh.faceZones()[zoneI].flipMap()[index];
     }
 }
@@ -793,19 +825,21 @@ void Foam::addPatchCellLayer::calcExtrudeInfo
 
             if (edgeFaces[edgeI].size() == 2)
             {
-                // Internal edge. Look at any face (internal or boundary) to
-                // determine extrusion properties. First one that has zone
-                // info wins
+                label facei = meshFaces[k];
 
-                label dummyPatchI = -1;
-                findZoneFace
-                (
-                    true,               // useInternalFaces,
-                    zoneFromAnyFace,    // useBoundaryFaces,
+                if (facei != myFaceI && !mesh.isInternalFace(facei))
+                {
+                    setFaceProps
+                    (
+                        mesh,
+                        facei,
 
-                    mesh,
-                    pp,
-                    edgeI,
+                        sidePatchID[edgeI],
+                        sideZoneID[edgeI],
+                        sideFlip[edgeI]
+                    );
+                    inflateFaceI[edgeI] = facei;
+                    inflateEdgeI[edgeI] = -1;
 
 
                     ppFaces,            // excludeFaces,
@@ -889,18 +923,29 @@ void Foam::addPatchCellLayer::calcExtrudeInfo
 
             forAll(meshFaces, k)
             {
-                label faceI = meshFaces[k];
+                label facei = meshFaces[k];
 
-                if (faceI != myFaceI && !mesh.isInternalFace(faceI))
+                if (facei != myFaceI)
                 {
-                    if (patches.whichPatch(faceI) == edgePatchID[edgeI])
+                    if (mesh.isInternalFace(facei))
                     {
-                        setFaceProps
-                        (
-                            mesh,
-                            pp,
-                            edgeI,
-                            faceI,
+                        inflateEdgeI[edgeI] = meshEdgeI;
+                    }
+                    else
+                    {
+                        if (patches.whichPatch(facei) == sidePatchID[edgeI])
+                        {
+                            setFaceProps
+                            (
+                                mesh,
+                                facei,
+
+                                sidePatchID[edgeI],
+                                sideZoneID[edgeI],
+                                sideFlip[edgeI]
+                            );
+                            inflateFaceI[edgeI] = facei;
+                            inflateEdgeI[edgeI] = -1;
 
                             edgePatchID[edgeI],
                             edgeZoneID[edgeI],
@@ -1240,15 +1285,15 @@ void Foam::addPatchCellLayer::setRefinement
 
                 forAll(meshFaces, i)
                 {
-                    label faceI = meshFaces[i];
+                    label facei = meshFaces[i];
 
-                    if (faceI != myFaceI)
+                    if (facei != myFaceI)
                     {
-                        if (!mesh_.isInternalFace(faceI))
+                        if (!mesh_.isInternalFace(facei))
                         {
                             if (bFaceI == -1)
                             {
-                                bFaceI = faceI;
+                                bFaceI = facei;
                             }
                             else
                             {
@@ -1261,9 +1306,9 @@ void Foam::addPatchCellLayer::setRefinement
                                     << bFaceI << " fc:"
                                     << mesh_.faceCentres()[bFaceI]
                                     << " patch:" << patches.whichPatch(bFaceI)
-                                    << " and " << faceI << " fc:"
-                                    << mesh_.faceCentres()[faceI]
-                                    << " patch:" << patches.whichPatch(faceI)
+                                    << " and " << facei << " fc:"
+                                    << mesh_.faceCentres()[facei]
+                                    << " patch:" << patches.whichPatch(facei)
                                     << abort(FatalError);
                             }
                         }
@@ -1467,7 +1512,7 @@ void Foam::addPatchCellLayer::setRefinement
 
                 // Get new neighbour
                 label nei;
-                label patchI;
+                label patchi;
                 label zoneI = -1;
                 bool flip = false;
 
@@ -1476,7 +1521,7 @@ void Foam::addPatchCellLayer::setRefinement
                 {
                     // Top layer so is patch face.
                     nei = -1;
-                    patchI = patchID[patchFaceI];
+                    patchi = patchID[patchFaceI];
                     zoneI = mesh_.faceZones().whichZone(meshFaceI);
                     if (zoneI != -1)
                     {
@@ -1488,7 +1533,7 @@ void Foam::addPatchCellLayer::setRefinement
                 {
                     // Internal face between layer i and i+1
                     nei = addedCells[patchFaceI][i+1];
-                    patchI = -1;
+                    patchi = -1;
                 }
 
 
@@ -1503,7 +1548,7 @@ void Foam::addPatchCellLayer::setRefinement
                         -1,                         // master edge
                         (addToMesh_ ? meshFaceI : -1), // master face
                         false,                      // flux flip
-                        patchI,                     // patch for face
+                        patchi,                     // patch for face
                         zoneI,                      // zone for face
                         flip                        // face zone flip
                     )

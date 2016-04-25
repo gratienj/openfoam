@@ -129,21 +129,21 @@ void Foam::regionSizeDistribution::writeAlphaFields
 
 
     // Knock out any cell not in patchRegions
-    forAll(liquidCore, cellI)
+    forAll(liquidCore, celli)
     {
-        label regionI = regions[cellI];
+        label regionI = regions[celli];
         if (patchRegions.found(regionI))
         {
-            backgroundAlpha[cellI] = 0;
+            backgroundAlpha[celli] = 0;
         }
         else
         {
-            liquidCore[cellI] = 0;
+            liquidCore[celli] = 0;
 
             scalar regionVol = regionVolume[regionI];
             if (regionVol < maxDropletVol)
             {
-                backgroundAlpha[cellI] = 0;
+                backgroundAlpha[celli] = 0;
             }
         }
     }
@@ -484,10 +484,10 @@ void Foam::regionSizeDistribution::write()
         label nBlocked = 0;
 
         {
-            for (label faceI = 0; faceI < mesh.nInternalFaces(); faceI++)
+            for (label facei = 0; facei < mesh.nInternalFaces(); facei++)
             {
-                scalar ownVal = alpha[mesh.faceOwner()[faceI]];
-                scalar neiVal = alpha[mesh.faceNeighbour()[faceI]];
+                scalar ownVal = alpha[mesh.faceOwner()[facei]];
+                scalar neiVal = alpha[mesh.faceNeighbour()[facei]];
 
                 if
                 (
@@ -495,15 +495,15 @@ void Foam::regionSizeDistribution::write()
                  || (ownVal > threshold_ && neiVal < threshold_)
                 )
                 {
-                    blockedFace[faceI] = true;
+                    blockedFace[facei] = true;
                     nBlocked++;
                 }
             }
 
             // Block coupled faces
-            forAll(alpha.boundaryField(), patchI)
+            forAll(alpha.boundaryField(), patchi)
             {
-                const fvPatchScalarField& fvp = alpha.boundaryField()[patchI];
+                const fvPatchScalarField& fvp = alpha.boundaryField()[patchi];
                 if (fvp.coupled())
                 {
                     tmp<scalarField> townFld(fvp.patchInternalField());
@@ -560,9 +560,9 @@ void Foam::regionSizeDistribution::write()
                 << "    Dumping region as " << volScalarField::typeName
                 << " to " << region.name() << endl;
 
-            forAll(regions, cellI)
+            forAll(regions, celli)
             {
-                region[cellI] = regions[cellI];
+                region[celli] = regions[celli];
             }
             region.correctBoundaryConditions();
             region.write();

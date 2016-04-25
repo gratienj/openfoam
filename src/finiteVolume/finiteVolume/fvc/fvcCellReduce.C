@@ -80,25 +80,15 @@ tmp<GeometricField<Type, fvPatchField, volMesh>> cellReduce
     const Field<Type>& iField = ssf.internalField();
     forAll(iField, faceI)
     {
-        label cellOwn = own[faceI];
-        cop(result[cellOwn], iField[faceI]);
-
-        label cellNbr = nbr[faceI];
-        cop(result[cellNbr], iField[faceI]);
+        label celli = own[i];
+        cop(result[celli], ssf[i]);
     }
 
     // Boundary field
     forAll(ssf.boundaryField(), patchI)
     {
-        const fvsPatchField<Type>& pf = ssf.boundaryField()[patchI];
-        const label start = pf.patch().start();
-
-        forAll(pf, i)
-        {
-            label faceI = start + i;
-            label cellI = own[faceI];
-            cop(result[cellI], pf[i]);
-        }
+        label celli = nbr[i];
+        cop(result[celli], ssf[i]);
     }
 
     result.correctBoundaryConditions();

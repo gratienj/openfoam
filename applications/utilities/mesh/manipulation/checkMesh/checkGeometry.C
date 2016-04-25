@@ -158,9 +158,9 @@ bool Foam::checkWedges
     // Check all non-wedge faces
     label nEdgesInError = 0;
 
-    forAll(fcs, faceI)
+    forAll(fcs, facei)
     {
-        const face& f = fcs[faceI];
+        const face& f = fcs[facei];
 
         forAll(f, fp)
         {
@@ -202,7 +202,7 @@ bool Foam::checkWedges
                         // Ok if purely in empty directions.
                         if (nNonEmptyDirs > 0)
                         {
-                            if (edgesInError.insert(edge(p0, p1), faceI))
+                            if (edgesInError.insert(edge(p0, p1), facei))
                             {
                                 nEdgesInError++;
                             }
@@ -211,7 +211,7 @@ bool Foam::checkWedges
                     else if (nEmptyDirs > 1)
                     {
                         // Always an error
-                        if (edgesInError.insert(edge(p0, p1), faceI))
+                        if (edgesInError.insert(edge(p0, p1), facei))
                         {
                             nEdgesInError++;
                         }
@@ -276,9 +276,9 @@ namespace Foam
             // lists of size cpp to transform.
 
             List<pointField> newPts(pts.size());
-            forAll(pts, faceI)
+            forAll(pts, facei)
             {
-                newPts[faceI].setSize(pts[faceI].size());
+                newPts[facei].setSize(pts[facei].size());
             }
 
             label index = 0;
@@ -288,12 +288,12 @@ namespace Foam
 
                 // Extract for every face the i'th position
                 pointField ptsAtIndex(pts.size(), Zero);
-                forAll(cpp, faceI)
+                forAll(cpp, facei)
                 {
-                    const pointField& facePts = pts[faceI];
+                    const pointField& facePts = pts[facei];
                     if (facePts.size() > index)
                     {
-                        ptsAtIndex[faceI] = facePts[index];
+                        ptsAtIndex[facei] = facePts[index];
                         n++;
                     }
                 }
@@ -308,12 +308,12 @@ namespace Foam
                 cpp.transformPosition(ptsAtIndex);
 
                 // Extract back from ptsAtIndex into newPts
-                forAll(cpp, faceI)
+                forAll(cpp, facei)
                 {
-                    pointField& facePts = newPts[faceI];
+                    pointField& facePts = newPts[facei];
                     if (facePts.size() > index)
                     {
-                        facePts[index] = ptsAtIndex[faceI];
+                        facePts[index] = ptsAtIndex[facei];
                     }
                 }
 

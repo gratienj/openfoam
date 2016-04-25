@@ -176,15 +176,15 @@ void writeRays
 
     Pout<< "Dumping rays to " << str.name() << endl;
 
-    forAll(myFc, faceI)
+    forAll(myFc, facei)
     {
-        const labelList visFaces = visibleFaceFaces[faceI];
+        const labelList visFaces = visibleFaceFaces[facei];
         forAll(visFaces, faceRemote)
         {
             label compactI = visFaces[faceRemote];
             const point& remoteFc = compactCf[compactI];
 
-            meshTools::writeOBJ(str, myFc[faceI]);
+            meshTools::writeOBJ(str, myFc[facei]);
             vertI++;
             meshTools::writeOBJ(str, remoteFc);
             vertI++;
@@ -246,12 +246,12 @@ void insertMatrixElements
     scalarSquareMatrix& matrix
 )
 {
-    forAll(viewFactors, faceI)
+    forAll(viewFactors, facei)
     {
-        const scalarList& vf = viewFactors[faceI];
-        const labelList& globalFaces = globalFaceFaces[faceI];
+        const scalarList& vf = viewFactors[facei];
+        const labelList& globalFaces = globalFaceFaces[facei];
 
-        label globalI = globalNumbering.toGlobal(fromProcI, faceI);
+        label globalI = globalNumbering.toGlobal(fromProcI, facei);
         forAll(globalFaces, i)
         {
             matrix[globalI][globalFaces[i]] = vf[i];
@@ -395,17 +395,14 @@ int main(int argc, char *argv[])
 
         includePatches.insert(patchID);
 
-        if (agglom.size() > 0)
+        forAll(coarseCf, facei)
         {
-            label nAgglom = max(agglom)+1;
-            labelListList coarseToFine(invertOneToMany(nAgglom, agglom));
-            const labelList& coarsePatchFace =
-                coarseMesh.patchFaceMap()[patchID];
+            point cf = coarseCf[facei];
 
-            const pointField& coarseCf =
-                coarseMesh.Cf().boundaryField()[patchID];
-            const pointField& coarseSf =
-                coarseMesh.Sf().boundaryField()[patchID];
+            const label coarseFaceI = coarsePatchFace[facei];
+            const labelList& fineFaces = coarseToFine[coarseFaceI];
+            const label agglomI =
+                agglom[fineFaces[0]] + coarsePatches[patchID].start();
 
             forAll(coarseCf, faceI)
             {
@@ -451,12 +448,10 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                point sf = coarseSf[faceI];
-                localCoarseCf.append(cf);
-                localCoarseSf.append(sf);
-                localAgg.append(agglomI);
-
-            }
+            point sf = coarseSf[facei];
+            localCoarseCf.append(cf);
+            localCoarseSf.append(sf);
+            localAgg.append(agglomI);
         }
     }
 
@@ -508,10 +503,10 @@ int main(int argc, char *argv[])
     labelListList visibleFaceFaces(nCoarseFaces);
 
     label nViewFactors = 0;
-    forAll(nVisibleFaceFaces, faceI)
+    forAll(nVisibleFaceFaces, facei)
     {
-        visibleFaceFaces[faceI].setSize(nVisibleFaceFaces[faceI]);
-        nViewFactors += nVisibleFaceFaces[faceI];
+        visibleFaceFaces[facei].setSize(nVisibleFaceFaces[facei]);
+        nViewFactors += nVisibleFaceFaces[facei];
     }
 
     // - Construct compact numbering
@@ -531,9 +526,9 @@ int main(int argc, char *argv[])
     nVisibleFaceFaces = 0;
     forAll(rayStartFace, i)
     {
-        label faceI = rayStartFace[i];
+        label facei = rayStartFace[i];
         label compactI = rayEndFace[i];
-        visibleFaceFaces[faceI][nVisibleFaceFaces[faceI]++] = compactI;
+        visibleFaceFaces[facei][nVisibleFaceFaces[facei]++] = compactI;
     }
 
 
@@ -867,21 +862,45 @@ int main(int argc, char *argv[])
     );
     IOglobalFaceFaces.write();
 
+        // Create globalFaceFaces needed to insert view factors
+        // in F to the global matrix Fmatrix
+        forAll(globalFaceFaces, facei)
+        {
+            globalFaceFaces[facei] = renumber
+            (
+                compactToGlobal,
+                visibleFaceFaces[facei]
+            );
+        }
 
     labelListIOList IOvisibleFaceFaces
     (
         IOobject
         (
-            "visibleFaceFaces",
-            mesh.facesInstance(),
-            mesh,
-            IOobject::NO_READ,
-            IOobject::NO_WRITE,
-            false
-        ),
-        visibleFaceFaces
-    );
-    IOvisibleFaceFaces.write();
+            IOobject
+            (
+                "globalFaceFaces",
+                mesh.facesInstance(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                false
+            ),
+            globalFaceFaces
+        );
+        IOglobalFaceFaces.write();
+    }
+    else
+    {
+        labelListList globalFaceFaces(visibleFaceFaces.size());
+        forAll(globalFaceFaces, facei)
+        {
+            globalFaceFaces[facei] = renumber
+            (
+                compactToGlobal,
+                visibleFaceFaces[facei]
+            );
+        }
 
     IOmapDistribute IOmapDist
     (

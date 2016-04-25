@@ -36,6 +36,73 @@ namespace Foam
     defineTypeNameAndDebug(refinementHistory, 0);
 }
 
+
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+void Foam::refinementHistory::writeEntry
+(
+    const List<splitCell8>& splitCells,
+    const splitCell8& split
+)
+{
+    // Write me:
+    if (split.addedCellsPtr_.valid())
+    {
+        Pout<< "parent:" << split.parent_
+            << " subCells:" << split.addedCellsPtr_()
+            << endl;
+    }
+    else
+    {
+        Pout<< "parent:" << split.parent_
+            << " no subcells"
+            << endl;
+    }
+
+    if (split.parent_ >= 0)
+    {
+        Pout<< "parent data:" << endl;
+        // Write my parent
+        string oldPrefix = Pout.prefix();
+        Pout.prefix() = "  " + oldPrefix;
+        writeEntry(splitCells, splitCells[split.parent_]);
+        Pout.prefix() = oldPrefix;
+    }
+}
+
+
+void Foam::refinementHistory::writeDebug
+(
+    const labelList& visibleCells,
+    const List<splitCell8>& splitCells
+)
+{
+    string oldPrefix = Pout.prefix();
+    Pout.prefix() = "";
+
+    forAll(visibleCells, celli)
+    {
+        label index = visibleCells[celli];
+
+        if (index >= 0)
+        {
+            Pout<< "Cell from refinement:" << celli << " index:" << index
+                << endl;
+
+            string oldPrefix = Pout.prefix();
+            Pout.prefix() = "  " + oldPrefix;
+            writeEntry(splitCells, splitCells[index]);
+            Pout.prefix() = oldPrefix;
+        }
+        else
+        {
+            Pout<< "Unrefined cell:" << celli << " index:" << index << endl;
+        }
+    }
+    Pout.prefix() = oldPrefix;
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::refinementHistory::splitCell8::splitCell8()
@@ -708,9 +775,9 @@ Foam::refinementHistory::refinementHistory
         visibleCells_.setSize(nCells);
         splitCells_.setCapacity(nCells);
 
-        for (label cellI = 0; cellI < nCells; cellI++)
+        for (label celli = 0; celli < nCells; celli++)
         {
-            visibleCells_[cellI] = cellI;
+            visibleCells_[celli] = celli;
             splitCells_.append(splitCell8());
         }
     }
@@ -1112,11 +1179,11 @@ void Foam::refinementHistory::updateMesh(const mapPolyMesh& map)
 
         labelList newVisibleCells(map.cellMap().size(), -1);
 
-        forAll(visibleCells_, cellI)
+        forAll(visibleCells_, celli)
         {
-            if (visibleCells_[cellI] != -1)
+            if (visibleCells_[celli] != -1)
             {
-                label index = visibleCells_[cellI];
+                label index = visibleCells_[celli];
 
                 // Check not already set
                 if (splitCells_[index].addedCellsPtr_.valid())
@@ -1125,7 +1192,7 @@ void Foam::refinementHistory::updateMesh(const mapPolyMesh& map)
                         << "Problem" << abort(FatalError);
                 }
 
-                label newCellI = reverseCellMap[cellI];
+                label newCellI = reverseCellMap[celli];
 
                 if (newCellI >= 0)
                 {
@@ -1159,9 +1226,9 @@ void Foam::refinementHistory::subset
     {
         labelList newVisibleCells(cellMap.size(), -1);
 
-        forAll(newVisibleCells, cellI)
+        forAll(newVisibleCells, celli)
         {
-            label oldCellI = cellMap[cellI];
+            label oldCellI = cellMap[celli];
 
             label index = visibleCells_[oldCellI];
 
@@ -1172,7 +1239,7 @@ void Foam::refinementHistory::subset
                     << "Problem" << abort(FatalError);
             }
 
-            newVisibleCells[cellI] = index;
+            newVisibleCells[celli] = index;
         }
 
         if (debug)
@@ -1284,16 +1351,16 @@ void Foam::refinementHistory::distribute(const mapDistributePolyMesh& map)
     // Per splitCell entry the number of live cells that move to that processor
     labelList splitCellNum(splitCells_.size(), 0);
 
-    forAll(visibleCells_, cellI)
+    forAll(visibleCells_, celli)
     {
-        label index = visibleCells_[cellI];
+        label index = visibleCells_[celli];
 
         if (index >= 0)
         {
             countProc
             (
                 splitCells_[index].parent_,
-                destination[cellI],
+                destination[celli],
                 splitCellProc,
                 splitCellNum
             );
@@ -1333,13 +1400,17 @@ void Foam::refinementHistory::distribute(const mapDistributePolyMesh& map)
         }
 
         // Add live cells that are subsetted.
-        forAll(visibleCells_, cellI)
+        forAll(visibleCells_, celli)
         {
-            label index = visibleCells_[cellI];
+            label index = visibleCells_[celli];
 
-            if (index >= 0 && destination[cellI] == procI)
+            if (index >= 0 && destination[celli] == procI)
             {
                 label parent = splitCells_[index].parent_;
+
+                //Pout<< "Adding refined cell " << celli
+                //    << " since moves to "
+                //    << procI << " old parent:" << parent << endl;
 
                 // Create new splitCell with parent
                 oldToNew[index] = newSplitCells.size();
@@ -1504,16 +1575,16 @@ void Foam::refinementHistory::compact()
         }
 
         // Check none of the visible cells are marked as free
-        forAll(visibleCells_, cellI)
+        forAll(visibleCells_, celli)
         {
             if
             (
-                visibleCells_[cellI] >= 0
-             && splitCells_[visibleCells_[cellI]].parent_ == -2
+                visibleCells_[celli] >= 0
+             && splitCells_[visibleCells_[celli]].parent_ == -2
             )
             {
                 FatalErrorInFunction
-                    << "Problem : visible cell:" << cellI
+                    << "Problem : visible cell:" << celli
                     << " is marked as being free." << abort(FatalError);
             }
         }
@@ -1528,9 +1599,9 @@ void Foam::refinementHistory::compact()
     // or indexed from other splitCell entries.
 
     // Mark from visibleCells
-    forAll(visibleCells_, cellI)
+    forAll(visibleCells_, celli)
     {
-        label index = visibleCells_[cellI];
+        label index = visibleCells_[celli];
 
         if (index >= 0)
         {
@@ -1619,14 +1690,14 @@ void Foam::refinementHistory::compact()
 
 
     // Adapt indices in visibleCells_
-    forAll(visibleCells_, cellI)
+    forAll(visibleCells_, celli)
     {
-        label index = visibleCells_[cellI];
+        label index = visibleCells_[celli];
 
         if (index >= 0)
         {
             // Note that oldToNew can be -1 so it resets newVisibleCells.
-            visibleCells_[cellI] = oldToNew[index];
+            visibleCells_[celli] = oldToNew[index];
         }
         else
         {
@@ -1644,22 +1715,22 @@ void Foam::refinementHistory::writeDebug() const
 
 void Foam::refinementHistory::storeSplit
 (
-    const label cellI,
+    const label celli,
     const labelList& addedCells
 )
 {
     label parentIndex = -1;
 
-    if (visibleCells_[cellI] != -1)
+    if (visibleCells_[celli] != -1)
     {
         // Was already live. The current live cell becomes the
         // parent of the cells split off from it.
 
-        parentIndex = visibleCells_[cellI];
+        parentIndex = visibleCells_[celli];
 
-        // It is no longer live (note that actually cellI gets alive
+        // It is no longer live (note that actually celli gets alive
         // again below since is addedCells[0])
-        visibleCells_[cellI] = -1;
+        visibleCells_[celli] = -1;
     }
     else
     {
@@ -1692,10 +1763,10 @@ void Foam::refinementHistory::combineCells
     // Remove the information for the combined cells
     forAll(combinedCells, i)
     {
-        label cellI = combinedCells[i];
+        label celli = combinedCells[i];
 
-        freeSplitCell(visibleCells_[cellI]);
-        visibleCells_[cellI] = -1;
+        freeSplitCell(visibleCells_[celli]);
+        visibleCells_[celli] = -1;
     }
 
     splitCell8& parentSplit = splitCells_[parentIndex];

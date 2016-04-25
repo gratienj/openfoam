@@ -145,7 +145,14 @@ void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeData
     Ostream& os
 ) const
 {
-    const label patchI = patch().index();
+    if (log())
+    {
+        Info<< type() << ": " << this->patch().name()
+            << ": writing data to " << os.name()
+            << endl;
+    }
+
+    const label patchi = patch().index();
 
     // Heat flux [W/m2]
     scalarField qDot(this->patch().size(), 0.0);
@@ -170,17 +177,17 @@ void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeData
 
         const basicThermo& thermo = turbModel.transport();
 
-        const fvPatchScalarField& hep = thermo.he().boundaryField()[patchI];
+        const fvPatchScalarField& hep = thermo.he().boundaryField()[patchi];
 
-        qDot = turbModel.alphaEff(patchI)*hep.snGrad();
+        qDot = turbModel.alphaEff(patchi)*hep.snGrad();
     }
     else if (db().foundObject<basicThermo>(thermoName))
     {
         const basicThermo& thermo = db().lookupObject<basicThermo>(thermoName);
 
-        const fvPatchScalarField& hep = thermo.he().boundaryField()[patchI];
+        const fvPatchScalarField& hep = thermo.he().boundaryField()[patchi];
 
-        qDot = thermo.alpha().boundaryField()[patchI]*hep.snGrad();
+        qDot = thermo.alpha().boundaryField()[patchi]*hep.snGrad();
     }
     else
     {
@@ -229,12 +236,12 @@ void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeData
                 const Field<scalar>& qDot = qDots[procI];
                 const Field<scalar>& htc = htcs[procI];
 
-                forAll(magSf, faceI)
+                forAll(magSf, facei)
                 {
-                    os  << magSf[faceI] << token::SPACE
-                        << value[faceI] << token::SPACE
-                        << qDot[faceI] << token::SPACE
-                        << htc[faceI] << token::SPACE
+                    os  << magSf[facei] << token::SPACE
+                        << value[facei] << token::SPACE
+                        << qDot[facei] << token::SPACE
+                        << htc[facei] << token::SPACE
                         << nl;
                 }
             }
@@ -244,11 +251,18 @@ void Foam::externalCoupledTemperatureMixedFvPatchScalarField::writeData
     }
     else
     {
-        os  << magSf[faceI] << token::SPACE
-            << Tp[faceI] << token::SPACE
-            << qDot[faceI] << token::SPACE
-            << htc[faceI] << token::SPACE
-            << nl;
+        const Field<scalar>& magSf(this->patch().magSf());
+
+        forAll(patch(), facei)
+        {
+            os  << magSf[facei] << token::SPACE
+                << Tp[facei] << token::SPACE
+                << qDot[facei] << token::SPACE
+                << htc[facei] << token::SPACE
+                << nl;
+        }
+
+        os.flush();
     }
 }
 

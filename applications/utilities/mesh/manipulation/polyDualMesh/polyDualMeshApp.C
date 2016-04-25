@@ -237,9 +237,9 @@ void simpleMarkFeatures
     // Face centres that need inclusion in the dual mesh
     labelHashSet featureFaceSet(mesh.nFaces()-mesh.nInternalFaces());
     // A. boundary faces.
-    for (label faceI = mesh.nInternalFaces(); faceI < mesh.nFaces(); faceI++)
+    for (label facei = mesh.nInternalFaces(); facei < mesh.nFaces(); facei++)
     {
-        featureFaceSet.insert(faceI);
+        featureFaceSet.insert(facei);
     }
 
     // B. face zones.
@@ -273,11 +273,11 @@ void simpleMarkFeatures
 
             forAll(fz, i)
             {
-                label faceI = fz[i];
-                const face& f = mesh.faces()[faceI];
-                const labelList& fEdges = mesh.faceEdges()[faceI];
+                label facei = fz[i];
+                const face& f = mesh.faces()[facei];
+                const labelList& fEdges = mesh.faceEdges()[facei];
 
-                featureFaceSet.insert(faceI);
+                featureFaceSet.insert(facei);
                 forAll(f, fp)
                 {
                     // Mark point as multi cell point (since both sides of
@@ -388,9 +388,9 @@ int main(int argc, char *argv[])
     // (Note: in 1.4.2 we can use the built-in mesh point ordering
     //  facility instead)
     PackedBoolList isBoundaryEdge(mesh.nEdges());
-    for (label faceI = mesh.nInternalFaces(); faceI < mesh.nFaces(); faceI++)
+    for (label facei = mesh.nInternalFaces(); facei < mesh.nFaces(); facei++)
     {
-        const labelList& fEdges = mesh.faceEdges()[faceI];
+        const labelList& fEdges = mesh.faceEdges()[facei];
 
         forAll(fEdges, i)
         {

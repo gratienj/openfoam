@@ -211,8 +211,8 @@ vectorField calcVertexNormals(const triSurface& surf)
 
         forAll(pFaces, fI)
         {
-            const label faceI = pFaces[fI];
-            const triFace& f = surf[faceI];
+            const label facei = pFaces[fI];
+            const triFace& f = surf[facei];
 
             vector fN = f.normal(points);
 

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -241,12 +241,12 @@ bool Foam::FieldActivatedInjection<CloudType>::validInjection
     const label parcelI
 )
 {
-    const label cellI = injectorCells_[parcelI];
+    const label celli = injectorCells_[parcelI];
 
     if
     (
         nParcelsInjected_[parcelI] < nParcelsPerInjector_
-     && factor_*referenceField_[cellI] > thresholdField_[cellI]
+     && factor_*referenceField_[celli] > thresholdField_[celli]
     )
     {
         nParcelsInjected_[parcelI]++;

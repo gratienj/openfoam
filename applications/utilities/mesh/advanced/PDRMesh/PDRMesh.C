@@ -72,7 +72,7 @@ void modifyOrAddFace
 (
     polyTopoChange& meshMod,
     const face& f,
-    const label faceI,
+    const label facei,
     const label own,
     const bool flipFaceFlux,
     const label newPatchI,
@@ -82,7 +82,7 @@ void modifyOrAddFace
     PackedBoolList& modifiedFace
 )
 {
-    if (!modifiedFace[faceI])
+    if (!modifiedFace[facei])
     {
         // First usage of face. Modify.
         meshMod.setAction
@@ -90,7 +90,7 @@ void modifyOrAddFace
             polyModifyFace
             (
                 f,                          // modified face
-                faceI,                      // label of face
+                facei,                      // label of face
                 own,                        // owner
                 -1,                         // neighbour
                 flipFaceFlux,               // face flip
@@ -100,7 +100,7 @@ void modifyOrAddFace
                 zoneFlip                    // face flip in zone
             )
         );
-        modifiedFace[faceI] = 1;
+        modifiedFace[facei] = 1;
     }
     else
     {
@@ -114,7 +114,7 @@ void modifyOrAddFace
                 -1,                         // neighbour
                 -1,                         // master point
                 -1,                         // master edge
-                faceI,                      // master face
+                facei,                      // master face
                 flipFaceFlux,               // face flip
                 newPatchI,                  // patch for face
                 zoneID,                     // zone for face
@@ -325,18 +325,18 @@ void createCoupledBaffles
 {
     const faceZoneMesh& faceZones = mesh.faceZones();
 
-    forAll(coupledWantedPatch, faceI)
+    forAll(coupledWantedPatch, facei)
     {
-        if (coupledWantedPatch[faceI] != -1)
+        if (coupledWantedPatch[facei] != -1)
         {
-            const face& f = mesh.faces()[faceI];
-            label zoneID = faceZones.whichZone(faceI);
+            const face& f = mesh.faces()[facei];
+            label zoneID = faceZones.whichZone(facei);
             bool zoneFlip = false;
 
             if (zoneID >= 0)
             {
                 const faceZone& fZone = faceZones[zoneID];
-                zoneFlip = fZone.flipMap()[fZone.whichFace(faceI)];
+                zoneFlip = fZone.flipMap()[fZone.whichFace(facei)];
             }
 
             // Use owner side of face
@@ -344,34 +344,34 @@ void createCoupledBaffles
             (
                 meshMod,
                 f,                          // modified face
-                faceI,                      // label of face
-                mesh.faceOwner()[faceI],    // owner
+                facei,                      // label of face
+                mesh.faceOwner()[facei],    // owner
                 false,                      // face flip
-                coupledWantedPatch[faceI],  // patch for face
+                coupledWantedPatch[facei],  // patch for face
                 zoneID,                     // zone for face
                 zoneFlip,                   // face flip in zone
                 modifiedFace                // modify or add status
             );
 
-            if (mesh.isInternalFace(faceI))
+            if (mesh.isInternalFace(facei))
             {
-                label zoneID = faceZones.whichZone(faceI);
+                label zoneID = faceZones.whichZone(facei);
                 bool zoneFlip = false;
 
                 if (zoneID >= 0)
                 {
                     const faceZone& fZone = faceZones[zoneID];
-                    zoneFlip = fZone.flipMap()[fZone.whichFace(faceI)];
+                    zoneFlip = fZone.flipMap()[fZone.whichFace(facei)];
                 }
                 // Use neighbour side of face
                 modifyOrAddFace
                 (
                     meshMod,
                     f.reverseFace(),            // modified face
-                    faceI,                      // label of face
-                    mesh.faceNeighbour()[faceI],// owner
+                    facei,                      // label of face
+                    mesh.faceNeighbour()[facei],// owner
                     false,                      // face flip
-                    coupledWantedPatch[faceI],  // patch for face
+                    coupledWantedPatch[facei],  // patch for face
                     zoneID,                     // zone for face
                     zoneFlip,                   // face flip in zone
                     modifiedFace                // modify or add status
@@ -393,29 +393,29 @@ void createCyclicCoupledBaffles
 {
     const faceZoneMesh& faceZones = mesh.faceZones();
 
-    forAll(cyclicMasterPatch, faceI)
+    forAll(cyclicMasterPatch, facei)
     {
-        if (cyclicMasterPatch[faceI] != -1)
+        if (cyclicMasterPatch[facei] != -1)
         {
-            const face& f = mesh.faces()[faceI];
+            const face& f = mesh.faces()[facei];
 
-            label zoneID = faceZones.whichZone(faceI);
+            label zoneID = faceZones.whichZone(facei);
             bool zoneFlip = false;
 
             if (zoneID >= 0)
             {
                 const faceZone& fZone = faceZones[zoneID];
-                zoneFlip = fZone.flipMap()[fZone.whichFace(faceI)];
+                zoneFlip = fZone.flipMap()[fZone.whichFace(facei)];
             }
 
             modifyOrAddFace
             (
                 meshMod,
                 f.reverseFace(),                    // modified face
-                faceI,                              // label of face
-                mesh.faceNeighbour()[faceI],        // owner
+                facei,                              // label of face
+                mesh.faceNeighbour()[facei],        // owner
                 false,                              // face flip
-                cyclicMasterPatch[faceI],           // patch for face
+                cyclicMasterPatch[facei],           // patch for face
                 zoneID,                             // zone for face
                 zoneFlip,                           // face flip in zone
                 modifiedFace                        // modify or add
@@ -423,30 +423,30 @@ void createCyclicCoupledBaffles
         }
     }
 
-    forAll(cyclicSlavePatch, faceI)
+    forAll(cyclicSlavePatch, facei)
     {
-        if (cyclicSlavePatch[faceI] != -1)
+        if (cyclicSlavePatch[facei] != -1)
         {
-            const face& f = mesh.faces()[faceI];
-            if (mesh.isInternalFace(faceI))
+            const face& f = mesh.faces()[facei];
+            if (mesh.isInternalFace(facei))
             {
-                label zoneID = faceZones.whichZone(faceI);
+                label zoneID = faceZones.whichZone(facei);
                 bool zoneFlip = false;
 
                 if (zoneID >= 0)
                 {
                     const faceZone& fZone = faceZones[zoneID];
-                    zoneFlip = fZone.flipMap()[fZone.whichFace(faceI)];
+                    zoneFlip = fZone.flipMap()[fZone.whichFace(facei)];
                 }
             // Use owner side of face
                 modifyOrAddFace
                 (
                     meshMod,
                     f,                          // modified face
-                    faceI,                      // label of face
-                    mesh.faceOwner()[faceI],    // owner
+                    facei,                      // label of face
+                    mesh.faceOwner()[facei],    // owner
                     false,                      // face flip
-                    cyclicSlavePatch[faceI],    // patch for face
+                    cyclicSlavePatch[facei],    // patch for face
                     zoneID,                     // zone for face
                     zoneFlip,                   // face flip in zone
                     modifiedFace                // modify or add status
@@ -466,19 +466,19 @@ void createBaffles
 {
     const faceZoneMesh& faceZones = mesh.faceZones();
     Info << "faceZone:createBaffle " << faceZones << endl;
-    forAll(wantedPatch, faceI)
+    forAll(wantedPatch, facei)
     {
-        if (wantedPatch[faceI] != -1)
+        if (wantedPatch[facei] != -1)
         {
-            const face& f = mesh.faces()[faceI];
+            const face& f = mesh.faces()[facei];
 
-            label zoneID = faceZones.whichZone(faceI);
+            label zoneID = faceZones.whichZone(facei);
             bool zoneFlip = false;
 
             if (zoneID >= 0)
             {
                 const faceZone& fZone = faceZones[zoneID];
-                zoneFlip = fZone.flipMap()[fZone.whichFace(faceI)];
+                zoneFlip = fZone.flipMap()[fZone.whichFace(facei)];
             }
 
             meshMod.setAction
@@ -486,26 +486,26 @@ void createBaffles
                 polyModifyFace
                 (
                     f,                          // modified face
-                    faceI,                      // label of face
-                    mesh.faceOwner()[faceI],    // owner
+                    facei,                      // label of face
+                    mesh.faceOwner()[facei],    // owner
                     -1,                         // neighbour
                     false,                      // face flip
-                    wantedPatch[faceI],         // patch for face
+                    wantedPatch[facei],         // patch for face
                     false,                      // remove from zone
                     zoneID,                     // zone for face
                     zoneFlip                    // face flip in zone
                 )
             );
 
-            if (mesh.isInternalFace(faceI))
+            if (mesh.isInternalFace(facei))
             {
-                label zoneID = faceZones.whichZone(faceI);
+                label zoneID = faceZones.whichZone(facei);
                 bool zoneFlip = false;
 
                 if (zoneID >= 0)
                 {
                     const faceZone& fZone = faceZones[zoneID];
-                    zoneFlip = fZone.flipMap()[fZone.whichFace(faceI)];
+                    zoneFlip = fZone.flipMap()[fZone.whichFace(facei)];
                 }
 
                 meshMod.setAction
@@ -513,13 +513,13 @@ void createBaffles
                     polyAddFace
                     (
                         f.reverseFace(),            // modified face
-                        mesh.faceNeighbour()[faceI],// owner
+                        mesh.faceNeighbour()[facei],// owner
                         -1,                         // neighbour
                         -1,                         // masterPointID
                         -1,                         // masterEdgeID
-                        faceI,                      // masterFaceID,
+                        facei,                      // masterFaceID,
                         false,                      // face flip
-                        wantedPatch[faceI],         // patch for face
+                        wantedPatch[facei],         // patch for face
                         zoneID,                     // zone for face
                         zoneFlip                    // face flip in zone
                     )

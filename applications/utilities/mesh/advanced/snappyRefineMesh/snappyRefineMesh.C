@@ -302,20 +302,20 @@ void addCutNeighbours
 
     forAllConstIter(labelHashSet, cutCells, iter)
     {
-        const label cellI = iter.key();
-        const labelList& cFaces = mesh.cells()[cellI];
+        const label celli = iter.key();
+        const labelList& cFaces = mesh.cells()[celli];
 
         forAll(cFaces, i)
         {
-            const label faceI = cFaces[i];
+            const label facei = cFaces[i];
 
-            if (mesh.isInternalFace(faceI))
+            if (mesh.isInternalFace(facei))
             {
-                label nbr = mesh.faceOwner()[faceI];
+                label nbr = mesh.faceOwner()[facei];
 
-                if (nbr == cellI)
+                if (nbr == celli)
                 {
-                    nbr = mesh.faceNeighbour()[faceI];
+                    nbr = mesh.faceNeighbour()[facei];
                 }
 
                 if (selectInside && inside.found(nbr))
@@ -354,11 +354,11 @@ bool limitRefinementLevel
 )
 {
     // Do simple check on validity of refinement level.
-    forAll(refLevel, cellI)
+    forAll(refLevel, celli)
     {
-        if (!excludeCells.found(cellI))
+        if (!excludeCells.found(celli))
         {
-            const labelList& cCells = mesh.cellCells()[cellI];
+            const labelList& cCells = mesh.cellCells()[celli];
 
             forAll(cCells, i)
             {
@@ -366,13 +366,13 @@ bool limitRefinementLevel
 
                 if (!excludeCells.found(nbr))
                 {
-                    if (refLevel[cellI] - refLevel[nbr] >= limitDiff)
+                    if (refLevel[celli] - refLevel[nbr] >= limitDiff)
                     {
                         FatalErrorInFunction
                             << "Level difference between neighbouring cells "
-                            << cellI << " and " << nbr
+                            << celli << " and " << nbr
                             << " greater than or equal to " << limitDiff << endl
-                            << "refLevels:" << refLevel[cellI] << ' '
+                            << "refLevels:" << refLevel[celli] << ' '
                             <<  refLevel[nbr] << abort(FatalError);
                     }
                 }
@@ -385,9 +385,9 @@ bool limitRefinementLevel
 
     forAllConstIter(labelHashSet, cutCells, iter)
     {
-        // cellI will be refined.
-        const label cellI = iter.key();
-        const labelList& cCells = mesh.cellCells()[cellI];
+        // celli will be refined.
+        const label celli = iter.key();
+        const labelList& cCells = mesh.cellCells()[celli];
 
         forAll(cCells, i)
         {
@@ -395,7 +395,7 @@ bool limitRefinementLevel
 
             if (!excludeCells.found(nbr) && !cutCells.found(nbr))
             {
-                if (refLevel[cellI] + 1 - refLevel[nbr] >= limitDiff)
+                if (refLevel[celli] + 1 - refLevel[nbr] >= limitDiff)
                 {
                     addCutCells.insert(nbr);
                 }
@@ -454,9 +454,9 @@ void doRefinement
 
     refLevel.setSize(mesh.nCells());
 
-    for (label cellI = oldCells; cellI < mesh.nCells(); cellI++)
+    for (label celli = oldCells; celli < mesh.nCells(); celli++)
     {
-        refLevel[cellI] = 0;
+        refLevel[celli] = 0;
     }
 
     const labelListList& addedCells = multiRef.addedCells();

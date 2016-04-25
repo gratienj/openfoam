@@ -34,115 +34,110 @@ License
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-// Merge faces that are in-line.
-Foam::label Foam::meshRefinement::mergePatchFaces
-(
-    const scalar minCos,
-    const scalar concaveCos,
-    const label mergeSize,
-    const labelList& patchIDs
-)
-{
-    // Patch face merging engine
-    combineFaces faceCombiner(mesh_, false);
-
-    const polyBoundaryMesh& patches = mesh_.boundaryMesh();
-
-    // Pick up all candidate cells on boundary
-    labelHashSet boundaryCells(mesh_.nFaces()-mesh_.nInternalFaces());
-
-    forAll(patchIDs, i)
-    {
-        label patchI = patchIDs[i];
-
-        const polyPatch& patch = patches[patchI];
-
-        if (!patch.coupled())
-        {
-            forAll(patch, i)
-            {
-                boundaryCells.insert(mesh_.faceOwner()[patch.start()+i]);
-            }
-        }
-    }
-
-    // Get all sets of faces that can be merged
-    labelListList mergeSets
-    (
-        faceCombiner.getMergeSets
-        (
-            minCos,
-            concaveCos,
-            boundaryCells
-        )
-    );
-
-    if (mergeSize != -1)
-    {
-        // Keep only those that are mergeSize faces
-        label compactI = 0;
-        forAll(mergeSets, setI)
-        {
-            if (mergeSets[setI].size() == mergeSize && compactI != setI)
-            {
-                mergeSets[compactI++] = mergeSets[setI];
-            }
-        }
-        mergeSets.setSize(compactI);
-    }
-
-
-    label nFaceSets = returnReduce(mergeSets.size(), sumOp<label>());
-
-    Info<< "Merging " << nFaceSets << " sets of faces." << nl << endl;
-
-    if (nFaceSets > 0)
-    {
-        // Topology changes container
-        polyTopoChange meshMod(mesh_);
-
-        // Merge all faces of a set into the first face of the set. Remove
-        // unused points.
-        faceCombiner.setRefinement(mergeSets, meshMod);
-
-        // Change the mesh (no inflation)
-        autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
-
-        // Update fields
-        mesh_.updateMesh(map);
-
-        // Move mesh (since morphing does not do this)
-        if (map().hasMotionPoints())
-        {
-            mesh_.movePoints(map().preMotionPoints());
-        }
-        else
-        {
-            // Delete mesh volumes. No other way to do this?
-            mesh_.clearOut();
-        }
-
-        // Reset the instance for if in overwrite mode
-        mesh_.setInstance(timeName());
-
-        faceCombiner.updateMesh(map);
-
-        // Get the kept faces that need to be recalculated.
-        // Merging two boundary faces might shift the cell centre
-        // (unless the faces are absolutely planar)
-        labelHashSet retestFaces(2*mergeSets.size());
-
-        forAll(mergeSets, setI)
-        {
-            label oldMasterI = mergeSets[setI][0];
-            retestFaces.insert(map().reverseFaceMap()[oldMasterI]);
-        }
-        updateMesh(map, growFaceCellFace(retestFaces));
-    }
-
-    return nFaceSets;
-}
-
+//// Merge faces that are in-line.
+//Foam::label Foam::meshRefinement::mergePatchFaces
+//(
+//    const scalar minCos,
+//    const scalar concaveCos,
+//    const labelList& patchIDs
+//)
+//{
+//    // Patch face merging engine
+//    combineFaces faceCombiner(mesh_);
+//
+//    const polyBoundaryMesh& patches = mesh_.boundaryMesh();
+//
+//    // Pick up all candidate cells on boundary
+//    labelHashSet boundaryCells(mesh_.nFaces()-mesh_.nInternalFaces());
+//
+//    forAll(patchIDs, i)
+//    {
+//        label patchi = patchIDs[i];
+//
+//        const polyPatch& patch = patches[patchi];
+//
+//        if (!patch.coupled())
+//        {
+//            forAll(patch, i)
+//            {
+//                boundaryCells.insert(mesh_.faceOwner()[patch.start()+i]);
+//            }
+//        }
+//    }
+//
+//    // Get all sets of faces that can be merged
+//    labelListList mergeSets
+//    (
+//        faceCombiner.getMergeSets
+//        (
+//            minCos,
+//            concaveCos,
+//            boundaryCells
+//        )
+//    );
+//
+//    label nFaceSets = returnReduce(mergeSets.size(), sumOp<label>());
+//
+//    Info<< "mergePatchFaces : Merging " << nFaceSets
+//        << " sets of faces." << endl;
+//
+//    if (nFaceSets > 0)
+//    {
+//        // Topology changes container
+//        polyTopoChange meshMod(mesh_);
+//
+//        // Merge all faces of a set into the first face of the set. Remove
+//        // unused points.
+//        faceCombiner.setRefinement(mergeSets, meshMod);
+//
+//        // Change the mesh (no inflation)
+//        autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
+//
+//        // Update fields
+//        mesh_.updateMesh(map);
+//
+//        // Move mesh (since morphing does not do this)
+//        if (map().hasMotionPoints())
+//        {
+//            mesh_.movePoints(map().preMotionPoints());
+//        }
+//        else
+//        {
+//            // Delete mesh volumes. No other way to do this?
+//            mesh_.clearOut();
+//        }
+//
+//
+//        // Reset the instance for if in overwrite mode
+//        mesh_.setInstance(timeName());
+//
+//        faceCombiner.updateMesh(map);
+//
+//        // Get the kept faces that need to be recalculated.
+//        // Merging two boundary faces might shift the cell centre
+//        // (unless the faces are absolutely planar)
+//        labelHashSet retestFaces(6*mergeSets.size());
+//
+//        forAll(mergeSets, setI)
+//        {
+//            label oldMasterI = mergeSets[setI][0];
+//
+//            label facei = map().reverseFaceMap()[oldMasterI];
+//
+//            // facei is always uncoupled boundary face
+//            const cell& cFaces = mesh_.cells()[mesh_.faceOwner()[facei]];
+//
+//            forAll(cFaces, i)
+//            {
+//                retestFaces.insert(cFaces[i]);
+//            }
+//        }
+//        updateMesh(map, retestFaces.toc());
+//    }
+//
+//
+//    return nFaceSets;
+//}
 //
 //
 //// Remove points not used by any face or points used by only two faces where
@@ -174,15 +169,15 @@ Foam::label Foam::meshRefinement::mergePatchFaces
 //        {
 //            const faceList& faces = mesh_.faces();
 //
-//            forAll(faces, faceI)
+//            forAll(faces, facei)
 //            {
-//                const face& f = faces[faceI];
+//                const face& f = faces[facei];
 //
 //                forAll(f, fp)
 //                {
 //                    if (pointCanBeDeleted[f[fp]])
 //                    {
-//                        retestOldFaces.insert(faceI);
+//                        retestOldFaces.insert(facei);
 //                        break;
 //                    }
 //                }
@@ -223,18 +218,18 @@ Foam::label Foam::meshRefinement::mergePatchFaces
 //
 //        forAllConstIter(labelHashSet, retestOldFaces, iter)
 //        {
-//            label faceI = map().reverseFaceMap()[iter.key()];
+//            label facei = map().reverseFaceMap()[iter.key()];
 //
-//            const cell& ownFaces = cells[mesh_.faceOwner()[faceI]];
+//            const cell& ownFaces = cells[mesh_.faceOwner()[facei]];
 //
 //            forAll(ownFaces, i)
 //            {
 //                retestFaces.insert(ownFaces[i]);
 //            }
 //
-//            if (mesh_.isInternalFace(faceI))
+//            if (mesh_.isInternalFace(facei))
 //            {
-//                const cell& neiFaces = cells[mesh_.faceNeighbour()[faceI]];
+//                const cell& neiFaces = cells[mesh_.faceNeighbour()[facei]];
 //
 //                forAll(neiFaces, i)
 //                {
@@ -269,9 +264,9 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
 
         forAll(patchIDs, i)
         {
-            label patchI = patchIDs[i];
+            label patchi = patchIDs[i];
 
-            const polyPatch& patch = patches[patchI];
+            const polyPatch& patch = patches[patchi];
 
             if (!patch.coupled())
             {
@@ -666,10 +661,10 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRemovePoints
     labelHashSet retestFaces(pointRemover.savedFaceLabels().size());
     forAll(pointRemover.savedFaceLabels(), i)
     {
-        label faceI = pointRemover.savedFaceLabels()[i];
-        if (faceI >= 0)
+        label facei = pointRemover.savedFaceLabels()[i];
+        if (facei >= 0)
         {
-            retestFaces.insert(faceI);
+            retestFaces.insert(facei);
         }
     }
     updateMesh(map, growFaceCellFace(retestFaces));
@@ -737,10 +732,10 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRestorePoints
     labelHashSet retestFaces(2*facesToRestore.size());
     forAll(facesToRestore, i)
     {
-        label faceI = map().reverseFaceMap()[facesToRestore[i]];
-        if (faceI >= 0)
+        label facei = map().reverseFaceMap()[facesToRestore[i]];
+        if (facei >= 0)
         {
-            retestFaces.insert(faceI);
+            retestFaces.insert(facei);
         }
     }
     updateMesh(map, growFaceCellFace(retestFaces));
@@ -770,11 +765,11 @@ Foam::labelList Foam::meshRefinement::collectFaces
 
     forAll(candidateFaces, i)
     {
-        label faceI = candidateFaces[i];
+        label facei = candidateFaces[i];
 
-        if (set.found(faceI))
+        if (set.found(facei))
         {
-            selected[faceI] = true;
+            selected[facei] = true;
         }
     }
     syncTools::syncFaceList
@@ -800,9 +795,9 @@ Foam::labelList Foam::meshRefinement::growFaceCellFace
 
     forAllConstIter(faceSet, set, iter)
     {
-        label faceI = iter.key();
+        label facei = iter.key();
 
-        label own = mesh_.faceOwner()[faceI];
+        label own = mesh_.faceOwner()[facei];
 
         const cell& ownFaces = mesh_.cells()[own];
         forAll(ownFaces, ownFaceI)
@@ -810,9 +805,9 @@ Foam::labelList Foam::meshRefinement::growFaceCellFace
             selected[ownFaces[ownFaceI]] = true;
         }
 
-        if (mesh_.isInternalFace(faceI))
+        if (mesh_.isInternalFace(facei))
         {
-            label nbr = mesh_.faceNeighbour()[faceI];
+            label nbr = mesh_.faceNeighbour()[facei];
 
             const cell& nbrFaces = mesh_.cells()[nbr];
             forAll(nbrFaces, nbrFaceI)

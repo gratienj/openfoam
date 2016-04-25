@@ -232,7 +232,7 @@ protected:
         (
             TrackData& td,
             const scalar dt,           // timestep
-            const label cellI,         // owner cell
+            const label celli,         // owner cell
             const scalar d,            // diameter
             const scalar T,            // temperature
             const scalar mass,         // mass
@@ -283,7 +283,7 @@ public:
         (
             const polyMesh& mesh,
             const vector& position,
-            const label cellI,
+            const label celli,
             const label tetFaceI,
             const label tetPtI
         );
@@ -294,7 +294,7 @@ public:
         (
             const polyMesh& mesh,
             const vector& position,
-            const label cellI,
+            const label celli,
             const label tetFaceI,
             const label tetPtI,
             const label typeId,
@@ -408,7 +408,7 @@ public:
             (
                 TrackData& td,
                 const scalar dt,
-                const label cellI
+                const label celli
             );
 
             //- Correct cell values using latest transfer information
@@ -417,7 +417,7 @@ public:
             (
                 TrackData& td,
                 const scalar dt,
-                const label cellI
+                const label celli
             );
 
             //- Update parcel properties over the time interval
@@ -426,7 +426,7 @@ public:
             (
                 TrackData& td,
                 const scalar dt,
-                const label cellI
+                const label celli
             );
 
 
