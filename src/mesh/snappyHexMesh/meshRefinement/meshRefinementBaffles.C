@@ -652,10 +652,6 @@ Foam::labelList Foam::meshRefinement::getZones
     {
         const polyPatch& pp = pbm[patchi];
 
-        label mpI, spI;
-        surfaceZonesInfo::faceZoneType fzType;
-        bool hasInfo = getFaceZoneInfo(fZone.name(), mpI, spI, fzType);
-
         if (hasInfo && findIndex(fzTypes, fzType) != -1)
         {
             forAll(pp, i)
@@ -1361,7 +1357,7 @@ void Foam::meshRefinement::findCellZoneGeometric
         {
             if (cellToZone[cellI] == -2)
             {
-                cellToZone[cellI] = surfaceToCellZone[surfI];
+                cellToZone[celli] = surfaceToCellZone[surfI];
             }
             else if (cellToZone[cellI] == -1)
             {
@@ -1525,11 +1521,6 @@ void Foam::meshRefinement::findCellZoneGeometric
             }
         }
     }
-
-    labelList neiCellZone;
-    syncTools::swapBoundaryCellList(mesh_, cellToZone, neiCellZone);
-
-    const polyBoundaryMesh& patches = mesh_.boundaryMesh();
 
     forAll(patches, patchi)
     {
@@ -2135,15 +2126,12 @@ void Foam::meshRefinement::getIntersections
     {
         label faceI = testFaces[i];
 
-        if (mesh_.isInternalFace(faceI))
+        forAll(facePatch, facei)
         {
-            start[i] = cellCentres[faceOwner[faceI]];
-            end[i] = cellCentres[faceNeighbour[faceI]];
-        }
-        else
-        {
-            start[i] = cellCentres[faceOwner[faceI]];
-            end[i] = neiCc[faceI-mesh_.nInternalFaces()];
+            if (facePatch[facei] != -1)
+            {
+                problemFaces.insert(facei);
+            }
         }
     }
 
@@ -3260,9 +3248,15 @@ void Foam::meshRefinement::zonify
 
         forAll(pp, i)
         {
-            label faceZoneI = faceToZone[faceI];
+            const label meshFaceI = patch.addressing()[i];
+            const label patchi = bm.whichPatch(meshFaceI);
 
-            if (faceZoneI != -1)
+            if
+            (
+                patchi != -1
+             && bm[patchi].coupled()
+             && !isMasterFace[meshFaceI]
+            )
             {
                 label ownZone = cellToZone[faceOwner[faceI]];
                 label neiZone = neiCellZone[faceI-mesh_.nInternalFaces()];

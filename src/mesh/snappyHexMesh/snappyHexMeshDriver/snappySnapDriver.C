@@ -898,14 +898,6 @@ void Foam::snappySnapDriver::preSmoothPatch
             checkFaces[facei] = facei;
         }
 
-        // If enabled smooth the internal points
-        if (snapParams.nSmoothInternal() > smoothIter)
-        {
-            // Override values on internal points on refinement interfaces
-            meshMover.pointDisplacement().internalField() =
-                smoothInternalDisplacement(meshRefiner, meshMover);
-        }
-
         // Smooth the patch points
         pointField patchDisp(smoothPatchDisplacement(meshMover, baffles));
         //pointField patchDisp

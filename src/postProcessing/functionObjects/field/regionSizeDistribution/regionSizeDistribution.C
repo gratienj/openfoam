@@ -556,10 +556,6 @@ void Foam::regionSizeDistribution::write()
                 dimensionedScalar("zero", dimless, 0)
             );
 
-            if (log_) Info
-                << "    Dumping region as " << volScalarField::typeName
-                << " to " << region.name() << endl;
-
             forAll(regions, celli)
             {
                 region[celli] = regions[celli];

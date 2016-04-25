@@ -166,15 +166,6 @@ updateCoeffs()
         dom.blackBody().bLambda(lambdaId).boundaryField()[patchi]
     );
 
-    const boundaryRadiationProperties& boundaryRadiation =
-        boundaryRadiationProperties::New(dimensionedInternalField().mesh());
-
-
-    const tmp<scalarField> temissivity
-    (
-        boundaryRadiation.emissivity(patch().index(), lambdaId)
-    );
-
     const scalarField& emissivity = temissivity();
 
     scalarField& Qem = ray.Qem().boundaryFieldRef()[patchi];

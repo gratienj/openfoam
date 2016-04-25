@@ -742,6 +742,7 @@ void Foam::meshRefinement::doSplitFaces
         label facei = splitFaces[i];
         const face& f = mesh_.faces()[facei];
 
+
         // Split as start and end index in face
         const labelPair& split = splits[i];
 

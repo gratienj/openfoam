@@ -4344,43 +4344,6 @@ void Foam::snappyLayerDriver::doLayers
                 }
             }
 
-            // Add contributions from faceZones that get layers
-            const faceZoneMesh& fZones = mesh.faceZones();
-            forAll(fZones, zoneI)
-            {
-                const faceZone& fZone = fZones[zoneI];
-                const word& fzName = fZone.name();
-
-                label mpI, spI;
-                surfaceZonesInfo::faceZoneType fzType;
-                meshRefiner_.getFaceZoneInfo(fzName, mpI, spI, fzType);
-
-                if (numLayers[mpI] > 0)
-                {
-                    // Get the owner side for unflipped faces, neighbour side
-                    // for flipped ones
-                    const labelList& cellIDs = fZone.slaveCells();
-                    forAll(cellIDs, i)
-                    {
-                        if (cellIDs[i] >= 0)
-                        {
-                            cellWeights[cellIDs[i]] += numLayers[mpI];
-                        }
-                    }
-                }
-                if (numLayers[spI] > 0)
-                {
-                    const labelList& cellIDs = fZone.masterCells();
-                    forAll(cellIDs, i)
-                    {
-                        if (cellIDs[i] >= 0)
-                        {
-                            cellWeights[cellIDs[i]] += numLayers[mpI];
-                        }
-                    }
-                }
-            }
-
             // Balance mesh (and meshRefinement). Restrict faceZones to
             // be on internal faces only since they will be converted into
             // baffles.
