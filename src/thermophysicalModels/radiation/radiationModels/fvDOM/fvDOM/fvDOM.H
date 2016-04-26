@@ -136,7 +136,7 @@ class fvDOM
         scalar convergence_;
 
         //- Maximum number of iterations
-        scalar maxIter_;
+        label maxIter_;
 
         //- List of cached fvMatrices for rays
         List<PtrList<fvScalarMatrix>>fvRayDiv_;
