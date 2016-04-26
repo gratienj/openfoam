@@ -438,6 +438,11 @@ public:
         //- Return a const-reference to the dimensioned internal field
         inline const DimensionedInternalField& dimensionedInternalField() const;
 
+        //- Return a const-reference to the dimensioned internal field
+        //  of a "vol" field.  Useful in the formulation of source-terms
+        //  for FV equations
+        inline const DimensionedInternalField& v() const;
+
         //- Return a reference to the internal field
         //  Note: this increments the event counter and checks the
         //  old-time fields; avoid in loops.
@@ -564,6 +569,11 @@ public:
 
 
     // Member operators
+
+        //- Return a const-reference to the dimensioned internal field
+        //  of a "vol" field.  Useful in the formulation of source-terms
+        //  for FV equations
+        inline const DimensionedInternalField& operator~() const;
 
         void operator=(const GeometricField<Type, PatchField, GeoMesh>&);
         void operator=(const tmp<GeometricField<Type, PatchField, GeoMesh>>&);
