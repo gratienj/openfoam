@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -108,9 +108,9 @@ class CourantNo
     // Private Member Functions
 
         //- Divide Co by rho if required
-        tmp<volScalarField::DimensionedInternalField> byRho
+        tmp<volScalarField::Internal> byRho
         (
-            const tmp<volScalarField::DimensionedInternalField>& Co
+            const tmp<volScalarField::Internal>& Co
         ) const;
 
         //- Disallow default bitwise copy construct
