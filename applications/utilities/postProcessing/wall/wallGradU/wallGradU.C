@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
                 )
             );
 
-            volVectorField::GeometricBoundaryField& wallGradUBf =
+            volVectorField::Boundary& wallGradUBf =
                 wallGradU.boundaryFieldRef();
 
             const fvPatchList& patches = mesh.boundary();

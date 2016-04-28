@@ -113,7 +113,7 @@ void Foam::fvMeshDistribute::mapBoundaryFields
     forAllIter(typename HashTable<fldType*>, flds, iter)
     {
         fldType& fld = *iter();
-        typename fldType::GeometricBoundaryField& bfld =
+        typename fldType::Boundary& bfld =
             fld.boundaryFieldRef();
 
         const FieldField<fvsPatchField, T>& oldBfld = oldBflds[fieldI++];
@@ -250,7 +250,7 @@ void Foam::fvMeshDistribute::initPatchFields
     {
         GeoField& fld = *iter();
 
-        typename GeoField::GeometricBoundaryField& bfld =
+        typename GeoField::Boundary& bfld =
             fld.boundaryFieldRef();
 
         forAll(bfld, patchi)

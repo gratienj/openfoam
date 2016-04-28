@@ -63,7 +63,7 @@ void calcIncompressible
 
     const volSymmTensorField Reff(model->devReff());
 
-    volVectorField::GeometricBoundaryField& wallShearStressBf =
+    volVectorField::Boundary& wallShearStressBf =
         wallShearStress.boundaryFieldRef();
 
     forAll(wallShearStressBf, patchi)
@@ -115,7 +115,7 @@ void calcCompressible
 
     const volSymmTensorField Reff(model->devRhoReff());
 
-    volVectorField::GeometricBoundaryField& wallShearStressBf =
+    volVectorField::Boundary& wallShearStressBf =
         wallShearStress.boundaryFieldRef();
 
     forAll(wallShearStressBf, patchi)

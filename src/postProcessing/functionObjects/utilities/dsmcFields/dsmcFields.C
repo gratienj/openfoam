@@ -210,7 +210,7 @@ void Foam::dsmcFields::write()
 
             const fvMesh& mesh = fDMean.mesh();
 
-            volScalarField::GeometricBoundaryField& pBf = p.boundaryFieldRef();
+            volScalarField::Boundary& pBf = p.boundaryFieldRef();
 
             forAll(mesh.boundaryMesh(), i)
             {

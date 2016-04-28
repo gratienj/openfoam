@@ -123,7 +123,7 @@ void Foam::fieldMinMax::calcMinMaxFields
         const fieldType& field = obr_.lookupObject<fieldType>(fieldName);
         const fvMesh& mesh = field.mesh();
 
-        const volVectorField::GeometricBoundaryField& CfBoundary =
+        const volVectorField::Boundary& CfBoundary =
             mesh.C().boundaryField();
 
         switch (mode)
@@ -131,7 +131,7 @@ void Foam::fieldMinMax::calcMinMaxFields
             case mdMag:
             {
                 const volScalarField magField(mag(field));
-                const volScalarField::GeometricBoundaryField& magFieldBoundary =
+                const volScalarField::Boundary& magFieldBoundary =
                     magField.boundaryField();
 
                 scalarList minVs(Pstream::nProcs());
@@ -204,7 +204,7 @@ void Foam::fieldMinMax::calcMinMaxFields
             }
             case mdCmpt:
             {
-                const typename fieldType::GeometricBoundaryField&
+                const typename fieldType::Boundary&
                     fieldBoundary = field.boundaryField();
 
                 List<Type> minVs(Pstream::nProcs());

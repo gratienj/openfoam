@@ -102,7 +102,7 @@ void Foam::nearWallFields::sampleBoundaryField
     );
 
     typename GeometricField<Type, fvPatchField, volMesh>::
-        GeometricBoundaryField& fldBf = fld.boundaryFieldRef();
+        Boundary& fldBf = fld.boundaryFieldRef();
 
     // Pick up data
     label nPatchFaces = 0;
