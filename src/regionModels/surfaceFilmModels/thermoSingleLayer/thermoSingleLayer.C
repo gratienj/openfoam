@@ -743,7 +743,7 @@ void thermoSingleLayer::info()
 {
     kinematicSingleLayer::info();
 
-    const scalarField& Tinternal = T_.internalField();
+    const scalarField& Tinternal = T_;
 
     Info<< indent << "min/mean/max(T)    = "
         << gMin(Tinternal) << ", "
