@@ -14,4 +14,4 @@ runApplication createBaffles -overwrite
 # remove zero-sized patches
 runApplication createPatch -overwrite
 
-restore0Dir
+cp -rf 0.orig 0

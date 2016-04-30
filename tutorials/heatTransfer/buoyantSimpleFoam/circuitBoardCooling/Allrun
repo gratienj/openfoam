@@ -6,7 +6,7 @@ application=$(getApplication)
 
 runApplication blockMesh
 
-restore0Dir
+cp -r 0.orig 0
 
 # Create 1D and 3D baffles
 runApplication createBaffles -overwrite

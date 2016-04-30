@@ -24,4 +24,5 @@ rm -rf constant/air/polyMesh/sets
 paraFoam -touch -region porous
 paraFoam -touch -region air
 
-restore0Dir
+
+cp -rf 0.orig 0

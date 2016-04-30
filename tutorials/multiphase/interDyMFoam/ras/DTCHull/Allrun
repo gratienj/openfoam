@@ -20,7 +20,10 @@ do
 done
 
 runApplication snappyHexMesh -overwrite
-restore0Dir
+
+\rm -rf 0
+\cp -r 0.orig 0
+
 runApplication setFields
 runApplication decomposePar
 runParallel renumberMesh -overwrite

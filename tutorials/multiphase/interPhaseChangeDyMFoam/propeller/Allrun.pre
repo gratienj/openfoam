@@ -35,4 +35,4 @@ runApplication createPatch -overwrite
 
 # - apply the initial fields
 
-restore0Dir
+cp -rf 0.orig 0
