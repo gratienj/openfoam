@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,7 +60,7 @@ Foam::cloudInfo::cloudInfo
     const bool loadFromFiles
 )
 :
-    functionObjectFile(obr, name),
+    functionObjectFiles(obr, name),
     name_(name),
     obr_(obr),
     active_(true),
@@ -84,7 +84,7 @@ void Foam::cloudInfo::read(const dictionary& dict)
 {
     if (active_)
     {
-        functionObjectFile::read(dict);
+        functionObjectFiles::resetNames(dict.lookup("clouds"));
 
         log_ = dict.lookupOrDefault<Switch>("log", true);
         dict.lookup("clouds") >> cloudNames_;
@@ -144,7 +144,9 @@ void Foam::cloudInfo::write()
 {
     if (active_)
     {
-        forAll(cloudNames_, cloudI)
+        functionObjectFiles::write();
+
+        forAll(names(), i)
         {
             const word& cloudName = cloudNames_[cloudI];
 

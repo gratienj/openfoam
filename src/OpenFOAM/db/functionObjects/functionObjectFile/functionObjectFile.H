@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,9 +40,6 @@ SourceFiles
 #define functionObjectFile_H
 
 #include "objectRegistry.H"
-#include "OFstream.H"
-#include "PtrList.H"
-#include "HashSet.H"
 #include "IOmanip.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -57,27 +54,17 @@ namespace Foam
 
 class functionObjectFile
 {
-private:
 
-    // Private data
+protected:
 
-        //- Reference to the database
+    // Protected data
+
+        //- Reference to the objectRegistry
         const objectRegistry& obr_;
 
         //- Prefix
         const word prefix_;
 
-        //- Name of file
-        word fileName_;
-
-        //- File pointer
-        autoPtr<OFstream> filePtr_;
-
-        //- Write precision
-        label writePrecision_;
-
-
-protected:
 
     // Protected Data
 
@@ -96,11 +83,8 @@ protected:
         //- Return the base directory for the current time value
         virtual fileName baseTimeDir() const;
 
-        //- Return an autoPtr to a new file
-        virtual autoPtr<OFstream> createFile(const word& name) const;
-
-        //- Reset internal file pointer to new file with new name
-        virtual void resetFile(const word& name);
+        //- File header information
+        virtual void writeFileHeader(const label i = 0);
 
         //- Return the value width when writing to stream with optional offset
         virtual Omanip<int> valueWidth(const label offset = 0) const;
@@ -122,17 +106,8 @@ public:
 
     // Constructors
 
-        //- Construct null
+        //- Construct from objectRegistry
         functionObjectFile(const objectRegistry& obr, const word& prefix);
-
-        //- Construct from components and read options from dictionary
-        functionObjectFile
-        (
-            const objectRegistry& obr,
-            const word& prefix,
-            const word& fileName,
-            const dictionary& dict
-        );
 
 
     //- Destructor
@@ -140,15 +115,6 @@ public:
 
 
     // Member Functions
-
-        //- Read
-        void read(const dictionary& dict);
-
-        //- Return access to the file (if only 1)
-        OFstream& file();
-
-        //- Return true if can write to file
-        bool writeToFile() const;
 
         //- Write a commented string to stream
         void writeCommented

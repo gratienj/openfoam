@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,7 +56,28 @@ namespace Foam
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-void Foam::fieldValues::fieldValueDelta::writeFileHeader(Ostream& os) const
+Foam::fieldValues::fieldValueDelta::fieldValueDelta
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+:
+    functionObjectFiles(obr, name, typeName),
+    name_(name),
+    obr_(obr),
+    loadFromFiles_(loadFromFiles),
+    log_(true),
+    operation_(opSubtract),
+    source1Ptr_(NULL),
+    source2Ptr_(NULL)
+{
+    read(dict);
+}
+
+
+void Foam::fieldValues::fieldValueDelta::writeFileHeader(const label i)
 {
     const wordList& fields1 = source1Ptr_->fields();
     const wordList& fields2 = source2Ptr_->fields();
@@ -157,8 +178,7 @@ void Foam::fieldValues::fieldValueDelta::read(const dictionary& dict)
 
 void Foam::fieldValues::fieldValueDelta::write()
 {
-    // Do nothing
-}
+    functionObjectFiles::write();
 
 
 void Foam::fieldValues::fieldValueDelta::execute()

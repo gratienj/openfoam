@@ -315,10 +315,7 @@ void Foam::forceCoeffs::execute()
     List<Field<scalar> > liftCoeffs(3);
     forAll(liftCoeffs, i)
     {
-        momentCoeffs[i].setSize(nBin_);
-        dragCoeffs[i].setSize(nBin_);
-        liftCoeffs[i].setSize(nBin_);
-    }
+        functionObjectFiles::write();
 
     // Calculate coefficients
     scalar CmTot = 0;

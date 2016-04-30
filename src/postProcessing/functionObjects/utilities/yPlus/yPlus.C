@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,7 +60,7 @@ Foam::yPlus::yPlus
     const bool loadFromFiles
 )
 :
-    functionObjectFile(obr, name, typeName, dict),
+    functionObjectFiles(obr, name, typeName),
     name_(name),
     obr_(obr),
     active_(true),
@@ -135,8 +135,7 @@ void Foam::yPlus::execute()
 
     if (active_)
     {
-        const surfaceScalarField& phi =
-            obr_.lookupObject<surfaceScalarField>(phiName_);
+        functionObjectFiles::write();
 
         const fvMesh& mesh = refCast<const fvMesh>(obr_);
 
@@ -216,6 +215,8 @@ void Foam::yPlus::write()
 {
     if (active_)
     {
+        functionObjectFiles::write();
+
         const volScalarField& yPlus =
             obr_.lookupObject<volScalarField>(resultName_);
 

@@ -749,8 +749,8 @@ Foam::forces::forces
     const bool readFields
 )
 :
-    functionObjectState(obr, name),
-    functionObjectFile(obr, name),
+    functionObjectFiles(obr, name, createFileNames(dict)),
+    name_(name),
     obr_(obr),
     log_(true),
     force_(3),
@@ -816,8 +816,8 @@ Foam::forces::forces
     const coordinateSystem& coordSys
 )
 :
-    functionObjectState(obr, name),
-    functionObjectFile(obr, name),
+    functionObjectFiles(obr, name, typeName),
+    name_(name),
     obr_(obr),
     log_(true),
     force_(3),
@@ -1060,8 +1060,13 @@ void Foam::forces::write()
 
     if (writeFields_)
     {
-        obr_.lookupObject<volVectorField>(fieldName("force")).write();
-        obr_.lookupObject<volVectorField>(fieldName("moment")).write();
+        functionObjectFiles::write();
+
+        writeForces();
+
+        writeBins();
+
+        if (log_) Info<< endl;
     }
 }
 

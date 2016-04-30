@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,7 +46,7 @@ Foam::residuals::residuals
     const bool loadFromFiles
 )
 :
-    functionObjectFile(obr, name, typeName, dict),
+    functionObjectFiles(obr, name, typeName),
     name_(name),
     obr_(obr),
     active_(true),
@@ -123,6 +123,8 @@ void Foam::residuals::write()
 {
     if (active_)
     {
+        functionObjectFiles::write();
+
         if (Pstream::master())
         {
             writeTime(file());

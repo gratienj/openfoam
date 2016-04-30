@@ -130,7 +130,7 @@ SourceFiles
 #ifndef regionSizeDistribution_H
 #define regionSizeDistribution_H
 
-#include "functionObjectFile.H"
+#include "functionObjectFiles.H"
 #include "pointFieldFwd.H"
 #include "writer.H"
 #include "Map.H"
@@ -157,7 +157,7 @@ class polyMesh;
 
 class regionSizeDistribution
 :
-    public functionObjectFile
+    public functionObjectFiles
 {
     // Private data
 

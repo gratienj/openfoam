@@ -78,8 +78,7 @@ SourceFiles
 #ifndef fieldMinMax_H
 #define fieldMinMax_H
 
-#include "functionObjectState.H"
-#include "functionObjectFile.H"
+#include "functionObjectFiles.H"
 #include "Switch.H"
 #include "NamedEnum.H"
 #include "vector.H"
@@ -101,8 +100,7 @@ class mapPolyMesh;
 
 class fieldMinMax
 :
-    public functionObjectState,
-    public functionObjectFile
+    public functionObjectFiles
 {
 public:
 
