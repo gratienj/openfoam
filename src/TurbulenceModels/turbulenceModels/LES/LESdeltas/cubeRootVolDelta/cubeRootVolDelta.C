@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,7 +48,7 @@ void Foam::LESModels::cubeRootVolDelta::calcDelta()
 
     if (nD == 3)
     {
-        delta_.internalField() = deltaCoeff_*pow(mesh.V(), 1.0/3.0);
+        delta_.internalFieldRef() = deltaCoeff_*pow(mesh.V(), 1.0/3.0);
     }
     else if (nD == 2)
     {
@@ -68,7 +68,7 @@ void Foam::LESModels::cubeRootVolDelta::calcDelta()
             }
         }
 
-        delta_.internalField() = deltaCoeff_*sqrt(mesh.V()/thickness);
+        delta_.internalFieldRef() = deltaCoeff_*sqrt(mesh.V()/thickness);
     }
     else
     {

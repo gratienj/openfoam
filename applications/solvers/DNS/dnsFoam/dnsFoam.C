@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     {
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
-        force.internalField() = ReImSum
+        force.internalFieldRef() = ReImSum
         (
             fft::reverseTransform
             (

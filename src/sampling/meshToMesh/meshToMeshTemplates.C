@@ -374,8 +374,7 @@ void Foam::meshToMesh::mapSrcToTgt
     const bool secondOrder
 ) const
 {
-    mapInternalSrcToTgt(field, cop, result, secondOrder);
-
+    mapSrcToTgt(field, cop, result.internalFieldRef());
 
     const PtrList<AMIPatchToPatchInterpolation>& AMIList = patchAMIs();
 

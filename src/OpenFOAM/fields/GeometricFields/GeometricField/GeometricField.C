@@ -50,7 +50,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::readFields
     const dictionary& dict
 )
 {
-    DimensionedField<Type, GeoMesh>::readField(dict, "internalField");
+    Internal::readField(dict, "internalField");
 
     boundaryField_.readField(*this, dict.subDict("boundaryField"));
 
@@ -194,7 +194,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const word& patchFieldType
 )
 :
-    DimensionedField<Type, GeoMesh>(io, mesh, ds, false),
+    Internal(io, mesh, ds, false),
     timeIndex_(this->time().timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -219,7 +219,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const wordList& actualPatchTypes
 )
 :
-    DimensionedField<Type, GeoMesh>(io, mesh, ds, false),
+    Internal(io, mesh, ds, false),
     timeIndex_(this->time().timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -243,7 +243,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const word& patchFieldType
 )
 :
-    DimensionedField<Type, GeoMesh>(io, mesh, dt, false),
+    Internal(io, mesh, dt, false),
     timeIndex_(this->time().timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -270,7 +270,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const wordList& actualPatchTypes
 )
 :
-    DimensionedField<Type, GeoMesh>(io, mesh, dt, false),
+    Internal(io, mesh, dt, false),
     timeIndex_(this->time().timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -291,13 +291,37 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     const IOobject& io,
+    const Internal& diField,
+    const PtrList<PatchField<Type>>& ptfl
+)
+:
+    Internal(io, diField),
+    timeIndex_(this->time().timeIndex()),
+    field0Ptr_(NULL),
+    fieldPrevIterPtr_(NULL),
+    boundaryField_(this->mesh().boundary(), *this, ptfl)
+{
+    if (debug)
+    {
+        InfoInFunction
+            << "Constructing from components" << endl << this->info() << endl;
+    }
+
+    readIfPresent();
+}
+
+
+template<class Type, template<class> class PatchField, class GeoMesh>
+Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
+(
+    const IOobject& io,
     const Mesh& mesh,
     const dimensionSet& ds,
     const Field<Type>& iField,
     const PtrList<PatchField<Type>>& ptfl
 )
 :
-    DimensionedField<Type, GeoMesh>(io, mesh, ds, iField),
+    Internal(io, mesh, ds, iField),
     timeIndex_(this->time().timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -321,7 +345,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const bool readOldTime
 )
 :
-    DimensionedField<Type, GeoMesh>(io, mesh, dimless, false),
+    Internal(io, mesh, dimless, false),
     timeIndex_(this->time().timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -360,7 +384,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const dictionary& dict
 )
 :
-    DimensionedField<Type, GeoMesh>(io, mesh, dimless, false),
+    Internal(io, mesh, dimless, false),
     timeIndex_(this->time().timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -393,7 +417,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const GeometricField<Type, PatchField, GeoMesh>& gf
 )
 :
-    DimensionedField<Type, GeoMesh>(gf),
+    Internal(gf),
     timeIndex_(gf.timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -424,7 +448,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 :
-    DimensionedField<Type, GeoMesh>
+    Internal
     (
         const_cast<GeometricField<Type, PatchField, GeoMesh>&>(tgf()),
         tgf.isTmp()
@@ -454,7 +478,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const GeometricField<Type, PatchField, GeoMesh>& gf
 )
 :
-    DimensionedField<Type, GeoMesh>(io, gf),
+    Internal(io, gf),
     timeIndex_(gf.timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -486,7 +510,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 :
-    DimensionedField<Type, GeoMesh>
+    Internal
     (
         io,
         const_cast<GeometricField<Type, PatchField, GeoMesh>&>(tgf()),
@@ -518,7 +542,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const GeometricField<Type, PatchField, GeoMesh>& gf
 )
 :
-    DimensionedField<Type, GeoMesh>(newName, gf),
+    Internal(newName, gf),
     timeIndex_(gf.timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -550,7 +574,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const tmp<GeometricField<Type, PatchField, GeoMesh>>& tgf
 )
 :
-    DimensionedField<Type, GeoMesh>
+    Internal
     (
         newName,
         const_cast<GeometricField<Type, PatchField, GeoMesh>&>(tgf()),
@@ -581,7 +605,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const word& patchFieldType
 )
 :
-    DimensionedField<Type, GeoMesh>(io, gf),
+    Internal(io, gf),
     timeIndex_(gf.timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -617,7 +641,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 
 )
 :
-    DimensionedField<Type, GeoMesh>(io, gf),
+    Internal(io, gf),
     timeIndex_(gf.timeIndex()),
     field0Ptr_(NULL),
     fieldPrevIterPtr_(NULL),
@@ -659,7 +683,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const wordList& actualPatchTypes
 )
 :
-    DimensionedField<Type, GeoMesh>
+    Internal
     (
         io,
         const_cast<GeometricField<Type, PatchField, GeoMesh>&>(tgf()),
@@ -716,7 +740,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::dimensionedInternalFieldRef()
 template<class Type, template<class> class PatchField, class GeoMesh>
 typename
 Foam::GeometricField<Type, PatchField, GeoMesh>::Internal::FieldType&
-Foam::GeometricField<Type, PatchField, GeoMesh>::internalField()
+Foam::GeometricField<Type, PatchField, GeoMesh>::internalFieldRef()
 {
     this->setUpToDate();
     storeOldTimes();
@@ -1007,7 +1031,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::T() const
         )
     );
 
-    Foam::T(result.ref().internalField(), internalField());
+    Foam::T(result.ref().internalFieldRef(), internalField());
     Foam::T(result.ref().boundaryFieldRef(), boundaryField());
 
     return result;
@@ -1044,7 +1068,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::component
         )
     );
 
-    Foam::component(Component.ref().internalField(), internalField(), d);
+    Foam::component(Component.ref().internalFieldRef(), internalField(), d);
     Foam::component(Component.ref().boundaryFieldRef(), boundaryField(), d);
 
     return Component;
@@ -1063,7 +1087,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::replace
      >& gcf
 )
 {
-    internalField().replace(d, gcf.internalField());
+    internalFieldRef().replace(d, gcf.internalField());
     boundaryFieldRef().replace(d, gcf.boundaryField());
 }
 
@@ -1075,7 +1099,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::replace
     const dimensioned<cmptType>& ds
 )
 {
-    internalField().replace(d, ds.value());
+    internalFieldRef().replace(d, ds.value());
     boundaryFieldRef().replace(d, ds.value());
 }
 
@@ -1086,7 +1110,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::max
     const dimensioned<Type>& dt
 )
 {
-    Foam::max(internalField(), internalField(), dt.value());
+    Foam::max(internalFieldRef(), internalField(), dt.value());
     Foam::max(boundaryFieldRef(), boundaryField(), dt.value());
 }
 
@@ -1097,7 +1121,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::min
     const dimensioned<Type>& dt
 )
 {
-    Foam::min(internalField(), internalField(), dt.value());
+    Foam::min(internalFieldRef(), internalField(), dt.value());
     Foam::min(boundaryFieldRef(), boundaryField(), dt.value());
 }
 
@@ -1105,7 +1129,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::min
 template<class Type, template<class> class PatchField, class GeoMesh>
 void Foam::GeometricField<Type, PatchField, GeoMesh>::negate()
 {
-    internalField().negate();
+    internalFieldRef().negate();
     boundaryFieldRef().negate();
 }
 
@@ -1156,7 +1180,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
     this->dimensions() = gf.dimensions();
 
     // Transfer the storage from the tmp
-    internalField().transfer
+    internalFieldRef().transfer
     (
         const_cast<Field<Type>&>(gf.internalField())
     );
