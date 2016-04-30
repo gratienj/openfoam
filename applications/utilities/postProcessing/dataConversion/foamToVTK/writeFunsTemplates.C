@@ -79,7 +79,7 @@ void Foam::writeFuns::write
 
     DynamicList<floatScalar> fField(pTraits<Type>::nComponents*nValues);
 
-    insert(vvf, fField);
+    insert(vvf.primitiveField(), fField);
 
     forAll(superCells, superCellI)
     {

@@ -571,7 +571,7 @@ void Foam::regionSizeDistribution::write()
 
 
         // Sum all regions
-        const scalarField alphaVol(alpha.internalField()*mesh.V());
+        const scalarField alphaVol(alpha.primitiveField()*mesh.V());
         Map<scalar> allRegionVolume(regionSum(regions, mesh.V()));
         Map<scalar> allRegionAlphaVolume(regionSum(regions, alphaVol));
         Map<label> allRegionNumCells
@@ -925,7 +925,7 @@ void Foam::regionSizeDistribution::write()
                     const scalarField& fld = obr_.lookupObject
                     <
                         volScalarField
-                    >(fldName).internalField();
+                    >(fldName).primitiveField();
 
                     writeGraphs
                     (
@@ -954,7 +954,7 @@ void Foam::regionSizeDistribution::write()
                     vectorField fld = obr_.lookupObject
                     <
                         volVectorField
-                    >(fldName).internalField();
+                    >(fldName).primitiveField();
 
                     if (coordSysPtr_.valid())
                     {

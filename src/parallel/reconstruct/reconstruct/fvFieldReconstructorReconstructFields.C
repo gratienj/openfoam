@@ -140,8 +140,8 @@ Foam::fvFieldReconstructor::reconstructFvVolumeField
         // Set the cell values in the reconstructed field
         internalField.rmap
         (
-            procField.internalField(),
-            cellProcAddressing_[procI]
+            procField.primitiveField(),
+            cellProcAddressing_[proci]
         );
 
         // Set the boundary patch values in the reconstructed field
@@ -373,7 +373,7 @@ Foam::fvFieldReconstructor::reconstructFvSurfaceField
             const labelList& faceMap = faceProcAddressing_[procI];
 
             // Correctly oriented copy of internal field
-            Field<Type> procInternalField(procField.internalField());
+            Field<Type> procInternalField(procField.primitiveField());
             // Addressing into original field
             labelList curAddr(procInternalField.size());
 

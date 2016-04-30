@@ -164,7 +164,7 @@ Foam::displacementSBRStressFvMotionSolver::curPoints() const
 
     tmp<pointField> tcurPoints
     (
-        points0() + pointDisplacement().internalField()
+        points0() + pointDisplacement().primitiveField()
     );
 
     twoDCorrectPoints(tcurPoints.ref());

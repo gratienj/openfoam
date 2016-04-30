@@ -673,8 +673,8 @@ void ensightPointField
         writeField
         (
             "coordinates",
-            Field<Type>(pf.internalField(), eMesh.uniquePointMap()),
-            os
+            Field<Type>(pf.primitiveField(), eMesh.uniquePointMap()),
+            ensightFile
         );
     }
 
@@ -713,8 +713,8 @@ void ensightPointField
                 writeField
                 (
                     "coordinates",
-                    Field<Type>(pf.internalField(), uniqueMeshPointLabels),
-                    os
+                    Field<Type>(pf.primitiveField(), uniqueMeshPointLabels),
+                    ensightFile
                 );
 
                 ensightPatchI++;
@@ -758,7 +758,7 @@ void ensightPointField
                     "coordinates",
                     Field<Type>
                     (
-                        pf.internalField(),
+                        pf.primitiveField(),
                         uniqueMeshPointLabels
                     ),
                     os
