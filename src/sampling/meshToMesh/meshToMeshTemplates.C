@@ -401,7 +401,10 @@ void Foam::meshToMesh::mapSrcToTgt
                 result.dimensionedInternalField(),
                 distributedWeightedFvPatchFieldMapper
                 (
-                    AMIList[i].singlePatchProc(),
+                    srcField,
+                    tgtField.patch(),
+                    result(),
+                    weightedFvPatchFieldMapper
                     (
                         AMIList[i].singlePatchProc() == -1
                       ? &AMIList[i].srcMap()
@@ -601,7 +604,10 @@ void Foam::meshToMesh::mapTgtToSrc
                 result.dimensionedInternalField(),
                 distributedWeightedFvPatchFieldMapper
                 (
-                    AMIList[i].singlePatchProc(),
+                    tgtField,
+                    srcField.patch(),
+                    result(),
+                    weightedFvPatchFieldMapper
                     (
                         AMIList[i].singlePatchProc() == -1
                       ? &AMIList[i].tgtMap()

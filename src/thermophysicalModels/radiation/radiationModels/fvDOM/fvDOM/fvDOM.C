@@ -518,11 +518,14 @@ Foam::radiation::fvDOM::Ru() const
 {
 
     const DimensionedField<scalar, volMesh>& G =
-        G_.dimensionedInternalField();
+        G_();
+
     const DimensionedField<scalar, volMesh> E =
-        absorptionEmission_->ECont()().dimensionedInternalField();
+        absorptionEmission_->ECont()()();
+
+    // Only include continuous phase absorption
     const DimensionedField<scalar, volMesh> a =
-        a_.dimensionedInternalField();
+        absorptionEmission_->aCont()()();
 
     return  a*G - E;
 }
