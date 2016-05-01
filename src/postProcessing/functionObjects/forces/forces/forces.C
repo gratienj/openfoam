@@ -37,13 +37,19 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(forces, 0);
+}
 }
 
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-Foam::word Foam::forces::fieldName(const word& name) const
+Foam::wordList Foam::functionObjects::forces::createFileNames
+(
+    const dictionary& dict
+) const
 {
     return name_ + ":" + name;
 }
@@ -87,11 +93,7 @@ void Foam::forces::createFiles()
 }
 
 
-void Foam::forces::writeIntegratedHeader
-(
-    const word& header,
-    Ostream& os
-) const
+void Foam::functionObjects::forces::writeFileHeader(const label i)
 {
     writeHeader(os, header);
     writeHeaderValue(os, "CofR", coordSys_.origin());
@@ -167,7 +169,7 @@ void Foam::forces::writeBinHeader(const word& header, Ostream& os) const
 }
 
 
-void Foam::forces::initialise()
+void Foam::functionObjects::forces::initialise()
 {
     if (initialised_ || !active_)
     {
@@ -218,112 +220,8 @@ void Foam::forces::initialise()
 }
 
 
-void Foam::forces::initialiseBins()
-{
-    if (!active_)
-    {
-        return;
-    }
-
-    if (nBin_ > 1)
-    {
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
-        const polyBoundaryMesh& pbm = mesh.boundaryMesh();
-
-        // Determine extents of patches
-        binMin_ = GREAT;
-        scalar binMax = -GREAT;
-        forAllConstIter(labelHashSet, patchSet_, iter)
-        {
-            label patchI = iter.key();
-            const polyPatch& pp = pbm[patchI];
-            scalarField d(pp.faceCentres() & binDir_);
-            binMin_ = min(min(d), binMin_);
-            binMax = max(max(d), binMax);
-        }
-
-        // Include porosity
-        if (porosity_)
-        {
-            const HashTable<const porosityModel*> models =
-                obr_.lookupClass<porosityModel>();
-
-            const scalarField dd(mesh.C() & binDir_);
-
-            forAllConstIter(HashTable<const porosityModel*>, models, iter)
-            {
-                const porosityModel& pm = *iter();
-                const labelList& cellZoneIDs = pm.cellZoneIDs();
-
-                forAll(cellZoneIDs, i)
-                {
-                    label zoneI = cellZoneIDs[i];
-                    const cellZone& cZone = mesh.cellZones()[zoneI];
-                    const scalarField d(dd, cZone);
-                    binMin_ = min(min(d), binMin_);
-                    binMax = max(max(d), binMax);
-                }
-            }
-        }
-
-        reduce(binMin_, minOp<scalar>());
-        reduce(binMax, maxOp<scalar>());
-
-        // Slightly boost binMax so that region of interest is fully
-        // within bounds
-        binMax = 1.0001*(binMax - binMin_) + binMin_;
-
-        binDx_ = (binMax - binMin_)/scalar(nBin_);
-
-        // Create the bin points used for writing
-        binPoints_.setSize(nBin_);
-        forAll(binPoints_, i)
-        {
-            binPoints_[i] = (i + 0.5)*binDir_*binDx_;
-        }
-
-        // Allocate storage for forces and moments
-        forAll(force_, i)
-        {
-            force_[i].setSize(nBin_);
-            moment_[i].setSize(nBin_);
-        }
-    }
-}
-
-
-void Foam::forces::resetFields()
-{
-    force_[0] = vector::zero;
-    force_[1] = vector::zero;
-    force_[2] = vector::zero;
-
-    moment_[0] = vector::zero;
-    moment_[1] = vector::zero;
-    moment_[2] = vector::zero;
-
-    if (writeFields_)
-    {
-        volVectorField& force =
-            const_cast<volVectorField&>
-            (
-                obr_.lookupObject<volVectorField>(fieldName("force"))
-            );
-
-        force == dimensionedVector("0", force.dimensions(), vector::zero);
-
-        volVectorField& moment =
-            const_cast<volVectorField&>
-            (
-                obr_.lookupObject<volVectorField>(fieldName("moment"))
-            );
-
-        moment == dimensionedVector("0", moment.dimensions(), vector::zero);
-    }
-}
-
-
-Foam::tmp<Foam::volSymmTensorField> Foam::forces::devRhoReff() const
+Foam::tmp<Foam::volSymmTensorField>
+Foam::functionObjects::forces::devRhoReff() const
 {
     typedef compressible::turbulenceModel cmpTurbModel;
     typedef incompressible::turbulenceModel icoTurbModel;
@@ -385,7 +283,7 @@ Foam::tmp<Foam::volSymmTensorField> Foam::forces::devRhoReff() const
 }
 
 
-Foam::tmp<Foam::volScalarField> Foam::forces::mu() const
+Foam::tmp<Foam::volScalarField> Foam::functionObjects::forces::mu() const
 {
     if (obr_.foundObject<fluidThermo>(basicThermo::dictName))
     {
@@ -424,7 +322,7 @@ Foam::tmp<Foam::volScalarField> Foam::forces::mu() const
 }
 
 
-Foam::tmp<Foam::volScalarField> Foam::forces::rho() const
+Foam::tmp<Foam::volScalarField> Foam::functionObjects::forces::rho() const
 {
     if (rhoName_ == "rhoInf")
     {
@@ -452,7 +350,7 @@ Foam::tmp<Foam::volScalarField> Foam::forces::rho() const
 }
 
 
-Foam::scalar Foam::forces::rho(const volScalarField& p) const
+Foam::scalar Foam::functionObjects::forces::rho(const volScalarField& p) const
 {
     if (p.dimensions() == dimPressure)
     {
@@ -472,7 +370,7 @@ Foam::scalar Foam::forces::rho(const volScalarField& p) const
 }
 
 
-void Foam::forces::applyBins
+void Foam::functionObjects::forces::applyBins
 (
     const vectorField& Md,
     const vectorField& fN,
@@ -509,122 +407,7 @@ void Foam::forces::applyBins
 }
 
 
-void Foam::forces::addToFields
-(
-    const label patchI,
-    const vectorField& Md,
-    const vectorField& fN,
-    const vectorField& fT,
-    const vectorField& fP
-)
-{
-    if (!writeFields_)
-    {
-        return;
-    }
-
-    volVectorField& force =
-        const_cast<volVectorField&>
-        (
-            obr_.lookupObject<volVectorField>(fieldName("force"))
-        );
-
-    vectorField& pf = force.boundaryField()[patchI];
-    pf += fN + fT + fP;
-
-    volVectorField& moment =
-        const_cast<volVectorField&>
-        (
-            obr_.lookupObject<volVectorField>(fieldName("moment"))
-        );
-
-    vectorField& pm = moment.boundaryField()[patchI];
-    pm += Md;
-}
-
-
-void Foam::forces::addToFields
-(
-    const labelList& cellIDs,
-    const vectorField& Md,
-    const vectorField& fN,
-    const vectorField& fT,
-    const vectorField& fP
-)
-{
-    if (!writeFields_)
-    {
-        return;
-    }
-
-    volVectorField& force =
-        const_cast<volVectorField&>
-        (
-            obr_.lookupObject<volVectorField>(fieldName("force"))
-        );
-
-    volVectorField& moment =
-        const_cast<volVectorField&>
-        (
-            obr_.lookupObject<volVectorField>(fieldName("moment"))
-        );
-
-    forAll(cellIDs, i)
-    {
-        label cellI = cellIDs[i];
-        force[cellI] += fN[i] + fT[i] + fP[i];
-        moment[cellI] += Md[i];
-    }
-}
-
-
-void Foam::forces::writeIntegratedForceMoment
-(
-    const string& descriptor,
-    const vectorField& fm0,
-    const vectorField& fm1,
-    const vectorField& fm2,
-    autoPtr<OFstream>& osPtr
-) const
-{
-    vector pressure = sum(fm0);
-    vector viscous = sum(fm1);
-    vector porous = sum(fm2);
-    vector total = pressure + viscous + porous;
-
-    if (log_)
-    {
-        Info<< "    Sum of " << descriptor.c_str() << nl
-            << "        Total    : " << total << nl
-            << "        Pressure : " << pressure << nl
-            << "        Viscous  : " << viscous << nl;
-
-        if (porosity_)
-        {
-            Info<< "        Porous   : " << porous << nl;
-        }
-    }
-
-    if (writeToFile())
-    {
-        Ostream& os = osPtr();
-
-        os  << obr_.time().value()
-            << tab << total
-            << tab << pressure
-            << tab << viscous;
-
-        if (porosity_)
-        {
-            os  << tab << porous;
-        }
-
-        os  << endl;
-    }
-}
-
-
-void Foam::forces::writeForces()
+void Foam::functionObjects::forces::writeForces()
 {
     if (log_) Info
         << type() << " " << name_ << " output:" << nl
@@ -672,11 +455,7 @@ void Foam::forces::writeForces()
 }
 
 
-void Foam::forces::writeBinnedForceMoment
-(
-    const List<Field<vector> >& fm,
-    autoPtr<OFstream>& osPtr
-) const
+void Foam::functionObjects::forces::writeBins()
 {
     if ((nBin_ == 1) || !writeToFile())
     {
@@ -740,7 +519,7 @@ void Foam::forces::writeBins()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::forces::forces
+Foam::functionObjects::forces::forces
 (
     const word& name,
     const objectRegistry& obr,
@@ -803,7 +582,30 @@ Foam::forces::forces
 }
 
 
-Foam::forces::forces
+Foam::autoPtr<Foam::functionObjects::forces>
+Foam::functionObjects::forces::New
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    if (isA<fvMesh>(obr))
+    {
+        return autoPtr<forces>
+        (
+            new forces(name, obr, dict, loadFromFiles)
+        );
+    }
+    else
+    {
+        return autoPtr<forces>();
+    }
+}
+
+
+Foam::functionObjects::forces::forces
 (
     const word& name,
     const objectRegistry& obr,
@@ -863,13 +665,13 @@ Foam::forces::forces
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::forces::~forces()
+Foam::functionObjects::forces::~forces()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::forces::read(const dictionary& dict)
+void Foam::functionObjects::forces::read(const dictionary& dict)
 {
     if (!active_)
     {
@@ -1033,25 +835,19 @@ void Foam::forces::execute()
     setResult("tangentialForce", sum(force_[1]));
     setResult("porousForce", sum(force_[2]));
 
-    setResult("normalMoment", sum(moment_[0]));
-    setResult("tangentialMoment", sum(moment_[1]));
-    setResult("porousMoment", sum(moment_[2]));
-}
+void Foam::functionObjects::forces::execute()
+{}
 
 
-void Foam::forces::end()
-{
-    // Do nothing
-}
+void Foam::functionObjects::forces::end()
+{}
 
 
-void Foam::forces::timeSet()
-{
-    // Do nothing
-}
+void Foam::functionObjects::forces::timeSet()
+{}
 
 
-void Foam::forces::write()
+void Foam::functionObjects::forces::write()
 {
     if (!active_)
     {
@@ -1071,7 +867,7 @@ void Foam::forces::write()
 }
 
 
-void Foam::forces::calcForcesMoment()
+void Foam::functionObjects::forces::calcForcesMoment()
 {
     if (!active_)
     {
@@ -1224,13 +1020,13 @@ void Foam::forces::calcForcesMoment()
 }
 
 
-Foam::vector Foam::forces::forceEff() const
+Foam::vector Foam::functionObjects::forces::forceEff() const
 {
     return sum(force_[0]) + sum(force_[1]) + sum(force_[2]);
 }
 
 
-Foam::vector Foam::forces::momentEff() const
+Foam::vector Foam::functionObjects::forces::momentEff() const
 {
     return sum(moment_[0]) + sum(moment_[1]) + sum(moment_[2]);
 }

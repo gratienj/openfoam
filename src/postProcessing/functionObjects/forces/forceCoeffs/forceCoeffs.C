@@ -26,6 +26,7 @@ License
 #include "forceCoeffs.H"
 #include "dictionary.H"
 #include "Time.H"
+#include "fvMesh.H"
 #include "Pstream.H"
 #include "IOmanip.H"
 #include "fvMesh.H"
@@ -36,13 +37,16 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(forceCoeffs, 0);
+}
 }
 
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-void Foam::forceCoeffs::createFiles()
+void Foam::functionObjects::forceCoeffs::writeFileHeader(const label i)
 {
     // Note: Only possible to create bin files after bins have been initialised
 
@@ -193,7 +197,7 @@ void Foam::forceCoeffs::writeBinData
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::forceCoeffs::forceCoeffs
+Foam::functionObjects::forceCoeffs::forceCoeffs
 (
     const word& name,
     const objectRegistry& obr,
@@ -222,15 +226,38 @@ Foam::forceCoeffs::forceCoeffs
 }
 
 
+Foam::autoPtr<Foam::functionObjects::forceCoeffs>
+Foam::functionObjects::forceCoeffs::New
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    if (isA<fvMesh>(obr))
+    {
+        return autoPtr<forceCoeffs>
+        (
+            new forceCoeffs(name, obr, dict, loadFromFiles)
+        );
+    }
+    else
+    {
+        return autoPtr<forceCoeffs>();
+    }
+}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::forceCoeffs::~forceCoeffs()
+Foam::functionObjects::forceCoeffs::~forceCoeffs()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::forceCoeffs::read(const dictionary& dict)
+void Foam::functionObjects::forceCoeffs::read(const dictionary& dict)
 {
     if (!active_)
     {
@@ -239,64 +266,21 @@ void Foam::forceCoeffs::read(const dictionary& dict)
 
     forces::read(dict);
 
-    // Directions for lift and drag forces, and pitch moment
-    dict.lookup("liftDir") >> liftDir_;
-    dict.lookup("dragDir") >> dragDir_;
-    dict.lookup("pitchAxis") >> pitchAxis_;
+void Foam::functionObjects::forceCoeffs::execute()
+{}
 
     // Free stream velocity magnitude
     dict.lookup("magUInf") >> magUInf_;
 
-    // Reference length and area scales
-    dict.lookup("lRef") >> lRef_;
-    dict.lookup("Aref") >> Aref_;
-
-    if (writeFields_)
-    {
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
-        tmp<volVectorField> tforceCoeff
-        (
-            new volVectorField
-            (
-                IOobject
-                (
-                    fieldName("forceCoeff"),
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedVector("0", dimless, vector::zero)
-            )
-        );
-
-        obr_.store(tforceCoeff.ptr());
-
-        tmp<volVectorField> tmomentCoeff
-        (
-            new volVectorField
-            (
-                IOobject
-                (
-                    fieldName("momentCoeff"),
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedVector("0", dimless, vector::zero)
-            )
-        );
-
-        obr_.store(tmomentCoeff.ptr());
-    }
-}
+void Foam::functionObjects::forceCoeffs::end()
+{}
 
 
-void Foam::forceCoeffs::execute()
+void Foam::functionObjects::forceCoeffs::timeSet()
+{}
+
+
+void Foam::functionObjects::forceCoeffs::write()
 {
     if (!active_)
     {

@@ -82,6 +82,9 @@ class dictionary;
 class polyMesh;
 class mapPolyMesh;
 
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                         Class partialWrite Declaration
 \*---------------------------------------------------------------------------*/
@@ -92,7 +95,7 @@ protected:
 
     // Private data
 
-        //- Name of this set of partialWrite object
+        //- Name of this partialWrite functionObject
         word name_;
 
         //- Refefence to the database
@@ -173,6 +176,16 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Construct on free-store and return pointer if successful
+        //  otherwise return a null-pointer
+        static autoPtr<partialWrite> New
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
 
     //- Destructor
     virtual ~partialWrite();
@@ -213,6 +226,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

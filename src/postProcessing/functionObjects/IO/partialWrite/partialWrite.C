@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2014-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,13 +34,16 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(partialWrite, 0);
+}
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::partialWrite::partialWrite
+Foam::functionObjects::partialWrite::partialWrite
 (
     const word& name,
     const objectRegistry& obr,
@@ -56,22 +59,49 @@ Foam::partialWrite::partialWrite
 }
 
 
+Foam::autoPtr<Foam::functionObjects::partialWrite>
+Foam::functionObjects::partialWrite::New
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    if (isA<fvMesh>(obr))
+    {
+        return autoPtr<partialWrite>
+        (
+            new partialWrite(name, obr, dict, loadFromFiles)
+        );
+    }
+    else
+    {
+        return autoPtr<partialWrite>();
+    }
+}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::partialWrite::~partialWrite()
+Foam::functionObjects::partialWrite::~partialWrite()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::partialWrite::read(const dictionary& dict)
+void Foam::functionObjects::partialWrite::read(const dictionary& dict)
 {
     log_.readIfPresent("log", dict);
     dict.lookup("objectNames") >> objectNames_;
     dict.lookup("writeInterval") >> writeInterval_;
     writeInstance_ = 0;
 
-    if (log_)
+    Info<< type() << " " << name() << ":" << nl
+        << "    dumping every " << writeInterval_
+        << " th outputTime : " << nl << endl ;
+
+    forAllConstIter(HashSet<word>, objectNames_, iter)
     {
         Info<< type() << " " << name() << ":" << nl
             << "    dumping every outputTime :";
@@ -133,19 +163,15 @@ void Foam::partialWrite::read(const dictionary& dict)
 }
 
 
-void Foam::partialWrite::execute()
-{
-    // Do nothing - only valid on write
-}
+void Foam::functionObjects::partialWrite::execute()
+{}
 
 
-void Foam::partialWrite::end()
-{
-    // Do nothing - only valid on write
-}
+void Foam::functionObjects::partialWrite::end()
+{}
 
 
-void Foam::partialWrite::timeSet()
+void Foam::functionObjects::partialWrite::timeSet()
 {
     if (obr_.time().outputTime())
     {
@@ -195,10 +221,9 @@ void Foam::partialWrite::timeSet()
 }
 
 
-void Foam::partialWrite::write()
+void Foam::functionObjects::partialWrite::write()
 {
-    // Do nothing. The fields get written through the
-    // standard dump
+    // Fields are written in the standard manner
 }
 
 

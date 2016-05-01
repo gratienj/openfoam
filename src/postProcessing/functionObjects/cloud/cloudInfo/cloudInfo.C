@@ -31,13 +31,16 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(cloudInfo, 0);
+}
 }
 
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-void Foam::cloudInfo::writeFileHeader(Ostream& os) const
+void Foam::functionObjects::cloudInfo::writeFileHeader(const label i)
 {
     writeHeader(os, "Cloud information");
     writeCommented(os, "Time");
@@ -52,7 +55,7 @@ void Foam::cloudInfo::writeFileHeader(Ostream& os) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::cloudInfo::cloudInfo
+Foam::functionObjects::cloudInfo::cloudInfo
 (
     const word& name,
     const objectRegistry& obr,
@@ -72,15 +75,31 @@ Foam::cloudInfo::cloudInfo
 }
 
 
+Foam::autoPtr<Foam::functionObjects::cloudInfo>
+Foam::functionObjects::cloudInfo::New
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    return autoPtr<cloudInfo>
+    (
+        new cloudInfo(name, obr, dict, loadFromFiles)
+    );
+}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::cloudInfo::~cloudInfo()
+Foam::functionObjects::cloudInfo::~cloudInfo()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::cloudInfo::read(const dictionary& dict)
+void Foam::functionObjects::cloudInfo::read(const dictionary& dict)
 {
     if (active_)
     {
@@ -122,25 +141,19 @@ void Foam::cloudInfo::read(const dictionary& dict)
 }
 
 
-void Foam::cloudInfo::execute()
-{
-    // Do nothing
-}
+void Foam::functionObjects::cloudInfo::execute()
+{}
 
 
-void Foam::cloudInfo::end()
-{
-    // Do nothing
-}
+void Foam::functionObjects::cloudInfo::end()
+{}
 
 
-void Foam::cloudInfo::timeSet()
-{
-    // Do nothing
-}
+void Foam::functionObjects::cloudInfo::timeSet()
+{}
 
 
-void Foam::cloudInfo::write()
+void Foam::functionObjects::cloudInfo::write()
 {
     if (active_)
     {
