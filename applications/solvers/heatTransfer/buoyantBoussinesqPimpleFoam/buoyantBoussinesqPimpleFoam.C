@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     {
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
-        #include "createTimeControls.H"
+        #include "readTimeControls.H"
         #include "CourantNo.H"
         #include "setDeltaT.H"
 

@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
-        #include "createTimeControls.H"
+        #include "readTimeControls.H"
         #include "CourantNos.H"
         #include "setDeltaT.H"
 
