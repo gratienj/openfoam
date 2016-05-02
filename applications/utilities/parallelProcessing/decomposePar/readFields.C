@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -79,18 +79,14 @@ void Foam::readFields
     // Construct the fields
     fields.setSize(fieldObjects.size());
 
-    // Get sorted set of names (different processors might read objects in
-    // different order)
-    const wordList masterNames(fieldObjects.sortedNames());
-
-    // Construct the fields
-    fields.setSize(masterNames.size());
-
-    forAll(masterNames, i)
+    label fieldi = 0;
+    forAllIter(IOobjectList, fieldObjects, iter)
     {
-        const IOobject& io = *fieldObjects[masterNames[i]];
-
-        fields.set(i, new GeoField(io, mesh));
+        fields.set
+        (
+            fieldi++,
+            new GeoField(*iter(), mesh)
+        );
     }
 }
 

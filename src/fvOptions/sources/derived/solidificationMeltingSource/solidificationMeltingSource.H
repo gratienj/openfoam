@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2014-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -220,10 +220,10 @@ public:
         // Add explicit and implicit contributions
 
             //- Add explicit contribution to enthalpy equation
-            virtual void addSup(fvMatrix<scalar>& eqn, const label fieldI);
+            virtual void addSup(fvMatrix<scalar>& eqn, const label fieldi);
 
             //- Add implicit contribution to momentum equation
-            virtual void addSup(fvMatrix<vector>& eqn, const label fieldI);
+            virtual void addSup(fvMatrix<vector>& eqn, const label fieldi);
 
 
         // Add explicit and implicit contributions to compressible equation
@@ -233,7 +233,7 @@ public:
             (
                 const volScalarField& rho,
                 fvMatrix<scalar>& eqn,
-                const label fieldI
+                const label fieldi
             );
 
             //- Add implicit contribution to compressible momentum equation
@@ -241,7 +241,7 @@ public:
             (
                 const volScalarField& rho,
                 fvMatrix<vector>& eqn,
-                const label fieldI
+                const label fieldi
             );
 
 

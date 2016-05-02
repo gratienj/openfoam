@@ -72,20 +72,20 @@ void Foam::functionObjects::fieldAverage::initialize()
 
 
     // Add mean fields to the field lists
-    forAll(faItems_, fieldI)
+    forAll(faItems_, fieldi)
     {
-        addMeanField<scalar>(fieldI);
-        addMeanField<vector>(fieldI);
-        addMeanField<sphericalTensor>(fieldI);
-        addMeanField<symmTensor>(fieldI);
-        addMeanField<tensor>(fieldI);
+        addMeanField<scalar>(fieldi);
+        addMeanField<vector>(fieldi);
+        addMeanField<sphericalTensor>(fieldi);
+        addMeanField<symmTensor>(fieldi);
+        addMeanField<tensor>(fieldi);
     }
 
     // Add prime-squared mean fields to the field lists
-    forAll(faItems_, fieldI)
+    forAll(faItems_, fieldi)
     {
-        addPrime2MeanField<scalar, scalar>(fieldI);
-        addPrime2MeanField<vector, symmTensor>(fieldI);
+        addPrime2MeanField<scalar, scalar>(fieldi);
+        addPrime2MeanField<vector, symmTensor>(fieldi);
     }
 
     // ensure first averaging works unconditionally
@@ -153,10 +153,10 @@ void Foam::functionObjects::fieldAverage::calcAverages()
     calculatePrime2MeanFields<scalar, scalar>();
     calculatePrime2MeanFields<vector, symmTensor>();
 
-    forAll(faItems_, fieldI)
+    forAll(faItems_, fieldi)
     {
-        totalIter_[fieldI]++;
-        totalTime_[fieldI] += obr_.time().deltaTValue();
+        totalIter_[fieldi]++;
+        totalTime_[fieldi] += obr_.time().deltaTValue();
     }
 }
 
@@ -189,9 +189,13 @@ void Foam::functionObjects::fieldAverage::writeAveragingProperties() const
         )
     );
 
-    forAll(faItems_, fieldI)
+    forAll(faItems_, fieldi)
     {
-        const word& fieldName = faItems_[fieldI].fieldName();
+        const word& fieldName = faItems_[fieldi].fieldName();
+        propsDict.add(fieldName, dictionary());
+        propsDict.subDict(fieldName).add("totalIter", totalIter_[fieldi]);
+        propsDict.subDict(fieldName).add("totalTime", totalTime_[fieldi]);
+    }
 
         dictionary propsDict;
         propsDict.add("totalIter", totalIter_[fieldI]);
@@ -236,21 +240,20 @@ void Foam::functionObjects::fieldAverage::readAveragingProperties()
 
         IOdictionary propsDict(propsDictHeader);
 
-        forAll(faItems_, fieldI)
+        Info<< "    Restarting averaging for fields:" << nl;
+        forAll(faItems_, fieldi)
         {
-            const word& fieldName = faItems_[fieldI].fieldName();
-            if (foundProperty(fieldName))
+            const word& fieldName = faItems_[fieldi].fieldName();
+            if (propsDict.found(fieldName))
             {
                 dictionary fieldDict;
                 getProperty(fieldName, fieldDict);
 
-                totalIter_[fieldI] = readLabel(fieldDict.lookup("totalIter"));
-                totalTime_[fieldI] = readScalar(fieldDict.lookup("totalTime"));
-
-                if (log_) Info
-                    << "        " << fieldName
-                    << " iters = " << totalIter_[fieldI]
-                    << " time = " << totalTime_[fieldI] << nl;
+                totalIter_[fieldi] = readLabel(fieldDict.lookup("totalIter"));
+                totalTime_[fieldi] = readScalar(fieldDict.lookup("totalTime"));
+                Info<< "        " << fieldName
+                    << " iters = " << totalIter_[fieldi]
+                    << " time = " << totalTime_[fieldi] << nl;
             }
             else
             {
