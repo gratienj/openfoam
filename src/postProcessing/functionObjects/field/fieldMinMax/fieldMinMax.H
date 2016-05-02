@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::fieldMinMax
+    Foam::functionObjects::fieldMinMax
 
 Group
     grpFieldFunctionObjects
@@ -93,6 +93,9 @@ class objectRegistry;
 class dictionary;
 class polyMesh;
 class mapPolyMesh;
+
+namespace functionObjects
+{
 
 /*---------------------------------------------------------------------------*\
                          Class fieldMinMax Declaration
@@ -181,6 +184,16 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
 
     //- Destructor
     virtual ~fieldMinMax();
@@ -223,6 +236,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

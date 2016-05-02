@@ -28,7 +28,7 @@ License
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::nearWallFields::createFields
+void Foam::functionObjects::nearWallFields::createFields
 (
     PtrList<GeometricField<Type, fvPatchField, volMesh>>& sflds
 ) const
@@ -74,7 +74,7 @@ void Foam::nearWallFields::createFields
 
 
 template<class Type>
-void Foam::nearWallFields::sampleBoundaryField
+void Foam::functionObjects::nearWallFields::sampleBoundaryField
 (
     const interpolationCellPoint<Type>& interpolator,
     GeometricField<Type, fvPatchField, volMesh>& fld
@@ -124,7 +124,7 @@ void Foam::nearWallFields::sampleBoundaryField
 
 
 template<class Type>
-void Foam::nearWallFields::sampleFields
+void Foam::functionObjects::nearWallFields::sampleFields
 (
     PtrList<GeometricField<Type, fvPatchField, volMesh>>& sflds
 ) const

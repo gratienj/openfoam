@@ -32,13 +32,16 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(yPlus, 0);
+}
 }
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::yPlus::writeFileHeader(Ostream& os) const
+void Foam::functionObjects::yPlus::writeFileHeader(const label i)
 {
     writeHeader(os, "y+");
     writeCommented(os, "Time");
@@ -52,7 +55,7 @@ void Foam::yPlus::writeFileHeader(Ostream& os) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::yPlus::yPlus
+Foam::functionObjects::yPlus::yPlus
 (
     const word& name,
     const objectRegistry& obr,
@@ -63,170 +66,121 @@ Foam::yPlus::yPlus
     functionObjectFiles(obr, name, typeName),
     name_(name),
     obr_(obr),
-    active_(true),
-    phiName_("phi"),
-    resultName_(name),
-    log_(true)
+    log_(true),
+    phiName_("phi")
 {
-    // Check if the available mesh is an fvMesh, otherwise deactivate
-    if (!isA<fvMesh>(obr_))
-    {
-        active_ = false;
-        WarningInFunction
-            << "No fvMesh available, deactivating " << name_ << nl
-            << endl;
-    }
+    const fvMesh& mesh = refCast<const fvMesh>(obr_);
 
-    if (active_)
-    {
-        read(dict);
-
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
-        volScalarField* yPlusPtr
+    volScalarField* yPlusPtr
+    (
+        new volScalarField
         (
-            new volScalarField
+            IOobject
             (
-                IOobject
-                (
-                    resultName_,
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
+                type(),
+                mesh.time().timeName(),
                 mesh,
-                dimensionedScalar("0", dimless, 0.0)
-            )
-        );
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("0", dimless, 0.0)
+        )
+    );
 
-        mesh.objectRegistry::store(yPlusPtr);
+    mesh.objectRegistry::store(yPlusPtr);
+}
 
-        writeFileHeader(file());
-    }
+
+bool Foam::functionObjects::yPlus::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
 }
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::yPlus::~yPlus()
+Foam::functionObjects::yPlus::~yPlus()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::yPlus::read(const dictionary& dict)
+void Foam::functionObjects::yPlus::read(const dictionary& dict)
 {
-    if (active_)
-    {
-        functionObjectFile::read(dict);
-
-        log_.readIfPresent("log", dict);
-        dict.readIfPresent("resultName", resultName_);
-        dict.readIfPresent("phiName", phiName_);
-    }
+    log_ = dict.lookupOrDefault<Switch>("log", true);
+    phiName_ = dict.lookupOrDefault<word>("phiName", "phi");
 }
 
 
-void Foam::yPlus::execute()
+void Foam::functionObjects::yPlus::execute()
 {
     typedef compressible::turbulenceModel cmpTurbModel;
     typedef incompressible::turbulenceModel icoTurbModel;
 
-    if (active_)
+    functionObjectFiles::write();
+
+    const fvMesh& mesh = refCast<const fvMesh>(obr_);
+
+    volScalarField& yPlus =
+        const_cast<volScalarField&>
+        (
+            mesh.lookupObject<volScalarField>(type())
+        );
+
+    if (log_) Info<< type() << " " << name_ << " output:" << nl;
+
+    tmp<volSymmTensorField> Reff;
+    if (mesh.foundObject<cmpModel>(turbulenceModel::propertiesName))
     {
-        functionObjectFiles::write();
+        const cmpModel& model =
+            mesh.lookupObject<cmpModel>(turbulenceModel::propertiesName);
 
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
+        calcYPlus(model, mesh, yPlus);
+    }
+    else if (mesh.foundObject<icoModel>(turbulenceModel::propertiesName))
+    {
+        const icoModel& model =
+            mesh.lookupObject<icoModel>(turbulenceModel::propertiesName);
 
-        volScalarField& yPlus =
-            const_cast<volScalarField&>
-            (
-                mesh.lookupObject<volScalarField>(resultName_)
-            );
-
-        if (log_) Info << type() << " " << name_ << " output:" << nl;
-
-        if (phi.dimensions() == dimMass/dimTime)
-        {
-            if (mesh.foundObject<cmpTurbModel>(turbulenceModel::propertiesName))
-            {
-                const cmpTurbModel& model =
-                    mesh.lookupObject<cmpTurbModel>
-                    (
-                        turbulenceModel::propertiesName
-                    );
-
-                calcYPlus(model, mesh, yPlus);
-            }
-            else
-            {
-                WarningInFunction
-                    << "Unable to find compressible turbulence model in the "
-                    << "database: yPlus will not be calculated" << endl;
-            }
-        }
-        else if (phi.dimensions() == dimVolume/dimTime)
-        {
-            if (mesh.foundObject<icoTurbModel>(turbulenceModel::propertiesName))
-            {
-                const icoTurbModel& model =
-                    mesh.lookupObject<icoTurbModel>
-                    (
-                        turbulenceModel::propertiesName
-                    );
-
-                calcYPlus(model, mesh, yPlus);
-            }
-            else
-            {
-                WarningInFunction
-                    << "Unable to find incompressible turbulence model in the "
-                    << "database: yPlus will not be calculated" << endl;
-            }
-        }
-        else
-        {
-            WarningInFunction
-                << "Unknown " << phiName_ << " dimensions: "
-                << phi.dimensions() << nl
-                << "Expected either " << dimMass/dimTime << " or "
-                << dimVolume/dimTime << nl
-                << "Unable to determine turbulence model type. "
-                << "yPlus will not be calculated" << endl;
-        }
+        calcYPlus(model, mesh, yPlus);
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "Unable to find turbulence model in the "
+            << "database" << exit(FatalError);
     }
 }
 
 
-void Foam::yPlus::end()
+void Foam::functionObjects::yPlus::end()
 {
-    // Do nothing
+    execute();
 }
 
 
-void Foam::yPlus::timeSet()
+void Foam::functionObjects::yPlus::timeSet()
+{}
+
+
+void Foam::functionObjects::yPlus::write()
 {
-    // Do nothing
-}
+    functionObjectFiles::write();
 
+    const volScalarField& yPlus =
+        obr_.lookupObject<volScalarField>(type());
 
-void Foam::yPlus::write()
-{
-    if (active_)
-    {
-        functionObjectFiles::write();
+    if (log_) Info<< "    writing field " << yPlus.name() << nl << endl;
 
-        const volScalarField& yPlus =
-            obr_.lookupObject<volScalarField>(resultName_);
-
-        if (log_) Info
-            << type() << " " << name_ << " output:" << nl
-            << "    writing field " << yPlus.name() << nl
-            << endl;
-
-        yPlus.write();
-    }
+    yPlus.write();
 }
 
 

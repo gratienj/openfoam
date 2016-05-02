@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::nearWallFields
+    Foam::functionObjects::nearWallFields
 
 Group
     grpFieldFunctionObjects
@@ -89,6 +89,9 @@ class objectRegistry;
 class dictionary;
 class mapPolyMesh;
 
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                        Class nearWallFields Declaration
 \*---------------------------------------------------------------------------*/
@@ -103,9 +106,6 @@ protected:
         word name_;
 
         const objectRegistry& obr_;
-
-        //- on/off switch
-        bool active_;
 
         // Read from dictionary
 
@@ -198,6 +198,16 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
 
     //- Destructor
     virtual ~nearWallFields();
@@ -238,6 +248,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

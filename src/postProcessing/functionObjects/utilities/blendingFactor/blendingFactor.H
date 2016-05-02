@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::blendingFactor
+    Foam::functionObjects::blendingFactor
 
 Group
     grpUtilitiesFunctionObjects
@@ -100,6 +100,9 @@ class objectRegistry;
 class dictionary;
 class polyMesh;
 class mapPolyMesh;
+
+namespace functionObjects
+{
 
 /*---------------------------------------------------------------------------*\
                        Class blendingFactor Declaration
@@ -181,6 +184,17 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
+
 
     //- Destructor
     virtual ~blendingFactor();
@@ -221,6 +235,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

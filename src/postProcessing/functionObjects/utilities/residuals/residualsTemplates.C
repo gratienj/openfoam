@@ -30,7 +30,7 @@ License
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::residuals::writeFileHeader(const word& fieldName)
+void Foam::functionObjects::residuals::writeFileHeader(const word& fieldName)
 {
     typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
 
@@ -60,7 +60,7 @@ void Foam::residuals::writeFileHeader(const word& fieldName)
 
 
 template<class Type>
-void Foam::residuals::writeResidual(const word& fieldName)
+void Foam::functionObjects::residuals::writeResidual(const word& fieldName)
 {
     typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
 

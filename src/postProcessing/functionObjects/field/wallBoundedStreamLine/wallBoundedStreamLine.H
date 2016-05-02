@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::wallBoundedStreamLine
+    Foam::functionObjects::wallBoundedStreamLine
 
 Group
     grpFieldFunctionObjects
@@ -109,6 +109,16 @@ SourceFiles
 namespace Foam
 {
 
+// Forward declaration of classes
+class objectRegistry;
+class dictionary;
+class mapPolyMesh;
+class meshSearch;
+class sampledSet;
+
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                     Class wallBoundedStreamLine Declaration
 \*---------------------------------------------------------------------------*/
@@ -130,10 +140,6 @@ class wallBoundedStreamLine
 
         //- Load fields from files (not from objectRegistry)
         bool loadFromFiles_;
-
-        //- On/off switch
-        bool active_;
-
 
         //- List of fields to sample
         wordList fields_;
@@ -231,6 +237,16 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
 
     //- Destructor
     virtual ~wallBoundedStreamLine();
@@ -241,13 +257,29 @@ public:
         //- Read settings
         virtual void read(const dictionary&);
 
-        //- Do the actual tracking to fill the track data
-        virtual void track();
+        //- Execute the averaging
+        virtual void execute();
+
+        //- Execute the averaging at the final time-loop, currently does nothing
+        virtual void end();
+
+        //- Called when time was set at the end of the Time::operator++
+        virtual void timeSet();
+
+        //- Calculate the field average data and write
+        virtual void write();
+
+        //- Update for changes of mesh
+        virtual void updateMesh(const mapPolyMesh&);
+
+        //- Update for mesh point-motion
+        virtual void movePoints(const polyMesh&);
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

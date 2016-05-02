@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::streamLine
+    Foam::functionObjects::streamLine
 
 Group
     grpFieldFunctionObjects
@@ -118,6 +118,9 @@ namespace Foam
 class objectRegistry;
 class dictionary;
 
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                          Class streamLine Declaration
 \*---------------------------------------------------------------------------*/
@@ -128,9 +131,59 @@ class streamLine
 {
     // Private data
 
+        //- Input dictionary
+        dictionary dict_;
+
+        //- Name of this set of field averages.
+        word name_;
+
+        //- Database this class is registered to
+        const objectRegistry& obr_;
+
+        //- Load fields from files (not from objectRegistry)
+        bool loadFromFiles_;
+
+        //- List of fields to sample
+        wordList fields_;
+
+        //- Field to transport particle with
+        word UName_;
+
+        //- Interpolation scheme to use
+        word interpolationScheme_;
+
+        //- Whether to use +u or -u
+        bool trackForward_;
+
+        //- Maximum lifetime (= number of cells) of particle
+        label lifeTime_;
+
         //- Number of subcycling steps
         label nSubCycle_;
 
+        //- Track length
+        scalar trackLength_;
+
+        //- Optional specified name of particles
+        word cloudName_;
+
+        //- Type of seed
+        word seedSet_;
+
+        //- Names of scalar fields
+        wordList scalarNames_;
+
+        //- Names of vector fields
+        wordList vectorNames_;
+
+
+        // Demand driven
+
+            //- Mesh searching enigne
+            autoPtr<meshSearch> meshSearchPtr_;
+
+            //- Seed set engine
+            autoPtr<sampledSet> sampledSetPtr_;
 
             //- Axis of the sampled points to output
             word sampledSetAxis_;
@@ -185,6 +238,16 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
 
     //- Destructor
     virtual ~streamLine();
@@ -195,13 +258,29 @@ public:
         //- Read settings
         virtual void read(const dictionary&);
 
-        //- Do the actual tracking to fill the track data
-        virtual void track();
+        //- Execute the averaging
+        virtual void execute();
+
+        //- Execute the averaging at the final time-loop, currently does nothing
+        virtual void end();
+
+        //- Called when time was set at the end of the Time::operator++
+        virtual void timeSet();
+
+        //- Calculate the field average data and write
+        virtual void write();
+
+        //- Update for changes of mesh
+        virtual void updateMesh(const mapPolyMesh&);
+
+        //- Update for mesh point-motion
+        virtual void movePoints(const polyMesh&);
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

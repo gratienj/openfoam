@@ -65,18 +65,13 @@ Foam::functionObjects::cloudInfo::cloudInfo
 :
     functionObjectFiles(obr, name),
     name_(name),
-    obr_(obr),
-    active_(true),
-    log_(true),
-    cloudNames_(),
-    filePtrs_()
+    obr_(obr)
 {
     read(dict);
 }
 
 
-Foam::autoPtr<Foam::functionObjects::cloudInfo>
-Foam::functionObjects::cloudInfo::New
+bool Foam::functionObjects::cloudInfo::viable
 (
     const word& name,
     const objectRegistry& obr,
@@ -84,10 +79,7 @@ Foam::functionObjects::cloudInfo::New
     const bool loadFromFiles
 )
 {
-    return autoPtr<cloudInfo>
-    (
-        new cloudInfo(name, obr, dict, loadFromFiles)
-    );
+    return true;
 }
 
 
@@ -101,42 +93,21 @@ Foam::functionObjects::cloudInfo::~cloudInfo()
 
 void Foam::functionObjects::cloudInfo::read(const dictionary& dict)
 {
-    if (active_)
+    functionObjectFiles::resetNames(dict.lookup("clouds"));
+
+    Info<< type() << " " << name_ << ": ";
+    if (names().size())
     {
-        functionObjectFiles::resetNames(dict.lookup("clouds"));
-
-        log_ = dict.lookupOrDefault<Switch>("log", true);
-        dict.lookup("clouds") >> cloudNames_;
-
-        if (log_)
+        Info<< "applying to clouds:" << nl;
+        forAll(names(), i)
         {
-            Info<< type() << " " << name_ << ": ";
-
-            if (cloudNames_.size())
-            {
-                Info<< "applying to clouds:" << nl;
-                forAll(cloudNames_, i)
-                {
-                    Info<< "    " << cloudNames_[i] << nl;
-                }
-                Info<< endl;
-            }
-            else
-            {
-                Info<< "no clouds to be processed" << nl << endl;
-            }
+            Info<< "    " << names()[i] << nl;
         }
-
-        if (writeToFile())
-        {
-            filePtrs_.setSize(cloudNames_.size());
-            forAll(filePtrs_, fileI)
-            {
-                const word& cloudName = cloudNames_[fileI];
-                filePtrs_.set(fileI, createFile(cloudName));
-                writeFileHeader(filePtrs_[fileI]);
-            }
-        }
+        Info<< endl;
+    }
+    else
+    {
+        Info<< "no clouds to be processed" << nl << endl;
     }
 }
 
@@ -155,46 +126,26 @@ void Foam::functionObjects::cloudInfo::timeSet()
 
 void Foam::functionObjects::cloudInfo::write()
 {
-    if (active_)
+    functionObjectFiles::write();
+
+    forAll(names(), i)
     {
-        functionObjectFiles::write();
+        const word& cloudName = names()[i];
 
-        forAll(names(), i)
+        const kinematicCloud& cloud =
+            obr_.lookupObject<kinematicCloud>(cloudName);
+
+        label nParcels = returnReduce(cloud.nParcels(), sumOp<label>());
+        scalar massInSystem =
+            returnReduce(cloud.massInSystem(), sumOp<scalar>());
+
+        if (Pstream::master())
         {
-            const word& cloudName = cloudNames_[cloudI];
-
-            const kinematicCloud& cloud =
-                obr_.lookupObject<kinematicCloud>(cloudName);
-
-            label nParcels = returnReduce(cloud.nParcels(), sumOp<label>());
-            scalar massInSystem =
-                returnReduce(cloud.massInSystem(), sumOp<scalar>());
-
-            scalar Dmax = cloud.Dmax();
-            scalar D10 = cloud.Dij(1, 0);
-            scalar D32 = cloud.Dij(3, 2);
-
-            if (Pstream::master() && writeToFile())
-            {
-                writeTime(file(i));
-                file(i)
-                    << token::TAB
-                    << nParcels << token::TAB
-                    << massInSystem << token::TAB
-                    << Dmax << token::TAB
-                    << D10 << token::TAB
-                    << D32 << token::TAB
-                    << endl;
-            }
-
-            if (log_) Info
-                << type() << " " << name_ <<  " output:" << nl
-                << "    number of parcels : " << nParcels << nl
-                << "    mass in system    : " << massInSystem << nl
-                << "    maximum diameter  : " << Dmax << nl
-                << "    D10 diameter      : " << D10 << nl
-                << "    D32 diameter      : " << D32 << nl
-                << endl;
+            writeTime(file(i));
+            file(i)
+                << token::TAB
+                << nParcels << token::TAB
+                << massInSystem << endl;
         }
     }
 }

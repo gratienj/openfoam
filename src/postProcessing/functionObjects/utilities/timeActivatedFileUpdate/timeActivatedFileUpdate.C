@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,13 +32,16 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(timeActivatedFileUpdate, 0);
+}
 }
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::timeActivatedFileUpdate::updateFile()
+void Foam::functionObjects::timeActivatedFileUpdate::updateFile()
 {
     label i = lastIndex_;
     while
@@ -64,7 +67,7 @@ void Foam::timeActivatedFileUpdate::updateFile()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::timeActivatedFileUpdate::timeActivatedFileUpdate
+Foam::functionObjects::timeActivatedFileUpdate::timeActivatedFileUpdate
 (
     const word& name,
     const objectRegistry& obr,
@@ -74,8 +77,7 @@ Foam::timeActivatedFileUpdate::timeActivatedFileUpdate
 :
     name_(name),
     obr_(obr),
-    active_(true),
-    fileToUpdate_("unknown-fileToUpdate"),
+    fileToUpdate_(dict.lookup("fileToUpdate")),
     timeVsFile_(),
     lastIndex_(-1),
     log_(true)
@@ -84,76 +86,75 @@ Foam::timeActivatedFileUpdate::timeActivatedFileUpdate
 }
 
 
+bool Foam::functionObjects::timeActivatedFileUpdate::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    return true;
+}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::timeActivatedFileUpdate::~timeActivatedFileUpdate()
+Foam::functionObjects::timeActivatedFileUpdate::~timeActivatedFileUpdate()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::timeActivatedFileUpdate::read(const dictionary& dict)
+void Foam::functionObjects::timeActivatedFileUpdate::read
+(
+    const dictionary& dict
+)
 {
-    if (active_)
+    dict.lookup("fileToUpdate") >> fileToUpdate_;
+    dict.lookup("timeVsFile") >> timeVsFile_;
+
+    lastIndex_ = -1;
+    fileToUpdate_.expand();
+
+    Info<< type() << ": time vs file list:" << nl;
+    forAll(timeVsFile_, i)
     {
-        log_.readIfPresent("log", dict);
-
-        dict.lookup("fileToUpdate") >> fileToUpdate_;
-        dict.lookup("timeVsFile") >> timeVsFile_;
-
-        lastIndex_ = -1;
-        fileToUpdate_.expand();
-
-        if (log_) Info
-            << type() << " " << name_ << " output:" << nl
-            << "    time vs file list:" << endl;
-
-        forAll(timeVsFile_, i)
+        timeVsFile_[i].second() = timeVsFile_[i].second().expand();
+        if (!isFile(timeVsFile_[i].second()))
         {
-            timeVsFile_[i].second() = timeVsFile_[i].second().expand();
-            if (!isFile(timeVsFile_[i].second()))
-            {
-                FatalErrorInFunction
-                    << "File: " << timeVsFile_[i].second() << " not found"
-                    << nl << exit(FatalError);
-            }
-
-            if (log_) Info
-                << "    " << timeVsFile_[i].first() << tab
-                << timeVsFile_[i].second() << endl;
+            FatalErrorInFunction
+                << "File: " << timeVsFile_[i].second() << " not found"
+                << nl << exit(FatalError);
         }
-        if (log_) Info<< endl;
 
-        updateFile();
+        Info<< "    " << timeVsFile_[i].first() << tab
+            << timeVsFile_[i].second() << endl;
     }
+    Info<< endl;
+
+    updateFile();
 }
 
 
-void Foam::timeActivatedFileUpdate::execute()
+void Foam::functionObjects::timeActivatedFileUpdate::execute()
 {
-    if (active_)
-    {
-        updateFile();
-    }
+    updateFile();
 }
 
 
-void Foam::timeActivatedFileUpdate::end()
+void Foam::functionObjects::timeActivatedFileUpdate::end()
 {
-    // Do nothing
+    execute();
 }
 
 
-void Foam::timeActivatedFileUpdate::timeSet()
-{
-    // Do nothing
-}
+void Foam::functionObjects::timeActivatedFileUpdate::timeSet()
+{}
 
 
-void Foam::timeActivatedFileUpdate::write()
-{
-    // Do nothing
-}
+void Foam::functionObjects::timeActivatedFileUpdate::write()
+{}
 
 
 // ************************************************************************* //

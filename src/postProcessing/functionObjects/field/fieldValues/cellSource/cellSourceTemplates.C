@@ -29,7 +29,10 @@ License
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 template<class Type>
-bool Foam::fieldValues::cellSource::validField(const word& fieldName) const
+bool Foam::functionObjects::fieldValues::cellSource::validField
+(
+    const word& fieldName
+) const
 {
     typedef GeometricField<Type, fvPatchField, volMesh> vf;
 
@@ -43,7 +46,8 @@ bool Foam::fieldValues::cellSource::validField(const word& fieldName) const
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::fieldValues::cellSource::setFieldValues
+Foam::tmp<Foam::Field<Type>>
+Foam::functionObjects::fieldValues::cellSource::setFieldValues
 (
     const word& fieldName,
     const bool mustGet
@@ -68,7 +72,7 @@ Foam::tmp<Foam::Field<Type>> Foam::fieldValues::cellSource::setFieldValues
 
 
 template<class Type>
-Type Foam::fieldValues::cellSource::processValues
+Type Foam::functionObjects::fieldValues::cellSource::processValues
 (
     const Field<Type>& values,
     const scalarField& V,
@@ -154,10 +158,8 @@ Type Foam::fieldValues::cellSource::processValues
 
             break;
         }
-        default:
-        {
-            // Do nothing
-        }
+        case opNone:
+        {}
     }
 
     return result;
@@ -167,10 +169,9 @@ Type Foam::fieldValues::cellSource::processValues
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-bool Foam::fieldValues::cellSource::writeValues
+bool Foam::functionObjects::fieldValues::cellSource::writeValues
 (
-    const word& fieldName,
-    const scalarField& weightField
+    const word& fieldName
 )
 {
     const bool ok = validField<Type>(fieldName);
@@ -226,7 +227,8 @@ bool Foam::fieldValues::cellSource::writeValues
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::fieldValues::cellSource::filterField
+Foam::tmp<Foam::Field<Type>>
+Foam::functionObjects::fieldValues::cellSource::filterField
 (
     const Field<Type>& field
 ) const

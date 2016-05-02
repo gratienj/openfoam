@@ -59,8 +59,7 @@ Foam::functionObjects::partialWrite::partialWrite
 }
 
 
-Foam::autoPtr<Foam::functionObjects::partialWrite>
-Foam::functionObjects::partialWrite::New
+bool Foam::functionObjects::partialWrite::viable
 (
     const word& name,
     const objectRegistry& obr,
@@ -68,17 +67,8 @@ Foam::functionObjects::partialWrite::New
     const bool loadFromFiles
 )
 {
-    if (isA<fvMesh>(obr))
-    {
-        return autoPtr<partialWrite>
-        (
-            new partialWrite(name, obr, dict, loadFromFiles)
-        );
-    }
-    else
-    {
-        return autoPtr<partialWrite>();
-    }
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
 }
 
 

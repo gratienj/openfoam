@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -59,32 +59,64 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::active() const
 
 
 template<class OutputFilter>
-void Foam::OutputFilterFunctionObject<OutputFilter>::allocateFilter()
+bool Foam::OutputFilterFunctionObject<OutputFilter>::allocateFilter()
 {
     if (dictName_.size())
     {
-        ptr_.reset
+        if
         (
-            new IOOutputFilter<OutputFilter>
+            IOOutputFilter<OutputFilter>::viable
             (
                 name(),
                 time_.lookupObject<objectRegistry>(regionName_),
                 dictName_
             )
-        );
+        )
+        {
+            ptr_.reset
+            (
+                new IOOutputFilter<OutputFilter>
+                (
+                    name(),
+                    time_.lookupObject<objectRegistry>(regionName_),
+                    dictName_
+                )
+            );
+        }
+        else
+        {
+            enabled_ = false;
+        }
     }
     else
     {
-        ptr_.reset
+        if
         (
-            new OutputFilter
+            OutputFilter::viable
             (
                 name(),
                 time_.lookupObject<objectRegistry>(regionName_),
                 dict_
             )
-        );
+        )
+        {
+            ptr_.reset
+            (
+                new OutputFilter
+                (
+                    name(),
+                    time_.lookupObject<objectRegistry>(regionName_),
+                    dict_
+                )
+            );
+        }
+        else
+        {
+            enabled_ = false;
+        }
     }
+
+    return enabled_;
 }
 
 
@@ -148,10 +180,12 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::start()
 
     if (enabled_ && storeFilter_)
     {
-        allocateFilter();
+        return allocateFilter();
     }
-
-    return true;
+    else
+    {
+        return true;
+    }
 }
 
 
@@ -163,9 +197,9 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::execute
 {
     if (active())
     {
-        if (!storeFilter_)
+        if (!storeFilter_ && !allocateFilter())
         {
-            allocateFilter();
+            return false;
         }
 
         if (evaluateControl_.output())
@@ -200,9 +234,9 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::end()
 {
     if (enabled_)
     {
-        if (!storeFilter_)
+        if (!storeFilter_ && !allocateFilter())
         {
-            allocateFilter();
+            return false;
         }
 
         ptr_->end();

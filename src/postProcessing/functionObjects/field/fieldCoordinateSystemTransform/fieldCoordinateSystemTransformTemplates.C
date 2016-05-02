@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +32,7 @@ License
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::fieldCoordinateSystemTransform::transformField
+void Foam::functionObjects::fieldCoordinateSystemTransform::transformField
 (
     const Type& field
 ) const
@@ -74,7 +74,7 @@ void Foam::fieldCoordinateSystemTransform::transformField
 
 
 template<class Type>
-void Foam::fieldCoordinateSystemTransform::transform
+void Foam::functionObjects::fieldCoordinateSystemTransform::transform
 (
     const word& fieldName
 ) const

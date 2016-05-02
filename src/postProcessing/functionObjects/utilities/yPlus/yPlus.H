@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::yPlus
+    Foam::functionObjects::yPlus
 
 Group
     grpUtilitiesFunctionObjects
@@ -79,6 +79,9 @@ class polyMesh;
 class mapPolyMesh;
 class fvMesh;
 
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                             Class yPlus Declaration
 \*---------------------------------------------------------------------------*/
@@ -94,8 +97,8 @@ class yPlus
 
         const objectRegistry& obr_;
 
-        //- on/off switch
-        bool active_;
+        //- Switch to send output to Info as well as to file
+        Switch log_;
 
         //- Name of mass/volume flux field (optional, default = phi)
         word phiName_;
@@ -146,6 +149,16 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
 
     //- Destructor
     virtual ~yPlus();
@@ -186,6 +199,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

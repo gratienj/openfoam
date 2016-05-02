@@ -121,9 +121,6 @@ updateCoeffs()
         return;
     }
 
-
-    // Do nothing
-
     if (debug)
     {
         scalar Q = gSum((*this)*patch().magSf());

@@ -32,7 +32,7 @@ License
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::blendingFactor::calcScheme
+Foam::volScalarField& Foam::functionObjects::blendingFactor::factor
 (
     const GeometricField<Type, fvPatchField, volMesh>& field,
     const typename fv::convectionScheme<Type>& cs
@@ -121,7 +121,7 @@ void Foam::blendingFactor::calcScheme
 
 
 template<class Type>
-void Foam::blendingFactor::calc()
+void Foam::functionObjects::blendingFactor::calc()
 {
     typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
 

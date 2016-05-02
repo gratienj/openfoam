@@ -218,16 +218,12 @@ Foam::functionObjects::forceCoeffs::forceCoeffs
     CdBinFilePtr_(),
     ClBinFilePtr_()
 {
-    if (readFields)
-    {
-        read(dict);
-        if (log_) Info << endl;
-    }
+    read(dict);
+    Info<< endl;
 }
 
 
-Foam::autoPtr<Foam::functionObjects::forceCoeffs>
-Foam::functionObjects::forceCoeffs::New
+bool Foam::functionObjects::forceCoeffs::viable
 (
     const word& name,
     const objectRegistry& obr,
@@ -235,17 +231,8 @@ Foam::functionObjects::forceCoeffs::New
     const bool loadFromFiles
 )
 {
-    if (isA<fvMesh>(obr))
-    {
-        return autoPtr<forceCoeffs>
-        (
-            new forceCoeffs(name, obr, dict, loadFromFiles)
-        );
-    }
-    else
-    {
-        return autoPtr<forceCoeffs>();
-    }
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
 }
 
 
@@ -259,10 +246,20 @@ Foam::functionObjects::forceCoeffs::~forceCoeffs()
 
 void Foam::functionObjects::forceCoeffs::read(const dictionary& dict)
 {
-    if (!active_)
-    {
-        return;
-    }
+    forces::read(dict);
+
+    // Directions for lift and drag forces, and pitch moment
+    dict.lookup("liftDir") >> liftDir_;
+    dict.lookup("dragDir") >> dragDir_;
+    dict.lookup("pitchAxis") >> pitchAxis_;
+
+    // Free stream velocity magnitude
+    dict.lookup("magUInf") >> magUInf_;
+
+    // Reference length and area scales
+    dict.lookup("lRef") >> lRef_;
+    dict.lookup("Aref") >> Aref_;
+}
 
     forces::read(dict);
 
@@ -282,22 +279,9 @@ void Foam::functionObjects::forceCoeffs::timeSet()
 
 void Foam::functionObjects::forceCoeffs::write()
 {
-    if (!active_)
-    {
-        return;
-    }
-
     forces::calcForcesMoment();
 
-    createFiles();
-
-    scalar pDyn = 0.5*rhoRef_*magUInf_*magUInf_;
-
-    // Storage for pressure, viscous and porous contributions to coeffs
-    List<Field<scalar> > momentCoeffs(3);
-    List<Field<scalar> > dragCoeffs(3);
-    List<Field<scalar> > liftCoeffs(3);
-    forAll(liftCoeffs, i)
+    if (Pstream::master())
     {
         functionObjectFiles::write();
 

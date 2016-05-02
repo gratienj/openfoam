@@ -30,23 +30,24 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(fieldMinMax, 0);
-
-    template<>
-    const char* NamedEnum
-    <
-        fieldMinMax::modeType,
-        2
-    >::names[] =
-    {
-        "magnitude",
-        "component"
-    };
+}
 }
 
+template<>
+const char* Foam::NamedEnum
+<
+    Foam::functionObjects::fieldMinMax::modeType,
+    2
+>::names[] = {"magnitude", "component"};
 
-const Foam::NamedEnum<Foam::fieldMinMax::modeType, 2>
-Foam::fieldMinMax::modeTypeNames_;
+const Foam::NamedEnum
+<
+    Foam::functionObjects::fieldMinMax::modeType,
+    2
+> Foam::functionObjects::fieldMinMax::modeTypeNames_;
 
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
@@ -90,7 +91,7 @@ void Foam::fieldMinMax::writeFileHeader(Ostream& os) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::fieldMinMax::fieldMinMax
+Foam::functionObjects::fieldMinMax::fieldMinMax
 (
     const word& name,
     const objectRegistry& obr,
@@ -106,79 +107,111 @@ Foam::fieldMinMax::fieldMinMax
     mode_(mdMag),
     fieldSet_()
 {
-    // Check if the available mesh is an fvMesh otherise deactivate
-    if (setActive<fvMesh>())
-    {
-        active_ = false;
-        WarningInFunction
-            << "No fvMesh available, deactivating " << name_
-            << endl;
-    }
+    read(dict);
+}
+
+
+bool Foam::functionObjects::fieldMinMax::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
 }
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::fieldMinMax::~fieldMinMax()
+Foam::functionObjects::fieldMinMax::~fieldMinMax()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::fieldMinMax::read(const dictionary& dict)
+void Foam::functionObjects::fieldMinMax::read(const dictionary& dict)
 {
-    if (active_)
+    log_ = dict.lookupOrDefault<Switch>("log", true);
+    location_ = dict.lookupOrDefault<Switch>("location", true);
+
+    mode_ = modeTypeNames_[dict.lookupOrDefault<word>("mode", "magnitude")];
+    dict.lookup("fields") >> fieldSet_;
+}
+
+
+void Foam::functionObjects::fieldMinMax::writeFileHeader(const label i)
+{
+    OFstream& file = this->file();
+
+    writeHeader(file, "Field minima and maxima");
+    writeCommented(file, "Time");
+
+    if (location_)
     {
-        functionObjectFile::read(dict);
+        writeTabbed(file, "field");
 
-        log_ = dict.lookupOrDefault<Switch>("log", true);
-        writeLocation_ = dict.lookupOrDefault<Switch>("writeLocation", true);
+        writeTabbed(file, "min");
+        writeTabbed(file, "location(min)");
 
-        mode_ = modeTypeNames_[dict.lookupOrDefault<word>("mode", "magnitude")];
-        dict.lookup("fields") >> fieldSet_;
-    }
-}
-
-
-void Foam::fieldMinMax::execute()
-{
-    // Do nothing - only valid on write
-}
-
-
-void Foam::fieldMinMax::end()
-{
-    // Do nothing - only valid on write
-}
-
-
-void Foam::fieldMinMax::timeSet()
-{
-    // Do nothing - only valid on write
-}
-
-
-void Foam::fieldMinMax::write()
-{
-    if (active_)
-    {
-        functionObjectFiles::write();
-
-        if (!location_) writeTime(file());
-        if (log_) Info<< type() << " " << name_ <<  " output:" << nl;
-
-        forAll(fieldSet_, fieldI)
+        if (Pstream::parRun())
         {
-            calcMinMaxFields<scalar>(fieldSet_[fieldI], mdCmpt);
-            calcMinMaxFields<vector>(fieldSet_[fieldI], mode_);
-            calcMinMaxFields<sphericalTensor>(fieldSet_[fieldI], mode_);
-            calcMinMaxFields<symmTensor>(fieldSet_[fieldI], mode_);
-            calcMinMaxFields<tensor>(fieldSet_[fieldI], mode_);
+            writeTabbed(file, "processor");
         }
 
-        if (!writeLocation_) file()<< endl;
-        if (log_) Info<< endl;
+        writeTabbed(file, "max");
+        writeTabbed(file, "location(max)");
+
+        if (Pstream::parRun())
+        {
+            writeTabbed(file, "processor");
+        }
     }
+    else
+    {
+        forAll(fieldSet_, fieldI)
+        {
+            writeTabbed(file, "min(" + fieldSet_[fieldI] + ')');
+            writeTabbed(file, "max(" + fieldSet_[fieldI] + ')');
+        }
+    }
+
+    file<< endl;
+}
+
+
+void Foam::functionObjects::fieldMinMax::execute()
+{}
+
+
+void Foam::functionObjects::fieldMinMax::end()
+{}
+
+
+void Foam::functionObjects::fieldMinMax::timeSet()
+{}
+
+
+void Foam::functionObjects::fieldMinMax::write()
+{
+    functionObjectFiles::write();
+
+    if (!location_) writeTime(file());
+    if (log_) Info<< type() << " " << name_ <<  " output:" << nl;
+
+    forAll(fieldSet_, fieldI)
+    {
+        calcMinMaxFields<scalar>(fieldSet_[fieldI], mdCmpt);
+        calcMinMaxFields<vector>(fieldSet_[fieldI], mode_);
+        calcMinMaxFields<sphericalTensor>(fieldSet_[fieldI], mode_);
+        calcMinMaxFields<symmTensor>(fieldSet_[fieldI], mode_);
+        calcMinMaxFields<tensor>(fieldSet_[fieldI], mode_);
+    }
+
+    if (!location_) file()<< endl;
+    if (log_) Info<< endl;
 }
 
 

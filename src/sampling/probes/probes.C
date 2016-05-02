@@ -318,6 +318,18 @@ Foam::probes::probes
 }
 
 
+bool Foam::probes::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    return true;
+}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::probes::~probes()
@@ -327,21 +339,15 @@ Foam::probes::~probes()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 void Foam::probes::execute()
-{
-    // Do nothing - only valid on write
-}
+{}
 
 
 void Foam::probes::end()
-{
-    // Do nothing - only valid on write
-}
+{}
 
 
 void Foam::probes::timeSet()
-{
-    // Do nothing - only valid on write
-}
+{}
 
 
 void Foam::probes::write()

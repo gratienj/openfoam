@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,7 +30,10 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(blendingFactor, 0);
+}
 }
 
 
@@ -49,7 +52,7 @@ void Foam::blendingFactor::writeFileHeader(Ostream& os) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::blendingFactor::blendingFactor
+Foam::functionObjects::blendingFactor::blendingFactor
 (
     const word& name,
     const objectRegistry& obr,
@@ -61,95 +64,69 @@ Foam::blendingFactor::blendingFactor
     functionObjectFile(obr, name, typeName, dict),
     name_(name),
     obr_(obr),
-    phiName_("phi"),
-    fieldName_("unknown-fieldName"),
-    resultName_(word::null),
-    tolerance_(0.001),
-    log_(true)
+    phiName_("unknown-phiName"),
+    fieldName_("unknown-fieldName")
 {
-    // Check if the available mesh is an fvMesh, otherwise deactivate
-    if (setActive<fvMesh>())
-    {
-        active_ = false;
-        WarningInFunction
-            << "No fvMesh available, deactivating " << name_ << nl
-            << endl;
-    }
+    read(dict);
+}
+
+
+bool Foam::functionObjects::blendingFactor::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
 }
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::blendingFactor::~blendingFactor()
+Foam::functionObjects::blendingFactor::~blendingFactor()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::blendingFactor::read(const dictionary& dict)
+void Foam::functionObjects::blendingFactor::read(const dictionary& dict)
 {
-    if (active_)
-    {
-        functionObjectFile::read(dict);
-
-        log_.readIfPresent("log", dict);
-
-        dict.readIfPresent("phiName", phiName_);
-        dict.lookup("fieldName") >> fieldName_;
-
-
-        if (!dict.readIfPresent("resultName", resultName_))
-        {
-            resultName_ = name_ + ':' + fieldName_;
-        }
-
-        dict.readIfPresent("tolerance", tolerance_);
-        if ((tolerance_ < 0) || (tolerance_ > 1))
-        {
-            FatalErrorInFunction
-                << "tolerance must be in the range 0 to 1.  Supplied value: "
-                << tolerance_ << exit(FatalError);
-        }
-    }
+    phiName_ = dict.lookupOrDefault<word>("phiName", "phi");
+    dict.lookup("fieldName") >> fieldName_;
 }
 
 
-void Foam::blendingFactor::execute()
+void Foam::functionObjects::blendingFactor::execute()
 {
-    if (active_)
-    {
-        calc<scalar>();
-        calc<vector>();
-    }
+    calc<scalar>();
+    calc<vector>();
 }
 
 
-void Foam::blendingFactor::end()
+void Foam::functionObjects::blendingFactor::end()
 {
-    // Do nothing
+    execute();
 }
 
+void Foam::functionObjects::blendingFactor::timeSet()
+{}
 
-void Foam::blendingFactor::timeSet()
+
+void Foam::functionObjects::blendingFactor::write()
 {
-    // Do nothing
-}
+    const word fieldName = "blendingFactor:" + fieldName_;
 
+    const volScalarField& blendingFactor =
+        obr_.lookupObject<volScalarField>(fieldName);
 
-void Foam::blendingFactor::write()
-{
-    if (active_)
-    {
-        const volScalarField& indicator =
-            obr_.lookupObject<volScalarField>(resultName_);
+    Info<< type() << " " << name_ << " output:" << nl
+        << "    writing field " << blendingFactor.name() << nl
+        << endl;
 
-        if (log_) Info
-            << type() << " " << name_ << " output:" << nl
-            << "    writing field " << indicator.name() << nl
-            << endl;
-
-        indicator.write();
-    }
+    blendingFactor.write();
 }
 
 

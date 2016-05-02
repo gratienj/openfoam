@@ -171,7 +171,7 @@ void Foam::forces::writeBinHeader(const word& header, Ostream& os) const
 
 void Foam::functionObjects::forces::initialise()
 {
-    if (initialised_ || !active_)
+    if (initialised_)
     {
         return;
     }
@@ -180,11 +180,9 @@ void Foam::functionObjects::forces::initialise()
     {
         if (!obr_.foundObject<volVectorField>(fDName_))
         {
-            active_ = false;
-            WarningInFunction
-                << "Could not find " << fDName_ << " in database." << nl
-                << "    De-activating forces."
-                << endl;
+            FatalErrorInFunction
+                << "Could not find " << fDName_ << " in database."
+                << exit(FatalError);
         }
     }
     else
@@ -199,10 +197,9 @@ void Foam::functionObjects::forces::initialise()
             )
         )
         {
-            active_ = false;
-
-            WarningInFunction
-                << "Could not find " << UName_ << ", " << pName_;
+            FatalErrorInFunction
+                << "Could not find " << UName_ << ", " << pName_
+                << exit(FatalError);
 
             if (rhoName_ != "rhoInf")
             {
@@ -562,28 +559,15 @@ Foam::functionObjects::forces::forces
     writeFields_(false),
     initialised_(false)
 {
-    // Check if the available mesh is an fvMesh otherise deactivate
-    if (setActive<fvMesh>())
+    if (readFields)
     {
-        if (readFields)
-        {
-            read(dict);
-            if (log_) Info << endl;
-        }
+        read(dict);
+        Info<< endl;
     }
-    else
-    {
-        active_ = false;
-        WarningInFunction
-            << "No fvMesh available, deactivating " << name_
-            << endl;
-    }
-
 }
 
 
-Foam::autoPtr<Foam::functionObjects::forces>
-Foam::functionObjects::forces::New
+bool Foam::functionObjects::forces::viable
 (
     const word& name,
     const objectRegistry& obr,
@@ -591,17 +575,8 @@ Foam::functionObjects::forces::New
     const bool loadFromFiles
 )
 {
-    if (isA<fvMesh>(obr))
-    {
-        return autoPtr<forces>
-        (
-            new forces(name, obr, dict, loadFromFiles)
-        );
-    }
-    else
-    {
-        return autoPtr<forces>();
-    }
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
 }
 
 
@@ -673,18 +648,11 @@ Foam::functionObjects::forces::~forces()
 
 void Foam::functionObjects::forces::read(const dictionary& dict)
 {
-    if (!active_)
-    {
-        return;
-    }
-
-    functionObjectFile::read(dict);
-
     initialised_ = false;
 
     log_ = dict.lookupOrDefault<Switch>("log", false);
 
-    if (log_) Info << type() << " " << name_ << ":" << nl;
+    if (log_) Info<< type() << " " << name_ << ":" << nl;
 
     directForceDensity_ = dict.lookupOrDefault("directForceDensity", false);
 
@@ -725,11 +693,11 @@ void Foam::functionObjects::forces::read(const dictionary& dict)
     dict.readIfPresent("porosity", porosity_);
     if (porosity_)
     {
-        if (log_) Info << "    Including porosity effects" << endl;
+        if (log_) Info<< "    Including porosity effects" << endl;
     }
     else
     {
-        if (log_) Info << "    Not including porosity effects" << endl;
+        if (log_) Info<< "    Not including porosity effects" << endl;
     }
 
     if (dict.found("binData"))
@@ -743,91 +711,68 @@ void Foam::functionObjects::forces::read(const dictionary& dict)
                 << "Number of bins (nBin) must be zero or greater"
                 << exit(FatalIOError);
         }
-        else if (nBin_ == 0)
+        else if ((nBin_ == 0) || (nBin_ == 1))
         {
             nBin_ = 1;
+            forAll(force_, i)
+            {
+                force_[i].setSize(1);
+                moment_[i].setSize(1);
+            }
         }
-        else
+    }
+
+        if (nBin_ > 1)
         {
-            binDict.lookup("cumulative") >> binCumulative_;
             binDict.lookup("direction") >> binDir_;
             binDir_ /= mag(binDir_);
+
+            binMin_ = GREAT;
+            scalar binMax = -GREAT;
+            forAllConstIter(labelHashSet, patchSet_, iter)
+            {
+                label patchi = iter.key();
+                const polyPatch& pp = pbm[patchi];
+                scalarField d(pp.faceCentres() & binDir_);
+                binMin_ = min(min(d), binMin_);
+                binMax = max(max(d), binMax);
+            }
+            reduce(binMin_, minOp<scalar>());
+            reduce(binMax, maxOp<scalar>());
+
+            // slightly boost binMax so that region of interest is fully
+            // within bounds
+            binMax = 1.0001*(binMax - binMin_) + binMin_;
+
+            binDx_ = (binMax - binMin_)/scalar(nBin_);
+
+            // create the bin points used for writing
+            binPoints_.setSize(nBin_);
+            forAll(binPoints_, i)
+            {
+                binPoints_[i] = (i + 0.5)*binDir_*binDx_;
+            }
+
+            binDict.lookup("cumulative") >> binCumulative_;
+
+            // allocate storage for forces and moments
+            forAll(force_, i)
+            {
+                force_[i].setSize(nBin_);
+                moment_[i].setSize(nBin_);
+            }
         }
     }
 
     if (nBin_ == 1)
     {
-        // Allocate storage for forces and moments
-        forAll(force_, i)
-        {
-            force_[i].setSize(1);
-            moment_[i].setSize(1);
-        }
-    }
-
-            if (nBin_ < 0)
-            {
-                FatalIOErrorInFunction(dict)
-                    << "Number of bins (nBin) must be zero or greater"
-                    << exit(FatalIOError);
-            }
-            else if ((nBin_ == 0) || (nBin_ == 1))
-            {
-                nBin_ = 1;
-                forAll(force_, i)
-                {
-                    force_[i].setSize(1);
-                    moment_[i].setSize(1);
-                }
-            }
-
-        obr_.store(tforce.ptr());
-
-                binMin_ = GREAT;
-                scalar binMax = -GREAT;
-                forAllConstIter(labelHashSet, patchSet_, iter)
-                {
-                    label patchi = iter.key();
-                    const polyPatch& pp = pbm[patchi];
-                    scalarField d(pp.faceCentres() & binDir_);
-                    binMin_ = min(min(d), binMin_);
-                    binMax = max(max(d), binMax);
-                }
-                reduce(binMin_, minOp<scalar>());
-                reduce(binMax, maxOp<scalar>());
-
-        obr_.store(tmoment.ptr());
-    }
-
-    // write state/results information
-    setResult("normalForce", sum(force_[0]));
-    setResult("tangentialForce", sum(force_[1]));
-    setResult("porousForce", sum(force_[2]));
-
-void Foam::forces::execute()
-{
-    if (!active_)
-    {
-        return;
-    }
-
-    // calcForcesMoment may have reset the active flag - need to re-check
-    calcForcesMoment();
-
-    if (!active_)
-    {
-        return;
-    }
-
-    if (Pstream::master())
-    {
-        createFiles();
-
-        writeForces();
-
-        writeBins();
-
-        if (log_) Info << endl;
+        // allocate storage for forces and moments
+        force_[0].setSize(1);
+        force_[1].setSize(1);
+        force_[2].setSize(1);
+        moment_[0].setSize(1);
+        moment_[1].setSize(1);
+        moment_[2].setSize(1);
     }
 
     // write state/results information
@@ -849,12 +794,9 @@ void Foam::functionObjects::forces::timeSet()
 
 void Foam::functionObjects::forces::write()
 {
-    if (!active_)
-    {
-        return;
-    }
+    calcForcesMoment();
 
-    if (writeFields_)
+    if (Pstream::master())
     {
         functionObjectFiles::write();
 
@@ -875,12 +817,6 @@ void Foam::functionObjects::forces::calcForcesMoment()
     }
 
     initialise();
-
-    // Initialise may have reset the active flag - need to re-check
-    if (!active_)
-    {
-        return;
-    }
 
     force_[0] = Zero;
     force_[1] = Zero;

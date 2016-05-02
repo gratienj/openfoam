@@ -41,28 +41,19 @@ namespace Foam
 
 void Foam::fieldValue::read(const dictionary& dict)
 {
-    if (active_)
-    {
-        functionObjectFile::read(dict);
+    dict_ = dict;
 
-        dict_ = dict;
-
-        log_ = dict.lookupOrDefault<Switch>("log", true);
-        dict.lookup("fields") >> fields_;
-        dict.lookup("valueOutput") >> valueOutput_;
-        dict.readIfPresent("scaleFactor", scaleFactor_);
-    }
+    log_ = dict.lookupOrDefault<Switch>("log", true);
+    dict.lookup("fields") >> fields_;
+    dict.lookup("valueOutput") >> valueOutput_;
 }
 
 
 void Foam::fieldValue::write()
 {
-    if (active_)
-    {
-        functionObjectFiles::write();
+    functionObjectFiles::write();
 
-        if (log_) Info<< type() << " " << name_ << " output:" << nl;
-    }
+    if (log_) Info<< type() << " " << name_ << " output:" << nl;
 }
 
 
@@ -87,18 +78,7 @@ Foam::fieldValue::fieldValue
     valueOutput_(false),
     scaleFactor_(1.0)
 {
-    // Only active if obr is an fvMesh
-    if (setActive<fvMesh>())
-    {
-        read(dict);
-    }
-    else
-    {
-        WarningInFunction
-            << "No fvMesh available, deactivating " << name << nl
-            << endl;
-        active_ = false;
-    }
+    read(dict);
 }
 
 
@@ -111,33 +91,23 @@ Foam::fieldValue::~fieldValue()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 void Foam::fieldValue::execute()
-{
-    // Do nothing
-}
+{}
 
 
 void Foam::fieldValue::end()
-{
-    // Do nothing
-}
+{}
 
 
 void Foam::fieldValue::timeSet()
-{
-    // Do nothing
-}
+{}
 
 
 void Foam::fieldValue::updateMesh(const mapPolyMesh&)
-{
-    // Do nothing
-}
+{}
 
 
 void Foam::fieldValue::movePoints(const polyMesh&)
-{
-    // Do nothing
-}
+{}
 
 
 // ************************************************************************* //

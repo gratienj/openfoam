@@ -31,7 +31,12 @@ License
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-bool Foam::readFields::loadField(const word& fieldName) const
+void Foam::functionObjects::readFields::loadField
+(
+    const word& fieldName,
+    PtrList<GeometricField<Type, fvPatchField, volMesh>>& vflds,
+    PtrList<GeometricField<Type, fvsPatchField, surfaceMesh>>& sflds
+) const
 {
     typedef GeometricField<Type, fvPatchField, volMesh> vfType;
     typedef GeometricField<Type, fvsPatchField, surfaceMesh> sfType;

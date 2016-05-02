@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::turbulenceFields
+    Foam::functionObjects::turbulenceFields
 
 Group
     grpUtilitiesFunctionObjects
@@ -104,6 +104,9 @@ class dictionary;
 class polyMesh;
 class mapPolyMesh;
 
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                       Class turbulenceFields Declaration
 \*---------------------------------------------------------------------------*/
@@ -147,9 +150,6 @@ protected:
         word name_;
 
         const objectRegistry& obr_;
-
-        //- on/off switch
-        bool active_;
 
         //- Fields to load
         wordHashSet fieldSet_;
@@ -201,6 +201,16 @@ public:
             const bool loadFromFiles = false
         );
 
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
 
     //- Destructor
     virtual ~turbulenceFields();
@@ -241,6 +251,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

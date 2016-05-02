@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,48 +32,61 @@ License
 
 namespace Foam
 {
-    template<>
-    const char* NamedEnum<fieldValues::cellSource::sourceType, 2>::names[] =
-    {
-        "cellZone",
-        "all"
-    };
-
-
-    template<>
-    const char* NamedEnum<fieldValues::cellSource::operationType, 11>::names[] =
-    {
-        "none",
-        "sum",
-        "sumMag",
-        "average",
-        "weightedAverage",
-        "volAverage",
-        "weightedVolAverage",
-        "volIntegrate",
-        "min",
-        "max",
-        "CoV"
-    };
-
-    namespace fieldValues
-    {
-        defineTypeNameAndDebug(cellSource, 0);
-        addToRunTimeSelectionTable(fieldValue, cellSource, dictionary);
-    }
+namespace functionObjects
+{
+namespace fieldValues
+{
+    defineTypeNameAndDebug(cellSource, 0);
+    addToRunTimeSelectionTable(fieldValue, cellSource, dictionary);
+}
+}
 }
 
+template<>
+const char*
+Foam::NamedEnum
+<
+    Foam::functionObjects::fieldValues::cellSource::sourceType,
+    2
+>::names[] = {"cellZone", "all"};
 
-const Foam::NamedEnum<Foam::fieldValues::cellSource::sourceType, 2>
-    Foam::fieldValues::cellSource::sourceTypeNames_;
+template<>
+const char*
+Foam::NamedEnum
+<
+    Foam::functionObjects::fieldValues::cellSource::operationType,
+    11
+>::names[] =
+{
+    "none",
+    "sum",
+    "sumMag",
+    "average",
+    "weightedAverage",
+    "volAverage",
+    "weightedVolAverage",
+    "volIntegrate",
+    "min",
+    "max",
+    "CoV"
+};
 
-const Foam::NamedEnum<Foam::fieldValues::cellSource::operationType, 11>
-    Foam::fieldValues::cellSource::operationTypeNames_;
+const Foam::NamedEnum
+<
+    Foam::functionObjects::fieldValues::cellSource::sourceType,
+    2
+> Foam::functionObjects::fieldValues::cellSource::sourceTypeNames_;
+
+const Foam::NamedEnum
+<
+    Foam::functionObjects::fieldValues::cellSource::operationType,
+    11
+> Foam::functionObjects::fieldValues::cellSource::operationTypeNames_;
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::fieldValues::cellSource::setCellZoneCells()
+void Foam::functionObjects::fieldValues::cellSource::setCellZoneCells()
 {
     switch (source_)
     {
@@ -116,7 +129,7 @@ void Foam::fieldValues::cellSource::setCellZoneCells()
 }
 
 
-Foam::scalar Foam::fieldValues::cellSource::volume() const
+Foam::scalar Foam::functionObjects::fieldValues::cellSource::volume() const
 {
     return gSum(filterField(mesh().V()));
 }
@@ -124,19 +137,19 @@ Foam::scalar Foam::fieldValues::cellSource::volume() const
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-void Foam::fieldValues::cellSource::initialise(const dictionary& dict)
+void Foam::functionObjects::fieldValues::cellSource::initialise
+(
+    const dictionary& dict
+)
 {
     setCellZoneCells();
 
     if (nCells_ == 0)
     {
-        WarningInFunction
+        FatalErrorInFunction
             << type() << " " << name_ << ": "
             << sourceTypeNames_[source_] << "(" << sourceName_ << "):" << nl
-            << "    Source has no cells - deactivating" << endl;
-
-        active_ = false;
-        return;
+            << "    Source has no cells" << exit(FatalError);
     }
 
     volume_ = volume();
@@ -157,7 +170,10 @@ void Foam::fieldValues::cellSource::initialise(const dictionary& dict)
 }
 
 
-void Foam::fieldValues::cellSource::writeFileHeader(Ostream& os) const
+void Foam::functionObjects::fieldValues::cellSource::writeFileHeader
+(
+    const label i
+)
 {
     writeHeaderValue(os, "Source", sourceTypeNames_[source_]);
     writeHeaderValue(os, "Name", sourceName_);
@@ -184,7 +200,7 @@ void Foam::fieldValues::cellSource::writeFileHeader(Ostream& os) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::fieldValues::cellSource::cellSource
+Foam::functionObjects::fieldValues::cellSource::cellSource
 (
     const word& name,
     const objectRegistry& obr,
@@ -208,72 +224,84 @@ Foam::fieldValues::cellSource::cellSource
 }
 
 
+bool Foam::functionObjects::fieldValues::cellSource::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
+}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::fieldValues::cellSource::~cellSource()
+Foam::functionObjects::fieldValues::cellSource::~cellSource()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::fieldValues::cellSource::read(const dictionary& dict)
+void Foam::functionObjects::fieldValues::cellSource::read
+(
+    const dictionary& dict
+)
 {
-    if (active_)
-    {
-        fieldValue::read(dict);
+    fieldValue::read(dict);
 
-        // No additional info to read
-        initialise(dict);
-    }
+    // No additional info to read
+    initialise(dict);
 }
 
 
-void Foam::fieldValues::cellSource::write()
+void Foam::functionObjects::fieldValues::cellSource::write()
 {
     fieldValue::write();
 
-    if (active_)
+    if (Pstream::master())
     {
-        file() << obr_.time().value();
-
-        // Construct weight field. Note: zero size indicates unweighted
-        scalarField weightField;
-        if (weightFieldName_ != "none")
-        {
-            writeTime(file());
-        }
-        
-        if (writeVolume_)
-        {
-            volume_ = volume();
-            file() << tab << volume_;
-            if (log_) Info<< "    total volume = " << volume_ << endl;
-        }
-
-        forAll(fields_, i)
-        {
-            const word& fieldName = fields_[i];
-            bool ok = false;
-
-            ok = ok || writeValues<scalar>(fieldName, weightField);
-            ok = ok || writeValues<vector>(fieldName, weightField);
-            ok = ok || writeValues<sphericalTensor>(fieldName, weightField);
-            ok = ok || writeValues<symmTensor>(fieldName, weightField);
-            ok = ok || writeValues<tensor>(fieldName, weightField);
-
-            if (!ok)
-            {
-                WarningInFunction
-                    << "Requested field " << fieldName
-                    << " not found in database and not processed"
-                    << endl;
-            }
-        }
-
-        file()<< endl;
-
-        if (log_) Info<< endl;
+        writeTime(file());
     }
+
+    if (writeVolume_)
+    {
+        volume_ = volume();
+        if (Pstream::master())
+        {
+            file() << tab << volume_;
+        }
+        if (log_) Info<< "    total volume = " << volume_ << endl;
+    }
+
+    forAll(fields_, i)
+    {
+        const word& fieldName = fields_[i];
+        bool processed = false;
+
+        processed = processed || writeValues<scalar>(fieldName);
+        processed = processed || writeValues<vector>(fieldName);
+        processed = processed || writeValues<sphericalTensor>(fieldName);
+        processed = processed || writeValues<symmTensor>(fieldName);
+        processed = processed || writeValues<tensor>(fieldName);
+
+        if (!processed)
+        {
+            WarningInFunction
+                << "Requested field " << fieldName
+                << " not found in database and not processed"
+                << endl;
+        }
+    }
+
+    if (Pstream::master())
+    {
+        file()<< endl;
+    }
+
+    if (log_) Info<< endl;
 }
 
 

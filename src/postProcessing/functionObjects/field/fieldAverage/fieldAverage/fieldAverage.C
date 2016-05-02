@@ -26,20 +26,22 @@ License
 #include "fieldAverage.H"
 #include "volFields.H"
 #include "Time.H"
-
 #include "fieldAverageItem.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(fieldAverage, 0);
+}
 }
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::fieldAverage::resetFields()
+void Foam::functionObjects::fieldAverage::resetFields()
 {
     forAll(faItems_, i)
     {
@@ -62,7 +64,7 @@ void Foam::fieldAverage::resetFields()
 }
 
 
-void Foam::fieldAverage::initialize()
+void Foam::functionObjects::fieldAverage::initialize()
 {
     resetFields();
 
@@ -86,16 +88,6 @@ void Foam::fieldAverage::initialize()
         addPrime2MeanField<vector, symmTensor>(fieldI);
     }
 
-    forAll(faItems_, fieldI)
-    {
-        if (!faItems_[fieldI].active())
-        {
-            WarningInFunction
-                << "Field " << faItems_[fieldI].fieldName()
-                << " not found in database for averaging";
-        }
-    }
-
     // ensure first averaging works unconditionally
     prevTimeIndex_ = -1;
 
@@ -105,7 +97,7 @@ void Foam::fieldAverage::initialize()
 }
 
 
-void Foam::fieldAverage::restart()
+void Foam::functionObjects::fieldAverage::restart()
 {
     Info<< "    Restarting averaging at time " << obr_.time().timeName()
         << nl << endl;
@@ -120,7 +112,7 @@ void Foam::fieldAverage::restart()
 }
 
 
-void Foam::fieldAverage::calcAverages()
+void Foam::functionObjects::fieldAverage::calcAverages()
 {
     if (!initialised_)
     {
@@ -169,7 +161,7 @@ void Foam::fieldAverage::calcAverages()
 }
 
 
-void Foam::fieldAverage::writeAverages() const
+void Foam::functionObjects::fieldAverage::writeAverages() const
 {
     if (log_) Info << "    Writing average fields" << endl;
 
@@ -181,7 +173,7 @@ void Foam::fieldAverage::writeAverages() const
 }
 
 
-void Foam::fieldAverage::writeAveragingProperties()
+void Foam::functionObjects::fieldAverage::writeAveragingProperties() const
 {
     IOdictionary propsDict
     (
@@ -209,7 +201,7 @@ void Foam::fieldAverage::writeAveragingProperties()
 }
 
 
-void Foam::fieldAverage::readAveragingProperties()
+void Foam::functionObjects::fieldAverage::readAveragingProperties()
 {
     totalIter_.clear();
     totalIter_.setSize(faItems_.size(), 1);
@@ -274,7 +266,7 @@ void Foam::fieldAverage::readAveragingProperties()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::fieldAverage::fieldAverage
+Foam::functionObjects::fieldAverage::fieldAverage
 (
     const word& name,
     const objectRegistry& obr,
@@ -295,101 +287,91 @@ Foam::fieldAverage::fieldAverage
     totalTime_(),
     periodIndex_(1)
 {
-    // Only active if a fvMesh is available
-    if (setActive<fvMesh>())
-    {
-        read(dict);
-    }
-    else
-    {
-        active_ = false;
-        WarningInFunction
-            << "No fvMesh available, deactivating " << name_ << nl
-            << endl;
-    }
+    read(dict);
+}
+
+
+bool Foam::functionObjects::fieldAverage::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
 }
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::fieldAverage::~fieldAverage()
+Foam::functionObjects::fieldAverage::~fieldAverage()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::fieldAverage::read(const dictionary& dict)
+void Foam::functionObjects::fieldAverage::read(const dictionary& dict)
 {
-    if (active_)
+    initialised_ = false;
+
+    Info<< type() << " " << name_ << ":" << nl;
+
+    dict.readIfPresent("restartOnRestart", restartOnRestart_);
+    dict.readIfPresent("restartOnOutput", restartOnOutput_);
+    dict.readIfPresent("periodicRestart", periodicRestart_);
+    dict.lookup("fields") >> faItems_;
+
+    if (periodicRestart_)
     {
-        initialised_ = false;
-
-        log_.readIfPresent("log", dict);
-
-        if (log_) Info << type() << " " << name_ << ":" << nl;
-
-        dict.readIfPresent("restartOnRestart", restartOnRestart_);
-        dict.readIfPresent("restartOnOutput", restartOnOutput_);
-        dict.readIfPresent("periodicRestart", periodicRestart_);
-        dict.lookup("fields") >> faItems_;
-
-        if (periodicRestart_)
-        {
-            dict.lookup("restartPeriod") >> restartPeriod_;
-        }
-
-        readAveragingProperties();
-
-        if (log_) Info << endl;
+        dict.lookup("restartPeriod") >> restartPeriod_;
     }
+
+    readAveragingProperties();
+
+    Info<< endl;
 }
 
 
-void Foam::fieldAverage::execute()
+void Foam::functionObjects::fieldAverage::execute()
 {
-    if (active_)
-    {
-        calcAverages();
-        if (log_) Info << endl;
-    }
+    calcAverages();
+    Info<< endl;
 }
 
 
-void Foam::fieldAverage::end()
+void Foam::functionObjects::fieldAverage::end()
+{
+    calcAverages();
+    Info<< endl;
+}
+
+
+void Foam::functionObjects::fieldAverage::timeSet()
 {}
 
 
-void Foam::fieldAverage::timeSet()
+void Foam::functionObjects::fieldAverage::write()
+{
+    writeAverages();
+    writeAveragingProperties();
+
+    if (restartOnOutput_)
+    {
+        restart();
+    }
+
+    Info<< endl;
+}
+
+
+void Foam::functionObjects::fieldAverage::updateMesh(const mapPolyMesh&)
 {}
 
 
-void Foam::fieldAverage::write()
-{
-    if (active_)
-    {
-        writeAverages();
-        writeAveragingProperties();
-
-        if (restartOnOutput_)
-        {
-            restart();
-        }
-
-        if (log_) Info << endl;
-    }
-}
-
-
-void Foam::fieldAverage::updateMesh(const mapPolyMesh&)
-{
-    // Do nothing
-}
-
-
-void Foam::fieldAverage::movePoints(const polyMesh&)
-{
-    // Do nothing
-}
+void Foam::functionObjects::fieldAverage::movePoints(const polyMesh&)
+{}
 
 
 // ************************************************************************* //

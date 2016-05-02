@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::timeActivatedFileUpdate
+    Foam::functionObjects::timeActivatedFileUpdate
 
 Group
     grpUtilitiesFunctionObjects
@@ -83,6 +83,9 @@ class dictionary;
 class polyMesh;
 class mapPolyMesh;
 
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                   Class timeActivatedFileUpdate Declaration
 \*---------------------------------------------------------------------------*/
@@ -96,9 +99,6 @@ class timeActivatedFileUpdate
 
         //- Owner database
         const objectRegistry& obr_;
-
-        //- On/off switch
-        bool active_;
 
         //- Name of file to update
         fileName fileToUpdate_;
@@ -136,6 +136,16 @@ public:
         //- Construct for given objectRegistry and dictionary.
         //  Allow the possibility to load fields from files
         timeActivatedFileUpdate
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
         (
             const word& name,
             const objectRegistry&,
@@ -183,6 +193,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

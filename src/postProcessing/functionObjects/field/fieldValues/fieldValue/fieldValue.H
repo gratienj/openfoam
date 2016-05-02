@@ -149,9 +149,6 @@ public:
             //- Return the reference to the construction dictionary
             inline const dictionary& dict() const;
 
-            //- Return the active flag
-            inline bool active() const;
-
             //- Return the switch to send output to Info as well as to file
             inline const Switch& log() const;
 

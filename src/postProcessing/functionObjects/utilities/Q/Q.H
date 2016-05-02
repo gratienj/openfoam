@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2014 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Q
+    Foam::functionObjects::Q
 
 Group
     grpUtilitiesFunctionObjects
@@ -84,6 +84,9 @@ class dictionary;
 class polyMesh;
 class mapPolyMesh;
 
+namespace functionObjects
+{
+
 /*---------------------------------------------------------------------------*\
                           Class Q Declaration
 \*---------------------------------------------------------------------------*/
@@ -97,9 +100,6 @@ class Q
 
         //- Reference to the database
         const objectRegistry& obr_;
-
-        //- On/off switch
-        bool active_;
 
         //- Name of velocity field, default is "U"
         word UName_;
@@ -131,6 +131,16 @@ public:
         //- Construct for given objectRegistry and dictionary.
         //  Allow the possibility to load fields from files
         Q
+        (
+            const word& name,
+            const objectRegistry&,
+            const dictionary&,
+            const bool loadFromFiles = false
+        );
+
+        //- Return true if the construction of this functionObject is viable
+        //  i.e. the prerequisites for construction are available
+        static bool viable
         (
             const word& name,
             const objectRegistry&,
@@ -178,6 +188,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace functionObjects
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

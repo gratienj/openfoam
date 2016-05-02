@@ -58,8 +58,7 @@ Foam::functionObjects::writeRegisteredObject::writeRegisteredObject
 }
 
 
-Foam::autoPtr<Foam::functionObjects::writeRegisteredObject>
-Foam::functionObjects::writeRegisteredObject::New
+bool Foam::functionObjects::writeRegisteredObject::viable
 (
     const word& name,
     const objectRegistry& obr,
@@ -67,10 +66,7 @@ Foam::functionObjects::writeRegisteredObject::New
     const bool loadFromFiles
 )
 {
-    return autoPtr<writeRegisteredObject>
-    (
-        new writeRegisteredObject(name, obr, dict, loadFromFiles)
-    );
+    return true;
 }
 
 

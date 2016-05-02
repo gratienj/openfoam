@@ -41,13 +41,16 @@ License
 
 namespace Foam
 {
+namespace functionObjects
+{
     defineTypeNameAndDebug(scalarTransport, 0);
+}
 }
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-Foam::wordList Foam::scalarTransport::boundaryTypes() const
+Foam::wordList Foam::functionObjects::scalarTransport::boundaryTypes() const
 {
     const volVectorField& U = mesh_.lookupObject<volVectorField>(UName_);
 
@@ -70,35 +73,7 @@ Foam::wordList Foam::scalarTransport::boundaryTypes() const
 }
 
 
-Foam::volScalarField& Foam::scalarTransport::transportedField()
-{
-    if (!mesh_.foundObject<volScalarField>(name()))
-    {
-        volScalarField* fldPtr = new volScalarField
-        (
-            IOobject
-            (
-                name(),
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::READ_IF_PRESENT,
-                IOobject::AUTO_WRITE
-            ),
-            mesh_,
-            dimensionedScalar("zero", dimless, 0.0),
-            boundaryTypes()
-        );
-        fldPtr->store();
-    }
-
-    return const_cast<volScalarField&>
-    (
-        mesh_.lookupObject<volScalarField>(name())
-    );
-}
-
-
-Foam::tmp<Foam::volScalarField> Foam::scalarTransport::DT
+Foam::tmp<Foam::volScalarField> Foam::functionObjects::scalarTransport::DT
 (
     const surfaceScalarField& phi
 ) const
@@ -167,7 +142,7 @@ Foam::tmp<Foam::volScalarField> Foam::scalarTransport::DT
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::scalarTransport::scalarTransport
+Foam::functionObjects::scalarTransport::scalarTransport
 (
     const word& name,
     const objectRegistry& obr,
@@ -201,15 +176,28 @@ Foam::scalarTransport::scalarTransport
 }
 
 
+bool Foam::functionObjects::scalarTransport::viable
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict,
+    const bool loadFromFiles
+)
+{
+    // Construction is viable if the available mesh is an fvMesh
+    return isA<fvMesh>(obr);
+}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::scalarTransport::~scalarTransport()
+Foam::functionObjects::scalarTransport::~scalarTransport()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::scalarTransport::read(const dictionary& dict)
+void Foam::functionObjects::scalarTransport::read(const dictionary& dict)
 {
     Info<< type() << ":" << nl;
 
@@ -233,7 +221,7 @@ void Foam::scalarTransport::read(const dictionary& dict)
 }
 
 
-void Foam::scalarTransport::execute()
+void Foam::functionObjects::scalarTransport::execute()
 {
     Info<< type() << " output:" << endl;
 
@@ -317,17 +305,17 @@ void Foam::scalarTransport::execute()
 }
 
 
-void Foam::scalarTransport::end()
+void Foam::functionObjects::scalarTransport::end()
 {
     execute();
 }
 
 
-void Foam::scalarTransport::timeSet()
+void Foam::functionObjects::scalarTransport::timeSet()
 {}
 
 
-void Foam::scalarTransport::write()
+void Foam::functionObjects::scalarTransport::write()
 {}
 
 
