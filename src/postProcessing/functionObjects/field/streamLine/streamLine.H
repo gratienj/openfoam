@@ -104,8 +104,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef streamLine_H
-#define streamLine_H
+#ifndef functionObjects_streamLine_H
+#define functionObjects_streamLine_H
 
 #include "streamLineBase.H"
 

@@ -78,8 +78,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef blendingFactor_H
-#define blendingFactor_H
+#ifndef functionObjects_blendingFactor_H
+#define functionObjects_blendingFactor_H
 
 #include "functionObjectState.H"
 #include "functionObjectFile.H"

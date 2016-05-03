@@ -68,8 +68,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef surfaceInterpolateFields_H
-#define surfaceInterpolateFields_H
+#ifndef functionObjects_surfaceInterpolateFields_H
+#define functionObjects_surfaceInterpolateFields_H
 
 #include "OFstream.H"
 #include "surfaceFields.H"

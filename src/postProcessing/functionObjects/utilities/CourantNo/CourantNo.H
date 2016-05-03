@@ -59,8 +59,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef CourantNo_H
-#define CourantNo_H
+#ifndef functionObjects_CourantNo_H
+#define functionObjects_CourantNo_H
 
 #include "volFields.H"
 

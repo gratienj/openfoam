@@ -66,8 +66,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef timeActivatedFileUpdate_H
-#define timeActivatedFileUpdate_H
+#ifndef functionObjects_timeActivatedFileUpdate_H
+#define functionObjects_timeActivatedFileUpdate_H
 
 #include "Tuple2.H"
 #include "Switch.H"

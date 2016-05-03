@@ -27,11 +27,14 @@ mapFields/mapFieldsFunctionObject.C
 Peclet/Peclet.C
 Peclet/PecletFunctionObject.C
 
-pressureTools/pressureTools.C
-pressureTools/pressureToolsFunctionObject.C
-
 Q/Q.C
 Q/QFunctionObject.C
+
+blendingFactor/blendingFactor.C
+blendingFactor/blendingFactorFunctionObject.C
+
+dsmcFields/dsmcFields.C
+dsmcFields/dsmcFieldsFunctionObject.C
 
 residuals/residuals.C
 residuals/residualsFunctionObject.C
@@ -48,9 +51,6 @@ turbulenceFields/turbulenceFieldsFunctionObject.C
 vorticity/vorticity.C
 vorticity/vorticityFunctionObject.C
 
-wallShearStress/wallShearStress.C
-wallShearStress/wallShearStressFunctionObject.C
-
 yPlus/yPlus.C
 yPlus/yPlusFunctionObject.C
 
@@ -58,5 +58,22 @@ zeroGradient/zeroGradient.C
 zeroGradient/zeroGradientFunctionObject.C
 
 setTimeStep/setTimeStepFunctionObject.C
+
+systemCall/systemCall.C
+systemCall/systemCallFunctionObject.C
+
+abort/abort.C
+
+partialWrite/partialWrite.C
+partialWrite/partialWriteFunctionObject.C
+
+removeRegisteredObject/removeRegisteredObject.C
+removeRegisteredObject/removeRegisteredObjectFunctionObject.C
+
+writeDictionary/writeDictionary.C
+writeDictionary/writeDictionaryFunctionObject.C
+
+writeRegisteredObject/writeRegisteredObject.C
+writeRegisteredObject/writeRegisteredObjectFunctionObject.C
 
 LIB = $(FOAM_LIBBIN)/libutilityFunctionObjects
