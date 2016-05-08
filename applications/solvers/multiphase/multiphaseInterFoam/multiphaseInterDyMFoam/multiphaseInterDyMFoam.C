@@ -47,14 +47,15 @@ Description
 
 int main(int argc, char *argv[])
 {
+    #include "postProcess.H"
+
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
     #include "initContinuityErrs.H"
-
-    pimpleControl pimple(mesh);
-
     #include "createControls.H"
+    #include "createTimeControls.H"
+    #include "createDyMControls.H"
     #include "createFields.H"
     #include "createMRF.H"
     #include "createFvOptions.H"
@@ -77,6 +78,8 @@ int main(int argc, char *argv[])
     #include "createUf.H"
     #include "CourantNo.H"
     #include "setInitialDeltaT.H"
+
+    const surfaceScalarField& rhoPhi(mixture.rhoPhi());
 
     turbulence->validate();
 
