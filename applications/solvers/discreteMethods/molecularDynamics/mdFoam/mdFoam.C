@@ -35,33 +35,20 @@ Description
 #include "fvCFD.H"
 #include "md.H"
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 int main(int argc, char *argv[])
 {
+    #define NO_CONTROL
+    #include "postProcess.H"
+
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createMesh.H"
+    #include "createFields.H"
+    #include "temperatureAndPressureVariables.H"
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-    Info<< "\nReading field U\n" << endl;
-    volVectorField U
-    (
-        IOobject
-        (
-            "U",
-            runTime.timeName(),
-            mesh,
-            IOobject::MUST_READ,
-            IOobject::AUTO_WRITE
-        ),
-        mesh
-    );
-
-    potential pot(mesh);
-
-    moleculeCloud molecules(mesh, pot);
-
-    #include "temperatureAndPressureVariables.H"
 
     label nAveragingSteps = 0;
 
@@ -76,7 +63,6 @@ int main(int argc, char *argv[])
         molecules.evolve();
 
         #include "meanMomentumEnergyAndNMols.H"
-
         #include "temperatureAndPressure.H"
 
         runTime.write();
