@@ -59,7 +59,6 @@ SeeAlso
 
 SourceFiles
     partialWrite.C
-    IOpartialWrite.H
 
 \*---------------------------------------------------------------------------*/
 

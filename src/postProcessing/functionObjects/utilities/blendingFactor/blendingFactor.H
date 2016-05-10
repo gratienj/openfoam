@@ -74,7 +74,6 @@ Description
 
 SourceFiles
     blendingFactor.C
-    IOblendingFactor.H
 
 \*---------------------------------------------------------------------------*/
 

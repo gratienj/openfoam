@@ -69,7 +69,6 @@ SeeAlso
 
 SourceFiles
     writeRegisteredObject.C
-    IOwriteRegisteredObject.H
 
 \*---------------------------------------------------------------------------*/
 

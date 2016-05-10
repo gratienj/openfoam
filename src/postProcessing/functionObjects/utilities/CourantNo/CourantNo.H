@@ -55,7 +55,6 @@ Description
 
 SourceFiles
     CourantNo.C
-    IOCourantNo.H
 
 \*---------------------------------------------------------------------------*/
 

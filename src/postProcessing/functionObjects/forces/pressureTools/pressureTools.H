@@ -107,7 +107,6 @@ Description
 
 SourceFiles
     pressureTools.C
-    IOpressureTools.H
 
 \*---------------------------------------------------------------------------*/
 

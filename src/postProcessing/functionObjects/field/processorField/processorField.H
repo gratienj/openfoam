@@ -54,7 +54,6 @@ SeeAlso
 
 SourceFiles
     processorField.C
-    IOprocessorField.H
 
 \*---------------------------------------------------------------------------*/
 

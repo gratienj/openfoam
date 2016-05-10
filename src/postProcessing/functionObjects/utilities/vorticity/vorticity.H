@@ -54,7 +54,6 @@ Description
 
 SourceFiles
     vorticity.C
-    IOvorticity.H
 
 \*---------------------------------------------------------------------------*/
 

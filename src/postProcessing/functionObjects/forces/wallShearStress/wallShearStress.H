@@ -68,7 +68,6 @@ Description
 
 SourceFiles
     wallShearStress.C
-    IOwallShearStress.H
 
 \*---------------------------------------------------------------------------*/
 

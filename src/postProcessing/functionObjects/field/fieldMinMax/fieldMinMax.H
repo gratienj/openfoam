@@ -70,8 +70,6 @@ SeeAlso
 
 SourceFiles
     fieldMinMax.C
-    fieldMinMaxTemplates.C
-    IOfieldMinMax.H
 
 \*---------------------------------------------------------------------------*/
 
