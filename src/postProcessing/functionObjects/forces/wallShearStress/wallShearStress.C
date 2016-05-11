@@ -106,6 +106,12 @@ Foam::functionObjects::wallShearStress::wallShearStress
     log_(true),
     patchSet_()
 {
+    if (!isA<fvMesh>(obr))
+    {
+        FatalErrorInFunction
+            << "objectRegistry is not an fvMesh" << exit(FatalError);
+    }
+
     const fvMesh& mesh = refCast<const fvMesh>(obr_);
 
     volVectorField* wallShearStressPtr
@@ -134,19 +140,6 @@ Foam::functionObjects::wallShearStress::wallShearStress
 
         writeFileHeader(file());
     }
-}
-
-
-bool Foam::functionObjects::wallShearStress::viable
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-{
-    // Construction is viable if the available mesh is an fvMesh
-    return isA<fvMesh>(obr);
 }
 
 

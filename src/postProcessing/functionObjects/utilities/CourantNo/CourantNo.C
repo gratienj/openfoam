@@ -75,6 +75,12 @@ Foam::functionObjects::CourantNo::CourantNo
     resultName_(name),
     log_(true)
 {
+    if (!isA<fvMesh>(obr))
+    {
+        FatalErrorInFunction
+            << "objectRegistry is not an fvMesh" << exit(FatalError);
+    }
+
     read(dict);
 
     const fvMesh& mesh = refCast<const fvMesh>(obr_);
@@ -98,19 +104,6 @@ Foam::functionObjects::CourantNo::CourantNo
     );
 
     mesh.objectRegistry::store(CourantNoPtr);
-}
-
-
-bool Foam::functionObjects::CourantNo::viable
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-{
-    // Construction is viable if the available mesh is an fvMesh
-    return isA<fvMesh>(obr);
 }
 
 

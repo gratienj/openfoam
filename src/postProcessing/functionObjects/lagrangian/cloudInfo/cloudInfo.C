@@ -71,18 +71,6 @@ Foam::functionObjects::cloudInfo::cloudInfo
 }
 
 
-bool Foam::functionObjects::cloudInfo::viable
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-{
-    return true;
-}
-
-
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::functionObjects::cloudInfo::~cloudInfo()

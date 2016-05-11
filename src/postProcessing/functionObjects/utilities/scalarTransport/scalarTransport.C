@@ -163,6 +163,12 @@ Foam::functionObjects::scalarTransport::scalarTransport
     fvOptions_(mesh_),
     log_(true)
 {
+    if (!isA<fvMesh>(obr))
+    {
+        FatalErrorInFunction
+            << "objectRegistry is not an fvMesh" << exit(FatalError);
+    }
+
     read(dict);
 
     // Force creation of transported field so any bcs using it can look it
@@ -173,19 +179,6 @@ Foam::functionObjects::scalarTransport::scalarTransport
     {
         T == dimensionedScalar("zero", dimless, 0.0);
     }
-}
-
-
-bool Foam::functionObjects::scalarTransport::viable
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-{
-    // Construction is viable if the available mesh is an fvMesh
-    return isA<fvMesh>(obr);
 }
 
 

@@ -69,6 +69,12 @@ Foam::functionObjects::yPlus::yPlus
     log_(true),
     phiName_("phi")
 {
+    if (!isA<fvMesh>(obr))
+    {
+        FatalErrorInFunction
+            << "objectRegistry is not an fvMesh" << exit(FatalError);
+    }
+
     const fvMesh& mesh = refCast<const fvMesh>(obr_);
 
     volScalarField* yPlusPtr
@@ -89,19 +95,6 @@ Foam::functionObjects::yPlus::yPlus
     );
 
     mesh.objectRegistry::store(yPlusPtr);
-}
-
-
-bool Foam::functionObjects::yPlus::viable
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-{
-    // Construction is viable if the available mesh is an fvMesh
-    return isA<fvMesh>(obr);
 }
 
 

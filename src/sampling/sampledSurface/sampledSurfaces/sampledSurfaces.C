@@ -121,19 +121,6 @@ Foam::sampledSurfaces::sampledSurfaces
 }
 
 
-bool Foam::sampledSurfaces::viable
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-{
-    return true;
-}
-
-
-
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::sampledSurfaces::~sampledSurfaces()

@@ -559,24 +559,16 @@ Foam::functionObjects::forces::forces
     writeFields_(false),
     initialised_(false)
 {
+    if (!isA<fvMesh>(obr))
+    {
+        FatalErrorInFunction
+            << "objectRegistry is not an fvMesh" << exit(FatalError);
+    }
+
     if (readFields)
     {
         read(dict);
-        Info<< endl;
     }
-}
-
-
-bool Foam::functionObjects::forces::viable
-(
-    const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
-)
-{
-    // Construction is viable if the available mesh is an fvMesh
-    return isA<fvMesh>(obr);
 }
 
 
