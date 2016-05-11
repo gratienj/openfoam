@@ -108,7 +108,7 @@ void Foam::outputFilterOutputControl::read(const dictionary& dict)
         case ocClockTime:
         case ocRunTime:
         case ocCpuTime:
-        case ocAdjustableTime:
+        case ocAdjustableRunTime:
         {
             writeInterval_ = readScalar(dict.lookup("writeInterval"));
             break;
@@ -149,7 +149,7 @@ bool Foam::outputFilterOutputControl::output()
         }
 
         case ocRunTime:
-        case ocAdjustableTime:
+        case ocAdjustableRunTime:
         {
             label outputIndex = label
             (
