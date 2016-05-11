@@ -132,13 +132,6 @@ Foam::OutputFilterFunctionObject<OutputFilter>::OutputFilterFunctionObject
     ),
     outputControl_(t, dict, "output"),
     evaluateControl_(t, dict, "evaluate")
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-template<class OutputFilter>
-bool Foam::OutputFilterFunctionObject<OutputFilter>::start()
 {
     readDict();
     if (!allocateFilter())
@@ -147,10 +140,10 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::start()
             << "Cannot construct " << OutputFilter::typeName
             << exit(FatalError);
     }
-
-    return true;
 }
 
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class OutputFilter>
 bool Foam::OutputFilterFunctionObject<OutputFilter>::execute
@@ -266,10 +259,11 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::read
     if (dict != dict_)
     {
         dict_ = dict;
-        outputControl_.read(dict);
 
-        // Reset the OutputFilter
-        return start();
+        outputControl_.read(dict);
+        readDict();
+
+        return true;
     }
     else
     {

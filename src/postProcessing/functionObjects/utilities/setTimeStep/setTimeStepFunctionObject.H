@@ -131,9 +131,6 @@ public:
 
         // Function object control
 
-            //- Called at the start of the time-loop
-            virtual bool start();
-
             //- Called at each ++ or += of the time-loop
             virtual bool execute(const bool forceWrite);
 
