@@ -65,7 +65,6 @@ SourceFiles
 #define functionObjects_setTimeStepFunctionObject_H
 
 #include "functionObject.H"
-#include "dictionary.H"
 #include "Function1.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -88,15 +87,11 @@ class setTimeStepFunctionObject
         //- Reference to the time database
         const Time& time_;
 
+        //- Time step function/table
+        autoPtr<Function1<scalar>> timeStepPtr_;
 
-        // Optional user inputs
 
-            //- Switch for the execution - defaults to 'yes/on'
-            Switch enabled_;
-
-            //- Time step
-            autoPtr<Function1<scalar>> timeStepPtr_;
-
+    // Private member functions
 
         //- Disallow default bitwise copy construct
         setTimeStepFunctionObject(const setTimeStepFunctionObject&);
@@ -110,6 +105,7 @@ public:
     //- Runtime type information
     TypeName("setTimeStep");
 
+
     // Constructors
 
         //- Construct from components
@@ -121,30 +117,19 @@ public:
         );
 
 
+    // Destructor
+    virtual ~setTimeStepFunctionObject();
+
+
     // Member Functions
 
         // Access
 
             //- Return time database
-            virtual const Time& time() const
-            {
-                return time_;
-            }
-
-            //- Return the enabled flag
-            virtual bool enabled() const
-            {
-                return enabled_;
-            }
+            const Time& time() const;
 
 
         // Function object control
-
-            //- Switch the function object on
-            virtual void on();
-
-            //- Switch the function object off
-            virtual void off();
 
             //- Called at the start of the time-loop
             virtual bool start();
@@ -170,6 +155,7 @@ public:
             //- Update for changes of mesh
             virtual void movePoints(const polyMesh& mesh);
 };
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

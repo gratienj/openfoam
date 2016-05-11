@@ -36,8 +36,6 @@ void Foam::OutputFilterFunctionObject<OutputFilter>::readDict()
 {
     dict_.readIfPresent("region", regionName_);
     dict_.readIfPresent("dictionary", dictName_);
-    dict_.readIfPresent("enabled", enabled_);
-    dict_.readIfPresent("storeFilter", storeFilter_);
     dict_.readIfPresent("timeStart", timeStart_);
     dict_.readIfPresent("timeEnd", timeEnd_);
     dict_.readIfPresent("nStepsToStartTimeChange", nStepsToStartTimeChange_);
@@ -52,9 +50,8 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::active() const
     // (see e.g. Time::run()) since the current time might be e.g.
     // 0.3000000000001 instead of exactly 0.3.
     return
-        enabled_
-     && time_.value() >= (timeStart_ - 0.5*time_.deltaTValue())
-     && time_.value() <= (timeEnd_ + 0.5*time_.deltaTValue());
+        time_.value() >= timeStart_
+     && time_.value() <= timeEnd_;
 }
 
 
@@ -83,10 +80,6 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::allocateFilter()
                 )
             );
         }
-        else
-        {
-            enabled_ = false;
-        }
     }
     else
     {
@@ -110,20 +103,9 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::allocateFilter()
                 )
             );
         }
-        else
-        {
-            enabled_ = false;
-        }
     }
 
-    return enabled_;
-}
-
-
-template<class OutputFilter>
-void Foam::OutputFilterFunctionObject<OutputFilter>::destroyFilter()
-{
-    ptr_.reset();
+    return ptr_.valid();
 }
 
 
@@ -142,8 +124,6 @@ Foam::OutputFilterFunctionObject<OutputFilter>::OutputFilterFunctionObject
     dict_(dict),
     regionName_(polyMesh::defaultRegion),
     dictName_(),
-    enabled_(true),
-    storeFilter_(true),
     timeStart_(-VGREAT),
     timeEnd_(VGREAT),
     nStepsToStartTimeChange_
@@ -152,40 +132,23 @@ Foam::OutputFilterFunctionObject<OutputFilter>::OutputFilterFunctionObject
     ),
     outputControl_(t, dict, "output"),
     evaluateControl_(t, dict, "evaluate")
-{
-    readDict();
-}
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class OutputFilter>
-void Foam::OutputFilterFunctionObject<OutputFilter>::on()
-{
-    enabled_ = true;
-}
-
-
-template<class OutputFilter>
-void Foam::OutputFilterFunctionObject<OutputFilter>::off()
-{
-    enabled_ = false;
-}
-
-
-template<class OutputFilter>
 bool Foam::OutputFilterFunctionObject<OutputFilter>::start()
 {
     readDict();
+    if (!allocateFilter())
+    {
+        FatalErrorInFunction
+            << "Cannot construct " << OutputFilter::typeName
+            << exit(FatalError);
+    }
 
-    if (enabled_ && storeFilter_)
-    {
-        return allocateFilter();
-    }
-    else
-    {
-        return true;
-    }
+    return true;
 }
 
 
@@ -197,11 +160,6 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::execute
 {
     if (active())
     {
-        if (!storeFilter_ && !allocateFilter())
-        {
-            return false;
-        }
-
         if (evaluateControl_.output())
         {
             ptr_->execute();
@@ -210,11 +168,6 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::execute
         if (forceWrite || outputControl_.output())
         {
             ptr_->write();
-        }
-
-        if (!storeFilter_)
-        {
-            destroyFilter();
         }
     }
     else if (enabled_ && time_.value() > timeEnd_)
@@ -232,19 +185,11 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::execute
 template<class OutputFilter>
 bool Foam::OutputFilterFunctionObject<OutputFilter>::end()
 {
-    if (enabled_)
+    ptr_->end();
+
+    if (outputControl_.output())
     {
-        if (!storeFilter_ && !allocateFilter())
-        {
-            return false;
-        }
-
-        ptr_->end();
-
-        if (!storeFilter_)
-        {
-            destroyFilter();
-        }
+        ptr_->write();
     }
 
     return true;
@@ -323,6 +268,7 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::read
         dict_ = dict;
         outputControl_.read(dict);
 
+        // Reset the OutputFilter
         return start();
     }
     else
