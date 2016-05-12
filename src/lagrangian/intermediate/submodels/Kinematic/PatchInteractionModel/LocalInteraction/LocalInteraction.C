@@ -318,7 +318,7 @@ void Foam::LocalInteraction<CloudType>::info(Ostream& os)
             << ", " << mps[i] << nl;
     }
 
-    if (this->outputTime())
+    if (this->writeTime())
     {
         this->setModelProperty("nEscape", npe);
         nEscape_ = 0;

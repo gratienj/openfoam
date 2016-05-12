@@ -149,7 +149,7 @@ void kinematicSingleLayer::transferPrimaryRegionSourceFields()
     pSp_.correctBoundaryConditions();
 
     // update addedMassTotal counter
-    if (time().outputTime())
+    if (time().writeTime())
     {
         if (debug)
         {

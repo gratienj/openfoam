@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        if (runTime.outputTime())
+        if (runTime.writeTime())
         {
             writeCellGraph(V, runTime.graphFormat());
             writeCellGraph(delta, runTime.graphFormat());
