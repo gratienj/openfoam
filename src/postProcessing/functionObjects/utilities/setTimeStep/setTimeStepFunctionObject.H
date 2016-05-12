@@ -28,11 +28,11 @@ Group
     grpUtilitiesFunctionObjects
 
 Description
-    This function object overrides the calculation time step. Can only be used
-    with solvers with adjustTimeStep control (e.g. pimpleFoam).  It makes no
-    attempt to co-operate with other time step 'controllers', e.g. maxCo, other
-    functionObjects. Supports 'enabled' flag but none of the other options
-    'timeStart', 'timeEnd', 'outputControl' etc.
+    Overrides the timeStep. Can only be used with
+    solvers with adjustTimeStep control (e.g. pimpleFoam). Makes no attempt
+    to cooperate with other timeStep 'controllers' (maxCo, other
+    functionObjects). Supports 'enabled' flag but none of othe other ones
+    'timeStart', 'timeEnd', 'writeControl' etc.
 
     Note that any 'writeControl adjustableRunTime' will still be in
     operation and will limit the wanted time step to account for the
@@ -147,10 +147,10 @@ public:
             virtual bool read(const dictionary&);
 
             //- Update for changes of mesh
-            virtual void updateMesh(const mapPolyMesh& mpm);
+            virtual void updateMesh(const mapPolyMesh&);
 
             //- Update for changes of mesh
-            virtual void movePoints(const polyMesh& mesh);
+            virtual void movePoints(const polyMesh&);
 };
 
 

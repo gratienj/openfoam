@@ -65,19 +65,21 @@ Foam::OutputFilterFunctionObject<OutputFilter>::OutputFilterFunctionObject
     functionObject(name),
     time_(t),
     dict_(dict),
-    regionName_(dict.lookupOrDefault("region", polyMesh::defaultRegion)),
     timeStart_(-VGREAT),
     timeEnd_(VGREAT),
     nStepsToStartTimeChange_
     (
         dict.lookupOrDefault("nStepsToStartTimeChange", 3)
     ),
-    outputControl_(t, dict, "output"),
+    writeControl_(t, dict, "write"),
     evaluateControl_(t, dict, "evaluate"),
     filter_
     (
         name,
-        time_.lookupObject<objectRegistry>(regionName_),
+        time_.lookupObject<objectRegistry>
+        (
+            dict.lookupOrDefault("region", polyMesh::defaultRegion)
+        ),
         dict_
     )
 {
@@ -100,7 +102,7 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::execute
             filter_.execute();
         }
 
-        if (forceWrite || outputControl_.output())
+        if (forceWrite || writeControl_.output())
         {
             filter_.write();
         }
@@ -122,7 +124,7 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::end()
 {
     filter_.end();
 
-    if (outputControl_.output())
+    if (writeControl_.output())
     {
         filter_.write();
     }
@@ -149,12 +151,12 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::adjustTimeStep()
     if
     (
         active()
-     && outputControl_.outputControl()
-     == outputFilterOutputControl::ocAdjustableRunTime
+     && writeControl_.writeControl()
+     == outputFilterControl::ocAdjustableRunTime
     )
     {
-        const label  outputTimeIndex = outputControl_.outputTimeLastDump();
-        const scalar writeInterval = outputControl_.writeInterval();
+        const label  outputTimeIndex = writeControl_.outputTimeLastDump();
+        const scalar writeInterval = writeControl_.writeInterval();
 
         // Logic mimics that of Time::adjustDeltaT() except we only allow
         // making the time step lower.
@@ -202,7 +204,7 @@ bool Foam::OutputFilterFunctionObject<OutputFilter>::read
     {
         dict_ = dict;
 
-        outputControl_.read(dict);
+        writeControl_.read(dict);
         evaluateControl_.read(dict);
         readControls();
 
@@ -221,7 +223,7 @@ void Foam::OutputFilterFunctionObject<OutputFilter>::updateMesh
     const mapPolyMesh& mpm
 )
 {
-    if (active() && mpm.mesh().name() == regionName_)
+    if (active())
     {
         filter_.updateMesh(mpm);
     }
@@ -234,7 +236,7 @@ void Foam::OutputFilterFunctionObject<OutputFilter>::movePoints
     const polyMesh& mesh
 )
 {
-    if (active() && mesh.name() == regionName_)
+    if (active())
     {
         filter_.movePoints(mesh);
     }

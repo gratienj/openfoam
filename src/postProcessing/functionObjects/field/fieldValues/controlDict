@@ -52,7 +52,7 @@ functions
         functionObjectLibs ("libfieldFunctionObjects.so");
 
         enabled         true;
-        outputControl   outputTime;
+        writeControl   outputTime;
 
         // Output to log&file (true) or to file only
         log             true;
@@ -96,7 +96,7 @@ functions
         type            faceSource;
         functionObjectLibs ("libfieldFunctionObjects.so");
         enabled         true;
-        outputControl   outputTime;
+        writeControl   outputTime;
         log             true;
         valueOutput     true;
         surfaceFormat   vtk;
@@ -115,7 +115,7 @@ functions
         type            cellSource;
         functionObjectLibs ("libfieldFunctionObjects.so");
         enabled         true;
-        outputControl   outputTime;
+        writeControl   outputTime;
         log             true;
         valueOutput     true;
         source          cellZone;
