@@ -113,30 +113,13 @@ public:
     static void zeroPatchFields(fvMesh& mesh, const label patchI);
 
     //- Reorder and remove trailing patches. If validBoundary call is parallel
-    //  synced
+    //  synced and all add the same patch with same settings
     static void reorderPatches
     (
         fvMesh&,
         const labelList& oldToNew,
         const label nPatches,
         const bool validBoundary
-    );
-
-    //- Remove zero sized patches. All but processor patches are
-    //  assumed to be present on all processors (so size will be reduced
-    //  if validBoundary). Return map from new
-    //  to old patches
-    static labelList removeEmptyPatches(fvMesh&, const bool validBoundary);
-
-    //- Read mesh or create dummy mesh (0 cells, >0 patches). Works in two
-    //  modes according to masterOnlyReading:
-    //  true : all slaves create dummy mesh
-    //  false: checks locally for mesh directories and only creates dummy mesh
-    //         if not present
-    static autoPtr<fvMesh> newMesh
-    (
-        const IOobject& io,
-        const bool masterOnlyReading
     );
 };
 
