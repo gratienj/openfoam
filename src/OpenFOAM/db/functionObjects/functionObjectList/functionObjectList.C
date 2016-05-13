@@ -239,7 +239,7 @@ bool Foam::functionObjectList::start()
 }
 
 
-bool Foam::functionObjectList::execute(const bool forceWrite)
+bool Foam::functionObjectList::execute(const bool postProcess)
 {
     bool ok = true;
 
@@ -257,7 +257,8 @@ bool Foam::functionObjectList::execute(const bool forceWrite)
 
         forAll(*this, objectI)
         {
-            ok = operator[](objectI).execute(forceWrite) && ok;
+            ok = operator[](objectI).execute(postProcess) && ok;
+            ok = operator[](objectI).write(postProcess) && ok;
         }
     }
 
