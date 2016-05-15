@@ -125,15 +125,7 @@ public:
         splitCell8(const splitCell8&);
 
         //- Copy operator since autoPtr otherwise 'steals' storage.
-        void operator=(const splitCell8& s)
-        {
-            // Check for assignment to self
-            if (this == &s)
-            {
-                FatalErrorInFunction
-                    << "Attempted assignment to self"
-                    << abort(FatalError);
-            }
+        void operator=(const splitCell8& s);
 
         bool operator==(const splitCell8& s) const;
 

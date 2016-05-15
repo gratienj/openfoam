@@ -47,6 +47,39 @@ License
 namespace Foam
 {
     defineTypeNameAndDebug(fvMeshDistribute, 0);
+
+//- Less function class that can be used for sorting processor patches
+class lessProcPatches
+{
+    const labelList& nbrProc_;
+    const labelList& referPatchID_;
+
+public:
+
+    lessProcPatches( const labelList& nbrProc, const labelList& referPatchID)
+    :
+        nbrProc_(nbrProc),
+        referPatchID_(referPatchID)
+    {}
+
+    bool operator()(const label a, const label b)
+    {
+        if (nbrProc_[a] < nbrProc_[b])
+        {
+            return true;
+        }
+        else if (nbrProc_[a] > nbrProc_[b])
+        {
+            return false;
+        }
+        else
+        {
+            // Equal neighbour processor
+            return referPatchID_[a] < referPatchID_[b];
+        }
+    }
+};
+
 }
 
 
@@ -637,7 +670,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::repatch
             map().reverseFaceMap(),
             false,
             true,
-            constructFaceMap[procI]
+            constructFaceMap[proci]
         );
     }
 
@@ -1072,15 +1105,15 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::doRemoveCells
 
     // Save internal fields (note: not as DimensionedFields since would
     // get mapped)
-    PtrList<Field<scalar> > sFlds;
+    PtrList<Field<scalar>> sFlds;
     saveInternalFields(sFlds);
-    PtrList<Field<vector> > vFlds;
+    PtrList<Field<vector>> vFlds;
     saveInternalFields(vFlds);
-    PtrList<Field<sphericalTensor> > sptFlds;
+    PtrList<Field<sphericalTensor>> sptFlds;
     saveInternalFields(sptFlds);
-    PtrList<Field<symmTensor> > sytFlds;
+    PtrList<Field<symmTensor>> sytFlds;
     saveInternalFields(sytFlds);
-    PtrList<Field<tensor> > tFlds;
+    PtrList<Field<tensor>> tFlds;
     saveInternalFields(tFlds);
 
     // Change the mesh. No inflation. Note: no parallel comms allowed.
@@ -1140,8 +1173,8 @@ void Foam::fvMeshDistribute::addProcPatches
 
     forAll(indices, i)
     {
-        label bFaceI = indices[i];
-        label procI = nbrProc[bFaceI];
+        label bFacei = indices[i];
+        label proci = nbrProc[bFacei];
 
         if (procI != -1 && procI != Pstream::myProcNo())
         {
@@ -1153,6 +1186,7 @@ void Foam::fvMeshDistribute::addProcPatches
                 if (referPatchID[bFaceI] == -1)
                 {
                     // Ordinary processor boundary
+
                     processorPolyPatch pp
                     (
                         0,              // size
@@ -1160,7 +1194,7 @@ void Foam::fvMeshDistribute::addProcPatches
                         mesh_.boundaryMesh().size(),
                         mesh_.boundaryMesh(),
                         Pstream::myProcNo(),
-                        procI
+                        proci
                     );
 
                     procPatchID[procI].insert
@@ -1183,7 +1217,6 @@ void Foam::fvMeshDistribute::addProcPatches
                           (
                               mesh_.boundaryMesh()[referPatchID[bFaceI]]
                           );
-
                     processorCyclicPolyPatch pp
                     (
                         0,              // size
@@ -1191,7 +1224,7 @@ void Foam::fvMeshDistribute::addProcPatches
                         mesh_.boundaryMesh().size(),
                         mesh_.boundaryMesh(),
                         Pstream::myProcNo(),
-                        nbrProc[bFaceI],
+                        proci,
                         pcPatch.name(),
                         pcPatch.transform()
                     );
@@ -1726,29 +1759,33 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     const wordList surfTensors(mesh_.names(surfaceTensorField::typeName));
     checkEqualWordList("surfaceTensorFields", surfTensors);
 
-    typedef volScalarField::DimensionedInternalField dimScalType;
+    typedef volScalarField::Internal dimScalType;
     const wordList dimScalars(mesh_.names(dimScalType::typeName));
-    checkEqualWordList("volScalarField::DimensionedInternalField", dimScalars);
+    checkEqualWordList("volScalarField::Internal", dimScalars);
 
-    typedef volVectorField::DimensionedInternalField dimVecType;
+    typedef volVectorField::Internal dimVecType;
     const wordList dimVectors(mesh_.names(dimVecType::typeName));
-    checkEqualWordList("volVectorField::DimensionedInternalField", dimVectors);
+    checkEqualWordList("volVectorField::Internal", dimVectors);
 
-    typedef volSphericalTensorField::DimensionedInternalField dimSphereType;
+    typedef volSphericalTensorField::Internal dimSphereType;
     const wordList dimSphereTensors(mesh_.names(dimSphereType::typeName));
     checkEqualWordList
     (
-        "volSphericalTensorField::DimensionedInternalField",
+        "volSphericalTensorField::Internal",
         dimSphereTensors
     );
 
-    typedef volSymmTensorField::DimensionedInternalField dimSymmTensorType;
+    typedef volSymmTensorField::Internal dimSymmTensorType;
     const wordList dimSymmTensors(mesh_.names(dimSymmTensorType::typeName));
     checkEqualWordList
     (
-        "volSymmTensorField::DimensionedInternalField",
+        "volSymmTensorField::Internal",
         dimSymmTensors
     );
+
+    typedef volTensorField::Internal dimTensorType;
+    const wordList dimTensors(mesh_.names(dimTensorType::typeName));
+    checkEqualWordList("volTensorField::Internal", dimTensors);
 
     typedef volTensorField::DimensionedInternalField dimTensorType;
     const wordList dimTensors(mesh_.names(dimTensorType::typeName));
@@ -1994,35 +2031,35 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             );
 
             // dimensionedFields
-            sendFields<volScalarField::DimensionedInternalField>
+            sendFields<volScalarField::Internal>
             (
                 recvProc,
                 dimScalars,
                 subsetter,
                 str
             );
-            sendFields<volVectorField::DimensionedInternalField>
+            sendFields<volVectorField::Internal>
             (
                 recvProc,
                 dimVectors,
                 subsetter,
                 str
             );
-            sendFields<volSphericalTensorField::DimensionedInternalField>
+            sendFields<volSphericalTensorField::Internal>
             (
                 recvProc,
                 dimSphereTensors,
                 subsetter,
                 str
             );
-            sendFields<volSymmTensorField::DimensionedInternalField>
+            sendFields<volSymmTensorField::Internal>
             (
                 recvProc,
                 dimSymmTensors,
                 subsetter,
                 str
             );
-            sendFields<volTensorField::DimensionedInternalField>
+            sendFields<volTensorField::Internal>
             (
                 recvProc,
                 dimTensors,
@@ -2192,11 +2229,11 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             PtrList<surfaceSymmTensorField> ssytf;
             PtrList<surfaceTensorField> stf;
 
-            PtrList<volScalarField::DimensionedInternalField> dsf;
-            PtrList<volVectorField::DimensionedInternalField> dvf;
-            PtrList<volSphericalTensorField::DimensionedInternalField> dstf;
-            PtrList<volSymmTensorField::DimensionedInternalField> dsytf;
-            PtrList<volTensorField::DimensionedInternalField> dtf;
+            PtrList<volScalarField::Internal> dsf;
+            PtrList<volVectorField::Internal> dvf;
+            PtrList<volSphericalTensorField::Internal> dstf;
+            PtrList<volSymmTensorField::Internal> dsytf;
+            PtrList<volTensorField::Internal> dtf;
 
 
             // Opposite of sendMesh
@@ -2309,7 +2346,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                 );
 
                 // Dimensioned fields
-                receiveFields<volScalarField::DimensionedInternalField>
+                receiveFields<volScalarField::Internal>
                 (
                     sendProc,
                     dimScalars,
@@ -2317,10 +2354,10 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                     dsf,
                     fieldDicts.subDict
                     (
-                        volScalarField::DimensionedInternalField::typeName
+                        volScalarField::Internal::typeName
                     )
                 );
-                receiveFields<volVectorField::DimensionedInternalField>
+                receiveFields<volVectorField::Internal>
                 (
                     sendProc,
                     dimVectors,
@@ -2328,10 +2365,10 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                     dvf,
                     fieldDicts.subDict
                     (
-                        volVectorField::DimensionedInternalField::typeName
+                        volVectorField::Internal::typeName
                     )
                 );
-                receiveFields<volSphericalTensorField::DimensionedInternalField>
+                receiveFields<volSphericalTensorField::Internal>
                 (
                     sendProc,
                     dimSphereTensors,
@@ -2339,11 +2376,11 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                     dstf,
                     fieldDicts.subDict
                     (
-                        volSphericalTensorField::DimensionedInternalField::
+                        volSphericalTensorField::Internal::
                         typeName
                     )
                 );
-                receiveFields<volSymmTensorField::DimensionedInternalField>
+                receiveFields<volSymmTensorField::Internal>
                 (
                     sendProc,
                     dimSymmTensors,
@@ -2351,10 +2388,10 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                     dsytf,
                     fieldDicts.subDict
                     (
-                        volSymmTensorField::DimensionedInternalField::typeName
+                        volSymmTensorField::Internal::typeName
                     )
                 );
-                receiveFields<volTensorField::DimensionedInternalField>
+                receiveFields<volTensorField::Internal>
                 (
                     sendProc,
                     dimTensors,
@@ -2362,7 +2399,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                     dtf,
                     fieldDicts.subDict
                     (
-                        volTensorField::DimensionedInternalField::typeName
+                        volTensorField::Internal::typeName
                     )
                 );
             }
@@ -2489,21 +2526,21 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             const labelList& oldPatchMap = map().oldPatchMap();
 
             //Note: old mesh faces never flipped!
-            forAll(constructPatchMap, procI)
+            forAll(constructPatchMap, proci)
             {
                 if (procI != sendProc && constructPatchMap[procI].size())
                 {
                     // Processor already in mesh (either myProcNo or received)
-                    inplaceRenumber(oldCellMap, constructCellMap[procI]);
+                    inplaceRenumber(oldCellMap, constructCellMap[proci]);
                     inplaceRenumberWithFlip
                     (
                         oldFaceMap,
                         false,
                         true,
-                        constructFaceMap[procI]
+                        constructFaceMap[proci]
                     );
-                    inplaceRenumber(oldPointMap, constructPointMap[procI]);
-                    inplaceRenumber(oldPatchMap, constructPatchMap[procI]);
+                    inplaceRenumber(oldPointMap, constructPointMap[proci]);
+                    inplaceRenumber(oldPatchMap, constructPatchMap[proci]);
                 }
             }
 
@@ -2656,35 +2693,6 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
         Zero
     );
     initPatchFields<volTensorField, processorFvPatchField<tensor>>
-    (
-        Zero
-    );
-
-    initPatchFields<surfaceScalarField, processorFvsPatchField<scalar>>
-    (
-        Zero
-    );
-    initPatchFields<surfaceVectorField, processorFvsPatchField<vector>>
-    (
-        Zero
-    );
-    initPatchFields
-    <
-        surfaceSphericalTensorField,
-        processorFvsPatchField<sphericalTensor>
-    >
-    (
-        Zero
-    );
-    initPatchFields
-    <
-        surfaceSymmTensorField,
-        processorFvsPatchField<symmTensor>
-    >
-    (
-        Zero
-    );
-    initPatchFields<surfaceTensorField, processorFvsPatchField<tensor>>
     (
         Zero
     );

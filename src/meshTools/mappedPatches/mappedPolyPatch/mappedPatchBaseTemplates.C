@@ -72,6 +72,7 @@ void Foam::mappedPatchBase::distribute
                 false,
                 lst,
                 cop,
+                flipOp(),
                 Type(Zero)
             );
         }
@@ -130,6 +131,7 @@ void Foam::mappedPatchBase::reverseDistribute
                 false,
                 lst,
                 cop,
+                flipOp(),
                 Type(Zero)
             );
             break;

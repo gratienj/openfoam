@@ -177,12 +177,6 @@ void Foam::meshRefinement::calcNeighbourData
                 label own = faceCells[i];
                 label ownLevel = cellLevel[own];
                 label faceLevel = meshCutter_.faceLevel(pp.start()+i);
-                if (faceLevel < 0)
-                {
-                    // Due to e.g. face merging no longer a consistent
-                    // refinementlevel of face. Assume same as cell
-                    faceLevel = ownLevel;
-                }
 
                 // Normal distance from face centre to cell centre
                 scalar d = ((faceCentres[i] - cellCentres[own]) & fn);

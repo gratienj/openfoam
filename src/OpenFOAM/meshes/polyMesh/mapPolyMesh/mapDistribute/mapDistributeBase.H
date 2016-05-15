@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,7 +49,7 @@ Note:
     followed by used-only elements of proc0, proc2, proc3.
     The constructed mapDistributeBase sends the local elements from and
     receives the remote elements into their compact position.
-    compactMap[procI] is the position of elements from procI in the compact
+    compactMap[proci] is the position of elements from proci in the compact
     map. compactMap[myProcNo()] is empty since trivial addressing.
 
     It rewrites the input global indices into indices into the constructed
@@ -112,29 +112,33 @@ protected:
 
 
         //- Schedule
-        mutable autoPtr<List<labelPair> > schedulePtr_;
+        mutable autoPtr<List<labelPair>> schedulePtr_;
 
 
     // Private Member Functions
 
         static void checkReceivedSize
         (
-            const label procI,
+            const label proci,
             const label expectedSize,
             const label receivedSize
         );
 
+        //- Construct per processor compact addressing of the global elements
+        //  needed. The ones from the local processor are not included since
+        //  these are always all needed.
         void calcCompactAddressing
         (
             const globalIndex& globalNumbering,
             const labelList& elements,
-            List<Map<label> >& compactMap
+            List<Map<label>>& compactMap
         ) const;
+
         void calcCompactAddressing
         (
             const globalIndex& globalNumbering,
             const labelListList& elements,
-            List<Map<label> >& compactMap
+            List<Map<label>>& compactMap
         ) const;
 
         void exchangeAddressing
@@ -142,7 +146,7 @@ protected:
             const int tag,
             const globalIndex& globalNumbering,
             labelList& elements,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             labelList& compactStart
         );
         void exchangeAddressing
@@ -150,7 +154,7 @@ protected:
             const int tag,
             const globalIndex& globalNumbering,
             labelListList& elements,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             labelList& compactStart
         );
 
@@ -212,7 +216,7 @@ public:
         (
             const globalIndex&,
             labelList& elements,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             const int tag = Pstream::msgType()
         );
 
@@ -223,7 +227,7 @@ public:
         (
             const globalIndex&,
             labelListList& cellCells,
-            List<Map<label> >& compactMap,
+            List<Map<label>>& compactMap,
             const int tag = Pstream::msgType()
         );
 
@@ -326,7 +330,7 @@ public:
             static label renumber
             (
                 const globalIndex&,
-                const List<Map<label> >& compactMap,
+                const List<Map<label>>& compactMap,
                 const label globalElement
             );
 
@@ -472,7 +476,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "mapDistributeBaseTemplates.C"
+    #include "mapDistributeBaseTemplates.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

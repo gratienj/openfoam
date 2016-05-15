@@ -168,7 +168,8 @@ template<class Type>
 Foam::Field<Type>::Field
 (
     const tmp<Field<Type>>& tmapF,
-    const FieldMapper& mapper
+    const FieldMapper& mapper,
+    const bool applyFlip
 )
 :
     List<Type>(mapper.size())
@@ -499,7 +500,8 @@ template<class Type>
 void Foam::Field<Type>::map
 (
     const tmp<Field<Type>>& tmapF,
-    const FieldMapper& mapper
+    const FieldMapper& mapper,
+    const bool applyFlip
 )
 {
     map(tmapF(), mapper, applyFlip);

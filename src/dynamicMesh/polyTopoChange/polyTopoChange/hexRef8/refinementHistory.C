@@ -139,9 +139,10 @@ Foam::refinementHistory::splitCell8::splitCell8(const splitCell8& sc)
 
 // * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * * //
 
-//- Copy operator since autoPtr otherwise 'steals' storage.
 void Foam::refinementHistory::splitCell8::operator=(const splitCell8& s)
 {
+    //- Assignment operator since autoPtr otherwise 'steals' storage.
+
     // Check for assignment to self
     if (this == &s)
     {
@@ -234,70 +235,6 @@ Foam::Ostream& Foam::operator<<
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
-void Foam::refinementHistory::writeEntry
-(
-    const List<splitCell8>& splitCells,
-    const splitCell8& split
-)
-{
-    // Write me:
-    if (split.addedCellsPtr_.valid())
-    {
-        Pout<< "parent:" << split.parent_
-            << " subCells:" << split.addedCellsPtr_()
-            << endl;
-    }
-    else
-    {
-        Pout<< "parent:" << split.parent_
-            << " no subcells"
-            << endl;
-    }
-
-    if (split.parent_ >= 0)
-    {
-        Pout<< "parent data:" << endl;
-        // Write my parent
-        string oldPrefix = Pout.prefix();
-        Pout.prefix() = "  " + oldPrefix;
-        writeEntry(splitCells, splitCells[split.parent_]);
-        Pout.prefix() = oldPrefix;
-    }
-}
-
-
-void Foam::refinementHistory::writeDebug
-(
-    const labelList& visibleCells,
-    const List<splitCell8>& splitCells
-)
-{
-    string oldPrefix = Pout.prefix();
-    Pout.prefix() = "";
-
-    forAll(visibleCells, cellI)
-    {
-        label index = visibleCells[cellI];
-
-        if (index >= 0)
-        {
-            Pout<< "Cell from refinement:" << cellI << " index:" << index
-                << endl;
-
-            string oldPrefix = Pout.prefix();
-            Pout.prefix() = "  " + oldPrefix;
-            writeEntry(splitCells, splitCells[index]);
-            Pout.prefix() = oldPrefix;
-        }
-        else
-        {
-            Pout<< "Unrefined cell:" << cellI << " index:" << index << endl;
-        }
-    }
-    Pout.prefix() = oldPrefix;
-}
-
 
 void Foam::refinementHistory::checkIndices() const
 {
@@ -620,7 +557,6 @@ void Foam::refinementHistory::apply
 Foam::refinementHistory::refinementHistory(const IOobject& io)
 :
     regIOobject(io),
-    refCount(),
     active_(false)
 {
     // Temporary warning
@@ -654,6 +590,7 @@ Foam::refinementHistory::refinementHistory(const IOobject& io)
             << " constructed history from IOobject :"
             << " splitCells:" << splitCells_.size()
             << " visibleCells:" << visibleCells_.size()
+            << " active:" << active_
             << endl;
     }
 }
@@ -668,7 +605,6 @@ Foam::refinementHistory::refinementHistory
 )
 :
     regIOobject(io),
-    refCount(),
     active_(active),
     splitCells_(splitCells),
     freeSplitCells_(0),
@@ -703,12 +639,12 @@ Foam::refinementHistory::refinementHistory
             << " constructed history from IOobject or components :"
             << " splitCells:" << splitCells_.size()
             << " visibleCells:" << visibleCells_.size()
+            << " active:" << active_
             << endl;
     }
 }
 
 
-// Construct from initial number of cells (all visible)
 Foam::refinementHistory::refinementHistory
 (
     const IOobject& io,
@@ -716,7 +652,6 @@ Foam::refinementHistory::refinementHistory
 )
 :
     regIOobject(io),
-    refCount(),
     active_(false),
     freeSplitCells_(0)
 {
@@ -775,6 +710,67 @@ Foam::refinementHistory::refinementHistory
         visibleCells_.setSize(nCells);
         splitCells_.setCapacity(nCells);
 
+        for (label cellI = 0; cellI < nCells; cellI++)
+        {
+            visibleCells_[cellI] = cellI;
+            splitCells_.append(splitCell8());
+        }
+    }
+
+    active_ = (returnReduce(visibleCells_.size(), sumOp<label>()) > 0);
+
+
+    // Check indices.
+    checkIndices();
+
+    if (debug)
+    {
+        Pout<< "refinementHistory::refinementHistory :"
+            << " constructed history from IOobject or initial size :"
+            << " splitCells:" << splitCells_.size()
+            << " visibleCells:" << visibleCells_.size()
+            << " active:" << active_
+            << endl;
+    }
+}
+
+
+// Construct from initial number of cells (all visible)
+Foam::refinementHistory::refinementHistory
+(
+    const IOobject& io,
+    const label nCells,
+    const bool active
+)
+:
+    regIOobject(io),
+    active_(active),
+    freeSplitCells_(0)
+{
+    // Warn for MUST_READ_IF_MODIFIED
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    {
+        WarningInFunction
+            << "Specified IOobject::MUST_READ_IF_MODIFIED but class"
+            << " does not support automatic rereading."
+            << endl;
+    }
+
+    if
+    (
+        io.readOpt() == IOobject::MUST_READ
+     || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+     || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
+    {
+        readStream(typeName) >> *this;
+        close();
+    }
+    else
+    {
+        visibleCells_.setSize(nCells);
+        splitCells_.setCapacity(nCells);
+
         for (label celli = 0; celli < nCells; celli++)
         {
             visibleCells_[celli] = celli;
@@ -791,6 +787,7 @@ Foam::refinementHistory::refinementHistory
             << " constructed history from IOobject or initial size :"
             << " splitCells:" << splitCells_.size()
             << " visibleCells:" << visibleCells_.size()
+            << " active:" << active_
             << endl;
     }
 }
@@ -804,7 +801,6 @@ Foam::refinementHistory::refinementHistory
 )
 :
     regIOobject(io),
-    refCount(),
     active_(rh.active_),
     splitCells_(rh.splitCells()),
     freeSplitCells_(rh.freeSplitCells()),
@@ -827,7 +823,6 @@ Foam::refinementHistory::refinementHistory
 )
 :
     regIOobject(io),
-    refCount(),
     active_(false)
 {
     if
@@ -837,8 +832,11 @@ Foam::refinementHistory::refinementHistory
      || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
     )
     {
-        WarningInFunction
-            << "read option IOobject::MUST_READ, READ_IF_PRESENT or "
+        WarningIn
+        (
+            "refinementHistory::refinementHistory(const IOobject&"
+            ", const labelListList&, const PtrList<refinementHistory>&)"
+        )   << "read option IOobject::MUST_READ, READ_IF_PRESENT or "
             << "MUST_READ_IF_MODIFIED"
             << " suggests that a read constructor would be more appropriate."
             << endl;
@@ -1391,7 +1389,7 @@ void Foam::refinementHistory::distribute(const mapDistributePolyMesh& map)
 
         forAll(splitCells_, index)
         {
-            if (splitCellProc[index] == procI && splitCellNum[index] == 8)
+            if (splitCellProc[index] == proci && splitCellNum[index] == 8)
             {
                 // Entry moves in its whole to procI
                 oldToNew[index] = newSplitCells.size();
@@ -1407,10 +1405,6 @@ void Foam::refinementHistory::distribute(const mapDistributePolyMesh& map)
             if (index >= 0 && destination[celli] == procI)
             {
                 label parent = splitCells_[index].parent_;
-
-                //Pout<< "Adding refined cell " << celli
-                //    << " since moves to "
-                //    << procI << " old parent:" << parent << endl;
 
                 // Create new splitCell with parent
                 oldToNew[index] = newSplitCells.size();
@@ -1772,6 +1766,17 @@ void Foam::refinementHistory::combineCells
     splitCell8& parentSplit = splitCells_[parentIndex];
     parentSplit.addedCellsPtr_.reset(NULL);
     visibleCells_[masterCellI] = parentIndex;
+}
+
+
+bool Foam::refinementHistory::read()
+{
+    bool ok = readData(readStream(typeName));
+    close();
+
+    active_ = (returnReduce(visibleCells_.size(), sumOp<label>()) > 0);
+
+    return ok;
 }
 
 

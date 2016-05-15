@@ -95,15 +95,13 @@ Foam::domainDecomposition::domainDecomposition
         )
       : NULL
     ),
-    decompDictFile_(decompDictFile),
     nProcs_
     (
         readInt
         (
             decompositionModel::New
             (
-                *this,
-                decompDictFile
+                *this
             ).lookup("numberOfSubdomains")
         )
     ),
@@ -122,8 +120,7 @@ Foam::domainDecomposition::domainDecomposition
 {
     decompositionModel::New
     (
-        *this,
-        decompDictFile
+        *this
     ).readIfPresent("distributed", distributed_);
 }
 
@@ -828,8 +825,8 @@ bool Foam::domainDecomposition::writeDecomposition(const bool decomposeSets)
                 false
             ),
             baseMeshData,
-            procCellAddressing_[procI],
-            procPointAddressing_[procI]
+            procCellAddressing_[proci],
+            procPointAddressing_[proci]
         ).write();
 
 

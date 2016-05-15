@@ -32,25 +32,13 @@ void Foam::mapDistributePolyMesh::calcPatchSizes()
 {
     oldPatchSizes_.setSize(oldPatchStarts_.size());
 
-    // Calculate old patch sizes
-    for (label patchi = 0; patchi < oldPatchStarts_.size() - 1; patchi++)
-    {
-        oldPatchSizes_[patchi] =
-            oldPatchStarts_[patchi + 1] - oldPatchStarts_[patchi];
-    }
-
-    // Set the last one by hand
-    const label lastPatchID = oldPatchStarts_.size() - 1;
-
-    oldPatchSizes_[lastPatchID] = nOldFaces_ - oldPatchStarts_[lastPatchID];
-
-    if (min(oldPatchSizes_) < 0)
+    if (oldPatchStarts_.size())
     {
         // Calculate old patch sizes
-        for (label patchI = 0; patchI < oldPatchStarts_.size() - 1; patchI++)
+        for (label patchi = 0; patchi < oldPatchStarts_.size() - 1; patchi++)
         {
-            oldPatchSizes_[patchI] =
-                oldPatchStarts_[patchI + 1] - oldPatchStarts_[patchI];
+            oldPatchSizes_[patchi] =
+                oldPatchStarts_[patchi + 1] - oldPatchStarts_[patchi];
         }
 
         // Set the last one by hand
@@ -69,6 +57,21 @@ void Foam::mapDistributePolyMesh::calcPatchSizes()
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::mapDistributePolyMesh::mapDistributePolyMesh()
+:
+    nOldPoints_(0),
+    nOldFaces_(0),
+    nOldCells_(0),
+    oldPatchSizes_(0),
+    oldPatchStarts_(0),
+    oldPatchNMeshPoints_(0),
+    pointMap_(),
+    faceMap_(),
+    cellMap_(),
+    patchMap_()
+{}
+
 
 Foam::mapDistributePolyMesh::mapDistributePolyMesh
 (
@@ -322,6 +325,19 @@ Foam::Istream& Foam::operator>>(Istream& is, mapDistributePolyMesh& map)
     return is;
 }
 
+void Foam::mapDistributePolyMesh::operator=(const mapDistributePolyMesh& rhs)
+{
+    nOldPoints_ = rhs.nOldPoints_;
+    nOldFaces_ = rhs.nOldFaces_;
+    nOldCells_ = rhs.nOldCells_;
+    oldPatchSizes_ = rhs.oldPatchSizes_;
+    oldPatchStarts_ = rhs.oldPatchStarts_;
+    oldPatchNMeshPoints_ = rhs.oldPatchNMeshPoints_;
+    pointMap_ = rhs.pointMap_;
+    faceMap_ = rhs.faceMap_;
+    cellMap_ = rhs.cellMap_;
+    patchMap_ = rhs.patchMap_;
+}
 
 // * * * * * * * * * * * * * * Ostream Operator  * * * * * * * * * * * * * * //
 

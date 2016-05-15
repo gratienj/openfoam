@@ -160,52 +160,8 @@ class mapDistribute
         //  gives the elements that need to be transformed
         labelListList transformElements_;
 
-        //- Schedule
-        mutable autoPtr<List<labelPair>> schedulePtr_;
-
-
-   // Private Member Functions
-
-        static void checkReceivedSize
-        (
-            const label procI,
-            const label expectedSize,
-            const label receivedSize
-        );
-
-        //- Construct per processor compact addressing of the global elements
-        //  needed. The ones from the local processor are not included since
-        //  these are always all needed.
-        void calcCompactAddressing
-        (
-            const globalIndex& globalNumbering,
-            const labelList& elements,
-            List<Map<label>>& compactMap
-        ) const;
-
-        void calcCompactAddressing
-        (
-            const globalIndex& globalNumbering,
-            const labelListList& elements,
-            List<Map<label>>& compactMap
-        ) const;
-
-        void exchangeAddressing
-        (
-            const int tag,
-            const globalIndex& globalNumbering,
-            labelList& elements,
-            List<Map<label>>& compactMap,
-            labelList& compactStart
-        );
-        void exchangeAddressing
-        (
-            const int tag,
-            const globalIndex& globalNumbering,
-            labelListList& elements,
-            List<Map<label>>& compactMap,
-            labelList& compactStart
-        );
+        //- Destination in constructMap for transformed elements
+        labelList transformStart_;
 
     // Private Member Functions
 
@@ -488,23 +444,6 @@ public:
             //- Transfer contents to the Xfer container
             Xfer<mapDistribute> xfer();
 
-            //- Helper for construct from globalIndex. Renumbers element
-            //  (in globalIndex numbering) into compact indices.
-            static label renumber
-            (
-                const globalIndex&,
-                const List<Map<label>>& compactMap,
-                const label globalElement
-            );
-
-            //- Compact maps. Gets per field a bool whether it is used (locally)
-            //  and works out itself what this side and sender side can remove
-            //  from maps.
-            void compact
-            (
-                const boolList& elemIsUsed,
-                const int tag = UPstream::msgType()
-            );
 
             //- Distribute data using default commsType.
             template<class T>
@@ -597,7 +536,10 @@ public:
             //- Correct for topo change.
             void updateMesh(const mapPolyMesh&)
             {
-                NotImplemented;
+                notImplemented
+                (
+                    "mapDistribute::updateMesh(const mapPolyMesh&)"
+                );
             }
 
     // Member Operators

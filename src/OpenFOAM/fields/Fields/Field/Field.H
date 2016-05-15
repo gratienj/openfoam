@@ -186,7 +186,8 @@ public:
         Field
         (
             const tmp<Field<Type>>& tmapF,
-            const FieldMapper& map
+            const FieldMapper& map,
+            const bool applyFlip = true
         );
 
         //- Construct by mapping from the given tmp field. Supplied uniform
@@ -285,7 +286,8 @@ public:
         void map
         (
             const tmp<Field<Type>>& tmapF,
-            const FieldMapper& map
+            const FieldMapper& map,
+            const bool applyFlip = true
         );
 
         //- Map from self

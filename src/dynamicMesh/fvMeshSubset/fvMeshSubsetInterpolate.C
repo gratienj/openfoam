@@ -300,14 +300,24 @@ tmp<GeometricField<Type, fvsPatchField, surfaceMesh>> fvMeshSubset::interpolate
             // Postprocess patch field for exposed faces
 
             fvsPatchField<Type>& pfld = bf[patchi];
+            const labelUList& fc = bf[patchi].patch().faceCells();
+            const labelList& own = vf.mesh().faceOwner();
 
             forAll(pfld, i)
             {
                 label baseFacei = faceMap[subPatch.start()+i];
                 if (baseFacei < vf.primitiveField().size())
                 {
-                    // Exposed internal face
-                    pfld[i] = vf.primitiveField()[baseFacei];
+                    Type val = vf.internalField()[baseFacei];
+
+                    if (cellMap[fc[i]] == own[baseFacei] || !negateIfFlipped)
+                    {
+                        pfld[i] = val;
+                    }
+                    else
+                    {
+                        pfld[i] = flipOp()(val);
+                    }
                 }
                 else
                 {
@@ -496,7 +506,7 @@ tmp<GeometricField<Type, pointPatchField, pointMesh>> fvMeshSubset::interpolate
 
 
 template<class Type>
-tmp<DimensionedField<Type, volMesh> > fvMeshSubset::interpolate
+tmp<DimensionedField<Type, volMesh>> fvMeshSubset::interpolate
 (
     const DimensionedField<Type, volMesh>& df,
     const fvMesh& sMesh,
@@ -504,7 +514,7 @@ tmp<DimensionedField<Type, volMesh> > fvMeshSubset::interpolate
 )
 {
     // Create the complete field from the pieces
-    tmp<DimensionedField<Type, volMesh> > tresF
+    tmp<DimensionedField<Type, volMesh>> tresF
     (
         new DimensionedField<Type, volMesh>
         (
@@ -527,7 +537,7 @@ tmp<DimensionedField<Type, volMesh> > fvMeshSubset::interpolate
 
 
 template<class Type>
-tmp<DimensionedField<Type, volMesh> > fvMeshSubset::interpolate
+tmp<DimensionedField<Type, volMesh>> fvMeshSubset::interpolate
 (
     const DimensionedField<Type, volMesh>& df
 ) const

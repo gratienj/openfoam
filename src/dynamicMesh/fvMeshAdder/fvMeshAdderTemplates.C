@@ -707,7 +707,7 @@ void Foam::fvMeshAdder::MapDimFields
         }
         else
         {
-            WarningInFunction
+            WarningIn("fvMeshAdder::MapDimFields(..)")
                 << "Not mapping field " << fld.name()
                 << " since not present on mesh to add"
                 << endl;

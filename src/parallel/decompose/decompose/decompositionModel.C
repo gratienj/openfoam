@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2014-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,8 +60,7 @@ Foam::decompositionModel::decompositionModel
                 mesh.db(),
                 IOobject::MUST_READ,
                 IOobject::NO_WRITE,
-                false,  //io.registerObject(),
-                true    //io.globalObject()
+                false   //io.registerObject()
             ),
             decompDictFile
         )
@@ -94,8 +93,7 @@ Foam::decompositionModel::decompositionModel
                 mesh.db(),
                 (dict.size() ? IOobject::NO_READ : IOobject::MUST_READ),
                 IOobject::NO_WRITE,
-                false,  //io.registerObject(),
-                true    //io.globalObject()
+                false   //io.registerObject()
             ),
             decompDictFile
         ),
@@ -156,8 +154,7 @@ Foam::IOobject Foam::decompositionModel::selectIO
             io.db(),
             io.readOpt(),
             io.writeOpt(),
-            io.registerObject(),
-            io.globalObject()
+            io.registerObject()
         )
      :  io
     );

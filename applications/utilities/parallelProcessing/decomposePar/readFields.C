@@ -79,14 +79,18 @@ void Foam::readFields
     // Construct the fields
     fields.setSize(fieldObjects.size());
 
-    label fieldi = 0;
-    forAllIter(IOobjectList, fieldObjects, iter)
+    // Get sorted set of names (different processors might read objects in
+    // different order)
+    const wordList masterNames(fieldObjects.sortedNames());
+
+    // Construct the fields
+    fields.setSize(masterNames.size());
+
+    forAll(masterNames, i)
     {
-        fields.set
-        (
-            fieldi++,
-            new GeoField(*iter(), mesh)
-        );
+        const IOobject& io = *fieldObjects[masterNames[i]];
+
+        fields.set(i, new GeoField(io, mesh));
     }
 }
 

@@ -40,11 +40,7 @@ void Foam::domainDecomposition::distributeCells()
 
     cpuTime decompositionTime;
 
-    const decompositionModel& method = decompositionModel::New
-    (
-        *this,
-        decompDictFile_
-    );
+    const decompositionModel& method = decompositionModel::New(*this);
 
 
     scalarField cellWeights;

@@ -225,8 +225,8 @@ $(dll)/codedBase/codedBase.C
 
 db/functionObjects/functionObject/functionObject.C
 db/functionObjects/functionObjectList/functionObjectList.C
-db/functionObjects/functionObjectFile/functionObjectFile.C
-db/functionObjects/functionObjectFiles/functionObjectFiles.C
+db/functionObjects/writeFile/writeFile.C
+db/functionObjects/writeFiles/writeFiles.C
 db/functionObjects/timeControl/timeControl.C
 db/functionObjects/timeControl/timeControlFunctionObject.C
 
