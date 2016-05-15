@@ -25,7 +25,7 @@ License
 
 #include "residuals.H"
 #include "volFields.H"
-#include "dictionary.H"
+#include "ListOps.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

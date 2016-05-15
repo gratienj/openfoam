@@ -27,6 +27,7 @@ License
 #include "surfaceFields.H"
 #include "volFields.H"
 #include "sampledSurface.H"
+#include "surfaceWriter.H"
 #include "interpolationCellPoint.H"
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
@@ -324,7 +325,7 @@ bool Foam::functionObjects::fieldValues::faceSource::writeValues
             if (Pstream::master())
             {
                 fileName outputDir =
-                    baseFileDir()/name_/"surface"/obr_.time().timeName();
+                    baseFileDir()/name()/"surface"/obr_.time().timeName();
 
                 surfaceWriterPtr_->write
                 (
@@ -383,7 +384,7 @@ Foam::functionObjects::fieldValues::faceSource::filterField
         else
         {
             FatalErrorInFunction
-                << type() << " " << name_ << ": "
+                << type() << " " << name() << ": "
                 << sourceTypeNames_[source_] << "(" << sourceName_ << "):"
                 << nl
                 << "    Unable to process internal faces for volume field "

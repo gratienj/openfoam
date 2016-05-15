@@ -66,6 +66,12 @@ Description
         log      | Log to standard output     | no         | yes
     \endtable
 
+SeeAlso
+    Foam::functionObject
+    Foam::functionObjects::writeFiles
+    Foam::functionObjects::pressureTools
+    Foam::functionObjects::timeControl
+
 SourceFiles
     wallShearStress.C
 
@@ -74,9 +80,8 @@ SourceFiles
 #ifndef functionObjects_wallShearStress_H
 #define functionObjects_wallShearStress_H
 
-#include "functionObjectFiles.H"
+#include "writeFiles.H"
 #include "volFieldsFwd.H"
-#include "Switch.H"
 #include "HashSet.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -85,10 +90,6 @@ namespace Foam
 {
 
 // Forward declaration of classes
-class objectRegistry;
-class dictionary;
-class polyMesh;
-class mapPolyMesh;
 class fvMesh;
 
 namespace functionObjects
@@ -100,20 +101,11 @@ namespace functionObjects
 
 class wallShearStress
 :
-    public functionObjectFiles
+    public writeFiles
 {
 protected:
 
     // Protected data
-
-        //- Name of this set of wallShearStress object
-        word name_;
-
-        //- Refefence to the database
-        const objectRegistry& obr_;
-
-        //- Switch to send output to Info as well as to file
-        Switch log_;
 
         //- Optional list of patches to process
         labelHashSet patchSet_;
@@ -152,14 +144,12 @@ public:
 
     // Constructors
 
-        //- Construct for given objectRegistry and dictionary.
-        //  Allow the possibility to load fields from files
+        //- Construct from Time and dictionary
         wallShearStress
         (
             const word& name,
-            const objectRegistry&,
-            const dictionary&,
-            const bool loadFromFiles = false
+            const Time& runTime,
+            const dictionary&
         );
 
 
@@ -169,34 +159,14 @@ public:
 
     // Member Functions
 
-        //- Return name of the set of wallShearStress
-        virtual const word& name() const
-        {
-            return name_;
-        }
-
         //- Read the wallShearStress data
-        virtual void read(const dictionary&);
+        virtual bool read(const dictionary&);
 
-        //- Execute, currently does nothing
-        virtual void execute();
+        //- Calculate the wall shear-stress
+        virtual bool execute(const bool postProcess = false);
 
-        //- Execute at the final time-loop, currently does nothing
-        virtual void end();
-
-        //- Called when time was set at the end of the Time::operator++
-        virtual void timeSet();
-
-        //- Calculate the wallShearStress and write
-        virtual void write();
-
-        //- Update for changes of mesh
-        virtual void updateMesh(const mapPolyMesh&)
-        {}
-
-        //- Update for changes of mesh
-        virtual void movePoints(const polyMesh&)
-        {}
+        //- Write the wall shear-stress
+        virtual bool write(const bool postProcess = false);
 };
 
 

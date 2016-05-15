@@ -24,10 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fieldValueDelta.H"
-#include "ListOps.H"
-#include "Time.H"
-#include "volFields.H"
-#include "surfaceFields.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -38,6 +35,7 @@ namespace functionObjects
 namespace fieldValues
 {
     defineTypeNameAndDebug(fieldValueDelta, 0);
+    addToRunTimeSelectionTable(functionObject, fieldValueDelta, dictionary);
 }
 }
 }
@@ -102,27 +100,23 @@ void Foam::functionObjects::fieldValues::fieldValueDelta::writeFileHeader
 Foam::functionObjects::fieldValues::fieldValueDelta::fieldValueDelta
 (
     const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
+    const Time& runTime,
+    const dictionary& dict
 )
 :
-    functionObjectFiles(obr, name, typeName),
-    name_(name),
-    obr_(obr),
-    loadFromFiles_(loadFromFiles),
-    log_(true),
+    writeFiles(name, runTime, dict, name),
     operation_(opSubtract),
     source1Ptr_(NULL),
     source2Ptr_(NULL)
 {
-    if (!isA<fvMesh>(obr))
+    if (!isA<fvMesh>(obr_))
     {
         FatalErrorInFunction
             << "objectRegistry is not an fvMesh" << exit(FatalError);
     }
 
     read(dict);
+    resetName(typeName);
 }
 
 
@@ -134,47 +128,46 @@ Foam::functionObjects::fieldValues::fieldValueDelta::~fieldValueDelta()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::functionObjects::fieldValues::fieldValueDelta::read
+bool Foam::functionObjects::fieldValues::fieldValueDelta::read
 (
     const dictionary& dict
 )
 {
-    if (active_)
-    {
-        functionObjectFile::read(dict);
+    writeFiles::read(dict);
 
-        log_ = dict.lookupOrDefault<Switch>("log", true);
-        source1Ptr_.reset
+    source1Ptr_.reset
+    (
+        fieldValue::New
         (
-            fieldValue::New
-            (
-                name_ + ".source1",
-                obr_,
-                dict.subDict("source1"),
-                loadFromFiles_,
-                false
-            ).ptr()
-        );
-        source2Ptr_.reset
+            name() + ".source1",
+            obr_,
+            dict.subDict("source1"),
+            false
+        ).ptr()
+    );
+    source2Ptr_.reset
+    (
+        fieldValue::New
         (
-            fieldValue::New
-            (
-                name_ + ".source2",
-                obr_,
-                dict.subDict("source2"),
-                loadFromFiles_,
-                false
-            ).ptr()
-        );
+            name() + ".source2",
+            obr_,
+            dict.subDict("source2"),
+            false
+        ).ptr()
+    );
 
-        operation_ = operationTypeNames_.read(dict.lookup("operation"));
-    }
+    operation_ = operationTypeNames_.read(dict.lookup("operation"));
+
+    return true;
 }
 
 
-void Foam::functionObjects::fieldValues::fieldValueDelta::write()
+bool Foam::functionObjects::fieldValues::fieldValueDelta::write
+(
+    const bool postProcess
+)
 {
-    functionObjectFiles::write();
+    writeFiles::write();
 
 
 void Foam::fieldValues::fieldValueDelta::execute()
@@ -184,7 +177,7 @@ void Foam::fieldValues::fieldValueDelta::execute()
         writeTime(file());
     }
 
-        if (log_) Info << type() << " " << name_ << " output:" << endl;
+    if (log_) Info<< type() << " " << name() << " output:" << endl;
 
         const word& name1 = source1Ptr_->name();
         const word& name2 = source2Ptr_->name();
@@ -236,41 +229,19 @@ void Foam::fieldValues::fieldValueDelta::execute()
                     << endl;
             }
         }
+    }
 
-        if (log_)
-        {
-            if (entries1.empty())
-            {
-                Info<< "    none";
-            }
-            
-            Info<< endl;
-        }
-
-void Foam::functionObjects::fieldValues::fieldValueDelta::execute()
-{}
+    return true;
+}
 
 
-void Foam::functionObjects::fieldValues::fieldValueDelta::end()
-{}
-
-
-void Foam::functionObjects::fieldValues::fieldValueDelta::timeSet()
-{}
-
-
-void Foam::functionObjects::fieldValues::fieldValueDelta::updateMesh
+bool Foam::functionObjects::fieldValues::fieldValueDelta::execute
 (
-    const mapPolyMesh&
+    const bool postProcess
 )
-{}
-
-
-void Foam::functionObjects::fieldValues::fieldValueDelta::movePoints
-(
-    const polyMesh&
-)
-{}
+{
+    return true;
+}
 
 
 // ************************************************************************* //

@@ -25,8 +25,7 @@ License
 
 #include "mag.H"
 #include "volFields.H"
-#include "dictionary.H"
-#include "mag.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -35,6 +34,7 @@ namespace Foam
 namespace functionObjects
 {
     defineTypeNameAndDebug(mag, 0);
+    addToRunTimeSelectionTable(functionObject, mag, dictionary);
 }
 }
 
@@ -44,18 +44,23 @@ namespace functionObjects
 Foam::functionObjects::mag::mag
 (
     const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
+    const Time& runTime,
+    const dictionary& dict
 )
 :
-    name_(name),
-    obr_(obr),
+    functionObject(name),
+    obr_
+    (
+        runTime.lookupObject<objectRegistry>
+        (
+            dict.lookupOrDefault("region", polyMesh::defaultRegion)
+        )
+    ),
     fieldName_("undefined-fieldName"),
     resultName_(word::null),
     log_(true)
 {
-    if (!isA<fvMesh>(obr))
+    if (!isA<fvMesh>(obr_))
     {
         FatalErrorInFunction
             << "objectRegistry is not an fvMesh" << exit(FatalError);
@@ -73,7 +78,7 @@ Foam::functionObjects::mag::~mag()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::functionObjects::mag::read(const dictionary& dict)
+bool Foam::functionObjects::mag::read(const dictionary& dict)
 {
     dict.lookup("fieldName") >> fieldName_;
     dict.lookup("resultName") >> resultName_;
@@ -82,10 +87,12 @@ void Foam::functionObjects::mag::read(const dictionary& dict)
     {
         resultName_ = "mag(" + fieldName_ + ")";
     }
+
+    return true;
 }
 
 
-void Foam::functionObjects::mag::execute()
+bool Foam::functionObjects::mag::execute(const bool postProcess)
 {
     bool processed = false;
 
@@ -100,31 +107,25 @@ void Foam::functionObjects::mag::execute()
         WarningInFunction
             << "Unprocessed field " << fieldName_ << endl;
     }
+
+    return true;
 }
 
 
-void Foam::functionObjects::mag::end()
-{
-    execute();
-}
-
-
-void Foam::functionObjects::mag::timeSet()
-{}
-
-
-void Foam::functionObjects::mag::write()
+bool Foam::functionObjects::mag::write(const bool postProcess)
 {
     if (obr_.foundObject<regIOobject>(resultName_))
     {
         const regIOobject& field =
             obr_.lookupObject<regIOobject>(resultName_);
 
-        Info<< type() << " " << name_ << " output:" << nl
+        Info<< type() << " " << name() << " output:" << nl
             << "    writing field " << field.name() << nl << endl;
 
         field.write();
     }
+
+    return true;
 }
 
 

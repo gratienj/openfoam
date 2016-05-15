@@ -31,12 +31,20 @@ License
 #include "volPointInterpolation.H"
 #include "PatchTools.H"
 #include "mapPolyMesh.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
     defineTypeNameAndDebug(sampledSurfaces, 0);
+
+    addToRunTimeSelectionTable
+    (
+        functionObject,
+        sampledSurfaces,
+        dictionary
+    );
 }
 
 bool Foam::sampledSurfaces::verbose_ = false;
@@ -88,14 +96,53 @@ void Foam::sampledSurfaces::writeGeometry() const
 Foam::sampledSurfaces::sampledSurfaces
 (
     const word& name,
+    const Time& t,
+    const dictionary& dict
+)
+:
+    functionObject(name),
+    PtrList<sampledSurface>(),
+    mesh_
+    (
+        refCast<const fvMesh>
+        (
+            t.lookupObject<objectRegistry>
+            (
+                dict.lookupOrDefault("region", polyMesh::defaultRegion)
+            )
+        )
+    ),
+    loadFromFiles_(false),
+    outputPath_(fileName::null),
+    fieldSelection_(),
+    interpolationScheme_(word::null),
+    mergeList_(),
+    formatter_(NULL)
+{
+    if (Pstream::parRun())
+    {
+        outputPath_ = mesh_.time().path()/".."/"postProcessing"/name;
+    }
+    else
+    {
+        outputPath_ = mesh_.time().path()/"postProcessing"/name;
+    }
+
+    read(dict);
+}
+
+
+Foam::sampledSurfaces::sampledSurfaces
+(
+    const word& name,
     const objectRegistry& obr,
     const dictionary& dict,
     const bool loadFromFiles
 )
 :
-    functionObjectState(obr, name),
+    functionObject(name),
     PtrList<sampledSurface>(),
-    obr_(obr),
+    mesh_(refCast<const fvMesh>(obr)),
     loadFromFiles_(loadFromFiles),
     outputPath_(fileName::null),
     fieldSelection_(),
@@ -111,11 +158,11 @@ Foam::sampledSurfaces::sampledSurfaces
 
     if (Pstream::parRun())
     {
-        outputPath_ = obr_.time().path()/".."/"postProcessing"/name_;
+        outputPath_ = mesh_.time().path()/".."/"postProcessing"/name;
     }
     else
     {
-        outputPath_ = obr_.time().path()/"postProcessing"/name_;
+        outputPath_ = mesh_.time().path()/"postProcessing"/name;
     }
 
     read(dict);
@@ -136,19 +183,13 @@ void Foam::sampledSurfaces::verbose(const bool verbosity)
 }
 
 
-void Foam::sampledSurfaces::execute()
-{}
+bool Foam::sampledSurfaces::execute(const bool postProcess)
+{
+    return true;
+}
 
 
-void Foam::sampledSurfaces::end()
-{}
-
-
-void Foam::sampledSurfaces::timeSet()
-{}
-
-
-void Foam::sampledSurfaces::write()
+bool Foam::sampledSurfaces::write(const bool postProcess)
 {
     if (size())
     {
@@ -178,10 +219,12 @@ void Foam::sampledSurfaces::write()
         sampleAndWrite<surfaceSymmTensorField>(objects);
         sampleAndWrite<surfaceTensorField>(objects);
     }
+
+    return true;
 }
 
 
-void Foam::sampledSurfaces::read(const dictionary& dict)
+bool Foam::sampledSurfaces::read(const dictionary& dict)
 {
     bool surfacesFound = dict.found("surfaces");
 
@@ -239,6 +282,8 @@ void Foam::sampledSurfaces::read(const dictionary& dict)
         }
         Pout<< ")" << endl;
     }
+
+    return true;
 }
 
 

@@ -25,7 +25,7 @@ License
 
 #include "pressureTools.H"
 #include "volFields.H"
-#include "dictionary.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -34,6 +34,7 @@ namespace Foam
 namespace functionObjects
 {
     defineTypeNameAndDebug(pressureTools, 0);
+    addToRunTimeSelectionTable(functionObject, pressureTools, dictionary);
 }
 }
 
@@ -196,13 +197,18 @@ Foam::functionObjects::pressureTools::convertToCoeff
 Foam::functionObjects::pressureTools::pressureTools
 (
     const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
+    const Time& runTime,
+    const dictionary& dict
 )
 :
-    name_(name),
-    obr_(obr),
+    functionObject(name),
+    obr_
+    (
+        runTime.lookupObject<objectRegistry>
+        (
+            dict.lookupOrDefault("region", polyMesh::defaultRegion)
+        )
+    ),
     pName_("p"),
     UName_("U"),
     rhoName_("rho"),
@@ -215,7 +221,7 @@ Foam::functionObjects::pressureTools::pressureTools
     UInf_(Zero),
     rhoInf_(0.0)
 {
-    if (!isA<fvMesh>(obr))
+    if (!isA<fvMesh>(obr_))
     {
         FatalErrorInFunction
             << "objectRegistry is not an fvMesh" << exit(FatalError);
@@ -261,7 +267,7 @@ Foam::functionObjects::pressureTools::~pressureTools()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::functionObjects::pressureTools::read(const dictionary& dict)
+bool Foam::functionObjects::pressureTools::read(const dictionary& dict)
 {
     dict.readIfPresent("pName", pName_);
     dict.readIfPresent("UName", UName_);
@@ -290,16 +296,18 @@ void Foam::functionObjects::pressureTools::read(const dictionary& dict)
         if (mag(zeroCheck) < ROOTVSMALL)
         {
             WarningInFunction
-                << type() << " " << name_ << ": "
+                << type() << " " << name() << ": "
                 << "Coefficient calculation requested, but reference "
                 << "pressure level is zero.  Please check the supplied "
                 << "values of pInf, UInf and rhoInf" << endl;
         }
     }
+
+    return true;
 }
 
 
-void Foam::functionObjects::pressureTools::execute()
+bool Foam::functionObjects::pressureTools::execute(const bool postProcess)
 {
     const volScalarField& p = obr_.lookupObject<volScalarField>(pName_);
 
@@ -309,29 +317,23 @@ void Foam::functionObjects::pressureTools::execute()
     );
 
     pResult == convertToCoeff(rhoScale(p)*p + pDyn(p) + pRef());
+
+    return true;
 }
 
 
-void Foam::functionObjects::pressureTools::end()
-{
-    execute();
-}
-
-
-void Foam::functionObjects::pressureTools::timeSet()
-{}
-
-
-void Foam::functionObjects::pressureTools::write()
+bool Foam::functionObjects::pressureTools::write(const bool postProcess)
 {
     const volScalarField& pResult =
         obr_.lookupObject<volScalarField>(pName());
 
-    Info<< type() << " " << name_ << " output:" << nl
+    Info<< type() << " " << name() << " output:" << nl
         << "    writing field " << pResult.name() << nl
         << endl;
 
     pResult.write();
+
+    return true;
 }
 
 

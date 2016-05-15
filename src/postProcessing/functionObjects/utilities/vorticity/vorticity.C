@@ -25,8 +25,8 @@ License
 
 #include "vorticity.H"
 #include "volFields.H"
-#include "dictionary.H"
 #include "fvcCurl.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -35,6 +35,13 @@ namespace Foam
 namespace functionObjects
 {
     defineTypeNameAndDebug(vorticity, 0);
+
+    addToRunTimeSelectionTable
+    (
+        functionObject,
+        vorticity,
+        dictionary
+    );
 }
 }
 
@@ -44,18 +51,23 @@ namespace functionObjects
 Foam::functionObjects::vorticity::vorticity
 (
     const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
+    const Time& runTime,
+    const dictionary& dict
 )
 :
-    name_(name),
-    obr_(obr),
+    functionObject(name),
+    obr_
+    (
+        runTime.lookupObject<objectRegistry>
+        (
+            dict.lookupOrDefault("region", polyMesh::defaultRegion)
+        )
+    ),
     UName_("U"),
     resultName_(name),
     log_(true)
 {
-    if (!isA<fvMesh>(obr))
+    if (!isA<fvMesh>(obr_))
     {
         FatalErrorInFunction
             << "objectRegistry is not an fvMesh" << exit(FatalError);
@@ -94,17 +106,19 @@ Foam::functionObjects::vorticity::~vorticity()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::functionObjects::vorticity::read(const dictionary& dict)
+bool Foam::functionObjects::vorticity::read(const dictionary& dict)
 {
     UName_ = dict.lookupOrDefault<word>("UName", "U");
     if (UName_ != "U")
     {
         outputName_ = typeName + "(" + UName_ + ")";
     }
+
+    return true;
 }
 
 
-void Foam::functionObjects::vorticity::execute()
+bool Foam::functionObjects::vorticity::execute(const bool postProcess)
 {
     const volVectorField& U = obr_.lookupObject<volVectorField>(UName_);
 
@@ -114,29 +128,23 @@ void Foam::functionObjects::vorticity::execute()
     );
 
     vorticity = fvc::curl(U);
+
+    return true;
 }
 
 
-void Foam::functionObjects::vorticity::end()
-{
-    execute();
-}
-
-
-void Foam::functionObjects::vorticity::timeSet()
-{}
-
-
-void Foam::functionObjects::vorticity::write()
+bool Foam::functionObjects::vorticity::write(const bool postProcess)
 {
     const volVectorField& vorticity =
         obr_.lookupObject<volVectorField>(outputName_);
 
-    Info<< type() << " " << name_ << " output:" << nl
+    Info<< type() << " " << name() << " output:" << nl
         << "    writing field " << vorticity.name() << nl
         << endl;
 
     vorticity.write();
+
+    return true;
 }
 
 

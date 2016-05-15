@@ -28,49 +28,9 @@ Group
     grpUtilitiesFunctionObjects
 
 Description
-    This function object provides information on the mode of operation of
-    blended convection schemes.
-
-    The weight of a blended scheme is given by a function of the blending
-    factor, f:
-
-        weight = f*scheme1 + (1 - f)*scheme2
-
-    The factor is a face-based quantity, which is converted to a cell-based
-    quantity by assigning the minimum blending factor for any cell face.
-
-    An indicator (volume) field, named <functionObjectName>:<fieldName>, is
-    generated that is set to (1 - f), i.e. values of:
-    - 0 represent scheme1 as active, and
-    - 1 represent scheme2 as active.
-    - intermediate values show the contribution to scheme2
-
-    Additional reporting is written to the standard output, providing
-    statistics as to the number of cells used by each scheme.
-
-    Example of function object specification to calculate the blending factor:
-    \verbatim
-    blendingFactor1
-    {
-        type        blendingFactor;
-        functionObjectLibs ("libutilityFunctionObjects.so");
-
-        ...
-
-        // Name of field
-        fieldName   U;
-    }
-    \endverbatim
-
-    \heading Function object usage
-    \table
-        Property     | Description             | Required    | Default value
-        type         | Type name: blendingFactor | yes       |
-        phiName      | Name of flux field      | no          | phi
-        fieldName    | Name of field to evaluate | yes       |
-        tolerance    | Tolerance for number of blended cells | no | 0.001
-        log          | Log to standard output  | no          | yes
-    \endtable
+    This function object calculates and outputs the blendingFactor as used by
+    the bended convection schemes.  The output is a volume field (cells) whose
+    value is calculated via the maximum blending factor for any cell face.
 
 SourceFiles
     blendingFactor.C
@@ -80,12 +40,8 @@ SourceFiles
 #ifndef functionObjects_blendingFactor_H
 #define functionObjects_blendingFactor_H
 
-#include "functionObjectState.H"
-#include "functionObjectFile.H"
+#include "functionObject.H"
 #include "volFieldsFwd.H"
-#include "surfaceFieldsFwd.H"
-#include "OFstream.H"
-#include "Switch.H"
 
 #include "convectionScheme.H"
 
@@ -96,9 +52,6 @@ namespace Foam
 
 // Forward declaration of classes
 class objectRegistry;
-class dictionary;
-class polyMesh;
-class mapPolyMesh;
 
 namespace functionObjects
 {
@@ -109,15 +62,11 @@ namespace functionObjects
 
 class blendingFactor
 :
-    public functionObjectState,
-    public functionObjectFile
+    public functionObject
 {
     // Private data
 
-        //- Name
-        const word name_;
-
-        //- Reference to the database
+        //- Reference to the objectRegistry
         const objectRegistry& obr_;
 
         //- Name of flux field, default is "phi"
@@ -173,14 +122,12 @@ public:
 
     // Constructors
 
-        //- Construct for given objectRegistry and dictionary.
-        //  Allow the possibility to load fields from files
+        //- Construct from Time and dictionary
         blendingFactor
         (
             const word& name,
-            const objectRegistry&,
-            const dictionary&,
-            const bool loadFromFiles = false
+            const Time& runTime,
+            const dictionary& dict
         );
 
 
@@ -190,34 +137,14 @@ public:
 
     // Member Functions
 
-        //- Return name of the set of blendingFactor
-        virtual const word& name() const
-        {
-            return name_;
-        }
-
         //- Read the blendingFactor data
-        virtual void read(const dictionary&);
+        virtual bool read(const dictionary&);
 
-        //- Execute, currently does nothing
-        virtual void execute();
+        //- Calculate the blending-factor
+        virtual bool execute(const bool postProcess = false);
 
-        //- Execute at the final time-loop, currently does nothing
-        virtual void end();
-
-        //- Called when time was set at the end of the Time::operator++
-        virtual void timeSet();
-
-        //- Calculate the blendingFactor and write
-        virtual void write();
-
-        //- Update for changes of mesh
-        virtual void updateMesh(const mapPolyMesh&)
-        {}
-
-        //- Update for changes of mesh
-        virtual void movePoints(const polyMesh&)
-        {}
+        //- Write the blending-factor
+        virtual bool write(const bool postProcess = false);
 };
 
 

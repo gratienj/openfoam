@@ -76,6 +76,7 @@ SourceFiles
 #ifndef probes_H
 #define probes_H
 
+#include "functionObject.H"
 #include "HashPtrTable.H"
 #include "OFstream.H"
 #include "polyMesh.H"
@@ -91,6 +92,7 @@ namespace Foam
 {
 
 // Forward declaration of classes
+class Time;
 class objectRegistry;
 class dictionary;
 class fvMesh;
@@ -102,6 +104,7 @@ class mapPolyMesh;
 
 class probes
 :
+    public functionObject,
     public pointField
 {
 protected:
@@ -124,10 +127,6 @@ protected:
 
 
     // Private data
-
-        //- Name of this set of probes,
-        //  Also used as the name of the probes directory.
-        const word name_;
 
         //- Const reference to fvMesh
         const fvMesh& mesh_;
@@ -238,15 +237,22 @@ public:
 
     // Constructors
 
+        //- Construct from Time and dictionary
+        probes
+        (
+            const word& name,
+            const Time& time,
+            const dictionary& dict
+        );
+
         //- Construct for given objectRegistry and dictionary.
         //  Allow the possibility to load fields from files
         probes
         (
             const word& name,
-            const objectRegistry&,
-            const dictionary&,
-            const bool loadFromFiles = false,
-            const bool findElements = true
+            const objectRegistry& obr,
+            const dictionary& dict,
+            const bool loadFromFiles = false
         );
 
 
@@ -255,12 +261,6 @@ public:
 
 
     // Member Functions
-
-        //- Return name of the set of probes
-        virtual const word& name() const
-        {
-            return name_;
-        }
 
         //- Return names of fields to probe
         virtual const wordReList& fieldNames() const
@@ -286,20 +286,14 @@ public:
             return elementList_;
         }
 
+        //- Read the probes
+        virtual bool read(const dictionary&);
+
         //- Execute, currently does nothing
-        virtual void execute();
-
-        //- Execute at the final time-loop, currently does nothing
-        virtual void end();
-
-        //- Called when time was set at the end of the Time::operator++
-        virtual void timeSet();
+        virtual bool execute(const bool postProcess = false);
 
         //- Sample and write
-        virtual void write();
-
-        //- Read the probes
-        virtual void read(const dictionary&);
+        virtual bool write(const bool postProcess = false);
 
         //- Update for changes of mesh
         virtual void updateMesh(const mapPolyMesh&);

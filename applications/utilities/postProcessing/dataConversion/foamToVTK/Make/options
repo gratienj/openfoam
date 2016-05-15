@@ -7,8 +7,6 @@ EXE_INC = \
 
 EXE_LIBS = \
     -lfoamToVTK \
-    -lfiniteVolume \
     -ldynamicMesh \
     -llagrangian \
-    -lgenericPatchFields \
-    -lmeshTools
+    -lgenericPatchFields

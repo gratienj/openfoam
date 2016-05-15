@@ -29,12 +29,20 @@ License
 #include "Time.H"
 #include "IOmanip.H"
 #include "mapPolyMesh.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
     defineTypeNameAndDebug(probes, 0);
+
+    addToRunTimeSelectionTable
+    (
+        functionObject,
+        probes,
+        dictionary
+    );
 }
 
 
@@ -187,7 +195,7 @@ Foam::label Foam::probes::prepare()
 
 
         fileName probeDir;
-        fileName probeSubDir = name_;
+        fileName probeSubDir = name();
 
         if (mesh_.name() != polyMesh::defaultRegion)
         {
@@ -289,14 +297,42 @@ void Foam::probes::readDict(const dictionary& dict)
 Foam::probes::probes
 (
     const word& name,
+    const Time& t,
+    const dictionary& dict
+)
+:
+    functionObject(name),
+    pointField(0),
+    mesh_
+    (
+        refCast<const fvMesh>
+        (
+            t.lookupObject<objectRegistry>
+            (
+                dict.lookupOrDefault("region", polyMesh::defaultRegion)
+            )
+        )
+    ),
+    loadFromFiles_(false),
+    fieldSelection_(),
+    fixedLocations_(true),
+    interpolationScheme_("cell")
+{
+    read(dict);
+}
+
+
+Foam::probes::probes
+(
+    const word& name,
     const objectRegistry& obr,
     const dictionary& dict,
     const bool loadFromFiles,
     const bool doFindElements
 )
 :
+    functionObject(name),
     pointField(0),
-    name_(name),
     mesh_(refCast<const fvMesh>(obr)),
     loadFromFiles_(loadFromFiles),
     fieldSelection_(),
@@ -326,40 +362,10 @@ Foam::probes::~probes()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::probes::execute()
-{}
-
-
-void Foam::probes::end()
-{}
-
-
-void Foam::probes::timeSet()
-{}
-
-
-void Foam::probes::write()
+bool Foam::probes::read(const dictionary& dict)
 {
-    if (size() && prepare())
-    {
-        sampleAndWrite(scalarFields_);
-        sampleAndWrite(vectorFields_);
-        sampleAndWrite(sphericalTensorFields_);
-        sampleAndWrite(symmTensorFields_);
-        sampleAndWrite(tensorFields_);
-
-        sampleAndWriteSurfaceFields(surfaceScalarFields_);
-        sampleAndWriteSurfaceFields(surfaceVectorFields_);
-        sampleAndWriteSurfaceFields(surfaceSphericalTensorFields_);
-        sampleAndWriteSurfaceFields(surfaceSymmTensorFields_);
-        sampleAndWriteSurfaceFields(surfaceTensorFields_);
-    }
-}
-
-
-void Foam::probes::read(const dictionary& dict)
-{
-    readDict(dict);
+    dict.lookup("probeLocations") >> *this;
+    dict.lookup("fields") >> fieldSelection_;
 
     dict.readIfPresent("fixedLocations", fixedLocations_);
     if (dict.readIfPresent("interpolationScheme", interpolationScheme_))
@@ -376,8 +382,36 @@ void Foam::probes::read(const dictionary& dict)
     // Initialise cells to sample from supplied locations
     findElements(mesh_);
 
-    // Open the probe streams
     prepare();
+
+    return true;
+}
+
+
+bool Foam::probes::execute(const bool postProcess)
+{
+    return true;
+}
+
+
+bool Foam::probes::write(const bool postProcess)
+{
+    if (size() && prepare())
+    {
+        sampleAndWrite(scalarFields_);
+        sampleAndWrite(vectorFields_);
+        sampleAndWrite(sphericalTensorFields_);
+        sampleAndWrite(symmTensorFields_);
+        sampleAndWrite(tensorFields_);
+
+        sampleAndWriteSurfaceFields(surfaceScalarFields_);
+        sampleAndWriteSurfaceFields(surfaceVectorFields_);
+        sampleAndWriteSurfaceFields(surfaceSphericalTensorFields_);
+        sampleAndWriteSurfaceFields(surfaceSymmTensorFields_);
+        sampleAndWriteSurfaceFields(surfaceTensorFields_);
+    }
+
+    return true;
 }
 
 

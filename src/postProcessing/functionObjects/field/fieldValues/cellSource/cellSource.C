@@ -38,6 +38,7 @@ namespace fieldValues
 {
     defineTypeNameAndDebug(cellSource, 0);
     addToRunTimeSelectionTable(fieldValue, cellSource, dictionary);
+    addToRunTimeSelectionTable(functionObject, cellSource, dictionary);
 }
 }
 }
@@ -147,15 +148,14 @@ void Foam::functionObjects::fieldValues::cellSource::initialise
     if (nCells_ == 0)
     {
         FatalErrorInFunction
-            << type() << " " << name_ << ": "
+            << type() << " " << name() << ": "
             << sourceTypeNames_[source_] << "(" << sourceName_ << "):" << nl
             << "    Source has no cells" << exit(FatalError);
     }
 
     volume_ = volume();
 
-    if (log_) Info
-        << type() << " " << name_ << ":"
+    Info<< type() << " " << name() << ":"
         << sourceTypeNames_[source_] << "(" << sourceName_ << "):" << nl
         << "    total cells  = " << nCells_ << nl
         << "    total volume = " << volume_
@@ -203,12 +203,11 @@ void Foam::functionObjects::fieldValues::cellSource::writeFileHeader
 Foam::functionObjects::fieldValues::cellSource::cellSource
 (
     const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
+    const Time& runTime,
+    const dictionary& dict
 )
 :
-    fieldValue(name, obr, dict, typeName, loadFromFiles),
+    fieldValue(name, runTime, dict, typeName),
     source_(sourceTypeNames_.read(dict.lookup("source"))),
     operation_(operationTypeNames_.read(dict.lookup("operation"))),
     nCells_(0),
@@ -216,7 +215,32 @@ Foam::functionObjects::fieldValues::cellSource::cellSource
     weightFieldName_("none"),
     writeVolume_(dict.lookupOrDefault("writeVolume", false))
 {
-    if (!isA<fvMesh>(obr))
+    if (!isA<fvMesh>(obr_))
+    {
+        FatalErrorInFunction
+            << "objectRegistry is not an fvMesh" << exit(FatalError);
+    }
+
+    read(dict);
+}
+
+
+Foam::functionObjects::fieldValues::cellSource::cellSource
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict
+)
+:
+    fieldValue(name, obr, dict, typeName),
+    source_(sourceTypeNames_.read(dict.lookup("source"))),
+    operation_(operationTypeNames_.read(dict.lookup("operation"))),
+    nCells_(0),
+    cellId_(),
+    weightFieldName_("none"),
+    writeVolume_(dict.lookupOrDefault("writeVolume", false))
+{
+    if (!isA<fvMesh>(obr_))
     {
         FatalErrorInFunction
             << "objectRegistry is not an fvMesh" << exit(FatalError);
@@ -234,7 +258,7 @@ Foam::functionObjects::fieldValues::cellSource::~cellSource()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::functionObjects::fieldValues::cellSource::read
+bool Foam::functionObjects::fieldValues::cellSource::read
 (
     const dictionary& dict
 )
@@ -243,10 +267,15 @@ void Foam::functionObjects::fieldValues::cellSource::read
 
     // No additional info to read
     initialise(dict);
+
+    return true;
 }
 
 
-void Foam::functionObjects::fieldValues::cellSource::write()
+bool Foam::functionObjects::fieldValues::cellSource::write
+(
+    const bool postProcess
+)
 {
     fieldValue::write();
 
@@ -291,6 +320,8 @@ void Foam::functionObjects::fieldValues::cellSource::write()
     }
 
     if (log_) Info<< endl;
+
+    return true;
 }
 
 

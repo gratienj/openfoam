@@ -24,14 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "forceCoeffs.H"
-#include "dictionary.H"
-#include "Time.H"
-#include "fvMesh.H"
-#include "Pstream.H"
-#include "IOmanip.H"
-#include "fvMesh.H"
-#include "dimensionedTypes.H"
-#include "volFields.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -40,6 +33,7 @@ namespace Foam
 namespace functionObjects
 {
     defineTypeNameAndDebug(forceCoeffs, 0);
+    addToRunTimeSelectionTable(functionObject, forceCoeffs, dictionary);
 }
 }
 
@@ -200,13 +194,11 @@ void Foam::forceCoeffs::writeBinData
 Foam::functionObjects::forceCoeffs::forceCoeffs
 (
     const word& name,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles,
-    const bool readFields
+    const Time& runTime,
+    const dictionary& dict
 )
 :
-    forces(name, obr, dict, loadFromFiles, false),
+    forces(name, runTime, dict),
     liftDir_(Zero),
     dragDir_(Zero),
     pitchAxis_(Zero),
@@ -218,12 +210,6 @@ Foam::functionObjects::forceCoeffs::forceCoeffs
     CdBinFilePtr_(),
     ClBinFilePtr_()
 {
-    if (!isA<fvMesh>(obr))
-    {
-        FatalErrorInFunction
-            << "objectRegistry is not an fvMesh" << exit(FatalError);
-    }
-
     read(dict);
 }
 
@@ -236,7 +222,7 @@ Foam::functionObjects::forceCoeffs::~forceCoeffs()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::functionObjects::forceCoeffs::read(const dictionary& dict)
+bool Foam::functionObjects::forceCoeffs::read(const dictionary& dict)
 {
     forces::read(dict);
 
@@ -251,31 +237,24 @@ void Foam::functionObjects::forceCoeffs::read(const dictionary& dict)
     // Reference length and area scales
     dict.lookup("lRef") >> lRef_;
     dict.lookup("Aref") >> Aref_;
+
+    return true;
 }
 
-    forces::read(dict);
 
-void Foam::functionObjects::forceCoeffs::execute()
-{}
-
-    // Free stream velocity magnitude
-    dict.lookup("magUInf") >> magUInf_;
-
-void Foam::functionObjects::forceCoeffs::end()
-{}
+bool Foam::functionObjects::forceCoeffs::execute(const bool postProcess)
+{
+    return true;
+}
 
 
-void Foam::functionObjects::forceCoeffs::timeSet()
-{}
-
-
-void Foam::functionObjects::forceCoeffs::write()
+bool Foam::functionObjects::forceCoeffs::write(const bool postProcess)
 {
     forces::calcForcesMoment();
 
     if (Pstream::master())
     {
-        functionObjectFiles::write();
+        writeFiles::write();
 
     // Calculate coefficients
     scalar CmTot = 0;
@@ -315,6 +294,12 @@ void Foam::functionObjects::forceCoeffs::write()
             << tab << Cm << tab  << Cd
             << tab << Cl << tab << Clf << tab << Clr << endl;
 
+        if (log_) Info<< type() << " " << name() << " output:" << nl
+            << "    Cm    = " << Cm << nl
+            << "    Cd    = " << Cd << nl
+            << "    Cl    = " << Cl << nl
+            << "    Cl(f) = " << Clf << nl
+            << "    Cl(r) = " << Clr << endl;
 
         if (nBin_ > 1)
         {
@@ -401,6 +386,8 @@ void Foam::forceCoeffs::write()
         forceCoeff.write();
         momentCoeff.write();
     }
+
+    return true;
 }
 
 
