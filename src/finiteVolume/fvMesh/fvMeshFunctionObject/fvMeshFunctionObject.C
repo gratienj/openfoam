@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,9 +23,9 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "grad.H"
-#include "volFields.H"
-#include "addToRunTimeSelectionTable.H"
+#include "fvMeshFunctionObject.H"
+#include "Time.H"
+#include "fvMesh.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -33,81 +33,29 @@ namespace Foam
 {
 namespace functionObjects
 {
-    defineTypeNameAndDebug(grad, 0);
-    addToRunTimeSelectionTable(functionObject, grad, dictionary);
+    defineTypeNameAndDebug(fvMeshFunctionObject, 0);
 }
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::functionObjects::grad::grad
+Foam::functionObjects::fvMeshFunctionObject::fvMeshFunctionObject
 (
     const word& name,
     const Time& runTime,
     const dictionary& dict
 )
 :
-    fvMeshFunctionObject(name, runTime, dict)
-{
-    read(dict);
-}
+    regionFunctionObject(name, runTime, dict),
+    mesh_(refCast<const fvMesh>(obr_))
+{}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::functionObjects::grad::~grad()
+Foam::functionObjects::fvMeshFunctionObject::~fvMeshFunctionObject()
 {}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-bool Foam::functionObjects::grad::read(const dictionary& dict)
-{
-    dict.lookup("fieldName") >> fieldName_;
-    dict.lookup("resultName") >> resultName_;
-
-    if (resultName_ == "none")
-    {
-        resultName_ = "fvc::grad(" + fieldName_ + ")";
-    }
-
-    return true;
-}
-
-
-bool Foam::functionObjects::grad::execute(const bool postProcess)
-{
-    bool processed = false;
-
-    calcGrad<scalar>(fieldName_, resultName_, processed);
-    calcGrad<vector>(fieldName_, resultName_, processed);
-
-    if (!processed)
-    {
-        WarningInFunction
-            << "Unprocessed field " << fieldName_ << endl;
-    }
-
-    return true;
-}
-
-
-bool Foam::functionObjects::grad::write(const bool postProcess)
-{
-    if (obr_.foundObject<regIOobject>(resultName_))
-    {
-        const regIOobject& field =
-            obr_.lookupObject<regIOobject>(resultName_);
-
-        Info<< type() << " " << name() << " output:" << nl
-            << "    writing field " << field.name() << nl << endl;
-
-        field.write();
-    }
-
-    return true;
-}
 
 
 // ************************************************************************* //

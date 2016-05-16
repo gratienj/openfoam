@@ -61,23 +61,8 @@ Foam::functionObjects::blendingFactor::blendingFactor
     const dictionary& dict
 )
 :
-    functionObject(name),
-    obr_
-    (
-        runTime.lookupObject<objectRegistry>
-        (
-            dict.lookupOrDefault("region", polyMesh::defaultRegion)
-        )
-    ),
-    phiName_("unknown-phiName"),
-    fieldName_("unknown-fieldName")
+    fvMeshFunctionObject(name, runTime, dict)
 {
-    if (!isA<fvMesh>(obr_))
-    {
-        FatalErrorInFunction
-            << "objectRegistry is not an fvMesh" << exit(FatalError);
-    }
-
     read(dict);
 }
 

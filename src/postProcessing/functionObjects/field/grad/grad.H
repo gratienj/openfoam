@@ -60,7 +60,7 @@ SourceFiles
 #ifndef functionObjects_grad_H
 #define functionObjects_grad_H
 
-#include "functionObject.H"
+#include "fvMeshFunctionObject.H"
 #include "volFieldsFwd.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -69,7 +69,6 @@ namespace Foam
 {
 
 // Forward declaration of classes
-class objectRegistry;
 class dimensionSet;
 
 namespace functionObjects
@@ -81,12 +80,9 @@ namespace functionObjects
 
 class grad
 :
-    public functionObject
+    public fvMeshFunctionObject
 {
     // Private data
-
-        //- Reference to the objectRegistry
-        const objectRegistry& obr_;
 
         //- Name of field to process
         word fieldName_;

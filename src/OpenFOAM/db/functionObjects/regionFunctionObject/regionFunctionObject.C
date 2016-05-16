@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,30 +23,59 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "fvMesh.H"
-#include "fvcDiv.H"
+#include "regionFunctionObject.H"
+#include "Time.H"
+#include "polyMesh.H"
 
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-template<class FieldType>
-void Foam::functionObjects::div::calcDiv
-(
-    const word& fieldName,
-    const word& resultName,
-    bool& processed
-)
+namespace Foam
 {
-    if (mesh_.foundObject<FieldType>(fieldName))
-    {
-        const FieldType& vf = mesh_.lookupObject<FieldType>(fieldName);
-
-        volScalarField& field = divField(resultName, vf.dimensions());
-
-        field = fvc::div(vf);
-
-        processed = true;
-    }
+namespace functionObjects
+{
+    defineTypeNameAndDebug(regionFunctionObject, 0);
 }
+}
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::functionObjects::regionFunctionObject::regionFunctionObject
+(
+    const word& name,
+    const Time& runTime,
+    const dictionary& dict
+)
+:
+    functionObject(name),
+    time_(runTime),
+    obr_
+    (
+        runTime.lookupObject<objectRegistry>
+        (
+            dict.lookupOrDefault("region", polyMesh::defaultRegion)
+        )
+    )
+{}
+
+
+Foam::functionObjects::regionFunctionObject::regionFunctionObject
+(
+    const word& name,
+    const objectRegistry& obr,
+    const dictionary& dict
+)
+:
+    functionObject(name),
+    time_(obr.time()),
+    obr_(obr)
+{}
+
+
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+Foam::functionObjects::regionFunctionObject::~regionFunctionObject()
+{}
 
 
 // ************************************************************************* //
