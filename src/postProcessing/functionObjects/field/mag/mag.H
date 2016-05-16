@@ -32,25 +32,9 @@ Description
     can be applied to any volume or surface fieldsm and the output is a
     volume or surface scalar field.
 
-    Example of function object specification:
-    \verbatim
-    calcMag1
-    {
-        type        calcMag;
-        functionObjectLibs ("libFVFunctionObjects.so");
-        ...
-        fieldName   U;
-    }
-    \endverbatim
+SeeAlso
+    Foam::functionObjects::fvMeshFunctionObject
 
-    \heading Function object usage
-    \table
-        Property | Description                | Required  | Default value
-        type     | type name: calcMag         | yes       |
-        fieldName | Name of field to process  | yes       |
-        resultName | Name of magnitude field  | no        | mag(fieldName)
-        log      | Log to standard output     | no        | yes
-    \endtable
 SourceFiles
     mag.C
 

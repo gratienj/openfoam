@@ -52,15 +52,25 @@ Foam::volScalarField& Foam::functionObjects::blendingFactor::factor
         refCast<const fv::gaussConvectionScheme<Type>>(cs);
 
 
-    const surfaceInterpolationScheme<Type>& interpScheme = gcs.interpScheme();
-
-    if (!isA<blendedSchemeBase<Type>>(interpScheme))
+    if (!mesh_.foundObject<volScalarField>(fieldName))
     {
-        WarningInFunction
-            << interpScheme.type() << " is not a blended scheme"
-            << ". Not calculating " << resultName_ << endl;
+        volScalarField* factorPtr =
+            new volScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    mesh_.time().timeName(),
+                    mesh_,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh_,
+                dimensionedScalar("0", dimless, 0.0),
+                zeroGradientFvPatchScalarField::typeName
+            );
 
-        return;
+        obr_.store(factorPtr);
     }
 
     // Retrieve the face-based blending factor
@@ -73,7 +83,7 @@ Foam::volScalarField& Foam::functionObjects::blendingFactor::factor
     volScalarField& indicator =
         const_cast<volScalarField&>
         (
-            obr_.lookupObject<volScalarField>(resultName_)
+            mesh_.lookupObject<volScalarField>(fieldName)
         );
     indicator = 1 - fvc::cellReduce(factorf, minEqOp<scalar>(), GREAT);
     indicator.correctBoundaryConditions();
@@ -125,23 +135,21 @@ void Foam::functionObjects::blendingFactor::calc()
 {
     typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
 
-    if (!obr_.foundObject<fieldType>(fieldName_))
+    if (!mesh_.foundObject<fieldType>(fieldName_))
     {
         return;
     }
 
-    const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
-    const fieldType& field = mesh.lookupObject<fieldType>(fieldName_);
+    const fieldType& field = mesh_.lookupObject<fieldType>(fieldName_);
 
     const word divScheme("div(" + phiName_ + ',' + fieldName_ + ')');
-    ITstream& its = mesh.divScheme(divScheme);
+    ITstream& its = mesh_.divScheme(divScheme);
 
     const surfaceScalarField& phi =
-        mesh.lookupObject<surfaceScalarField>(phiName_);
+        mesh_.lookupObject<surfaceScalarField>(phiName_);
 
-    tmp<fv::convectionScheme<Type>> tcs =
-        fv::convectionScheme<Type>::New(mesh, phi, its);
+    tmp<fv::convectionScheme<Type>> cs =
+        fv::convectionScheme<Type>::New(mesh_, phi, its);
 
     const fv::convectionScheme<Type>& cs = tcs();
 

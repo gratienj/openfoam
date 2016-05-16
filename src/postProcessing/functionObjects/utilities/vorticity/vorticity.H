@@ -52,6 +52,9 @@ Description
     \endtable
 
 
+SeeAlso
+    Foam::functionObjects::fvMeshFunctionObject
+
 SourceFiles
     vorticity.C
 
@@ -60,7 +63,7 @@ SourceFiles
 #ifndef functionObjects_vorticity_H
 #define functionObjects_vorticity_H
 
-#include "functionObject.H"
+#include "fvMeshFunctionObject.H"
 #include "volFieldsFwd.H"
 #include "Switch.H"
 
@@ -68,10 +71,6 @@ SourceFiles
 
 namespace Foam
 {
-
-// Forward declaration of classes
-class objectRegistry;
-
 namespace functionObjects
 {
 
@@ -81,12 +80,9 @@ namespace functionObjects
 
 class vorticity
 :
-    public functionObject
+    public fvMeshFunctionObject
 {
     // Private data
-
-        //- Reference to the database
-        const objectRegistry& obr_;
 
         //- Name of velocity field, default is "U"
         word UName_;

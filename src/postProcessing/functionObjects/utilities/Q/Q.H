@@ -35,29 +35,8 @@ Description
         Q = 0.5(sqr(tr(\nabla U)) - tr(((\nabla U) \cdot (\nabla U))))
     \f]
 
-    where
-    \vartable
-        U           | velocity [m/s]
-    \endvartable
-
-    Example of function object specification to calculate Q:
-    \verbatim
-    Q1
-    {
-        type        Q;
-        functionObjectLibs ("libutilityFunctionObjects.so");
-        ...
-    }
-    \endverbatim
-
-    \heading Function object usage
-    \table
-        Property     | Description             | Required    | Default value
-        type         | type name: Q            | yes         |
-        UName        | Name of velocity field  | no          | U
-        resultName   | Name of Q field         | no          | <function name>
-        log          | Log to standard output  | no          | yes
-    \endtable
+SeeAlso
+    Foam::functionObjects::fvMeshFunctionObject
 
 SourceFiles
     Q.C
@@ -67,17 +46,13 @@ SourceFiles
 #ifndef functionObjects_Q_H
 #define functionObjects_Q_H
 
-#include "functionObject.H"
+#include "fvMeshFunctionObject.H"
 #include "volFieldsFwd.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-
-// Forward declaration of classes
-class objectRegistry;
-
 namespace functionObjects
 {
 
@@ -87,12 +62,9 @@ namespace functionObjects
 
 class Q
 :
-    public functionObject
+    public fvMeshFunctionObject
 {
     // Private data
-
-        //- Reference to the database
-        const objectRegistry& obr_;
 
         //- Name of velocity field, default is "U"
         word UName_;

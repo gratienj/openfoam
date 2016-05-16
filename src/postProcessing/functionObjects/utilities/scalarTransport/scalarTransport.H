@@ -40,45 +40,8 @@ Description
     - the diffusivity can be set manually using the DT entry, or retrieved
       from the turbulence model (if applicable)
 
-    Example of function object specification to solve a scalar transport
-    equation:
-    \verbatim
-    functions
-    {
-        scalar1                                     // <--- NOTE: SCALAR NAME
-        {
-            type            scalarTransport;
-            functionObjectLibs ("libutilityFunctionObjects.so");
-            resetOnStartUp  no;
-
-            autoSchemes     yes;
-
-            fvOptions
-            {
-                ...
-            }
-        }
-    }
-    \endverbatim
-
-    \heading Function object usage
-    \table
-        Property     | Description             | Required    | Default value
-        type         | Type name: scalarTransport | yes      |
-        phiName      | Name of flux field      | no          | phi
-        UName        | Name of velocity field  | no          | U
-        rhoName      | Name of density field   | no          | rho
-        nCorr        | Number of correctors    | no          | 0
-        DT           | Diffision coefficient   | no          | auto generated
-        resetOnStartUp | Reset source to zero on start-up | no | no
-        autoSchemes  | Use U schemes to evolve scalar | no   | yes
-        fvOptions    | List of scalar sources  | yes         |
-        log          | Log to standard output  | no          | yes
-    \endtable
-
 SeeAlso
-    fvOption.H
-    fvOptionList.H
+    Foam::functionObjects::fvMeshFunctionObject
 
 SourceFiles
     scalarTransport.C
@@ -89,7 +52,7 @@ SourceFiles
 #ifndef functionObjects_scalarTransport_H
 #define functionObjects_scalarTransport_H
 
-#include "functionObject.H"
+#include "fvMeshFunctionObject.H"
 #include "volFields.H"
 #include "surfaceFieldsFwd.H"
 #include "fvOptionList.H"
@@ -98,10 +61,6 @@ SourceFiles
 
 namespace Foam
 {
-
-// Forward declaration of classes
-class objectRegistry;
-
 namespace functionObjects
 {
 
@@ -111,12 +70,9 @@ namespace functionObjects
 
 class scalarTransport
 :
-    public functionObject
+    public fvMeshFunctionObject
 {
     // Private data
-
-        //- Reference to the mesh database
-        const fvMesh& mesh_;
 
         //- Name of flux field (optional)
         word phiName_;

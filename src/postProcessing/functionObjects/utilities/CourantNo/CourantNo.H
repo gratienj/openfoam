@@ -32,26 +32,8 @@ Description
     volScalarField.  The field is stored on the mesh database so that it can
     be retrieved and used for other applications.
 
-    Example of function object specification to calculate the Courant number:
-    \verbatim
-    CourantNo1
-    {
-        type        CourantNo;
-        functionObjectLibs ("libutilityFunctionObjects.so");
-        ...
-    }
-    \endverbatim
-
-    \heading Function object usage
-    \table
-        Property     | Description             | Required    | Default value
-        type         | Type name: CourantNo    | yes         |
-        rhoName      | Name of density field   | no          | rho
-        phiName      | Name of flux field      | no          | phi
-        resultName   | Name of Courant number field | no     | <function name>
-        log          | Log to standard output  | no          | yes
-    \endtable
-
+SeeAlso
+    Foam::functionObjects::fvMeshFunctionObject
 
 SourceFiles
     CourantNo.C
@@ -61,7 +43,7 @@ SourceFiles
 #ifndef functionObjects_CourantNo_H
 #define functionObjects_CourantNo_H
 
-#include "functionObject.H"
+#include "fvMeshFunctionObject.H"
 #include "volFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -77,12 +59,9 @@ namespace functionObjects
 
 class CourantNo
 :
-    public functionObject
+    public fvMeshFunctionObject
 {
     // Private data
-
-        //- Reference to the database
-        const objectRegistry& obr_;
 
         //- Name of flux field, default is "phi"
         word phiName_;

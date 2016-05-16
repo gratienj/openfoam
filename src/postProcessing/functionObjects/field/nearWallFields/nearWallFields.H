@@ -62,7 +62,7 @@ Description
     \endtable
 
 SeeAlso
-    Foam::functionObject
+    Foam::functionObjects::fvMeshFunctionObject
 
 SourceFiles
     nearWallFields.C
@@ -72,7 +72,7 @@ SourceFiles
 #ifndef functionObjects_nearWallFields_H
 #define functionObjects_nearWallFields_H
 
-#include "functionObject.H"
+#include "fvMeshFunctionObject.H"
 #include "volFields.H"
 #include "Tuple2.H"
 #include "interpolationCellPoint.H"
@@ -81,10 +81,6 @@ SourceFiles
 
 namespace Foam
 {
-
-// Forward declaration of classes
-class objectRegistry;
-
 namespace functionObjects
 {
 
@@ -94,14 +90,11 @@ namespace functionObjects
 
 class nearWallFields
 :
-    public functionObject
+    public fvMeshFunctionObject
 {
 protected:
 
-    // Protected data
-
-        //- Reference to the objectRegistry
-        const objectRegistry& obr_;
+    // Protected member data
 
         // Read from dictionary
 

@@ -139,8 +139,6 @@ Foam::tmp<Foam::volScalarField> Foam::functionObjects::pressureTools::pDyn
     const volScalarField& p
 ) const
 {
-    const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
     tmp<volScalarField> tpDyn
     (
         new volScalarField
@@ -148,12 +146,12 @@ Foam::tmp<Foam::volScalarField> Foam::functionObjects::pressureTools::pDyn
             IOobject
             (
                 "pDyn",
-                mesh.time().timeName(),
-                mesh,
+                mesh_.time().timeName(),
+                mesh_,
                 IOobject::NO_READ,
                 IOobject::NO_WRITE
             ),
-            mesh,
+            mesh_,
             dimensionedScalar("zero", dimPressure, 0.0)
         )
     );
@@ -201,14 +199,7 @@ Foam::functionObjects::pressureTools::pressureTools
     const dictionary& dict
 )
 :
-    functionObject(name),
-    obr_
-    (
-        runTime.lookupObject<objectRegistry>
-        (
-            dict.lookupOrDefault("region", polyMesh::defaultRegion)
-        )
-    ),
+    fvMeshFunctionObject(name, runTime, dict),
     pName_("p"),
     UName_("U"),
     rhoName_("rho"),
@@ -221,12 +212,6 @@ Foam::functionObjects::pressureTools::pressureTools
     UInf_(Zero),
     rhoInf_(0.0)
 {
-    if (!isA<fvMesh>(obr_))
-    {
-        FatalErrorInFunction
-            << "objectRegistry is not an fvMesh" << exit(FatalError);
-    }
-
     read(dict);
 
     dimensionSet pDims(dimPressure);
@@ -236,8 +221,6 @@ Foam::functionObjects::pressureTools::pressureTools
         pDims /= dimPressure;
     }
 
-    const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
     volScalarField* pPtr
     (
         new volScalarField
@@ -245,17 +228,17 @@ Foam::functionObjects::pressureTools::pressureTools
             IOobject
             (
                 pName(),
-                mesh.time().timeName(),
-                mesh,
+                mesh_.time().timeName(),
+                mesh_,
                 IOobject::NO_READ,
                 IOobject::NO_WRITE
             ),
-            mesh,
+            mesh_,
             dimensionedScalar("0", pDims, 0.0)
         )
     );
 
-    mesh.objectRegistry::store(pPtr);
+    mesh_.objectRegistry::store(pPtr);
 }
 
 

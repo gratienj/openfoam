@@ -61,13 +61,11 @@ void Foam::functionObjects::readFields::loadField
     }
     else
     {
-        const fvMesh& mesh = refCast<const fvMesh>(obr_);
-
         IOobject fieldHeader
         (
             fieldName,
-            mesh.time().timeName(),
-            mesh,
+            mesh_.time().timeName(),
+            mesh_,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
         );
@@ -78,11 +76,11 @@ void Foam::functionObjects::readFields::loadField
          && fieldHeader.headerClassName() == vfType::typeName
         )
         {
-            // Store field on mesh database
-            if (log_) Info<< "    Reading " << fieldName << endl;
-            vfType* vfPtr = new vfType(fieldHeader, mesh);
-            mesh.objectRegistry::store(vfPtr);
-            return true;
+            // store field locally
+            Info<< "    Reading " << fieldName << endl;
+            label sz = vflds.size();
+            vflds.setSize(sz+1);
+            vflds.set(sz, new vfType(fieldHeader, mesh_));
         }
         else if
         (
@@ -90,11 +88,11 @@ void Foam::functionObjects::readFields::loadField
          && fieldHeader.headerClassName() == sfType::typeName
         )
         {
-            // Store field on mesh database
-            if (log_) Info<< "    Reading " << fieldName << endl;
-            sfType* sfPtr = new sfType(fieldHeader, mesh);
-            mesh.objectRegistry::store(sfPtr);
-            return true;
+            // store field locally
+            Info<< "    Reading " << fieldName << endl;
+            label sz = sflds.size();
+            sflds.setSize(sz+1);
+            sflds.set(sz, new sfType(fieldHeader, mesh_));
         }
     }
 
