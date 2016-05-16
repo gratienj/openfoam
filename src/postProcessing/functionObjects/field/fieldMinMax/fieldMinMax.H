@@ -39,7 +39,7 @@ Description
     fieldMinMax1
     {
         type        fieldMinMax;
-        functionObjectLibs ("libfieldFunctionObjects.so");
+        libs ("libfieldFunctionObjects.so");
         ...
         writeToFile yes;
         log         yes;

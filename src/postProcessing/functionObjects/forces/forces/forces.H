@@ -53,7 +53,7 @@ Description
     forces1
     {
         type        forces;
-        functionObjectLibs ("libforces.so");
+        libs ("libforces.so");
         ...
         log         yes;
         writeFields yes;

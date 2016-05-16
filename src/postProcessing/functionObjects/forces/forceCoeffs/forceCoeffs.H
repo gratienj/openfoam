@@ -50,7 +50,7 @@ Description
     forceCoeffs1
     {
         type        forceCoeffs;
-        functionObjectLibs ("libforces.so");
+        libs ("libforces.so");
         ...
         log         yes;
         writeFields yes;

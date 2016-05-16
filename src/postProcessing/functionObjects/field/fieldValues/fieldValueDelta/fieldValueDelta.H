@@ -39,7 +39,7 @@ Description
     fieldValueDelta1
     {
         type            fieldValueDelta;
-        functionObjectLibs ("libfieldFunctionObjects.so");
+        libs ("libfieldFunctionObjects.so");
         operation       subtract;
 
         source1

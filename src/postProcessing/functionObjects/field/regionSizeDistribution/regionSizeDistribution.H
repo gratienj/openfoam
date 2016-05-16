@@ -64,7 +64,7 @@ Description
     regionSizeDistribution1
     {
         type            regionSizeDistribution;
-        functionObjectLibs ("libfieldFunctionObjects.so");
+        libs ("libfieldFunctionObjects.so");
         ...
         field           alpha;
         patches         (inlet);
