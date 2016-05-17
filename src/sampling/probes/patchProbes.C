@@ -111,9 +111,9 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
         );
 
 
-        forAll(probeLocations(), probeI)
+        forAll(probeLocations(), probei)
         {
-            const point sample = probeLocations()[probeI];
+            const point sample = probeLocations()[probei];
 
             scalar span = boundaryTree.bb().mag();
 
@@ -157,7 +157,7 @@ void Foam::patchProbes::findElements(const fvMesh& mesh)
                 sampleInfo.second().first() = magSqr(facePt-sample);
                 sampleInfo.second().second() = Pstream::myProcNo();
 
-                nearest[probeI]= sampleInfo;
+                nearest[probei]= sampleInfo;
             }
         }
     }
