@@ -128,8 +128,8 @@ class hexRef8
         label addInternalFace
         (
             polyTopoChange& meshMod,
-            const label meshFaceI,
-            const label meshPointI,
+            const label meshFacei,
+            const label meshPointi,
             const face& newFace,
             const label own,
             const label nei
@@ -155,17 +155,17 @@ class hexRef8
             const labelListList& cellAddedCells,
             const label celli,
             const label facei,
-            const label pointI
+            const label pointi
         ) const;
 
-        //- Get new owner and neighbour (in unspecified order) of pointI
+        //- Get new owner and neighbour (in unspecified order) of pointi
         //  on facei.
         void getFaceNeighbours
         (
             const labelListList& cellAnchorPoints,
             const labelListList& cellAddedCells,
             const label facei,
-            const label pointI,
+            const label pointi,
 
             label& own,
             label& nei
@@ -235,9 +235,9 @@ class hexRef8
             const label celli,
             const label facei,
             const bool faceOrder,
-            const label midPointI,
-            const label anchorPointI,
-            const label faceMidPointI,
+            const label midPointi,
+            const label anchorPointi,
+            const label faceMidPointi,
 
             Map<edge>& midPointToAnchors,
             Map<edge>& midPointToFaceMids,

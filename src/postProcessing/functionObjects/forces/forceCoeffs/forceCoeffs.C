@@ -125,22 +125,31 @@ void Foam::forceCoeffs::writeBinHeader
     writeHeader(os, "");
     writeCommented(os, "Time");
 
-    for (label j = 0; j < nBin_; j++)
-    {
-        word jn(Foam::name(j) + ':');
-        writeTabbed(os, jn + "total");
-        writeTabbed(os, jn + "pressure");
-        writeTabbed(os, jn + "viscous");
-
-        if (porosity_)
+        vectorField binPoints(nBin_);
+        writeCommented(file(i), "x co-ords  :");
+        forAll(binPoints, pointi)
         {
-            writeTabbed(os, jn + "porous");
+            binPoints[pointi] = (binMin_ + (pointi + 1)*binDx_)*binDir_;
+            file(i) << tab << binPoints[pointi].x();
+        }
+        file(i) << nl;
+
+        writeCommented(file(i), "y co-ords  :");
+        forAll(binPoints, pointi)
+        {
+            file(i) << tab << binPoints[pointi].y();
         }
     }
 
     os  << endl;
 }
 
+        writeCommented(file(i), "z co-ords  :");
+        forAll(binPoints, pointi)
+        {
+            file(i) << tab << binPoints[pointi].z();
+        }
+        file(i) << nl;
 
 void Foam::forceCoeffs::writeIntegratedData
 (

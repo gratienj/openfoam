@@ -119,28 +119,28 @@ void Foam::forces::writeBinHeader(const word& header, Ostream& os) const
     writeHeaderValue(os, "delta", binDx_);
     writeHeaderValue(os, "direction", binDir_);
 
-    vectorField binPoints(nBin_);
-    writeCommented(os, "x co-ords  :");
-    forAll(binPoints, pointI)
-    {
-        binPoints[pointI] = (binMin_ + (pointI + 1)*binDx_)*binDir_;
-        os  << tab << binPoints[pointI].x();
-    }
-    os  << nl;
+        vectorField binPoints(nBin_);
+        writeCommented(file(i), "x co-ords  :");
+        forAll(binPoints, pointi)
+        {
+            binPoints[pointi] = (binMin_ + (pointi + 1)*binDx_)*binDir_;
+            file(i) << tab << binPoints[pointi].x();
+        }
+        file(i) << nl;
 
-    writeCommented(os, "y co-ords  :");
-    forAll(binPoints, pointI)
-    {
-        os  << tab << binPoints[pointI].y();
-    }
-    os  << nl;
+        writeCommented(file(i), "y co-ords  :");
+        forAll(binPoints, pointi)
+        {
+            file(i) << tab << binPoints[pointi].y();
+        }
+        file(i) << nl;
 
-    writeCommented(os, "z co-ords  :");
-    forAll(binPoints, pointI)
-    {
-        os  << tab << binPoints[pointI].z();
-    }
-    os  << nl;
+        writeCommented(file(i), "z co-ords  :");
+        forAll(binPoints, pointi)
+        {
+            file(i) << tab << binPoints[pointi].z();
+        }
+        file(i) << nl;
 
     writeHeader(os, "");
     writeCommented(os, "Time");

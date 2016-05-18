@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
     {
         labelList pointIndex(nNodes);
 
-        label pointI = 0;
+        label pointi = 0;
 
         while (nodeStream.good())
         {
@@ -221,15 +221,15 @@ int main(int argc, char *argv[])
                 }
 
                 // Store point and node number.
-                points[pointI] = point(x, y, z);
-                nodeToPoint.insert(nodeI, pointI);
-                pointI++;
+                points[pointi] = point(x, y, z);
+                nodeToPoint.insert(nodeI, pointi);
+                pointi++;
             }
         }
-        if (pointI != nNodes)
+        if (pointi != nNodes)
         {
-            FatalIOErrorInFunction(nodeStream)
-                << "Only " << pointI << " nodes present instead of " << nNodes
+            FatalIOErrorIn(args.executable().c_str(), nodeStream)
+                << "Only " << pointi << " nodes present instead of " << nNodes
                 << " from header." << exit(FatalIOError);
         }
     }

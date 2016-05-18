@@ -532,9 +532,9 @@ void Foam::decompositionMethod::calcCellCells
 
     labelList globalNeighbour(mesh.nFaces()-mesh.nInternalFaces());
 
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        const polyPatch& pp = patches[patchI];
+        const polyPatch& pp = patches[patchi];
 
         if (pp.coupled() && (parallel || !isA<processorPolyPatch>(pp)))
         {
@@ -573,9 +573,9 @@ void Foam::decompositionMethod::calcCellCells
         nFacesPerCell[nei]++;
     }
 
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        const polyPatch& pp = patches[patchI];
+        const polyPatch& pp = patches[patchi];
 
         if (pp.coupled() && (parallel || !isA<processorPolyPatch>(pp)))
         {
@@ -631,9 +631,9 @@ void Foam::decompositionMethod::calcCellCells
     }
 
     // For boundary faces is offsetted coupled neighbour
-    forAll(patches, patchI)
+    forAll(patches, patchi)
     {
-        const polyPatch& pp = patches[patchI];
+        const polyPatch& pp = patches[patchi];
 
         if (pp.coupled() && (parallel || !isA<processorPolyPatch>(pp)))
         {

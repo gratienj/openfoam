@@ -1006,12 +1006,32 @@ int main(int argc, char *argv[])
             Info<< "Surface is self-intersecting at " << nInt
                 << " locations." << endl;
 
-            if (intStreamPtr.valid())
-            {
-                Info<< "Writing intersection points to "
-                    << intStreamPtr().name() << endl;
-            }
-        }
+        //surfaceIntersection inter(querySurf);
+        //
+        //if (inter.cutEdges().empty() && inter.cutPoints().empty())
+        //{
+        //    Info<< "Surface is not self-intersecting" << endl;
+        //}
+        //else
+        //{
+        //    Info<< "Surface is self-intersecting" << endl;
+        //    Info<< "Writing edges of intersection to selfInter.obj" << endl;
+        //
+        //    OFstream intStream("selfInter.obj");
+        //    forAll(inter.cutPoints(), cutPointi)
+        //    {
+        //        const point& pt = inter.cutPoints()[cutPointi];
+        //
+        //        intStream << "v " << pt.x() << ' ' << pt.y() << ' ' << pt.z()
+        //            << endl;
+        //    }
+        //    forAll(inter.cutEdges(), cutEdgeI)
+        //    {
+        //        const edge& e = inter.cutEdges()[cutEdgeI];
+        //
+        //        intStream << "l " << e.start()+1 << ' ' << e.end()+1 << endl;
+        //    }
+        //}
         Info<< endl;
     }
 

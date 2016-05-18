@@ -129,7 +129,7 @@ void Foam::nastranSurfaceWriter::writeKeyword
 void Foam::nastranSurfaceWriter::writeCoord
 (
     const point& p,
-    const label pointI,
+    const label pointi,
     OFstream& os
 ) const
 {
@@ -164,7 +164,15 @@ void Foam::nastranSurfaceWriter::writeCoord
     {
         case wfShort:
         {
-            os  << setw(8) << p.z()
+            os.setf(ios_base::left);
+            os  << setw(8) << "GRID";
+            os.unsetf(ios_base::left);
+            os.setf(ios_base::right);
+            os  << setw(8) << pointi + 1
+                << "        " 
+                << setw(8) << p.x()
+                << setw(8) << p.y()
+                << setw(8) << p.z()
                 << nl;
             os.unsetf(ios_base::right);
 
@@ -172,7 +180,15 @@ void Foam::nastranSurfaceWriter::writeCoord
         }
         case wfLong:
         {
-            os  << nl;
+            os.setf(ios_base::left);
+            os  << setw(8) << "GRID*";
+            os.unsetf(ios_base::left);
+            os.setf(ios_base::right);
+            os  << setw(16) << pointi + 1
+                << "                "
+                << setw(16) << p.x()
+                << setw(16) << p.y()
+                << nl;
             os.unsetf(ios_base::right);
             writeKeyword("", os);
             os.setf(ios_base::right);
@@ -183,8 +199,13 @@ void Foam::nastranSurfaceWriter::writeCoord
         }
         case wfFree:
         {
-            writeValue(p.z(), os);
-            os  << nl;
+            os  << "GRID"
+                << ',' << pointi + 1
+                << ','
+                << ',' << p.x()
+                << ',' << p.y()
+                << ',' << p.z()
+                << nl;
 
             break;
         }
@@ -298,9 +319,9 @@ void Foam::nastranSurfaceWriter::writeGeometry
         << "$ Points" << nl
         << "$" << nl;
 
-    forAll(points, pointI)
+    forAll(points, pointi)
     {
-        writeCoord(points[pointI], pointI, os);
+        writeCoord(points[pointi], pointi, os);
     }
 
 

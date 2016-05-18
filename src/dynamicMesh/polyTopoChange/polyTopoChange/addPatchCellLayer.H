@@ -339,22 +339,12 @@ public:
                 const indirectPrimitivePatch& pp
             );
 
-            //- Determine extrude information per patch edge:
-            //  - zoneID, zoneFlip :
-            //      picks one of the faces that connects to
-            //      the edge. For boundary edge only looks
-            //      at boundary faces. For internal edge it looks at internal
-            //      faces only (zoneFromAnyFace = false) or at any face
-            //      (zoneFromAnyFace = true). zoneFlip is consistent with
-            //      ordering of pp edge.
-            //      Face selected gets stored in inflateFaceID
-            //  - patchID :
-            //      get patch from any boundary face connected to the
-            //      edge. The patch might be a to-be-created processor patch
-            //      (patchI >= mesh.boundaryMesh().size()) in which case the
-            //      nbrProcToPatch, patchToNbrProc give the correspondence.
-            //      nPatches is the new number of patches.
-            static void calcExtrudeInfo
+            //- Boundary edges get extruded into boundary faces. Determine patch
+            //  for these faces. This might be a to-be-created processor patch
+            //  (patchi >= mesh.boundaryMesh().size()) in which case the
+            //  nbrProcToPatch, patchToNbrProc give the correspondence. nPatches
+            //  is the new number of patches.
+            static void calcSidePatch
             (
                 const bool zoneFromAnyFace,
 

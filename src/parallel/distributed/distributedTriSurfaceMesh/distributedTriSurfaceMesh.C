@@ -992,7 +992,7 @@ void Foam::distributedTriSurfaceMesh::subsetMeshMap
     oldToNewPoints = -1;
     {
         label facei = 0;
-        label pointI = 0;
+        label pointi = 0;
 
         forAll(include, oldFacei)
         {
@@ -1006,17 +1006,17 @@ void Foam::distributedTriSurfaceMesh::subsetMeshMap
 
                 forAll(f, fp)
                 {
-                    label oldPointI = f[fp];
+                    label oldPointi = f[fp];
 
-                    if (oldToNewPoints[oldPointI] == -1)
+                    if (oldToNewPoints[oldPointi] == -1)
                     {
-                        oldToNewPoints[oldPointI] = pointI;
-                        newToOldPoints[pointI++] = oldPointI;
+                        oldToNewPoints[oldPointi] = pointi;
+                        newToOldPoints[pointi++] = oldPointi;
                     }
                 }
             }
         }
-        newToOldPoints.setSize(pointI);
+        newToOldPoints.setSize(pointi);
     }
 }
 
@@ -1114,7 +1114,7 @@ Foam::triSurface Foam::distributedTriSurfaceMesh::subsetMesh
     newToOldPoints.setSize(s.points().size());
     labelList oldToNewPoints(s.points().size(), -1);
     {
-        label pointI = 0;
+        label pointi = 0;
 
         forAll(include, oldFacei)
         {
@@ -1125,17 +1125,17 @@ Foam::triSurface Foam::distributedTriSurfaceMesh::subsetMesh
 
                 forAll(f, fp)
                 {
-                    label oldPointI = f[fp];
+                    label oldPointi = f[fp];
 
-                    if (oldToNewPoints[oldPointI] == -1)
+                    if (oldToNewPoints[oldPointi] == -1)
                     {
-                        oldToNewPoints[oldPointI] = pointI;
-                        newToOldPoints[pointI++] = oldPointI;
+                        oldToNewPoints[oldPointi] = pointi;
+                        newToOldPoints[pointi++] = oldPointi;
                     }
                 }
             }
         }
-        newToOldPoints.setSize(pointI);
+        newToOldPoints.setSize(pointi);
     }
 
     return subsetMesh
@@ -1210,24 +1210,24 @@ void Foam::distributedTriSurfaceMesh::merge
     // Add all unmatched points
     // ~~~~~~~~~~~~~~~~~~~~~~~~
 
-    label allPointI = nOldAllPoints;
-    forAll(pointConstructMap, pointI)
+    label allPointi = nOldAllPoints;
+    forAll(pointConstructMap, pointi)
     {
-        if (pointConstructMap[pointI] == -1)
+        if (pointConstructMap[pointi] == -1)
         {
-            pointConstructMap[pointI] = allPointI++;
+            pointConstructMap[pointi] = allPointi++;
         }
     }
 
-    if (allPointI > nOldAllPoints)
+    if (allPointi > nOldAllPoints)
     {
-        allPoints.setSize(allPointI);
+        allPoints.setSize(allPointi);
 
-        forAll(pointConstructMap, pointI)
+        forAll(pointConstructMap, pointi)
         {
-            if (pointConstructMap[pointI] >= nOldAllPoints)
+            if (pointConstructMap[pointi] >= nOldAllPoints)
             {
-                allPoints[pointConstructMap[pointI]] = subPoints[pointI];
+                allPoints[pointConstructMap[pointi]] = subPoints[pointi];
             }
         }
     }
@@ -1636,23 +1636,23 @@ void Foam::distributedTriSurfaceMesh::findNearest
         {
             if (allInfo[i].hit())
             {
-                label pointI = allSegmentMap[i];
+                label pointi = allSegmentMap[i];
 
-                if (!info[pointI].hit())
+                if (!info[pointi].hit())
                 {
                     // No intersection yet so take this one
-                    info[pointI] = allInfo[i];
+                    info[pointi] = allInfo[i];
                 }
                 else
                 {
                     // Nearest intersection
                     if
                     (
-                        magSqr(allInfo[i].hitPoint()-samples[pointI])
-                      < magSqr(info[pointI].hitPoint()-samples[pointI])
+                        magSqr(allInfo[i].hitPoint()-samples[pointi])
+                      < magSqr(info[pointi].hitPoint()-samples[pointi])
                     )
                     {
-                        info[pointI] = allInfo[i];
+                        info[pointi] = allInfo[i];
                     }
                 }
             }
@@ -1739,26 +1739,26 @@ void Foam::distributedTriSurfaceMesh::findLineAll
     label compactI = 0;
 
     info.setSize(hitInfo.size());
-    forAll(hitInfo, pointI)
+    forAll(hitInfo, pointi)
     {
-        if (hitInfo[pointI].hit())
+        if (hitInfo[pointi].hit())
         {
-            info[pointI].setSize(1);
-            info[pointI][0] = hitInfo[pointI];
+            info[pointi].setSize(1);
+            info[pointi][0] = hitInfo[pointi];
 
-            point pt = hitInfo[pointI].hitPoint() + smallVec[pointI];
+            point pt = hitInfo[pointi].hitPoint() + smallVec[pointi];
 
-            if (((pt-start[pointI])&dirVec[pointI]) <= magSqrDirVec[pointI])
+            if (((pt-start[pointi])&dirVec[pointi]) <= magSqrDirVec[pointi])
             {
                 e0[compactI] = pt;
-                e1[compactI] = end[pointI];
-                pointMap[compactI] = pointI;
+                e1[compactI] = end[pointi];
+                pointMap[compactI] = pointi;
                 compactI++;
             }
         }
         else
         {
-            info[pointI].clear();
+            info[pointi].clear();
         }
     }
 
@@ -1785,24 +1785,19 @@ void Foam::distributedTriSurfaceMesh::findLineAll
         {
             if (hitInfo[i].hit())
             {
-                label pointI = pointMap[i];
+                label pointi = pointMap[i];
 
-                label sz = info[pointI].size();
-                info[pointI].setSize(sz+1);
-                info[pointI][sz] = hitInfo[i];
+                label sz = info[pointi].size();
+                info[pointi].setSize(sz+1);
+                info[pointi][sz] = hitInfo[i];
 
-                point pt = hitInfo[i].hitPoint() + smallVec[pointI];
+                point pt = hitInfo[i].hitPoint() + smallVec[pointi];
 
-                // Check current coordinate along ray
-                scalar d = ((pt-start[pointI])&dirVec[pointI]);
-
-                // Note check for d>0. Very occasionally the octree will find
-                // an intersection to the left of the ray due to tolerances.
-                if (d > 0 && d <= magSqrDirVec[pointI])
+                if (((pt-start[pointi])&dirVec[pointi]) <= magSqrDirVec[pointi])
                 {
                     e0[compactI] = pt;
-                    e1[compactI] = end[pointI];
-                    pointMap[compactI] = pointI;
+                    e1[compactI] = end[pointi];
+                    pointMap[compactI] = pointi;
                     compactI++;
                 }
             }

@@ -488,19 +488,19 @@ Foam::dynamicRefineFvMesh::unrefine
     {
         forAll(splitPoints, i)
         {
-            label pointI = splitPoints[i];
+            label pointi = splitPoints[i];
 
-            const labelList& pEdges = pointEdges()[pointI];
+            const labelList& pEdges = pointEdges()[pointi];
 
             forAll(pEdges, j)
             {
-                label otherPointI = edges()[pEdges[j]].otherVertex(pointI);
+                label otherPointi = edges()[pEdges[j]].otherVertex(pointi);
 
-                const labelList& pFaces = pointFaces()[otherPointI];
+                const labelList& pFaces = pointFaces()[otherPointi];
 
                 forAll(pFaces, pFaceI)
                 {
-                    faceToSplitPoint.insert(pFaces[pFaceI], otherPointI);
+                    faceToSplitPoint.insert(pFaces[pFacei], otherPointi);
                 }
             }
         }
@@ -589,10 +589,10 @@ Foam::dynamicRefineFvMesh::unrefine
 
             forAllConstIter(Map<label>, faceToSplitPoint, iter)
             {
-                label oldFaceI = iter.key();
-                label oldPointI = iter();
+                label oldFacei = iter.key();
+                label oldPointi = iter();
 
-                if (reversePointMap[oldPointI] < 0)
+                if (reversePointMap[oldPointi] < 0)
                 {
                     // midpoint was removed. See if face still exists.
                     label facei = reverseFaceMap[oldFaceI];
@@ -652,13 +652,13 @@ Foam::dynamicRefineFvMesh::maxPointField(const scalarField& pFld) const
 {
     scalarField vFld(nCells(), -GREAT);
 
-    forAll(pointCells(), pointI)
+    forAll(pointCells(), pointi)
     {
-        const labelList& pCells = pointCells()[pointI];
+        const labelList& pCells = pointCells()[pointi];
 
         forAll(pCells, i)
         {
-            vFld[pCells[i]] = max(vFld[pCells[i]], pFld[pointI]);
+            vFld[pCells[i]] = max(vFld[pCells[i]], pFld[pointi]);
         }
     }
     return vFld;
@@ -671,13 +671,13 @@ Foam::dynamicRefineFvMesh::maxCellField(const volScalarField& vFld) const
 {
     scalarField pFld(nPoints(), -GREAT);
 
-    forAll(pointCells(), pointI)
+    forAll(pointCells(), pointi)
     {
-        const labelList& pCells = pointCells()[pointI];
+        const labelList& pCells = pointCells()[pointi];
 
         forAll(pCells, i)
         {
-            pFld[pointI] = max(pFld[pointI], vFld[pCells[i]]);
+            pFld[pointi] = max(pFld[pointi], vFld[pCells[i]]);
         }
     }
     return pFld;
@@ -690,16 +690,16 @@ Foam::dynamicRefineFvMesh::cellToPoint(const scalarField& vFld) const
 {
     scalarField pFld(nPoints());
 
-    forAll(pointCells(), pointI)
+    forAll(pointCells(), pointi)
     {
-        const labelList& pCells = pointCells()[pointI];
+        const labelList& pCells = pointCells()[pointi];
 
         scalar sum = 0.0;
         forAll(pCells, i)
         {
             sum += vFld[pCells[i]];
         }
-        pFld[pointI] = sum/pCells.size();
+        pFld[pointi] = sum/pCells.size();
     }
     return pFld;
 }
@@ -910,12 +910,12 @@ Foam::labelList Foam::dynamicRefineFvMesh::selectUnrefinePoints
 
     forAll(splitPoints, i)
     {
-        label pointI = splitPoints[i];
+        label pointi = splitPoints[i];
 
-        if (!protectedPoint[pointI] && pFld[pointI] < unrefineLevel)
+        if (pFld[pointi] < unrefineLevel)
         {
             // Check that all cells are not marked
-            const labelList& pCells = pointCells[pointI];
+            const labelList& pCells = pointCells()[pointi];
 
             bool hasMarked = false;
 
@@ -930,7 +930,7 @@ Foam::labelList Foam::dynamicRefineFvMesh::selectUnrefinePoints
 
             if (!hasMarked)
             {
-                newSplitPoints.append(pointI);
+                newSplitPoints.append(pointi);
             }
         }
     }
@@ -1009,15 +1009,15 @@ void Foam::dynamicRefineFvMesh::checkEightAnchorPoints
 
     labelList nAnchorPoints(nCells(), 0);
 
-    forAll(pointLevel, pointI)
+    forAll(pointLevel, pointi)
     {
-        const labelList& pCells = pointCells(pointI);
+        const labelList& pCells = pointCells(pointi);
 
         forAll(pCells, pCellI)
         {
             label celli = pCells[pCellI];
 
-            if (pointLevel[pointI] <= cellLevel[celli])
+            if (pointLevel[pointi] <= cellLevel[celli])
             {
                 // Check if cell has already 8 anchor points -> protect cell
                 if (nAnchorPoints[celli] == 8)
@@ -1077,9 +1077,9 @@ Foam::dynamicRefineFvMesh::dynamicRefineFvMesh(const IOobject& io)
 
     label nProtected = 0;
 
-    forAll(pointCells(), pointI)
+    forAll(pointCells(), pointi)
     {
-        const labelList& pCells = pointCells()[pointI];
+        const labelList& pCells = pointCells()[pointi];
 
         forAll(pCells, i)
         {
@@ -1087,7 +1087,7 @@ Foam::dynamicRefineFvMesh::dynamicRefineFvMesh(const IOobject& io)
 
             if (!protectedCell_.get(celli))
             {
-                if (pointLevel[pointI] <= cellLevel[celli])
+                if (pointLevel[pointi] <= cellLevel[celli])
                 {
                     nAnchors[celli]++;
 

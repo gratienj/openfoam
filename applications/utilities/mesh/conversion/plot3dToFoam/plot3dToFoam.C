@@ -214,12 +214,12 @@ int main(int argc, char *argv[])
         {
             labelList cellPoints(curBlockCells[blockCellI].size());
 
-            forAll(cellPoints, pointI)
+            forAll(cellPoints, pointi)
             {
-                cellPoints[pointI] =
+                cellPoints[pointi] =
                     oldToNew
                     [
-                        curBlockCells[blockCellI][pointI]
+                        curBlockCells[blockCelli][pointi]
                       + blockOffsets[blockI]
                     ];
             }

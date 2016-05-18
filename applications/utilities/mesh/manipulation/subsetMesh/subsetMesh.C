@@ -326,19 +326,15 @@ int main(int argc, char *argv[])
     // Create mesh subsetting engine
     fvMeshSubset subsetter(mesh);
 
-    labelList exposedPatchIDs;
+    label patchi = -1;
 
     if (args.optionFound("patch"))
     {
         const word patchName = args["patch"];
 
-        exposedPatchIDs = labelList
-        (
-            1,
-            mesh.boundaryMesh().findPatchID(patchName)
-        );
+        patchi = mesh.boundaryMesh().findPatchID(patchName);
 
-        if (exposedPatchIDs[0] == -1)
+        if (patchi == -1)
         {
             FatalErrorInFunction
                 << nl << "Valid patches are " << mesh.boundaryMesh().names()
@@ -368,33 +364,7 @@ int main(int argc, char *argv[])
 
     cellSet currentSet(mesh, setName);
 
-    if (exposedPatchIDs.size() == 1)
-    {
-        subsetter.setLargeCellSubset(currentSet, exposedPatchIDs[0], true);
-    }
-    else
-    {
-
-        // Find per face the nearest patch
-        labelList nearestExposedPatch(nearestPatch(mesh, exposedPatchIDs));
-
-        labelList region(mesh.nCells(), 0);
-        forAllConstIter(cellSet, currentSet, iter)
-        {
-            region[iter.key()] = 1;
-        }
-
-        labelList exposedFaces(subsetter.getExposedFaces(region, 1, true));
-        subsetter.setLargeCellSubset
-        (
-            region,
-            1,
-            exposedFaces,
-            UIndirectList<label>(nearestExposedPatch, exposedFaces)(),
-            true
-        );
-    }
-
+    subsetter.setLargeCellSubset(currentSet, patchi, true);
 
     IOobjectList objects(mesh, runTime.timeName());
 

@@ -257,11 +257,11 @@ int main(int argc, char *argv[])
             const labelList& blockPFacePoints =
                 blockPFaces[blockPFaceLabel];
 
-            forAll(blockPFacePoints, blockPFacePointI)
+            forAll(blockPFacePoints, blockPFacePointi)
             {
-                forAll(blockPFacePoints, blockPFacePointI2)
+                forAll(blockPFacePoints, blockPFacePointi2)
                 {
-                    if (blockPFacePointI != blockPFacePointI2)
+                    if (blockPFacePointi != blockPFacePointi2)
                     {
                         sqrMergeTol =
                             min
@@ -270,9 +270,9 @@ int main(int argc, char *argv[])
                                 magSqr
                                 (
                                     blockPpoints
-                                        [blockPFacePoints[blockPFacePointI]]
+                                        [blockPFacePoints[blockPFacePointi]]
                                   - blockPpoints
-                                        [blockPFacePoints[blockPFacePointI2]]
+                                        [blockPFacePoints[blockPFacePointi2]]
                                 )
                             );
                     }
@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
             labelList& cp = curPairs[blockPFaceLabel];
             cp.setSize(blockPFacePoints.size());
 
-        forAll(blockPFacePoints, blockPFacePointI)
+        forAll(blockPFacePoints, blockPFacePointi)
         {
             found = false;
 
@@ -303,16 +303,16 @@ int main(int argc, char *argv[])
                 const labelList& blockNFacePoints =
                     blockNFaces[blockNFaceLabel];
 
-            forAll(blockNFacePoints, blockNFacePointI)
+            forAll(blockNFacePoints, blockNFacePointi)
             {
                 if
                 (
                     magSqr
                     (
                         blockPpoints
-                            [blockPFacePoints[blockPFacePointI]]
+                            [blockPFacePoints[blockPFacePointi]]
                       - blockNpoints
-                            [blockNFacePoints[blockNFacePointI]]
+                            [blockNFacePoints[blockNFacePointi]]
                     )
                   < sqrMergeTol
                 )
@@ -320,15 +320,15 @@ int main(int argc, char *argv[])
                     // Found a new pair
                     found = true;
 
-                    cp[blockPFacePointI] =
-                        blockNFacePoints[blockNFacePointI];
+                    cp[blockPFacePointi] =
+                        blockNFacePoints[blockNFacePointi];
 
                     label PpointLabel =
-                        blockPFacePoints[blockPFacePointI]
+                        blockPFacePoints[blockPFacePointi]
                       + blockOffsets[blockPlabel];
 
                     label NpointLabel =
-                        blockNFacePoints[blockNFacePointI]
+                        blockNFacePoints[blockNFacePointi]
                       + blockOffsets[blockNlabel];
 
                     label minPN = min(PpointLabel, NpointLabel);
@@ -384,14 +384,14 @@ int main(int argc, char *argv[])
 
                 const labelList& cp = curPairs[blockPFaceLabel];
 
-                forAll(cp, blockPFacePointI)
+                forAll(cp, blockPFacePointi)
                 {
                     label PpointLabel =
-                        blockPFacePoints[blockPFacePointI]
+                        blockPFacePoints[blockPFacePointi]
                       + blockOffsets[blockPlabel];
 
                     label NpointLabel =
-                        cp[blockPFacePointI]
+                        cp[blockPFacePointi]
                       + blockOffsets[blockNlabel];
 
                     if
@@ -443,16 +443,16 @@ int main(int argc, char *argv[])
             const labelList& blockPFacePoints
                 = blockPFaces[blockPFaceLabel];
 
-            forAll(blockPFacePoints, blockPFacePointI)
+            forAll(blockPFacePoints, blockPFacePointi)
             {
                 label PpointLabel =
-                    blockPFacePoints[blockPFacePointI]
+                    blockPFacePoints[blockPFacePointi]
                   + blockOffsets[blockPlabel];
 
                 if (pointMergeList[PpointLabel] == -1)
                 {
                     FatalErrorInFunction
-                        << "Unable to merge point " << blockPFacePointI
+                        << "Unable to merge point " << blockPFacePointi
                         << " of face " << blockPFaceLabel
                         << " of block " << blockPlabel
                         << abort(FatalError);
@@ -465,16 +465,16 @@ int main(int argc, char *argv[])
             const labelList& blockNFacePoints
                 = blockNFaces[blockNFaceLabel];
 
-            forAll(blockNFacePoints, blockNFacePointI)
+            forAll(blockNFacePoints, blockNFacePointi)
             {
                 label NpointLabel =
-                    blockNFacePoints[blockNFacePointI]
+                    blockNFacePoints[blockNFacePointi]
                   + blockOffsets[blockNlabel];
 
                 if (pointMergeList[NpointLabel] == -1)
                 {
                     FatalErrorInFunction
-                        << "Unable to merge point " << blockNFacePointI
+                        << "Unable to merge point " << blockNFacePointi
                         << " of face " << blockNFaceLabel
                         << " of block " << blockNlabel
                         << abort(FatalError);
@@ -557,12 +557,12 @@ int main(int argc, char *argv[])
         {
             labelList cellPoints(curBlockCells[blockCellI].size());
 
-            forAll(cellPoints, pointI)
+            forAll(cellPoints, pointi)
             {
-                cellPoints[pointI] =
+                cellPoints[pointi] =
                     pointMergeList
                     [
-                        curBlockCells[blockCellI][pointI]
+                        curBlockCells[blockCelli][pointi]
                       + blockOffsets[blockI]
                     ];
             }
@@ -621,12 +621,12 @@ int main(int argc, char *argv[])
                     face& newFace = renumberedPatch[oldSize + facei];
                     newFace.setSize(oldFace.size());
 
-                    forAll(oldFace, pointI)
+                    forAll(oldFace, pointi)
                     {
-                        newFace[pointI] =
+                        newFace[pointi] =
                             pointMergeList
                             [
-                                oldFace[pointI]
+                                oldFace[pointi]
                               + blockOffsets[curBlock]
                             ];
                     }
@@ -645,12 +645,12 @@ int main(int argc, char *argv[])
                     face& newFace = renumberedPatch[facei];
                     newFace.setSize(oldFace.size());
 
-                    forAll(oldFace, pointI)
+                    forAll(oldFace, pointi)
                     {
-                        newFace[pointI] =
+                        newFace[pointi] =
                             pointMergeList
                             [
-                                oldFace[pointI]
+                                oldFace[pointi]
                               + blockOffsets[curBlock]
                             ];
                     }
