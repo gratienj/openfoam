@@ -79,8 +79,7 @@ void Foam::functionObjects::regionSizeDistribution::writeGraph
 
     OFstream str(outputPath/formatterPtr_().getFileName(coords, valNames));
 
-    if (log_) Info
-        << "Writing distribution of " << valueName << " to " << str.name()
+    Info<< "    Writing distribution of " << valueName << " to " << str.name()
         << endl;
 
     List<const scalarField*> valPtrs(1);
@@ -167,12 +166,9 @@ void Foam::functionObjects::regionSizeDistribution::writeAlphaFields
             << endl;
     }
 
-    if (log_) Info
-        << "Writing liquid-core field to " << liquidCore.name() << endl;
+    Info<< "    Writing liquid-core field to " << liquidCore.name() << endl;
     liquidCore.write();
-
-    if (log_) Info
-        << "Writing background field to " << backgroundAlpha.name() << endl;
+    Info<< "    Writing background field to " << backgroundAlpha.name() << endl;
     backgroundAlpha.write();
 }
 
