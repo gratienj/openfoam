@@ -23,12 +23,15 @@ boundaryField
     ".*"
     {
         type            MarshakRadiation;
+        emissivityMode  lookup;
+        emissivity      uniform 1.0;
         value           uniform 0;
     }
 
     "(region0_to.*)"
     {
         type            MarshakRadiation;
+        emissivityMode  solidRadiation;
         value           uniform 0;
     }
 }

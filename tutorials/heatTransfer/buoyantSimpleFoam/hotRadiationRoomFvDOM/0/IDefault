@@ -23,6 +23,8 @@ boundaryField
     ".*"
     {
         type            greyDiffusiveRadiation;
+        emissivityMode  lookup;
+        emissivity      uniform 1.0;
         value           uniform 0;
     }
 }

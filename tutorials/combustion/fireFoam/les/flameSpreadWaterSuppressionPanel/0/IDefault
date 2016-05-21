@@ -24,6 +24,8 @@ boundaryField
     region0_to_pyrolysisRegion_coupledWall
     {
         type            greyDiffusiveRadiation;
+        emissivityMode  solidRadiation;
+        emissivity      uniform 1.0;
         value           uniform 0;
     }
 
@@ -35,6 +37,8 @@ boundaryField
     ".*"
     {
         type            greyDiffusiveRadiation;
+        emissivityMode  lookup;
+        emissivity      uniform 1.0;
         value           uniform 0;
     }
 }

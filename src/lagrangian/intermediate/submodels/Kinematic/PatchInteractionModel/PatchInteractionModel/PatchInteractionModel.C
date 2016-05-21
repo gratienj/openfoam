@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -110,9 +110,7 @@ Foam::PatchInteractionModel<CloudType>::PatchInteractionModel
 )
 :
     CloudSubModelBase<CloudType>(owner),
-    UName_("unknown_UName"),
-    escapedParcels_(0),
-    escapedMass_(0.0)
+    UName_("unknown_U")
 {}
 
 
@@ -125,9 +123,7 @@ Foam::PatchInteractionModel<CloudType>::PatchInteractionModel
 )
 :
     CloudSubModelBase<CloudType>(owner, dict, typeName, type),
-    UName_(this->coeffDict().lookupOrDefault("UName", word("U"))),
-    escapedParcels_(0),
-    escapedMass_(0.0)
+    UName_(this->coeffDict().lookupOrDefault("U", word("U")))
 {}
 
 

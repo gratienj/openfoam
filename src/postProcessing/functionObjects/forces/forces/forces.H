@@ -71,17 +71,15 @@ Description
     \heading Function object usage
     \table
         Property     | Description             | Required    | Default value
-        type         | type name: forces       | yes         |
-        log          | write force data to standard output | no | no
-        writeFields  | write the force and moment fields | no | no
-        patches      | patches included in the forces calculation | yes |
-        pName        | pressure field name     | no          | p
-        UName        | velocity field name     | no          | U
-        rhoName      | density field name (see below) | no   | rho
-        CofR         | centre of rotation (see below) | no   |
-        porosity     | flag to include porosity contributions | no | no
-        directForceDensity | force density supplied directly (see below)|no|no
-        fDName       | name of force density field (see below) | no | fD
+        type         | Type name: forces       | yes         |
+        log          | Write force data to standard output | no | no
+        patches      | Patches included in the forces calculation | yes |
+        p            | Pressure field name     | no          | p
+        U            | Velocity field name     | no          | U
+        rho          | Density field name (see below) | no   | rho
+        CofR         | Centre of rotation (see below) | no   |
+        directForceDensity | Force density supplied directly (see below)|no|no
+        fD           | Name of force density field (see below) | no | fD
     \endtable
 
     Bin data is optional, but if the dictionary is present, the entries must
@@ -93,7 +91,7 @@ Description
     \endtable
 
 Note
-  - For incompressible cases, set \c rhoName to \c rhoInf.  You will then be
+  - For incompressible cases, set \c rho to \c rhoInf.  You will then be
     required to provide a \c rhoInf value corresponding to the free-stream
     constant density.
   - If the force density is supplied directly, set the \c directForceDensity
@@ -253,7 +251,7 @@ protected:
         //- Dynamic viscosity field
         tmp<volScalarField> mu() const;
 
-        //- Return rho if rhoName is specified otherwise rhoRef
+        //- Return rho if specified otherwise rhoRef
         tmp<volScalarField> rho() const;
 
         //- Return rhoRef if the pressure field is dynamic, i.e. p/rho

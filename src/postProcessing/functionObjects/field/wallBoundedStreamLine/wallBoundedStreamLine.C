@@ -432,9 +432,9 @@ bool Foam::functionObjects::wallBoundedStreamLine::read(const dictionary& dict)
 {
     //dict_ = dict;
     dict.lookup("fields") >> fields_;
-    if (dict.found("UName"))
+    if (dict.found("U"))
     {
-        dict.lookup("UName") >> UName_;
+        dict.lookup("U") >> UName_;
     }
     else
     {
