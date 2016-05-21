@@ -53,6 +53,7 @@ Description
 
 
 SeeAlso
+    Foam::functionObjects::fieldExpression
     Foam::functionObjects::fvMeshFunctionObject
 
 SourceFiles
@@ -63,9 +64,7 @@ SourceFiles
 #ifndef functionObjects_vorticity_H
 #define functionObjects_vorticity_H
 
-#include "fvMeshFunctionObject.H"
-#include "volFieldsFwd.H"
-#include "Switch.H"
+#include "fieldExpression.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -80,28 +79,8 @@ namespace functionObjects
 
 class vorticity
 :
-    public fvMeshFunctionObject
+    public fieldExpression
 {
-    // Private data
-
-        //- Name of velocity field, default is "U"
-        word UName_;
-
-        //- Name of vorticity field
-        word resultName_;
-
-        //- Switch to send output to Info as well as to file
-        Switch log_;
-
-
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        vorticity(const vorticity&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const vorticity&);
-
 
 public:
 
@@ -126,14 +105,8 @@ public:
 
     // Member Functions
 
-        //- Read the vorticity data
-        virtual bool read(const dictionary&);
-
         //- Execute, currently does nothing
         virtual bool execute(const bool postProcess = false);
-
-        //- Calculate the vorticity and write
-        virtual bool write(const bool postProcess = false);
 };
 
 
