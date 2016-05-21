@@ -80,9 +80,7 @@ Foam::functionObjects::writeRegisteredObject::~writeRegisteredObject()
 
 bool Foam::functionObjects::writeRegisteredObject::read(const dictionary& dict)
 {
-    log_.readIfPresent("log", dict);
-
-    dict.lookup("objectNames") >> objectNames_;
+    dict.lookup("objects") >> objectNames_;
     dict.readIfPresent("exclusiveWriting", exclusiveWriting_);
 
     return true;
