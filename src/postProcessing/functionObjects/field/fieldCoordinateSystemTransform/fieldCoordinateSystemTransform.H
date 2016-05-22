@@ -67,7 +67,7 @@ Description
     \endtable
 
 SeeAlso
-    Foam::functionObject
+    Foam::functionObjects::fvMeshFunctionObject
     Foam::coordinateSystem
 
 SourceFiles
@@ -79,8 +79,7 @@ SourceFiles
 #ifndef functionObjects_fieldCoordinateSystemTransform_H
 #define functionObjects_fieldCoordinateSystemTransform_H
 
-#include "functionObject.H"
-#include "volFieldsFwd.H"
+#include "fvMeshFunctionObject.H"
 #include "coordinateSystem.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -100,14 +99,11 @@ namespace functionObjects
 
 class fieldCoordinateSystemTransform
 :
-    public functionObject
+    public fvMeshFunctionObject
 {
 protected:
 
     // Protected data
-
-        //- Reference to the objectRegistry
-        const objectRegistry& obr_;
 
         //- Fields to transform
         wordList fieldSet_;
@@ -121,22 +117,16 @@ protected:
 
     // Protected Member Functions
 
+        //- Return the name of the transformed field
+        word transformFieldName(const word& fieldName) const;
+
+        //- Transform the given field
+        template<class FieldType>
+        void transformField(const FieldType& field);
+
+        //- Transform the given field if has the specified element type
         template<class Type>
-        void transform(const word& fieldName) const;
-
-        template<class Type>
-        void transformField(const Type& field) const;
-
-
-private:
-
-    // Private member functions
-
-        //- Disallow default bitwise copy construct
-        fieldCoordinateSystemTransform(const fieldCoordinateSystemTransform&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const fieldCoordinateSystemTransform&);
+        void transform(const word& fieldName);
 
 
 public:
