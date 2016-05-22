@@ -24,7 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "blendingFactor.H"
-#include "volFields.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -61,7 +60,7 @@ Foam::functionObjects::blendingFactor::blendingFactor
     const dictionary& dict
 )
 :
-    fvMeshFunctionObject(name, runTime, dict)
+    fieldExpression(name, runTime, dict)
 {
     read(dict);
 }
@@ -77,8 +76,11 @@ Foam::functionObjects::blendingFactor::~blendingFactor()
 
 bool Foam::functionObjects::blendingFactor::read(const dictionary& dict)
 {
+    fieldExpression::read(dict);
+
     phiName_ = dict.lookupOrDefault<word>("phi", "phi");
-    dict.lookup("field") >> fieldName_;
+
+    resultName_ = "blendingFactor:" + fieldName_;
 
     return true;
 }
@@ -86,27 +88,18 @@ bool Foam::functionObjects::blendingFactor::read(const dictionary& dict)
 
 bool Foam::functionObjects::blendingFactor::execute(const bool postProcess)
 {
-    calc<scalar>();
-    calc<vector>();
+    bool processed = false;
 
-    return true;
-}
+    processed = processed || calc<scalar>();
+    processed = processed || calc<vector>();
 
+    if (!processed)
+    {
+        WarningInFunction
+            << "Unprocessed field " << fieldName_ << endl;
+    }
 
-bool Foam::functionObjects::blendingFactor::write(const bool postProcess)
-{
-    const word fieldName = "blendingFactor:" + fieldName_;
-
-    const volScalarField& blendingFactor =
-        obr_.lookupObject<volScalarField>(fieldName);
-
-    Info<< type() << " " << name() << " output:" << nl
-        << "    writing field " << blendingFactor.name() << nl
-        << endl;
-
-    blendingFactor.write();
-
-    return true;
+    return processed;
 }
 
 

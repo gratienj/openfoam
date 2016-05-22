@@ -33,6 +33,7 @@ Description
     value is calculated via the maximum blending factor for any cell face.
 
 SeeAlso
+    Foam::functionObjects::fieldExpression
     Foam::functionObjects::fvMeshFunctionObject
 
 SourceFiles
@@ -43,8 +44,7 @@ SourceFiles
 #ifndef functionObjects_blendingFactor_H
 #define functionObjects_blendingFactor_H
 
-#include "fvMeshFunctionObject.H"
-#include "volFieldsFwd.H"
+#include "fieldExpression.H"
 
 #include "convectionScheme.H"
 
@@ -52,10 +52,6 @@ SourceFiles
 
 namespace Foam
 {
-
-// Forward declaration of classes
-class objectRegistry;
-
 namespace functionObjects
 {
 
@@ -65,45 +61,19 @@ namespace functionObjects
 
 class blendingFactor
 :
-    public fvMeshFunctionObject
+    public fieldExpression
 {
     // Private data
 
         //- Name of flux field, default is "phi"
         word phiName_;
 
-        //- Field name
-        word fieldName_;
-
-        //- Result field name
-        word resultName_;
-
-        //- Tolerance used when calculating the number of blended cells
-        scalar tolerance_;
-
-        //- Switch to send output to Info as well as to file
-        Switch log_;
-
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        blendingFactor(const blendingFactor&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const blendingFactor&);
-
-        //- Helper function to calculate the blending factor for the scheme
-        template<class Type>
-        void calcScheme
-        (
-            const GeometricField<Type, fvPatchField, volMesh>& field,
-            const typename fv::convectionScheme<Type>& cs
-        );
-
         //- Calculate the blending factor
         template<class Type>
-        void calc();
+        bool calc();
 
 
 protected:
@@ -142,9 +112,6 @@ public:
 
         //- Calculate the blending-factor
         virtual bool execute(const bool postProcess = false);
-
-        //- Write the blending-factor
-        virtual bool write(const bool postProcess = false);
 };
 
 
