@@ -76,6 +76,7 @@ namespace Foam
 // Forward declaration of classes
 class objectRegistry;
 class fvMesh;
+class turbulenceModel;
 
 namespace functionObjects
 {
@@ -106,10 +107,9 @@ class yPlus
         virtual void writeFileHeader(Ostream& os) const;
 
         //- Calculate y+
-        template<class TurbulenceModel>
         void calcYPlus
         (
-            const TurbulenceModel& turbulenceModel,
+            const turbulenceModel& turbModel,
             const fvMesh& mesh,
             volScalarField& yPlus
         );
@@ -159,12 +159,6 @@ public:
 
 } // End namespace functionObjects
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#ifdef NoRepository
-    #include "yPlusTemplates.C"
-#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
