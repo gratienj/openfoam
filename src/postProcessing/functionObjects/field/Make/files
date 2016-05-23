@@ -46,5 +46,6 @@ CourantNo/CourantNo.C
 PecletNo/PecletNo.C
 blendingFactor/blendingFactor.C
 pressure/pressure.C
+MachNo/MachNo.C
 
 LIB = $(FOAM_LIBBIN)/libfieldFunctionObjects
