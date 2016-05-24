@@ -74,7 +74,6 @@ namespace Foam
 {
 
 // Forward declaration of classes
-class objectRegistry;
 class fvMesh;
 class turbulenceModel;
 
