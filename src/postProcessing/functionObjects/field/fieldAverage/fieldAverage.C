@@ -69,8 +69,6 @@ void Foam::functionObjects::fieldAverage::initialize()
 {
     resetFields();
 
-    Info<< type() << " " << name() << ":" << nl;
-
     // Add mean fields to the field lists
     forAll(faItems_, fieldi)
     {
@@ -91,15 +89,14 @@ void Foam::functionObjects::fieldAverage::initialize()
     // ensure first averaging works unconditionally
     prevTimeIndex_ = -1;
 
-    if (log_) Info << endl;
-
     initialised_ = true;
 }
 
 
 void Foam::functionObjects::fieldAverage::restart()
 {
-    Info<< "    Restarting averaging at time " << obr_.time().timeName()
+    if (log_) Info
+        << "    Restarting averaging at time " << obr_.time().timeName()
         << nl << endl;
 
     totalIter_.clear();
@@ -137,9 +134,9 @@ void Foam::functionObjects::fieldAverage::calcAverages()
         periodIndex_++;
     }
 
-    Info<< type() << " " << name() << " output:" << nl;
-
-    Info<< "    Calculating averages" << nl;
+    if (log_) Info
+        << type() << " " << name() << " output:" << nl
+        << "    Calculating averages" << nl;
 
     addMeanSqrToPrime2Mean<scalar, scalar>();
     addMeanSqrToPrime2Mean<vector, symmTensor>();
@@ -158,18 +155,22 @@ void Foam::functionObjects::fieldAverage::calcAverages()
         totalIter_[fieldi]++;
         totalTime_[fieldi] += obr_.time().deltaTValue();
     }
+
+    if (log_) Info<< endl;
 }
 
 
 void Foam::functionObjects::fieldAverage::writeAverages() const
 {
-    if (log_) Info << "    Writing average fields" << endl;
+    if (log_) Info<< "    Writing average fields" << endl;
 
     writeFields<scalar>();
     writeFields<vector>();
     writeFields<sphericalTensor>();
     writeFields<symmTensor>();
     writeFields<tensor>();
+
+    if (log_) Info<< endl;
 }
 
 
@@ -197,11 +198,9 @@ void Foam::functionObjects::fieldAverage::writeAveragingProperties() const
         propsDict.subDict(fieldName).add("totalTime", totalTime_[fieldi]);
     }
 
-        dictionary propsDict;
-        propsDict.add("totalIter", totalIter_[fieldI]);
-        propsDict.add("totalTime", totalTime_[fieldI]);
-        setProperty(fieldName, propsDict);
-    }
+    propsDict.regIOobject::write();
+
+    if (log_) Info<< endl;
 }
 
 
@@ -213,7 +212,7 @@ void Foam::functionObjects::fieldAverage::readAveragingProperties()
     totalTime_.clear();
     totalTime_.setSize(faItems_.size(), obr_.time().deltaTValue());
 
-    if (restartOnRestart_ || restartOnOutput_)
+    if ((restartOnRestart_ || restartOnOutput_) && log_)
     {
         Info<< "    Starting averaging at time " << obr_.time().timeName()
             << nl;
@@ -233,14 +232,17 @@ void Foam::functionObjects::fieldAverage::readAveragingProperties()
 
         if (!propsDictHeader.headerOk())
         {
-            Info<< "    Starting averaging at time " << obr_.time().timeName()
-                << nl;
+            if (log_) Info
+                << "    Starting averaging at time "
+                << obr_.time().timeName() << nl;
+
             return;
         }
 
         IOdictionary propsDict(propsDictHeader);
 
-        Info<< "    Restarting averaging for fields:" << nl;
+        if (log_) Info<< "    Restarting averaging for fields:" << nl;
+
         forAll(faItems_, fieldi)
         {
             const word& fieldName = faItems_[fieldi].fieldName();
@@ -251,7 +253,9 @@ void Foam::functionObjects::fieldAverage::readAveragingProperties()
 
                 totalIter_[fieldi] = readLabel(fieldDict.lookup("totalIter"));
                 totalTime_[fieldi] = readScalar(fieldDict.lookup("totalTime"));
-                Info<< "        " << fieldName
+
+                if (log_) Info
+                    << "        " << fieldName
                     << " iters = " << totalIter_[fieldi]
                     << " time = " << totalTime_[fieldi] << nl;
             }
@@ -272,18 +276,11 @@ void Foam::functionObjects::fieldAverage::readAveragingProperties()
 Foam::functionObjects::fieldAverage::fieldAverage
 (
     const word& name,
-    const Time& t,
+    const Time& runTime,
     const dictionary& dict
 )
 :
-    functionObject(name),
-    obr_
-    (
-        t.lookupObject<objectRegistry>
-        (
-            dict.lookupOrDefault("region", polyMesh::defaultRegion)
-        )
-    ),
+    fvMeshFunctionObject(name, runTime, dict),
     prevTimeIndex_(-1),
     restartOnRestart_(false),
     restartOnOutput_(false),
@@ -295,12 +292,6 @@ Foam::functionObjects::fieldAverage::fieldAverage
     totalTime_(),
     periodIndex_(1)
 {
-    if (!isA<fvMesh>(obr_))
-    {
-        FatalErrorInFunction
-            << "objectRegistry is not an fvMesh" << exit(FatalError);
-    }
-
     read(dict);
 }
 
@@ -315,9 +306,11 @@ Foam::functionObjects::fieldAverage::~fieldAverage()
 
 bool Foam::functionObjects::fieldAverage::read(const dictionary& dict)
 {
+    fvMeshFunctionObject::read(dict);
+
     initialised_ = false;
 
-    Info<< type() << " " << name() << ":" << nl;
+    if (log_) Info<< type() << " " << name() << ":" << nl;
 
     dict.readIfPresent("restartOnRestart", restartOnRestart_);
     dict.readIfPresent("restartOnOutput", restartOnOutput_);
@@ -331,7 +324,7 @@ bool Foam::functionObjects::fieldAverage::read(const dictionary& dict)
 
     readAveragingProperties();
 
-    Info<< endl;
+    if (log_) Info<< endl;
 
     return true;
 }
@@ -340,7 +333,6 @@ bool Foam::functionObjects::fieldAverage::read(const dictionary& dict)
 bool Foam::functionObjects::fieldAverage::execute(const bool postProcess)
 {
     calcAverages();
-    Info<< endl;
 
     return true;
 }
@@ -355,8 +347,6 @@ bool Foam::functionObjects::fieldAverage::write(const bool postProcess)
     {
         restart();
     }
-
-    Info<< endl;
 
     return true;
 }

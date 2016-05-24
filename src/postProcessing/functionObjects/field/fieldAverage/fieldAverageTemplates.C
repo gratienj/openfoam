@@ -36,7 +36,7 @@ void Foam::functionObjects::fieldAverage::addMeanFieldType(const label fieldi)
     const word& fieldName = faItems_[fieldi].fieldName();
     const word& meanFieldName = faItems_[fieldi].meanFieldName();
 
-    if (log_) Info << "    Reading/initialising field " << meanFieldName << endl;
+    if (log_) Info<< "    Reading/initialising field " << meanFieldName << endl;
 
     if (obr_.foundObject<Type>(meanFieldName))
     {
@@ -113,7 +113,7 @@ void Foam::functionObjects::fieldAverage::addPrime2MeanFieldType
     const word& prime2MeanFieldName = faItems_[fieldi].prime2MeanFieldName();
 
     if (log_) Info
-        << "    Reading/initialising field " << prime2MeanFieldName << endl;
+        << "    Reading/initialising field " << prime2MeanFieldName << nl;
 
     if (obr_.foundObject<Type2>(prime2MeanFieldName))
     {
