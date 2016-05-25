@@ -105,8 +105,7 @@ void Foam::functionObjects::yPlus::calcYPlus
 
             if (Pstream::master())
             {
-                if (log_) Info
-                    << "    patch " << patch.name()
+                Log << "    patch " << patch.name()
                     << " y+ : min = " << minYplus << ", max = " << maxYplus
                     << ", average = " << avgYplus << nl;
 
@@ -136,8 +135,7 @@ void Foam::functionObjects::yPlus::calcYPlus
 
             if (Pstream::master())
             {
-                if (log_) Info
-                    << "    patch " << patch.name()
+                Log << "    patch " << patch.name()
                     << " y+ : min = " << minYplus << ", max = " << maxYplus
                     << ", average = " << avgYplus << nl;
 
@@ -226,7 +224,7 @@ bool Foam::functionObjects::yPlus::execute(const bool postProcess)
             mesh.lookupObject<volScalarField>(type())
         );
 
-    if (log_) Info<< type() << " " << name() << " output:" << nl;
+    Log << type() << " " << name() << " output:" << nl;
 
     if (mesh.foundObject<turbulenceModel>(turbulenceModel::propertiesName))
     {
@@ -253,7 +251,7 @@ bool Foam::functionObjects::yPlus::write(const bool postProcess)
     const volScalarField& yPlus =
         obr_.lookupObject<volScalarField>(type());
 
-    if (log_) Info<< "    writing field " << yPlus.name() << endl;
+    Log << "    writing field " << yPlus.name() << endl;
 
     yPlus.write();
 

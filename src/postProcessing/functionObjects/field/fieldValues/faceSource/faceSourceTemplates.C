@@ -352,10 +352,10 @@ bool Foam::functionObjects::fieldValues::faceSource::writeValues
             << "(" << sourceName_ << ") for " << fieldName
             <<  " = " << result << endl;
 
-        // Write state/results information
-        const word& opName = operationTypeNames_[operation_];
-        word resultName = opName + '(' + sourceName_ + ',' + fieldName + ')';
-        this->setResult(resultName, result);
+            Log << "    " << operationTypeNames_[operation_]
+                << "(" << sourceName_ << ") of " << fieldName
+                <<  " = " << result << endl;
+        }
     }
 
     return ok;

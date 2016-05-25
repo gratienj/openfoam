@@ -85,8 +85,7 @@ void Foam::functionObjects::wallShearStress::calcShearStress
             << token::TAB << maxSsp
             << endl;
 
-        if (log_) Info
-            << "    min/max(" << pp.name() << ") = "
+        Log << "    min/max(" << pp.name() << ") = "
             << minSsp << ", " << maxSsp << endl;
     }
 }
@@ -220,7 +219,7 @@ bool Foam::functionObjects::wallShearStress::execute(const bool postProcess)
             mesh.lookupObject<volVectorField>(type())
         );
 
-    if (log_) Info<< type() << " " << name() << " output:" << nl;
+    Log << type() << " " << name() << " output:" << nl;
 
 
     tmp<volSymmTensorField> Reff;
@@ -258,7 +257,7 @@ bool Foam::functionObjects::wallShearStress::write(const bool postProcess)
     const volVectorField& wallShearStress =
         obr_.lookupObject<volVectorField>(type());
 
-    if (log_) Info<< type() << " " << name() << " output:" << nl
+    Log << type() << " " << name() << " output:" << nl
         << "    writing field " << wallShearStress.name() << nl
         << endl;
 

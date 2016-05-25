@@ -115,7 +115,9 @@ void Foam::functionObjects::fieldValues::fieldValueDelta::processFields
 
     if (log_) Info << "    " << resultName << " = " << result << endl;
 
-    this->file()<< tab << result;
+            Log << "    " << operationTypeNames_[operation_]
+                << "(" << fieldName << ") = " << result
+                << endl;
 
     // Write state/results information
     this->setResult(resultName, result);

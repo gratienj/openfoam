@@ -303,7 +303,7 @@ bool Foam::functionObjects::forceCoeffs::write(const bool postProcess)
             << tab << Cm << tab  << Cd
             << tab << Cl << tab << Clf << tab << Clr << endl;
 
-        if (log_) Info<< type() << " " << name() << " output:" << nl
+        Log << type() << " " << name() << " output:" << nl
             << "    Cm    = " << Cm << nl
             << "    Cd    = " << Cd << nl
             << "    Cl    = " << Cl << nl
@@ -392,8 +392,7 @@ void Foam::forceCoeffs::write()
         const volVectorField& momentCoeff =
             obr_.lookupObject<volVectorField>(fieldName("momentCoeff"));
 
-        forceCoeff.write();
-        momentCoeff.write();
+        Log << endl;
     }
 
     return true;

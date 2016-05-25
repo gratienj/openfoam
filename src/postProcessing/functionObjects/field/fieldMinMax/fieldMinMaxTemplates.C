@@ -67,43 +67,31 @@ void Foam::functionObjects::fieldMinMax::output
 
         file<< endl;
 
-        if (log_) Info
-            << "    min(" << outputName << ") = " << minValue
+        Log << "    min(" << outputName << ") = " << minValue
             << " at location " << minC;
 
         if (Pstream::parRun())
         {
-            if (log_) Info<< " on processor " << minProcI;
+            Log << " on processor " << minProci;
         }
 
-        if (log_) Info
-            << nl << "    max(" << outputName << ") = " << maxValue
+        Log << nl << "    max(" << outputName << ") = " << maxValue
             << " at location " << maxC;
 
         if (Pstream::parRun())
         {
-            if (log_) Info<< " on processor " << maxProcI;
+            Log << " on processor " << maxProci;
         }
     }
     else
     {
         file<< token::TAB << minValue << token::TAB << maxValue;
 
-        if (log_) Info
-            << "    min/max(" << outputName << ") = "
+        Log << "    min/max(" << outputName << ") = "
             << minValue << ' ' << maxValue;
     }
 
-    if (log_) Info<< endl;
-
-    // Write state/results information
-    word nameStr('(' + outputName + ')');
-    this->setResult("min" + nameStr, minValue);
-    this->setResult("min" + nameStr + "_position", minC);
-    this->setResult("min" + nameStr + "_processor", minProcI);
-    this->setResult("max" + nameStr, maxValue);
-    this->setResult("max" + nameStr + "_position", maxC);
-    this->setResult("max" + nameStr + "_processor", maxProcI);
+    Log << endl;
 }
 
 

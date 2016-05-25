@@ -177,7 +177,7 @@ void Foam::fieldValues::fieldValueDelta::execute()
         writeTime(file());
     }
 
-    if (log_) Info<< type() << " " << name() << " output:" << endl;
+    Log << type() << " " << name() << " output:" << endl;
 
         const word& name1 = source1Ptr_->name();
         const word& name2 = source2Ptr_->name();
@@ -185,50 +185,13 @@ void Foam::fieldValues::fieldValueDelta::execute()
         const wordList entries1 = objectResultEntries(name1);
         const wordList entries2 = objectResultEntries(name2);
 
-        if (entries1.size() != entries2.size())
-        {
-            FatalErrorInFunction
-                << name_ << ": objects must generate the same number of results"
-                << nl
-                << "    " << name1 << " objects: " << entries1 << nl
-                << "    " << name2 << " objects: " << entries2 << nl
-                << exit(FatalError);
-        }
-
-        forAll(entries1, i)
-        {
-            const word& entry1(entries1[i]);
-            const word& entry2(entries2[i]);
-            const word type1 = objectResultType(name1, entry1);
-            const word type2 = objectResultType(name2, entry2);
-
-            if (type1 != type2)
-            {
-                FatalErrorInFunction
-                    << name_
-                    << ": input values for operation must be of the same type"
-                    << nl
-                    << "    " << entry1 << ": " << type1 << nl
-                    << "    " << entry2 << ": " << type2 << nl
-                    << exit(FatalError);
-            }
-
-            bool found = false;
-
-            apply<scalar>(type1, name1, name2, entry1, entry2, found);
-            apply<vector>(type1, name1, name2, entry1, entry2, found);
-            apply<sphericalTensor>(type1, name1, name2, entry1, entry2, found);
-            apply<symmTensor>(type1, name1, name2, entry1, entry2, found);
-            apply<tensor>(type1, name1, name2, entry1, entry2, found);
-
-            if (log_ && !found)
-            {
-                Info<< "Operation between "
-                    << name1 << " with result " << entry1 << " and "
-                    << name2 << " with result " << entry2 << " not applied"
-                    << endl;
-            }
-        }
+    if (!found)
+    {
+        Log << "    none" << endl;
+    }
+    else
+    {
+        Log << endl;
     }
 
     return true;

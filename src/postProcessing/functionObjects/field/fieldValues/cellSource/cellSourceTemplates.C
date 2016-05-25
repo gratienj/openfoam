@@ -209,17 +209,10 @@ bool Foam::functionObjects::fieldValues::cellSource::writeValues
 
         Type result = processValues(values, V, weightField);
 
-        file()<< tab << result;
-
-        if (log_) Info
-            << "    " << operationTypeNames_[operation_]
-            << "(" << sourceName_ << ") of " << fieldName
-            <<  " = " << result << endl;
-
-        // write state/results information
-        const word& opName = operationTypeNames_[operation_];
-        word resultName = opName + '(' + sourceName_ + ',' + fieldName + ')';
-        this->setResult(resultName, result);
+            Log << "    " << operationTypeNames_[operation_]
+                << "(" << sourceName_ << ") of " << fieldName
+                <<  " = " << result << endl;
+        }
     }
 
     return ok;

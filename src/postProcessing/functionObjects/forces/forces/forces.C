@@ -405,8 +405,7 @@ void Foam::functionObjects::forces::applyBins
 
 void Foam::functionObjects::forces::writeForces()
 {
-    if (log_) Info
-        << type() << " " << name() << " output:" << nl
+    Log << type() << " " << name() << " output:" << nl
         << "    sum of forces:" << nl
         << "        pressure : " << sum(force_[0]) << nl
         << "        viscous  : " << sum(force_[1]) << nl
@@ -619,7 +618,7 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
 
     initialised_ = false;
 
-    if (log_) Info<< type() << " " << name() << ":" << nl;
+    Log << type() << " " << name() << ":" << nl;
 
     directForceDensity_ = dict.lookupOrDefault("directForceDensity", false);
 
@@ -660,11 +659,11 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
     dict.readIfPresent("porosity", porosity_);
     if (porosity_)
     {
-        if (log_) Info<< "    Including porosity effects" << endl;
+        Log << "    Including porosity effects" << endl;
     }
     else
     {
-        if (log_) Info<< "    Not including porosity effects" << endl;
+        Log << "    Not including porosity effects" << endl;
     }
 
     if (dict.found("binData"))
@@ -923,7 +922,7 @@ bool Foam::functionObjects::forces::write(const bool postProcess)
 
         writeBins();
 
-        if (log_) Info<< endl;
+        Log << endl;
     }
 
     return true;
