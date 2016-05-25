@@ -81,6 +81,11 @@ class vorticity
 :
     public fieldExpression
 {
+    // Private Member Functions
+
+        //- Calculate the vorticity field and return true if successful
+        virtual bool calc();
+
 
 public:
 
@@ -101,12 +106,6 @@ public:
 
     //- Destructor
     virtual ~vorticity();
-
-
-    // Member Functions
-
-        //- Calculate the vorticity field
-        virtual bool execute(const bool postProcess = false);
 };
 
 

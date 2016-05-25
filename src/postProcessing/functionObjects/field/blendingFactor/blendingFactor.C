@@ -38,16 +38,22 @@ namespace functionObjects
 }
 
 
-// * * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::blendingFactor::writeFileHeader(Ostream& os) const
+bool Foam::functionObjects::blendingFactor::calc()
 {
-    writeHeader(os, "Blending factor");
-    writeCommented(os, "Time");
-    writeTabbed(os, "Scheme1");
-    writeTabbed(os, "Scheme2");
-    writeTabbed(os, "Blended");
-    os  << endl;
+    bool processed = false;
+
+    processed = processed || calcBF<scalar>();
+    processed = processed || calcBF<vector>();
+
+    if (!processed)
+    {
+        WarningInFunction
+            << "Unprocessed field " << fieldName_ << endl;
+    }
+
+    return processed;
 }
 
 
@@ -83,23 +89,6 @@ bool Foam::functionObjects::blendingFactor::read(const dictionary& dict)
     resultName_ = "blendingFactor:" + fieldName_;
 
     return true;
-}
-
-
-bool Foam::functionObjects::blendingFactor::execute(const bool postProcess)
-{
-    bool processed = false;
-
-    processed = processed || calc<scalar>();
-    processed = processed || calc<vector>();
-
-    if (!processed)
-    {
-        WarningInFunction
-            << "Unprocessed field " << fieldName_ << endl;
-    }
-
-    return processed;
 }
 
 
