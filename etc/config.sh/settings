@@ -242,20 +242,14 @@ OpenFOAM | ThirdParty)
         # Add ThirdParty compiler libraries to run-time environment
         _foamAddLib     $gccDir/lib$WM_COMPILER_LIB_ARCH
 
-        # Add ThirdParty gmp/mpfr/mpc libraries to run-time environment
-        if [ "${gmpDir##*-}" != system ]
+        # Add gmp/mpfr libraries to run-time environment
+        _foamAddLib     $gmpDir/lib$WM_COMPILER_LIB_ARCH
+        _foamAddLib     $mpfrDir/lib$WM_COMPILER_LIB_ARCH
+
+        # Add mpc libraries (not need for older gcc) to run-time environment
+        if [ -n "$mpc_version" ]
         then
-            _foamAddLib $gmpDir/lib$WM_COMPILER_LIB_ARCH
-            export GMP_ARCH_PATH=$gmpDir        # For ThirdParty CGAL
-        fi
-        if [ "${mpfrDir##*-}" != system ]
-        then
-            _foamAddLib $mpfrDir/lib$WM_COMPILER_LIB_ARCH
-            export MPFR_ARCH_PATH=$mpfrDir      # For ThirdParty CGAL
-        fi
-        if [ "${mpcDir##*-}" != system ]
-        then
-            _foamAddLib $mpcDir/lib$WM_COMPILER_LIB_ARCH
+            _foamAddLib     $mpcDir/lib$WM_COMPILER_LIB_ARCH
         fi
 
         if [ "$FOAM_VERBOSE" -a "$PS1" ]

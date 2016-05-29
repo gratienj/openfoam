@@ -62,9 +62,6 @@ OpenFOAM | ThirdParty)
     Gcc53)
         gcc_version=gcc-5.3.0
         ;;
-    Gcc54)
-        gcc_version=gcc-5.4.0
-        ;;
     Gcc61)
         gcc_version=gcc-6.1.0
         ;;
