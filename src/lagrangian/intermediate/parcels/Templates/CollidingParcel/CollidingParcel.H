@@ -160,6 +160,13 @@ public:
           + " (collisionRecordsWallData)"
         );
 
+        //- String representation of property types
+        AddToPropertyTypes
+        (
+            ParcelType,
+            "{vector vector vector} *"
+        );
+
 
     // Constructors
 

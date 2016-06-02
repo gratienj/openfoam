@@ -175,7 +175,14 @@ public:
         AddToPropertyList
         (
             ParcelType,
-            "(UCorrectx UCorrecty UCorrectz)"
+            " (UCorrectx UCorrecty UCorrectz)"
+        );
+
+        //- String representation of property types
+        AddToPropertyTypes
+        (
+            ParcelType,
+            "{vector}"
         );
 
 

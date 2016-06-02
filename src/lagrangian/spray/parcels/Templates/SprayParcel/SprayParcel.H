@@ -200,6 +200,25 @@ public:
           + " user"
         );
 
+        //- String representation of property types
+        AddToPropertyTypes
+        (
+            ParcelType,
+            "{scalar"
+          + " vector"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " scalar}"
+        );
+
 
     // Constructors
 

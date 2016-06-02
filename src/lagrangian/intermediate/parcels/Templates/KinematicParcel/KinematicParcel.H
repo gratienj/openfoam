@@ -317,6 +317,22 @@ public:
           + " (UTurbx UTurby UTurbz)"
         );
 
+        //- String representation of property types
+        AddToPropertyTypes
+        (
+            ParcelType,
+            "{label"
+          + " label"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " vector"
+          + " scalar"
+          + " scalar"
+          + " scalar"
+          + " vector}"
+        );
+
 
     // Constructors
 

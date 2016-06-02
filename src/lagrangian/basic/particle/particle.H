@@ -319,6 +319,12 @@ public:
             "tetFaceI tetPtI origProc origId"
         );
 
+        //- String representation of property types
+        DefinePropertyTypes
+        (
+            "{vector label label scalar label label label label}"
+        );
+
         //- Cumulative particle counter - used to provode unique ID
         static label particleCount_;
 

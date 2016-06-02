@@ -277,6 +277,13 @@ public:
           + " Cp"
         );
 
+        //- String representation of property types
+        AddToPropertyTypes
+        (
+            ParcelType,
+            "{scalar scalar}"
+        );
+
 
     // Constructors
 
