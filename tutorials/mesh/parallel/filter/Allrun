@@ -9,8 +9,8 @@ application=`getApplication`
 # create mesh
 runApplication blockMesh
 
-# copy 0.org to 0
-cp -r 0.org 0
+# Copy 0.org to 0
+restore0Dir
 
 # create sets
 runApplication topoSet
