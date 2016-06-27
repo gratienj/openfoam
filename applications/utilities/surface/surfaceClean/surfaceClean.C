@@ -24,6 +24,9 @@ License
 Application
     surfaceClean
 
+Group
+    grpSurfaceUtilities
+
 Description
     - removes baffles
     - collapses small edges, removing triangles.
