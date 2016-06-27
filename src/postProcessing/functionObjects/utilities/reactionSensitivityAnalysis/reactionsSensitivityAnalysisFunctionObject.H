@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -21,78 +21,41 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Class
-    Foam::radiation::noTransmissivity
+Typedef
+    Foam::reactionsSensitivityAnalysisFunctionObject
 
 Description
-    Dummy transmissivity model for 'none'
+    FunctionObject wrapper around reactionsSensitivityAnalysis to allow
+    it to be created via the functions entry within controlDict.
 
 SourceFiles
-    noTransmissivity.C
+    reactionsSensitivityAnalysisFunctionObject.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef radiationConstantScatter_H
-#define radiationConstantScatter_H
+#ifndef reactionsSensitivityAnalysisFunctionObject_H
+#define reactionsSensitivityAnalysisFunctionObject_H
 
-#include "transmissivityModel.H"
+#include "OutputFilterFunctionObject.H"
+#include "reactionsSensitivityAnalysis.H"
+#include "rhoChemistryModel.H"
+#include "psiChemistryModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace radiation
-{
-
-/*---------------------------------------------------------------------------*\
-                          Class noTransmissivity Declaration
-\*---------------------------------------------------------------------------*/
-
-class noTransmissivity
-:
-    public transmissivityModel
-{
-
-public:
-
-    //- Runtime type information
-    TypeName("none");
+    typedef OutputFilterFunctionObject
+    <
+        reactionsSensitivityAnalysis<rhoChemistryModel>
+    > rhoReactionsSensitivityAnalysisFunctionObject;
 
 
-    // Constructors
-
-        //- Construct from components
-        noTransmissivity(const dictionary& dict, const fvMesh& mesh);
-
-
-    //- Destructor
-    virtual ~noTransmissivity();
-
-
-    // Member Functions
-
-        //- Return scatter coefficient
-        tmp<volScalarField> tauEff(const label bandI = 0) const;
-
-         //- Is Grey
-        inline bool isGrey() const
-        {
-            return true;
-        }
-
-
-        //- Number of bands
-        inline label nBands() const
-        {
-            return 1;
-        }
-};
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace radiation
-} // End namespace Foam
+    typedef OutputFilterFunctionObject
+    <
+        reactionsSensitivityAnalysis<psiChemistryModel>
+    > psiReactionsSensitivityAnalysisFunctionObject;
+}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

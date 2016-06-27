@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,37 +23,53 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "error.H"
-#include "transmissivityModel.H"
+#include "reactionsSensitivityAnalysisFunctionObject.H"
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-Foam::autoPtr<Foam::radiation::transmissivityModel> Foam::radiation::
-transmissivityModel::New
-(
-    const dictionary& dict,
-    const fvMesh& mesh
-)
+namespace Foam
 {
-    const word modelType(dict.lookup("transmissivityModel"));
+    defineTemplateTypeNameAndDebugWithName
+    (
+        reactionsSensitivityAnalysis<rhoChemistryModel>,
+        "rhoReactionsSensitivityAnalysis",
+        0
+    );
 
-    Info<< "Selecting transmissivityModel " << modelType << endl;
+    defineTemplateTypeNameAndDebugWithName
+    (
+        rhoReactionsSensitivityAnalysisFunctionObject,
+        "rhoReactionsSensitivityAnalysis",
+        0
+    );
 
-    dictionaryConstructorTable::iterator cstrIter =
-        dictionaryConstructorTablePtr_->find(modelType);
+    addToRunTimeSelectionTable
+    (
+        functionObject,
+        rhoReactionsSensitivityAnalysisFunctionObject,
+        dictionary
+    );
 
-    if (cstrIter == dictionaryConstructorTablePtr_->end())
-    {
-        FatalErrorInFunction
-            << "Unknown transmissivityModel type "
-            << modelType << nl << nl
-            << "Valid transmissivityModel types are :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
-    }
+    defineTemplateTypeNameAndDebugWithName
+    (
+        reactionsSensitivityAnalysis<psiChemistryModel>,
+        "psiReactionsSensitivityAnalysis",
+        0
+    );
 
-    return autoPtr<transmissivityModel>(cstrIter()(dict, mesh));
+    defineTemplateTypeNameAndDebugWithName
+    (
+        psiReactionsSensitivityAnalysisFunctionObject,
+        "psiReactionsSensitivityAnalysis",
+        0
+    );
+
+    addToRunTimeSelectionTable
+    (
+        functionObject,
+        psiReactionsSensitivityAnalysisFunctionObject,
+        dictionary
+    );
 }
-
 
 // ************************************************************************* //
