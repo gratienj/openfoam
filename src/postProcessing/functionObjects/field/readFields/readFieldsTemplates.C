@@ -31,12 +31,7 @@ License
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::readFields::loadField
-(
-    const word& fieldName,
-    PtrList<GeometricField<Type, fvPatchField, volMesh>>& vflds,
-    PtrList<GeometricField<Type, fvsPatchField, surfaceMesh>>& sflds
-) const
+bool Foam::readFields::loadField(const word& fieldName) const
 {
     typedef GeometricField<Type, fvPatchField, volMesh> vfType;
     typedef GeometricField<Type, fvsPatchField, surfaceMesh> sfType;
@@ -82,6 +77,7 @@ void Foam::readFields::loadField
             if (log_) Info<< "    Reading " << fieldName << endl;
             vfType* vfPtr = new vfType(fieldHeader, mesh);
             mesh.objectRegistry::store(vfPtr);
+            return true;
         }
         else if
         (
@@ -93,8 +89,11 @@ void Foam::readFields::loadField
             if (log_) Info<< "    Reading " << fieldName << endl;
             sfType* sfPtr = new sfType(fieldHeader, mesh);
             mesh.objectRegistry::store(sfPtr);
+            return true;
         }
     }
+
+    return false;
 }
 
 
