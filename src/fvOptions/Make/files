@@ -12,6 +12,7 @@ $(generalSources)/codedSource/codedSource.C
 $(generalSources)/semiImplicitSource/semiImplicitSource.C
 
 derivedSources=sources/derived
+$(derivedSources)/acousticDampingSource/acousticDampingSource.C
 $(derivedSources)/actuationDiskSource/actuationDiskSource.C
 $(derivedSources)/effectivenessHeatExchangerSource/effectivenessHeatExchangerSource.C
 $(derivedSources)/explicitPorositySource/explicitPorositySource.C
