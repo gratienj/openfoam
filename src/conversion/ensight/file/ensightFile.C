@@ -186,6 +186,12 @@ Foam::Ostream& Foam::ensightFile::write(const string& value)
 }
 
 
+Foam::Ostream& Foam::ensightFile::write(const string& value)
+{
+    return write(value.c_str());
+}
+
+
 Foam::Ostream& Foam::ensightFile::write(const label value)
 {
     if (format() == IOstream::BINARY)

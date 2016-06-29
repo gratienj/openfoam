@@ -25,6 +25,20 @@ License
 
 #include "ensightGeoFile.H"
 
+#include "IOstreams.H"
+
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+void Foam::ensightGeoFile::initialize()
+{
+    writeBinaryHeader();
+    write("Ensight Geometry File");  newline(); // description line 1
+    write("=====================");  newline(); // description line 2
+    write("node id assign");         newline();
+    write("element id assign");      newline();
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::ensightGeoFile::ensightGeoFile
@@ -52,7 +66,9 @@ Foam::ensightGeoFile::~ensightGeoFile()
 
 Foam::Ostream& Foam::ensightGeoFile::writeKeyword(const string& key)
 {
-    write(key);
+    // Note: make sure to hit ensightFile::write(const string&)
+    write(string(key));
+
     newline();
 
     return *this;
