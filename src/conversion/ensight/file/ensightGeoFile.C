@@ -66,10 +66,8 @@ Foam::ensightGeoFile::~ensightGeoFile()
 
 Foam::Ostream& Foam::ensightGeoFile::writeKeyword(const string& key)
 {
-    // Note: make sure to hit ensightFile::write(const string&)
-    write(string(key));
-
-    newline();
+    // ensure we get ensightFile::write(const string&)
+    write(static_cast<const string&>(key)); newline();
 
     return *this;
 }
