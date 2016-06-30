@@ -100,7 +100,7 @@ Foam::fileName Foam::ensightSurfaceWriter::write
     ensightGeoFile osGeom
     (
         outputDir,
-        surfName + ".000000.mesh",
+        surfName + ".00000000.mesh",
         writeFormat_
     );
 
