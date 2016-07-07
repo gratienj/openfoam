@@ -321,6 +321,30 @@ void Foam::activePressureForceBaffleVelocityFvPatchVectorField::updateCoeffs()
 
         Info<< "Open fraction = " << openFraction_ << endl;
 
+        if (opening_)
+        {
+            areaFraction = openFraction_;
+        }
+        else
+        {
+            areaFraction = 1 - openFraction_;
+        }
+
+        if (patch().boundaryMesh().mesh().moving())
+        {
+            // All areas have been recalculated already so are consistent
+            // with the new points. Note we already only do this routine
+            // once per timestep. The alternative is to use the upToDate
+            // mechanism for regIOobject + polyMesh::upToDatePoints
+            initWallSf_ = patch().Sf();
+            initCyclicSf_ = patch().boundaryMesh()[cyclicPatchLabel_].Sf();
+            nbrCyclicSf_ =  refCast<const cyclicFvPatch>
+            (
+                patch().boundaryMesh()[cyclicPatchLabel_]
+            ).neighbFvPatch().Sf();
+        }
+
+        // Update this wall patch
         vectorField::subField Sfw = patch().patch().faceAreas();
         vectorField newSfw((1 - openFraction_)*initWallSf_);
         forAll(Sfw, facei)
