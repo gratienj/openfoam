@@ -342,6 +342,10 @@ void reactingOneDim::solveEnergy()
         hEqn += fvc::div(phiQr);
     }
 
+/* NOTE: The moving mesh option is only correct for reaction such as
+   Solid -> Gas, thus the ddt term is compesated exaclty by chemistrySh and
+   the mesh flux is not necessary.
+   
     if (regionMesh().moving())
     {
         surfaceScalarField phihMesh
@@ -351,7 +355,7 @@ void reactingOneDim::solveEnergy()
 
         hEqn += fvc::div(phihMesh);
     }
-
+*/
     hEqn.relax();
     hEqn.solve();
 }
