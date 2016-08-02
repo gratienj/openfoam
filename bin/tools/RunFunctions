@@ -54,7 +54,6 @@ getApplication()
 
 runApplication()
 {
-    LOG_NAME=
     APP_RUN=
     LOG_IGNORE=false
     LOG_APPEND=false
@@ -101,12 +100,15 @@ runApplication()
 
 runParallel()
 {
-    LOG_NAME=
     APP_RUN=
     LOG_IGNORE=false
     LOG_APPEND=false
     LOG_SUFFIX=
-    nProcs=$(getNumberOfProcessors)
+
+    # Store any parsed additional arguments e.g. decomposeParDict
+    APP_PARARGS=
+    # Check the default decomposeParDict if available
+    nProcs=$(getNumberOfProcessors system/decomposeParDict)
 
     # Parse options and executable
     while [ $# -gt 0 ] && [ -z "$APP_RUN" ]; do
@@ -137,7 +139,7 @@ runParallel()
         shift
     done
 
-    if [ -f log.$SUFFIX ] && [ "$LOG_IGNORE" = "false" ]
+    if [ -f log.$LOG_SUFFIX ] && [ "$LOG_IGNORE" = "false" ]
     then
         echo "$APP_NAME already run on $PWD:" \
              "remove log file 'log.$LOG_SUFFIX' to re-run"
