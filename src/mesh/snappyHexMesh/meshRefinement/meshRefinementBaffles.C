@@ -28,7 +28,6 @@ License
 #include "syncTools.H"
 #include "Time.H"
 #include "refinementSurfaces.H"
-#include "pointSet.H"
 #include "faceSet.H"
 #include "indirectPrimitivePatch.H"
 #include "polyTopoChange.H"
@@ -37,7 +36,6 @@ License
 #include "polyModifyCell.H"
 #include "polyAddFace.H"
 #include "polyRemoveFace.H"
-#include "polyAddPoint.H"
 #include "localPointRegion.H"
 #include "duplicatePoints.H"
 #include "regionSplit.H"
@@ -255,106 +253,33 @@ void Foam::meshRefinement::getBafflePatches
     labelList& neiPatch
 ) const
 {
-    // This determines the patches for the intersected faces to
-    // - remove the outside of the mesh
-    // - introduce baffles for (non-faceZone) intersections
-    // Any baffles for faceZones (faceType 'baffle'/'boundary') get introduced
-    // later
+    // In v1606 we used the zonify routine to detect which cells were
+    // not assigned (zone=-2) and insert baffles at those. A big problem
+    // with the zonify routine as it stands is that it splits up the
+    // mesh according to (sometimes) intersections with both named and unnamed
+    // surfaces. On complex surfaces there might be regions which are
+    // split off since
+    // - some faces intersect unnamed surfaces
+    // - some faces intersect named surfaces
+    // and this causes these regions to be wrongly kept. For now just bypass
+    // that complex logic and just use the intersections with the unnamed
+    // surfaces to baffle (and hence split).
 
-
-    // 1. Determine cell zones
-    // ~~~~~~~~~~~~~~~~~~~~~~~
-    // Note that this does not determine the surface+region that was intersected
-    // so that is done in step 2 below.
-
-    labelList cellToZone;
-    {
-        labelList namedSurfaceIndex;
-        PackedBoolList posOrientation;
-        zonify
-        (
-            true,               // allowFreeStandingZoneFaces
-            locationsInMesh,
-            zonesInMesh,
-
-            cellToZone,
-            namedSurfaceIndex,
-            posOrientation
-        );
-    }
-
-
-    // The logic is quite complicated and depends on the cell zone allocation
-    // (see zonify). Cells can have zone:
-    //  -2  : unreachable
-    //  -1  : in background zone
-    //  >=0 : in named cellZone
-    // Faces can be intersected by a
-    //  - unnamed surface (no faceZone defined for it)
-    //  - named surface (a faceZone defined for it)
-    // Per intersected faces, depending on the cellToZone on either side of
-    // the face we need to:
-    //
-    // surface type    |   cellToZone      |   action
-    // ----------------+-------------------+---------
-    // unnamed         |  -2  | same       |   -
-    // unnamed         |  -2  | different  |   baffle
-    //                 |      |            |
-    // unnamed         |  -1  | same       |   baffle
-    // unnamed         |  -1  | different  |   -
-    //                 |      |            |
-    // unnamed         | >=0  | same       |   baffle
-    // unnamed         | >=0  | different  |   -
-    //
-    // named           |  -2  | same       |   -
-    // named           |  -2  | different  |   see note
-    //
-    // named           |  -1  | same       |   -
-    // named           |  -1  | different  |   -
-    //
-    // named           | >=0  | same       |   -
-    // named           | >=0  | different  |   -
-    //
-    // So the big difference between surface with a faceZone and those
-    // without is that 'standing-up-baffles' are not supported. Note that
-    // they are still in a faceZone so can be split etc. later on.
-    // Note: this all depends on whether we allow named surfaces
-    //       to be outside the unnamed geometry. 2.3 does not allow this
-    //       so we do the same. We could implement it but it would require
-    //       re-testing of the intersections with the named surfaces to
-    //       obtain the surface and region number.
-
-
-    // 2. Check intersections of all unnamed surfaces
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    const PtrList<surfaceZonesInfo>& surfZones = surfaces_.surfZones();
+    labelList unnamedSurfaces(surfaceZonesInfo::getUnnamedSurfaces(surfZones));
 
     const labelList testFaces(intersectedFaces());
 
-    labelList globalRegion1;
-    labelList globalRegion2;
+    labelList unnamedRegion1;
+    labelList unnamedRegion2;
     getIntersections
     (
-        surfaceZonesInfo::getUnnamedSurfaces(surfaces_.surfZones()),
+        unnamedSurfaces,
         neiCc,
         testFaces,
-        globalRegion1,
-        globalRegion2
+        unnamedRegion1,
+        unnamedRegion2
     );
-
-
-    labelList neiCellZone;
-    syncTools::swapBoundaryCellList(mesh_, cellToZone, neiCellZone);
-
-
-    // 3. Baffle all boundary faces
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    // Baffle all boundary faces except those on outside of unvisited cells
-    // Use patch according to globalRegion1,2
-    // Note: the behaviour is slightly different from version3.0 and earlier
-    //       in that it will not create baffles which are outside the meshed
-    //       domain. On a medium testcase (motorBike tutorial geometry) this
-    //       selects about 20 cells less (out of 120000). These cells are where
-    //       there might e.g. be a single cell which is fully unreachable.
 
     ownPatch.setSize(mesh_.nFaces());
     ownPatch = -1;
@@ -364,52 +289,21 @@ void Foam::meshRefinement::getBafflePatches
     {
         label faceI = testFaces[i];
 
-        if (globalRegion1[faceI] != -1 || globalRegion2[faceI] != -1)
+        if (unnamedRegion1[faceI] != -1 || unnamedRegion2[faceI] != -1)
         {
             label ownMasterPatch = -1;
-            if (globalRegion1[faceI] != -1)
+            if (unnamedRegion1[faceI] != -1)
             {
-                ownMasterPatch = globalToMasterPatch[globalRegion1[faceI]];
+                ownMasterPatch = globalToMasterPatch[unnamedRegion1[faceI]];
             }
             label neiMasterPatch = -1;
-            if (globalRegion2[faceI] != -1)
+            if (unnamedRegion2[faceI] != -1)
             {
-                neiMasterPatch = globalToMasterPatch[globalRegion2[faceI]];
+                neiMasterPatch = globalToMasterPatch[unnamedRegion2[faceI]];
             }
 
-
-            label ownZone = cellToZone[mesh_.faceOwner()[faceI]];
-            label neiZone = -1;
-
-            if (mesh_.isInternalFace(faceI))
-            {
-                neiZone = cellToZone[mesh_.faceNeighbour()[faceI]];
-            }
-            else
-            {
-                neiZone = neiCellZone[faceI-mesh_.nInternalFaces()];
-            }
-
-
-            if (ownZone == -2)
-            {
-                if (neiZone != -2)
-                {
-                    ownPatch[faceI] = ownMasterPatch;
-                    neiPatch[faceI] = neiMasterPatch;
-                }
-            }
-            else if (neiZone == -2)
-            {
-                ownPatch[faceI] = ownMasterPatch;
-                neiPatch[faceI] = neiMasterPatch;
-            }
-            else if (ownZone == neiZone)
-            {
-                // Free-standing baffle
-                ownPatch[faceI] = ownMasterPatch;
-                neiPatch[faceI] = neiMasterPatch;
-            }
+            ownPatch[faceI] = ownMasterPatch;
+            neiPatch[faceI] = neiMasterPatch;
         }
     }
 
@@ -1634,11 +1528,6 @@ void Foam::meshRefinement::findCellZoneInsideWalk
     regionSplit cellRegion(mesh_, blockedFace);
     blockedFace.clear();
 
-    // Mark off which regions correspond to a zone
-    // (note zone is -1 for the non-zoned bit so initialise to -2)
-    labelList regionToZone(cellRegion.nRegions(), -2);
-
-
     // Force calculation of face decomposition (used in findCell)
     (void)mesh_.tetBasePtIs();
 
@@ -1678,9 +1567,6 @@ void Foam::meshRefinement::findCellZoneInsideWalk
         }
 
 
-        // Mark correspondence to zone
-        regionToZone[keepRegionI] = zoneID;
-
 
         // Set all cells with this region to the zoneID
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1698,7 +1584,7 @@ void Foam::meshRefinement::findCellZoneInsideWalk
                 }
                 else if (cellToZone[cellI] != zoneID)
                 {
-                    if (nWarnings < 10)
+                    if (cellToZone[cellI] != -1 && nWarnings < 10)
                     {
                         WarningInFunction
                             << "Cell " << cellI
@@ -1718,6 +1604,9 @@ void Foam::meshRefinement::findCellZoneInsideWalk
                             << endl;
                         nWarnings++;
                     }
+
+                    // Override the zone
+                    cellToZone[cellI] = zoneID;
                 }
             }
         }
@@ -1783,7 +1672,7 @@ bool Foam::meshRefinement::calcRegionToZone
             else if (regionToCellZone[neiRegion] == surfZoneI)
             {
                 // Face between unset and my region. Put unset
-                // region into keepRegion
+                // region into background region
                 regionToCellZone[ownRegion] = -1;
                 changed = true;
             }
@@ -1808,7 +1697,7 @@ bool Foam::meshRefinement::calcRegionToZone
             else if (regionToCellZone[ownRegion] == surfZoneI)
             {
                 // Face between unset and my region. Put unset
-                // region into keepRegion
+                // region into background region
                 regionToCellZone[neiRegion] = -1;
                 changed = true;
             }
@@ -1834,6 +1723,18 @@ void Foam::meshRefinement::findCellZoneTopo
     labelList& cellToZone
 ) const
 {
+    // This routine fixes small problems with left over unassigned regions
+    // (after all off the unreachable bits of the mesh have been removed).
+    // This routine splits the mesh into regions, based on the intersection
+    // with a surface. The problem is that we know the surface which
+    // (intersected) face belongs to (in namedSurfaceIndex) but we don't
+    // know which side of the face it relates to. So all we are doing here
+    // is get the correspondence between surface/cellZone and regionSplit
+    // region. See the logic in calcRegionToZone.
+    // Basically it looks at the neighbours of a face on a named surface.
+    // If one side is in the cellZone corresponding to the surface and
+    // the other side is unassigned (-2) it sets this to the background zone.
+
     // Assumes:
     // - region containing keepPoint does not go into a cellZone
     // - all other regions can be found by crossing faces marked in
@@ -2324,18 +2225,20 @@ void Foam::meshRefinement::zonify
 
     // 1. Test all (unnamed & named) surfaces
 
-    labelList globalRegion1;
+    // Unnamed surfaces. Global surface region of intersection (or -1)
+    labelList unnamedRegion1;
     {
-        labelList globalRegion2;
+        labelList unnamedRegion2;
         getIntersections
         (
-            identity(surfaces_.surfaces().size()),  // surfacesToTest,
+            unnamedSurfaces,
             neiCc,
-            intersectedFaces(),     // testFaces
-            globalRegion1,
-            globalRegion2
+            intersectedFaces(),
+            unnamedRegion1,
+            unnamedRegion2
         );
     }
+
 
     if (namedSurfaces.size())
     {
@@ -2351,6 +2254,7 @@ void Foam::meshRefinement::zonify
 
 
     // 2. Walk from locationsInMesh. Hard set cellZones.
+    //    Note: walk through faceZones! (these might get overridden later)
 
     if (locationsInMesh.size())
     {
@@ -2377,13 +2281,12 @@ void Foam::meshRefinement::zonify
         Info<< endl;
 
 
-        // Assign cellZone according to seed points
+        // Assign cellZone according to seed points. Walk through named surfaces
         findCellZoneInsideWalk
         (
             locationsInMesh,    // locations
             locationsZoneIDs,   // index of cellZone (or -1)
-            globalRegion1,      // per face -1 (unblocked) or >= 0 (blocked)
-
+            unnamedRegion1,     // per face -1 (unblocked) or >= 0 (blocked)
             cellToZone
         );
     }
@@ -2426,11 +2329,23 @@ void Foam::meshRefinement::zonify
             }
         }
 
+
+        // Stop at unnamed or named surface
+        labelList allRegion1(mesh_.nFaces(), -1);
+        forAll(namedSurfaceIndex, faceI)
+        {
+            allRegion1[faceI] = max
+            (
+                unnamedRegion1[faceI],
+                namedSurfaceIndex[faceI]
+            );
+        }
+
         findCellZoneInsideWalk
         (
             insidePoints,           // locations
             insidePointCellZoneIDs, // index of cellZone
-            globalRegion1,          // per face -1 (unblocked) or >= 0 (blocked)
+            allRegion1,             // per face -1 (unblocked) or >= 0 (blocked)
             cellToZone
         );
     }
@@ -2475,19 +2390,6 @@ void Foam::meshRefinement::zonify
     {
         Info<< "Walking from known cellZones; crossing a faceZone "
             << "face changes cellZone" << nl << endl;
-
-        labelList unnamedRegion1;
-        {
-            labelList unnamedRegion2;
-            getIntersections
-            (
-                unnamedSurfaces,
-                neiCc,
-                intersectedFaces(),
-                unnamedRegion1,
-                unnamedRegion2
-            );
-        }
 
         findCellZoneTopo
         (
@@ -2572,8 +2474,15 @@ void Foam::meshRefinement::zonify
     }
     if (debug&MESH)
     {
+        const_cast<Time&>(mesh_.time())++;
         Pout<< "Writing cell zone allocation on mesh to time "
             << timeName() << endl;
+        write
+        (
+            debugType(debug),
+            writeType(writeLevel() | WRITEMESH),
+            mesh_.time().path()/"cell2Zone"
+        );
         volScalarField volCellToZone
         (
             IOobject
