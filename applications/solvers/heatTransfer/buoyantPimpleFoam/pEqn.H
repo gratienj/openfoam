@@ -50,7 +50,8 @@
     {
         fvScalarMatrix p_rghEqn
         (
-            p_rghDDtEqn
+            p_rghDDtEqn()
+          + fvc::div(phiHbyA)
           - fvm::laplacian(rhorAUf, p_rgh)
         );
 
