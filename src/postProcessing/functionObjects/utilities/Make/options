@@ -27,4 +27,6 @@ LIB_LIBS = \
     -lfiniteVolume \
     -lmeshTools \
     -lsampling \
-    -lsurfMesh
+    -lsurfMesh \
+    -lchemistryModel \
+    -lreactionThermophysicalModels
