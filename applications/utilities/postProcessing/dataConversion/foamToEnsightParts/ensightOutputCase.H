@@ -56,35 +56,36 @@ forAllConstIter(HashTable<word>, volumeFields, fieldIter)
 
     if (fieldType == volScalarField::typeName)
     {
-        ensightType = "scalar";
+        ensightType = ensightPTraits<scalar>::typeName;
     }
     else if (fieldType == volVectorField::typeName)
     {
-        ensightType = "vector";
+        ensightType = ensightPTraits<vector>::typeName;
     }
     else if (fieldType == volSphericalTensorField::typeName)
     {
-        ensightType = "tensor symm";
+        ensightType = ensightPTraits<sphericalTensor>::typeName;
     }
     else if (fieldType == volSymmTensorField::typeName)
     {
-        ensightType = "tensor symm";
+        ensightType = ensightPTraits<symmTensor>::typeName;
     }
     else if (fieldType == volTensorField::typeName)
     {
-        ensightType = "tensor asym";
+        ensightType = ensightPTraits<tensor>::typeName;
+    }
+    else
+    {
+        continue;
     }
 
-    if (ensightType.size())
-    {
-        ensightCaseEntry
-        (
-            caseFile,
-            ensightType,
-            fieldName,
-            dataMask
-        );
-    }
+    ensightCaseEntry
+    (
+        caseFile,
+        ensightType,
+        fieldName,
+        dataMask
+    );
 }
 
 // TODO: allow similar/different time-steps for each cloud
@@ -103,30 +104,31 @@ forAllConstIter(HashTable<HashTable<word>>, cloudFields, cloudIter)
 
         if (fieldType == scalarIOField::typeName)
         {
-            ensightType = "scalar";
+            ensightType = ensightPTraits<scalar>::typeName;
         }
         else if (fieldType == vectorIOField::typeName)
         {
-            ensightType = "vector";
+            ensightType = ensightPTraits<vector>::typeName;
         }
         else if (fieldType == tensorIOField::typeName)
         {
-            ensightType = "tensor";
+            ensightType = ensightPTraits<tensor>::typeName;
+        }
+        else
+        {
+            continue;
         }
 
-        if (ensightType.size())
-        {
-            ensightCaseEntry
-            (
-                caseFile,
-                ensightType,
-                fieldName,
-                dataMask,
-                cloud::prefix/cloudName,
-                cloudNo,
-                2
-            );
-        }
+        ensightCaseEntry
+        (
+            caseFile,
+            ensightType,
+            fieldName,
+            dataMask,
+            cloud::prefix/cloudName,
+            cloudNo,
+            2
+        );
     }
     cloudNo++;
 }
@@ -161,6 +163,48 @@ if (fieldTimesUsed.size())
     count = 0;
     forAll(fieldTimesUsed, i)
     {
+        const label index = fieldTimesUsed[i];
+        caseFile
+            << " " << setw(12) << timeIndices[index] + timeCorrection;
+
+        if (++count % 6 == 0)
+        {
+            caseFile << nl;
+        }
+    }
+    caseFile << nl << nl;
+}
+
+
+// time set 2 - geometry
+// THIS NEEDS MORE CHECKING
+#if 0
+if (geometryTimesUsed.size())
+{
+    caseFile
+        << "time set:        " << 2 << nl
+        << "number of steps: " << geometryTimesUsed.size() << nl
+        << "filename numbers:" << nl;
+
+    label count = 0;
+    forAll(geometryTimesUsed, i)
+    {
+        caseFile
+            << " " << setw(12) << geometryTimesUsed[i];
+
+        if (++count % 6 == 0)
+        {
+            caseFile << nl;
+        }
+    }
+
+    caseFile
+        << nl << "time values:" << nl;
+
+    count = 0;
+    forAll(geometryTimesUsed, i)
+    {
+        const label index = geometryTimesUsed[i];
         caseFile
             << " " << setw(12)
                 << timeIndices[fieldTimesUsed[i]] + timeCorrection;
@@ -205,6 +249,7 @@ forAllConstIter(HashTable<DynamicList<label>>, cloudTimesUsed, cloudIter)
         count = 0;
         forAll(timesUsed, i)
         {
+            const label index = timesUsed[i];
             caseFile
                 << " " << setw(12)
                     << timeIndices[timesUsed[i]] + timeCorrection;
