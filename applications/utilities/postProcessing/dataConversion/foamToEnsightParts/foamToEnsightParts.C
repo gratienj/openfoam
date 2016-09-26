@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        Info<< "write volume field (" << flush;
+        Info<< "Write volume field (" << flush;
 
         forAllConstIter(HashTable<word>, volumeFields, fieldIter)
         {
@@ -408,6 +408,8 @@ int main(int argc, char *argv[])
                 continue;
             }
 
+            Info<< "Write " << cloudName << " ( positions" << flush;
+
             ensightParticlePositions
             (
                 mesh,
@@ -416,8 +418,6 @@ int main(int argc, char *argv[])
                 cloudName,
                 format
             );
-
-            Info<< "write " << cloudName << " (" << flush;
 
             forAllConstIter(HashTable<word>, cloudIter(), fieldIter)
             {
