@@ -58,6 +58,13 @@ License
 \section usingTheCode Using the code
 
     - \subpage pageSolvers
+
+    Modelling
+    - \subpage pageThermophysicalModels
+    - \subpage pageTurbulenceModelling
+    - \subpage pageLagrangianIntermediate
+
+    Boundary conditions
     - \subpage pageBoundaryConditions
     - \subpage pagePostProcessing
 
