@@ -84,74 +84,152 @@ void Foam::primitiveMesh::makeCellCentresAndVols
     const labelList& own = faceOwner();
     const labelList& nei = faceNeighbour();
 
-    // first estimate the approximate cell centre as the average of
-    // face centres
-
-    vectorField cEst(nCells(), Zero);
-    labelField nCellFaces(nCells(), 0);
-
-    forAll(own, facei)
+    if (nTopologicalD() == 2)
     {
-        cEst[own[facei]] += fCtrs[facei];
-        nCellFaces[own[facei]] += 1;
-    }
+        // first estimate the approximate cell centre as the average of
+        // face centres
 
-    forAll(nei, facei)
-    {
-        cEst[nei[facei]] += fCtrs[facei];
-        nCellFaces[nei[facei]] += 1;
-    }
+        vectorField cEst(nCells(), Zero);
+        labelField nCellFaces(nCells(), 0);
 
-    forAll(cEst, celli)
-    {
-        cEst[celli] /= nCellFaces[celli];
-    }
-
-    forAll(own, facei)
-    {
-        // Calculate 3*face-pyramid volume
-        scalar pyr3Vol =
-            fAreas[facei] & (fCtrs[facei] - cEst[own[facei]]);
-
-        // Calculate face-pyramid centre
-        vector pc = (3.0/4.0)*fCtrs[facei] + (1.0/4.0)*cEst[own[facei]];
-
-        // Accumulate volume-weighted face-pyramid centre
-        cellCtrs[own[facei]] += pyr3Vol*pc;
-
-        // Accumulate face-pyramid volume
-        cellVols[own[facei]] += pyr3Vol;
-    }
-
-    forAll(nei, facei)
-    {
-        // Calculate 3*face-pyramid volume
-        scalar pyr3Vol =
-            fAreas[facei] & (cEst[nei[facei]] - fCtrs[facei]);
-
-        // Calculate face-pyramid centre
-        vector pc = (3.0/4.0)*fCtrs[facei] + (1.0/4.0)*cEst[nei[facei]];
-
-        // Accumulate volume-weighted face-pyramid centre
-        cellCtrs[nei[facei]] += pyr3Vol*pc;
-
-        // Accumulate face-pyramid volume
-        cellVols[nei[facei]] += pyr3Vol;
-    }
-
-    forAll(cellCtrs, celli)
-    {
-        if (mag(cellVols[celli]) > VSMALL)
+        forAll(own, facei)
         {
-            cellCtrs[celli] /= cellVols[celli];
+            cEst[own[facei]] += fCtrs[facei];
+            nCellFaces[own[facei]] += 1;
         }
-        else
-        {
-            cellCtrs[celli] = cEst[celli];
-        }
-    }
 
-    cellVols *= (1.0/3.0);
+        forAll(nei, facei)
+        {
+            cEst[nei[facei]] += fCtrs[facei];
+            nCellFaces[nei[facei]] += 1;
+        }
+
+        forAll(cEst, celli)
+        {
+            cEst[celli] /= nCellFaces[celli];
+        }
+
+        forAll(own, facei)
+        {
+            // Calculate 3*face-pyramid volume
+            scalar pyr3Vol = mag
+            (
+                fAreas[facei] ^ (fCtrs[facei] - cEst[own[facei]])
+            );
+
+            // Calculate face-pyramid centre
+            vector pc = (3.0/4.0)*fCtrs[facei] + (1.0/4.0)*cEst[own[facei]];
+
+            // Accumulate volume-weighted face-pyramid centre
+            cellCtrs[own[facei]] += pyr3Vol*pc;
+
+            // Accumulate face-pyramid volume
+            cellVols[own[facei]] += pyr3Vol;
+        }
+
+        forAll(nei, facei)
+        {
+            // Calculate 3*face-pyramid volume
+            scalar pyr3Vol = mag
+            (
+                fAreas[facei] ^ (cEst[nei[facei]] - fCtrs[facei])
+            );
+
+            // Calculate face-pyramid centre
+            vector pc = (3.0/4.0)*fCtrs[facei] + (1.0/4.0)*cEst[nei[facei]];
+
+            // Accumulate volume-weighted face-pyramid centre
+            cellCtrs[nei[facei]] += pyr3Vol*pc;
+
+            // Accumulate face-pyramid volume
+            cellVols[nei[facei]] += pyr3Vol;
+        }
+
+        forAll(cellCtrs, celli)
+        {
+            if (mag(cellVols[celli]) > VSMALL)
+            {
+                cellCtrs[celli] /= cellVols[celli];
+            }
+            else
+            {
+                cellCtrs[celli] = cEst[celli];
+            }
+        }
+
+        cellVols *= (1.0/3.0);
+    }
+    else
+    {
+        // first estimate the approximate cell centre as the average of
+        // face centres
+
+        vectorField cEst(nCells(), Zero);
+        labelField nCellFaces(nCells(), 0);
+
+        forAll(own, facei)
+        {
+            cEst[own[facei]] += fCtrs[facei];
+            nCellFaces[own[facei]] += 1;
+        }
+
+        forAll(nei, facei)
+        {
+            cEst[nei[facei]] += fCtrs[facei];
+            nCellFaces[nei[facei]] += 1;
+        }
+
+        forAll(cEst, celli)
+        {
+            cEst[celli] /= nCellFaces[celli];
+        }
+
+        forAll(own, facei)
+        {
+            // Calculate 3*face-pyramid volume
+            scalar pyr3Vol =
+                fAreas[facei] & (fCtrs[facei] - cEst[own[facei]]);
+
+            // Calculate face-pyramid centre
+            vector pc = (3.0/4.0)*fCtrs[facei] + (1.0/4.0)*cEst[own[facei]];
+
+            // Accumulate volume-weighted face-pyramid centre
+            cellCtrs[own[facei]] += pyr3Vol*pc;
+
+            // Accumulate face-pyramid volume
+            cellVols[own[facei]] += pyr3Vol;
+        }
+
+        forAll(nei, facei)
+        {
+            // Calculate 3*face-pyramid volume
+            scalar pyr3Vol =
+                fAreas[facei] & (cEst[nei[facei]] - fCtrs[facei]);
+
+            // Calculate face-pyramid centre
+            vector pc = (3.0/4.0)*fCtrs[facei] + (1.0/4.0)*cEst[nei[facei]];
+
+            // Accumulate volume-weighted face-pyramid centre
+            cellCtrs[nei[facei]] += pyr3Vol*pc;
+
+            // Accumulate face-pyramid volume
+            cellVols[nei[facei]] += pyr3Vol;
+        }
+
+        forAll(cellCtrs, celli)
+        {
+            if (mag(cellVols[celli]) > VSMALL)
+            {
+                cellCtrs[celli] /= cellVols[celli];
+            }
+            else
+            {
+                cellCtrs[celli] = cEst[celli];
+            }
+        }
+
+        cellVols *= (1.0/3.0);
+    }
 }
 
 

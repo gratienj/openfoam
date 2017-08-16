@@ -79,56 +79,75 @@ void Foam::primitiveMesh::makeFaceCentresAndAreas
 {
     const faceList& fs = faces();
 
-    forAll(fs, facei)
+    if (nTopologicalD() == 2)
     {
-        const labelList& f = fs[facei];
-        label nPoints = f.size();
-
-        // If the face is a triangle, do a direct calculation for efficiency
-        // and to avoid round-off error-related problems
-        if (nPoints == 3)
+        forAll(fs, facei)
         {
-            fCtrs[facei] = (1.0/3.0)*(p[f[0]] + p[f[1]] + p[f[2]]);
-            fAreas[facei] = 0.5*((p[f[1]] - p[f[0]])^(p[f[2]] - p[f[0]]));
+            const labelList& f = fs[facei];
+
+            if (f.size() != 2)
+            {
+                FatalErrorInFunction
+                    << "Illegal face " << f << " at "
+                    << UIndirectList<point>(p, f) << endl;
+            }
+            fCtrs[facei] = 0.5*(p[f[0]] + p[f[1]]);
+            fAreas[facei] = p[f[1]]-p[f[0]];
         }
-        else
+    }
+    else
+    {
+        forAll(fs, facei)
         {
-            vector sumN = Zero;
-            scalar sumA = 0.0;
-            vector sumAc = Zero;
+            const labelList& f = fs[facei];
+            label nPoints = f.size();
 
-            point fCentre = p[f[0]];
-            for (label pi = 1; pi < nPoints; pi++)
+            // If the face is a triangle, do a direct calculation for efficiency
+            // and to avoid round-off error-related problems
+            if (nPoints == 3)
             {
-                fCentre += p[f[pi]];
-            }
-
-            fCentre /= nPoints;
-
-            for (label pi = 0; pi < nPoints; pi++)
-            {
-                const point& nextPoint = p[f[(pi + 1) % nPoints]];
-
-                vector c = p[f[pi]] + nextPoint + fCentre;
-                vector n = (nextPoint - p[f[pi]])^(fCentre - p[f[pi]]);
-                scalar a = mag(n);
-
-                sumN += n;
-                sumA += a;
-                sumAc += a*c;
-            }
-
-            // This is to deal with zero-area faces. Mark very small faces
-            // to be detected in e.g., processorPolyPatch.
-            if (sumA < ROOTVSMALL)
-            {
-                fCtrs[facei] = fCentre;
-                fAreas[facei] = Zero;
+                fCtrs[facei] = (1.0/3.0)*(p[f[0]] + p[f[1]] + p[f[2]]);
+                fAreas[facei] = 0.5*((p[f[1]] - p[f[0]])^(p[f[2]] - p[f[0]]));
             }
             else
             {
-                fCtrs[facei] = (1.0/3.0)*sumAc/sumA;
-                fAreas[facei] = 0.5*sumN;
+                vector sumN = Zero;
+                scalar sumA = 0.0;
+                vector sumAc = Zero;
+
+                point fCentre = p[f[0]];
+                for (label pi = 1; pi < nPoints; pi++)
+                {
+                    fCentre += p[f[pi]];
+                }
+
+                fCentre /= nPoints;
+
+                for (label pi = 0; pi < nPoints; pi++)
+                {
+                    const point& nextPoint = p[f[(pi + 1) % nPoints]];
+
+                    vector c = p[f[pi]] + nextPoint + fCentre;
+                    vector n = (nextPoint - p[f[pi]])^(fCentre - p[f[pi]]);
+                    scalar a = mag(n);
+
+                    sumN += n;
+                    sumA += a;
+                    sumAc += a*c;
+                }
+
+                // This is to deal with zero-area faces. Mark very small faces
+                // to be detected in e.g., processorPolyPatch.
+                if (sumA < ROOTVSMALL)
+                {
+                    fCtrs[facei] = fCentre;
+                    fAreas[facei] = Zero;
+                }
+                else
+                {
+                    fCtrs[facei] = (1.0/3.0)*sumAc/sumA;
+                    fAreas[facei] = 0.5*sumN;
+                }
             }
         }
     }

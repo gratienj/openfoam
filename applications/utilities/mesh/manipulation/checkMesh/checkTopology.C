@@ -51,6 +51,19 @@ Foam::label Foam::checkTopology
 
     Info<< "Checking topology..." << endl;
 
+    if (mesh.nTopologicalD() == 2)
+    {
+        Info<< "    Mesh has " << mesh.nTopologicalD()
+            << " dimensional topology - all faces have 2 vertices;"
+            << " cells are shell elements" << endl;
+    }
+    else if (mesh.nTopologicalD() == 1)
+    {
+        Info<< "    Mesh has " << mesh.nTopologicalD()
+            << " dimensional topology - all faces have 1 vertex;"
+            << " cells are line elements" << endl;
+    }
+
     // Check if the boundary definition is unique
     mesh.boundaryMesh().checkDefinition(true);
 
