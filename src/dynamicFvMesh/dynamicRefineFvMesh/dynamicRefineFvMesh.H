@@ -2,8 +2,9 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
+<<<<<<< HEAD
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,6 +57,7 @@ Description
             (rho*phi none)   //none)
             (ghf none)  //NaN)   //none)
         );
+
         // Write the refinement level as a volScalarField
         dumpLevel       true;
 
@@ -117,10 +119,10 @@ protected:
 
 
         //- Refine cells. Update mesh and fields.
-        autoPtr<mapPolyMesh> refine(const labelList&);
+        virtual autoPtr<mapPolyMesh> refine(const labelList&);
 
         //- Unrefine cells. Gets passed in centre points of cells to combine.
-        autoPtr<mapPolyMesh> unrefine(const labelList&);
+        virtual autoPtr<mapPolyMesh> unrefine(const labelList&);
 
 
         // Selection of cells to un/refine
@@ -185,6 +187,7 @@ protected:
                 label& nProtected
             ) const;
 
+
 private:
 
         //- No copy construct
@@ -232,6 +235,9 @@ public:
         //- Update the mesh for both mesh motion and topology change
         virtual bool update();
 
+        //- Map all fields in time using given map.
+        virtual void mapFields(const mapPolyMesh& mpm);
+
 
     // Writing
 
@@ -243,9 +249,7 @@ public:
             IOstream::compressionType cmp,
             const bool valid
         ) const;
-
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
