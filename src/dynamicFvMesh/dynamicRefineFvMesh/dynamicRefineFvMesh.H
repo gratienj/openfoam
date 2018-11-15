@@ -2,7 +2,6 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-<<<<<<< HEAD
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
@@ -187,6 +186,31 @@ protected:
                 label& nProtected
             ) const;
 
+            //- Map single non-flux surface<Type>Field
+            //  for new internal faces (e.g. AMR refine). This currently
+            //  interpolates values from surrounding faces (faces on
+            //  neighbouring cells) that do have a value.
+            template <class T>
+            void mapNewInternalFaces
+            (
+                const labelList& faceMap,
+                GeometricField<T, fvsPatchField, surfaceMesh>&
+            );
+
+            //- Correct surface fields for new faces
+            template <class T>
+            void mapNewInternalFaces(const labelList& faceMap);
+
+            //- Correct surface fields for new faces. Converts any oriented
+            //  fields into non-oriented (i.e. phi -> Uf) before mapping
+            template <class T>
+            void mapNewInternalFaces
+            (
+                const surfaceVectorField& Sf,
+                const surfaceScalarField& magSf,
+                const labelList& faceMap
+            );
+
 
 private:
 
@@ -254,6 +278,12 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+    #include "dynamicRefineFvMeshTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
