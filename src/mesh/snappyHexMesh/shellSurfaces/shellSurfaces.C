@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,11 +40,11 @@ const Foam::Enum
     Foam::shellSurfaces::refineMode
 >
 Foam::shellSurfaces::refineModeNames_
-{
+({
     { refineMode::INSIDE, "inside" },
     { refineMode::OUTSIDE, "outside" },
     { refineMode::DISTANCE, "distance" },
-};
+});
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -55,6 +55,8 @@ void Foam::shellSurfaces::setAndCheckLevels
     const List<Tuple2<scalar, label>>& distLevels
 )
 {
+    const searchableSurface& shell = allGeometry_[shells_[shellI]];
+
     if (modes_[shellI] != DISTANCE && distLevels.size() != 1)
     {
         FatalErrorInFunction
@@ -72,6 +74,16 @@ void Foam::shellSurfaces::setAndCheckLevels
     {
         distances_[shellI][j] = distLevels[j].first();
         levels_[shellI][j] = distLevels[j].second();
+
+        if (levels_[shellI][j] < -1)
+        {
+            FatalErrorInFunction
+                << "Shell " << shell.name()
+                << " has illegal refinement level "
+                << levels_[shellI][j]
+                << exit(FatalError);
+        }
+
 
         // Check in incremental order
         if (j > 0)
@@ -94,8 +106,6 @@ void Foam::shellSurfaces::setAndCheckLevels
             }
         }
     }
-
-    const searchableSurface& shell = allGeometry_[shells_[shellI]];
 
     if (modes_[shellI] == DISTANCE)
     {
@@ -568,13 +578,11 @@ Foam::shellSurfaces::shellSurfaces
 
     // Count number of shells.
     label shellI = 0;
-    forAll(allGeometry.names(), geomI)
+    for (const word& geomName : allGeometry_.names())
     {
-        const word& geomName = allGeometry_.names()[geomI];
-
         if (shellsDict.found(geomName))
         {
-            shellI++;
+            ++shellI;
         }
     }
 
@@ -584,6 +592,10 @@ Foam::shellSurfaces::shellSurfaces
     modes_.setSize(shellI);
     distances_.setSize(shellI);
     levels_.setSize(shellI);
+    dirLevels_.setSize(shellI);
+    smoothDirection_.setSize(shellI);
+    nSmoothExpansion_.setSize(shellI);
+    nSmoothPosition_.setSize(shellI);
 
     extendedGapLevel_.setSize(shellI);
     extendedGapMode_.setSize(shellI);
@@ -594,26 +606,82 @@ Foam::shellSurfaces::shellSurfaces
     nullGapLevel[2] = 0;
 
 
-    HashSet<word> unmatchedKeys(shellsDict.toc());
+    wordHashSet unmatchedKeys(shellsDict.toc());
     shellI = 0;
 
     forAll(allGeometry_.names(), geomI)
     {
         const word& geomName = allGeometry_.names()[geomI];
 
-        const entry* ePtr = shellsDict.lookupEntryPtr(geomName, false, true);
+        const entry* eptr = shellsDict.findEntry(geomName, keyType::REGEX);
 
-        if (ePtr)
+        if (eptr)
         {
-            const dictionary& dict = ePtr->dict();
-            unmatchedKeys.erase(ePtr->keyword());
+            const dictionary& dict = eptr->dict();
+            unmatchedKeys.erase(eptr->keyword());
 
             shells_[shellI] = geomI;
-            modes_[shellI] = refineModeNames_.lookup("mode", dict);
+            modes_[shellI] = refineModeNames_.get("mode", dict);
 
             // Read pairs of distance+level
             setAndCheckLevels(shellI, dict.lookup("levels"));
 
+
+            // Directional refinement
+            // ~~~~~~~~~~~~~~~~~~~~~~
+
+            dirLevels_[shellI] = Tuple2<labelPair,labelVector>
+            (
+                labelPair(labelMax, labelMin),
+                labelVector::zero
+            );
+            const entry* levelPtr =
+                dict.findEntry("levelIncrement", keyType::REGEX);
+
+            if (levelPtr)
+            {
+                // Do reading ourselves since using labelPair would require
+                // additional bracket pair
+                Istream& is = levelPtr->stream();
+
+                is.readBegin("levelIncrement");
+                is  >> dirLevels_[shellI].first().first()
+                    >> dirLevels_[shellI].first().second()
+                    >> dirLevels_[shellI].second();
+                is.readEnd("levelIncrement");
+
+                if (modes_[shellI] == INSIDE)
+                {
+                    Info<< "Additional directional refinement level"
+                        << " for all cells inside " << geomName << endl;
+                }
+                else if (modes_[shellI] == OUTSIDE)
+                {
+                    Info<< "Additional directional refinement level"
+                        << " for all cells outside " << geomName << endl;
+                }
+                else
+                {
+                    FatalIOErrorInFunction(shellsDict)
+                        << "Unsupported mode "
+                        << refineModeNames_[modes_[shellI]]
+                        << exit(FatalIOError);
+                }
+            }
+
+            // Directional smoothing
+            // ~~~~~~~~~~~~~~~~~~~~~
+
+            nSmoothExpansion_[shellI] = 0;
+            nSmoothPosition_[shellI] = 0;
+            smoothDirection_[shellI] =
+                dict.lookupOrDefault("smoothDirection", vector::zero);
+
+            if (smoothDirection_[shellI] != vector::zero)
+            {
+                dict.readEntry("nSmoothExpansion", nSmoothExpansion_[shellI]);
+                dict.readEntry("nSmoothPosition", nSmoothPosition_[shellI]);
+            }
 
 
             // Gap specification
@@ -635,19 +703,9 @@ Foam::shellSurfaces::shellSurfaces
             extendedGapLevel_[shellI].setSize(regionNames.size());
             extendedGapLevel_[shellI] = gapSpec;
 
-            volumeType gapModeSpec
-            (
-                volumeType::names
-                [
-                    dict.lookupOrDefault<word>
-                    (
-                        "gapMode",
-                        volumeType::names[volumeType::MIXED]
-                    )
-                ]
-            );
             extendedGapMode_[shellI].setSize(regionNames.size());
-            extendedGapMode_[shellI] = gapModeSpec;
+            extendedGapMode_[shellI] =
+                volumeType("gapMode", dict, volumeType::MIXED);
 
 
             // Override on a per-region basis?
@@ -674,22 +732,16 @@ Foam::shellSurfaces::shellSurfaces
                         );
                         extendedGapLevel_[shellI][regionI] = gapSpec;
 
-                        volumeType gapModeSpec
-                        (
-                            volumeType::names
-                            [
-                                regionDict.lookupOrDefault<word>
-                                (
-                                    "gapMode",
-                                    volumeType::names[volumeType::MIXED]
-                                )
-                            ]
-                        );
-                        extendedGapMode_[shellI][regionI] = gapModeSpec;
+                        extendedGapMode_[shellI][regionI] =
+                            volumeType
+                            (
+                                "gapMode",
+                                regionDict,
+                                volumeType::MIXED
+                            );
                     }
                 }
             }
-
 
             checkGapLevels(dict, shellI, extendedGapLevel_[shellI]);
 
@@ -699,10 +751,8 @@ Foam::shellSurfaces::shellSurfaces
 
     if (unmatchedKeys.size() > 0)
     {
-        IOWarningInFunction
-        (
-            shellsDict
-        )   << "Not all entries in refinementRegions dictionary were used."
+        IOWarningInFunction(shellsDict)
+            << "Not all entries in refinementRegions dictionary were used."
             << " The following entries were not used : "
             << unmatchedKeys.sortedToc()
             << endl;
@@ -742,6 +792,35 @@ Foam::labelList Foam::shellSurfaces::maxGapLevel() const
         }
     }
     return surfaceMax;
+}
+
+
+Foam::labelPairList Foam::shellSurfaces::directionalSelectLevel() const
+{
+    labelPairList levels(dirLevels_.size());
+    forAll(dirLevels_, shelli)
+    {
+        levels[shelli] = dirLevels_[shelli].first();
+    }
+    return levels;
+}
+
+
+const Foam::labelList& Foam::shellSurfaces::nSmoothExpansion() const
+{
+    return nSmoothExpansion_;
+}
+
+
+const Foam::vectorField& Foam::shellSurfaces::smoothDirection() const
+{
+    return smoothDirection_;
+}
+
+
+const Foam::labelList& Foam::shellSurfaces::nSmoothPosition() const
+{
+    return nSmoothPosition_;
 }
 
 
@@ -820,6 +899,74 @@ void Foam::shellSurfaces::findLevel
     forAll(shells_, shelli)
     {
         findLevel(pt, shelli, minLevel, shell);
+    }
+}
+
+
+void Foam::shellSurfaces::findDirectionalLevel
+(
+    const pointField& pt,
+    const labelList& ptLevel,
+    const labelList& dirLevel,  // directional level
+    const direction dir,
+    labelList& shell
+) const
+{
+    shell.setSize(pt.size());
+    shell = -1;
+
+    List<volumeType> volType;
+
+    // Current back to original
+    DynamicList<label> candidateMap(pt.size());
+
+    forAll(shells_, shelli)
+    {
+        if (modes_[shelli] == INSIDE || modes_[shelli] == OUTSIDE)
+        {
+            const labelPair& selectLevels = dirLevels_[shelli].first();
+            const label addLevel = dirLevels_[shelli].second()[dir];
+
+            // Collect the cells that are of the right original level
+            candidateMap.clear();
+            forAll(ptLevel, celli)
+            {
+                label level = ptLevel[celli];
+
+                if
+                (
+                    level >= selectLevels.first()
+                 && level <= selectLevels.second()
+                 && dirLevel[celli] < level+addLevel
+                )
+                {
+                    candidateMap.append(celli);
+                }
+            }
+
+            // Do geometric test
+            pointField candidatePt(pt, candidateMap);
+            allGeometry_[shells_[shelli]].getVolumeType(candidatePt, volType);
+
+            // Extract selected cells
+            forAll(candidateMap, i)
+            {
+                if
+                (
+                    (
+                        modes_[shelli] == INSIDE
+                     && volType[i] == volumeType::INSIDE
+                    )
+                 || (
+                        modes_[shelli] == OUTSIDE
+                     && volType[i] == volumeType::OUTSIDE
+                    )
+                )
+                {
+                    shell[candidateMap[i]] = shelli;
+                }
+            }
+        }
     }
 }
 

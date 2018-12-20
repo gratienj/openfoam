@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,6 +41,7 @@ License
 #include "syncTools.H"
 #include "globalIndex.H"
 #include "PatchTools.H"
+#include "functionObject.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -208,7 +209,7 @@ void Foam::mergeAndWrite
     const polyMesh& mesh,
     const surfaceWriter& writer,
     const word& name,
-    const indirectPrimitivePatch setPatch,
+    const indirectPrimitivePatch& setPatch,
     const fileName& outputDir
 )
 {
@@ -283,9 +284,8 @@ void Foam::mergeAndWrite
 
     fileName outputDir
     (
-        set.time().path()
-      / (Pstream::parRun() ? ".." : "")
-      / "postProcessing"
+        set.time().globalPath()
+      / functionObject::outputPrefix
       / mesh.pointsInstance()
       / set.name()
     );
@@ -306,14 +306,14 @@ void Foam::mergeAndWrite
 
 
     // Determine faces on outside of cellSet
-    PackedBoolList isInSet(mesh.nCells());
+    bitSet isInSet(mesh.nCells());
     forAllConstIter(cellSet, set, iter)
     {
-        isInSet[iter.key()] = true;
+        isInSet.set(iter.key());
     }
 
 
-    boolList bndInSet(mesh.nFaces()-mesh.nInternalFaces());
+    boolList bndInSet(mesh.nBoundaryFaces());
     forAll(pbm, patchi)
     {
         const polyPatch& pp = pbm[patchi];
@@ -329,8 +329,8 @@ void Foam::mergeAndWrite
     DynamicList<label> outsideFaces(3*set.size());
     for (label facei = 0; facei < mesh.nInternalFaces(); facei++)
     {
-        bool ownVal = isInSet[mesh.faceOwner()[facei]];
-        bool neiVal = isInSet[mesh.faceNeighbour()[facei]];
+        const bool ownVal = isInSet[mesh.faceOwner()[facei]];
+        const bool neiVal = isInSet[mesh.faceNeighbour()[facei]];
 
         if (ownVal != neiVal)
         {
@@ -349,7 +349,7 @@ void Foam::mergeAndWrite
             {
                 label facei = pp.start()+i;
 
-                bool neiVal = bndInSet[facei-mesh.nInternalFaces()];
+                const bool neiVal = bndInSet[facei-mesh.nInternalFaces()];
                 if (isInSet[fc[i]] && !neiVal)
                 {
                     outsideFaces.append(facei);
@@ -377,9 +377,8 @@ void Foam::mergeAndWrite
 
     fileName outputDir
     (
-        set.time().path()
-      / (Pstream::parRun() ? ".." : "")
-      / "postProcessing"
+        set.time().globalPath()
+      / functionObject::outputPrefix
       / mesh.pointsInstance()
       / set.name()
     );
@@ -415,11 +414,7 @@ void Foam::mergeAndWrite
 
         // Get renumbered local data
         pointField myPoints(mesh.points(), setPointIDs);
-        labelList myIDs(setPointIDs.size());
-        forAll(setPointIDs, i)
-        {
-            myIDs[i] = globalNumbering.toGlobal(setPointIDs[i]);
-        }
+        labelList myIDs(globalNumbering.toGlobal(setPointIDs));
 
         if (Pstream::master())
         {
@@ -481,9 +476,8 @@ void Foam::mergeAndWrite
         // postProcessing/<time>/p0.vtk
         fileName outputDir
         (
-            set.time().path()
-          / (Pstream::parRun() ? ".." : "")
-          / "postProcessing"
+            set.time().globalPath()
+          / functionObject::outputPrefix
           / mesh.pointsInstance()
           // set.name()
         );

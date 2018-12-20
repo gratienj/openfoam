@@ -25,7 +25,7 @@ License
 
 #include "ParticleErosion.H"
 
-// * * * * * * * * * * * * * Protectd Member Functions * * * * * * * * * * * //
+// * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
 template<class CloudType>
 Foam::label Foam::ParticleErosion<CloudType>::applyToPatch
@@ -73,31 +73,31 @@ Foam::ParticleErosion<CloudType>::ParticleErosion
     CloudFunctionObject<CloudType>(dict, owner, modelName, typeName),
     QPtr_(nullptr),
     patchIDs_(),
-    p_(readScalar(this->coeffDict().lookup("p"))),
+    p_(this->coeffDict().getScalar("p")),
     psi_(this->coeffDict().template lookupOrDefault<scalar>("psi", 2.0)),
     K_(this->coeffDict().template lookupOrDefault<scalar>("K", 2.0))
 {
-    const wordList allPatchNames = owner.mesh().boundaryMesh().names();
-    wordList patchName(this->coeffDict().lookup("patches"));
+    const wordList allPatchNames(owner.mesh().boundaryMesh().names());
+    const wordReList patchNames(this->coeffDict().lookup("patches"));
 
-    labelHashSet uniquePatchIDs;
-    forAllReverse(patchName, i)
+    labelHashSet uniqIds;
+    for (const wordRe& re : patchNames)
     {
-        labelList patchIDs = findStrings(patchName[i], allPatchNames);
+        labelList ids = findStrings(re, allPatchNames);
 
-        if (patchIDs.empty())
+        if (ids.empty())
         {
             WarningInFunction
-                << "Cannot find any patch names matching " << patchName[i]
+                << "Cannot find any patch names matching " << re
                 << endl;
         }
 
-        uniquePatchIDs.insert(patchIDs);
+        uniqIds.insert(ids);
     }
 
-    patchIDs_ = uniquePatchIDs.toc();
+    patchIDs_ = uniqIds.sortedToc();
 
-    // trigger ther creation of the Q field
+    // trigger creation of the Q field
     preEvolve();
 }
 
@@ -114,13 +114,6 @@ Foam::ParticleErosion<CloudType>::ParticleErosion
     p_(pe.p_),
     psi_(pe.psi_),
     K_(pe.K_)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class CloudType>
-Foam::ParticleErosion<CloudType>::~ParticleErosion()
 {}
 
 
@@ -150,7 +143,7 @@ void Foam::ParticleErosion<CloudType>::preEvolve()
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                dimensionedScalar("zero", dimVolume, 0.0)
+                dimensionedScalar(dimVolume, Zero)
             )
         );
     }
@@ -177,7 +170,7 @@ void Foam::ParticleErosion<CloudType>::postPatch
         // patch-normal direction
         this->owner().patchData(p, pp, nw, Up);
 
-        // particle velocity reletive to patch
+        // particle velocity relative to patch
         const vector& U = p.U() - Up;
 
         // quick reject if particle travelling away from the patch

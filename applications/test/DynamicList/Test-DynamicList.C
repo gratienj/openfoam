@@ -103,8 +103,11 @@ int main(int argc, char *argv[])
     ldl[1].reserve(5);        // should not decrease allocated size
     ldl[1](3) = 2;            // allocates space and sets value
 
-    // this works without a segfault, but doesn't change the list size
+    #ifndef FULLDEBUG
+    // Accessing an out-of-bounds address, but writing into allocated  memory.
+    // No segfault, doesn't change the list size. Nonetheless not a good idea.
     ldl[0][4] = 4;
+    #endif
 
     ldl[1] = 3;
 
@@ -194,13 +197,13 @@ int main(int argc, char *argv[])
 
     printInfo("dlC", dlC, true);
 
-    List<label> lstB(dlC.xfer());
+    List<label> lstB(std::move(dlC));
 
-    Info<< "Transferred to normal list via the xfer() method" << endl;
+    Info<< "Move construct to normal list" << endl;
     printInfo("lstB", lstB, true);
     printInfo("dlC", dlC, true);
 
-    DynamicList<label> dlD(lstB.xfer());
+    DynamicList<label> dlD(std::move(lstB));
 
     Info<< "Transfer construct from normal list" << endl;
     printInfo("lstB", lstB, true);
@@ -279,7 +282,7 @@ int main(int argc, char *argv[])
         Info<< "list in:  " << flatOutput(list1) << nl
             << "list out: " << flatOutput(list2) << endl;
 
-        input2 = std::move(identity(15));
+        input2 = identity(15);  // don't need std::move() on temporary object
         list2 = std::move(input2);
         Info<< "list in:  " << flatOutput(input2) << nl
             << "list out: " << flatOutput(list2) << endl;

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -58,9 +58,17 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for magnetohydrodynamics (MHD):"
+        " incompressible, laminar flow of a conducting fluid"
+        " under the influence of a magnetic field."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
@@ -148,7 +156,7 @@ int main(int argc, char *argv[])
             volScalarField rAB(1.0/BEqn.A());
             surfaceScalarField rABf("rABf", fvc::interpolate(rAB));
 
-            phiB = fvc::flux(B) + rABf*fvc::ddtCorr(B, phiB);
+            phiB = fvc::flux(B);
 
             while (bpiso.correctNonOrthogonal())
             {

@@ -50,7 +50,7 @@ Description
     \verbatim
     communication
     {
-        commsDir        "${FOAM_CASE}/comms";
+        commsDir        "<case>/comms";
         waitInterval    1;
         timeOut         100;
         initByExternal  no;
@@ -143,10 +143,10 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         externalFileCoupler(const externalFileCoupler&) = delete;
 
-        //- Disallow default bitwise assignmen
+        //- No copy assignment
         void operator=(const externalFileCoupler&) = delete;
 
 
@@ -243,13 +243,13 @@ public:
         //  content which corresponds to particular return values:
         //  - \c status=done
         //  \return Foam::Time::saEndTime
+        //  - \c action=noWriteNow
+        //  \return Foam::Time::saNoWriteNow
         //  - \c action=writeNow
         //  \return Foam::Time::saWriteNow
         //  - \c action=nextWrite
         //  \return Foam::Time::saNextWrite
-        //  - \c action=noNextWrite
-        //  \return Foam::Time::saNoNextWrite
-        // - Anything else (empty file, no action= or status=, etc)
+        //  - Anything else (empty file, no action= or status=, etc)
         //  \return Foam::Time::saUnknown
         enum Time::stopAtControls waitForSlave() const;
 

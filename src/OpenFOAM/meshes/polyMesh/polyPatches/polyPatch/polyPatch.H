@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,10 +49,7 @@ SourceFiles
 namespace Foam
 {
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-// Forward declaration of friend functions and operators
-
+// Forward declarations
 class polyBoundaryMesh;
 class polyPatch;
 class PstreamBuffers;
@@ -231,7 +228,7 @@ public:
         //- Construct and return a clone, resetting the boundary mesh
         virtual autoPtr<polyPatch> clone(const polyBoundaryMesh& bm) const
         {
-            return autoPtr<polyPatch>(new polyPatch(*this, bm));
+            return autoPtr<polyPatch>::New(*this, bm);
         }
 
         //- Construct and return a clone, resetting the face list
@@ -244,10 +241,7 @@ public:
             const label newStart
         ) const
         {
-            return autoPtr<polyPatch>
-            (
-                new polyPatch(*this, bm, index, newSize, newStart)
-            );
+            return autoPtr<polyPatch>::New(*this, bm, index, newSize, newStart);
         }
 
         //- Construct and return a clone, resetting the face list
@@ -260,10 +254,8 @@ public:
             const label newStart
         ) const
         {
-            return autoPtr<polyPatch>
-            (
-                new polyPatch(*this, bm, index, mapAddressing, newStart)
-            );
+            return autoPtr<polyPatch>::New
+                (*this, bm, index, mapAddressing, newStart);
         }
 
 
@@ -309,10 +301,20 @@ public:
 
     // Member Functions
 
+        //- The offset where this patch starts in the boundary face list
+        //  The value is the same as  patch.start() - mesh.nInternalFaces()
+        label offset() const;
+
         //- Return start label of this patch in the polyMesh face list
         label start() const
         {
             return start_;
+        }
+
+        //- Return start/size range of this patch
+        labelRange range() const
+        {
+            return labelRange(start_, this->size());
         }
 
         //- Return boundaryMesh reference
@@ -371,6 +373,10 @@ public:
             //- Return face cell centres
             tmp<vectorField> faceCellCentres() const;
 
+            //- Return the area fraction as the ratio of the stored face area
+            //- and the area given by the face points
+            tmp<scalarField> areaFraction() const;
+
 
         // Addressing into mesh
 
@@ -420,6 +426,19 @@ public:
     // Ostream Operator
 
         friend Ostream& operator<<(Ostream&, const polyPatch&);
+};
+
+
+// Global Functions
+
+//- The labelRange of a polyPatch
+template<>
+struct labelRangeOp<polyPatch>
+{
+    labelRange operator()(const polyPatch& pp) const
+    {
+        return pp.range();
+    }
 };
 
 

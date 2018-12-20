@@ -56,11 +56,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        directAMI(const directAMI&);
+        //- No copy construct
+        directAMI(const directAMI&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const directAMI&);
+        //- No copy assignment
+        void operator=(const directAMI&) = delete;
 
         // Marching front
 
@@ -109,8 +109,6 @@ public:
         (
             const SourcePatch& srcPatch,
             const TargetPatch& tgtPatch,
-            const scalarField& srcMagSf,
-            const scalarField& tgtMagSf,
             const faceAreaIntersect::triangulationMode& triMode,
             const bool reverseTarget = false,
             const bool requireMatch = true
@@ -135,6 +133,15 @@ public:
                 label srcFacei = -1,
                 label tgtFacei = -1
             );
+
+            //- Set the face areas for parallel runs
+            virtual void setMagSf
+            (
+                const TargetPatch& tgtPatch,
+                const mapDistribute& map,
+                scalarList& srcMagSf,
+                scalarList& tgtMagSf
+            ) const;
 
             //- Normalise the weight. Can optionally subset addressing
             //  (e.g. for mapNearest)

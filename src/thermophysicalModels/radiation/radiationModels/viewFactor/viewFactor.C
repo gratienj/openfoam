@@ -53,11 +53,11 @@ void Foam::radiation::viewFactor::initialise()
 {
     const polyBoundaryMesh& coarsePatches = coarseMesh_.boundaryMesh();
 
-    selectedPatches_ = mesh_.boundaryMesh().findIndices(viewFactorWalls);
-    forAll(selectedPatches_, i)
+    selectedPatches_ = mesh_.boundaryMesh().indices(viewFactorWalls);
+
+    for (const label patchi : selectedPatches_)
     {
-        const label patchI = selectedPatches_[i];
-        nLocalCoarseFaces_ += coarsePatches[patchI].size();
+        nLocalCoarseFaces_ += coarsePatches[patchi].size();
     }
 
     if (debug)
@@ -155,8 +155,7 @@ void Foam::radiation::viewFactor::initialise()
         }
 
 
-        bool smoothing = readBool(coeffs_.lookup("smoothing"));
-        if (smoothing)
+        if (coeffs_.get<bool>("smoothing"))
         {
             if (debug)
             {
@@ -180,7 +179,7 @@ void Foam::radiation::viewFactor::initialise()
             }
         }
 
-        constEmissivity_ = readBool(coeffs_.lookup("constantEmissivity"));
+        coeffs_.readEntry("constantEmissivity", constEmissivity_);
         if (constEmissivity_)
         {
             CLU_.reset
@@ -192,10 +191,7 @@ void Foam::radiation::viewFactor::initialise()
         }
     }
 
-    if (this->found("useSolarLoad"))
-    {
-        this->lookup("useSolarLoad") >> useSolarLoad_;
-    }
+    this->readIfPresent("useSolarLoad", useSolarLoad_);
 
     if (useSolarLoad_)
     {
@@ -480,20 +476,13 @@ void Foam::radiation::viewFactor::calculate()
     map_->distribute(compactCoarseHo);
 
     // Distribute local global ID
-    labelList compactGlobalIds(map_->constructSize(), 0.0);
-
-    labelList localGlobalIds(nLocalCoarseFaces_);
-
-    for(label k = 0; k < nLocalCoarseFaces_; k++)
-    {
-        localGlobalIds[k] = globalNumbering.toGlobal(Pstream::myProcNo(), k);
-    }
+    labelList compactGlobalIds(map_->constructSize(), Zero);
 
     SubList<label>
     (
         compactGlobalIds,
         nLocalCoarseFaces_
-    ) = localGlobalIds;
+    ) = identity(globalNumbering.localSize(), globalNumbering.localStart());
 
     map_->distribute(compactGlobalIds);
 
@@ -556,7 +545,7 @@ void Foam::radiation::viewFactor::calculate()
         }
         else //Constant emissivity
         {
-            // Initial iter calculates CLU and chaches it
+            // Initial iter calculates CLU and caches it
             if (iterCounter_ == 0)
             {
                 for (label i=0; i<totalNCoarseFaces_; i++)
@@ -675,26 +664,21 @@ void Foam::radiation::viewFactor::calculate()
 
 Foam::tmp<Foam::volScalarField> Foam::radiation::viewFactor::Rp() const
 {
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                "Rp",
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            "Rp",
+            mesh_.time().timeName(),
             mesh_,
-            dimensionedScalar
-            (
-                "zero",
-                dimMass/pow3(dimTime)/dimLength/pow4(dimTemperature),
-                0.0
-            )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh_,
+        dimensionedScalar
+        (
+            dimMass/dimLength/pow3(dimTime)/pow4(dimTemperature), Zero
         )
     );
 }
@@ -703,22 +687,19 @@ Foam::tmp<Foam::volScalarField> Foam::radiation::viewFactor::Rp() const
 Foam::tmp<Foam::DimensionedField<Foam::scalar, Foam::volMesh>>
 Foam::radiation::viewFactor::Ru() const
 {
-    return tmp<DimensionedField<scalar, volMesh>>
+    return tmp<DimensionedField<scalar, volMesh>>::New
     (
-        new DimensionedField<scalar, volMesh>
+        IOobject
         (
-            IOobject
-            (
-                "Ru",
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            "Ru",
+            mesh_.time().timeName(),
             mesh_,
-            dimensionedScalar("zero", dimMass/dimLength/pow3(dimTime), 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh_,
+        dimensionedScalar(dimMass/dimLength/pow3(dimTime), Zero)
     );
 }
 

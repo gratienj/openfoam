@@ -1,4 +1,5 @@
 #include "tensor.H"
+#include "triad.H"
 #include "symmTensor.H"
 #include "transform.H"
 #include "stringList.H"
@@ -13,7 +14,40 @@ int main()
 
     tensor t3 = t1 + t2;
 
-    Info<< t3 << endl;
+    Info<< "tensor " << t1 << " + " << t2 << nl
+        << " = " << t3 << nl << nl;
+
+    {
+        Info<< "rows:" << nl;
+        for (direction i=0; i < 3; ++i)
+        {
+            Info<< "  (" << i << ") = " << t3.row(i) << nl;
+        }
+    }
+    {
+        Info<< "cols:" << nl;
+        for (direction i=0; i < 3; ++i)
+        {
+            Info<< "  (" << i << ") = " << t3.col(i) << nl;
+        }
+        Info<< "col<0> = " << t3.col<0>() << nl;
+        Info<< "col<1> = " << t3.col<1>() << nl;
+        Info<< "col<2> = " << t3.col<2>() << nl;
+        // Compilation error:  Info << "col<3> = " << t3.col<3>() << nl;
+
+        t3.col<1>({0, 2, 4});
+        Info<< "replaced col<1> = " << t3.col<1>() << nl;
+        Info<< "tensor " << t3 << nl;
+
+        t3.row<2>(Zero);
+        Info<< "replaced row<1> = " << t3.row<2>() << nl;
+        Info<< "tensor " << t3 << nl;
+
+        triad tr3(t3);
+        Info<< "triad " << tr3 << " :: T() " << tr3.T() << nl;
+    }
+    Info<< nl;
+
 
     tensor t4(3,-2,1,-2,2,0,1, 0, 4);
 
@@ -35,9 +69,10 @@ int main()
     Info<< "Check determinant " << e.x()*e.y()*e.z() << " " << det(t6) << endl;
 
     Info<< "Check eigenvectors "
-        << (eigenVector(t6, e[0]) & t6) << e[0]*eigenVector(t6, e[0]) << " "
-        << (eigenVector(t6, e[1]) & t6) << e[1]*eigenVector(t6, e[1]) << " "
-        << (eigenVector(t6, e[2]) & t6) << e[2]*eigenVector(t6, e[2])
+        << (eigenVectors(t6, e) & t6) << " "
+        << (e.x() * eigenVectors(t6, e)).x()
+        << (e.x() * eigenVectors(t6, e)).y()
+        << (e.z() * eigenVectors(t6, e)).z()
         << endl;
 
     Info<< "Check eigenvalues for symmTensor "

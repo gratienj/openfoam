@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,6 +32,19 @@ License
 
 // Truncate error message for readability
 static const unsigned errLen = 80;
+
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+
+namespace
+{
+
+// Convert a single character to a word with length 1
+inline static Foam::word charToWord(char c)
+{
+    return Foam::word(std::string(1, c), false);
+}
+
+} // End anonymous namespace
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -210,7 +223,7 @@ Foam::Istream& Foam::ISstream::read(token& t)
             if (read(nextC).bad())
             {
                 // Return lone '#' as word
-                t = token(word(c));
+                t = charToWord(c);
             }
             else if (nextC == token::BEGIN_BLOCK)
             {
@@ -246,7 +259,7 @@ Foam::Istream& Foam::ISstream::read(token& t)
             if (read(nextC).bad())
             {
                 // Return lone '$' as word
-                t = token(word(c));
+                t = charToWord(c);
             }
             else if (nextC == token::BEGIN_BLOCK)
             {
@@ -458,8 +471,8 @@ Foam::Istream& Foam::ISstream::read(word& str)
             << buf << nl << endl;
     }
 
-    // Finalize
-    str = buf;
+    // Finalize: content already validated, assign without additional checks.
+    str.assign(buf, nChar);
     putback(c);
 
     return *this;
@@ -555,7 +568,7 @@ Foam::Istream& Foam::ISstream::read(string& str)
     }
 
 
-    // don't worry about a dangling backslash if string terminated prematurely
+    // Don't worry about a dangling backslash if string terminated prematurely
     buf[errLen] = buf[nChar] = '\0';
 
     FatalIOErrorInFunction(*this)
@@ -698,6 +711,7 @@ Foam::Istream& Foam::ISstream::readVerbatim(string& str)
     unsigned nChar = 0;
     char c;
 
+    str.clear();
     while (get(c))
     {
         if (c == token::HASH)
@@ -707,8 +721,7 @@ Foam::Istream& Foam::ISstream::readVerbatim(string& str)
             if (nextC == token::END_BLOCK)
             {
                 // The closing "#}" found
-                buf[nChar] = '\0';
-                str = buf;
+                str.append(buf, nChar);
                 return *this;
             }
             else
@@ -720,19 +733,13 @@ Foam::Istream& Foam::ISstream::readVerbatim(string& str)
         buf[nChar++] = c;
         if (nChar == maxLen)
         {
-            buf[errLen] = '\0';
-
-            FatalIOErrorInFunction(*this)
-                << "string \"" << buf << "...\"\n"
-                << "    is too long (max. " << maxLen << " characters)"
-                << exit(FatalIOError);
-
-            return *this;
+            str.append(buf, nChar);
+            nChar = 0;
         }
     }
 
 
-    // don't worry about a dangling backslash if string terminated prematurely
+    // Don't worry about a dangling backslash if string terminated prematurely
     buf[errLen] = buf[nChar] = '\0';
 
     FatalIOErrorInFunction(*this)

@@ -58,10 +58,10 @@ bool kinematicSingleLayer::read()
     if (surfaceFilmRegionModel::read())
     {
         const dictionary& solution = this->solution().subDict("PISO");
-        solution.lookup("momentumPredictor") >> momentumPredictor_;
+        solution.readEntry("momentumPredictor", momentumPredictor_);
         solution.readIfPresent("nOuterCorr", nOuterCorr_);
-        solution.lookup("nCorr") >> nCorr_;
-        solution.lookup("nNonOrthCorr") >> nNonOrthCorr_;
+        solution.readEntry("nCorr", nCorr_);
+        solution.readEntry("nNonOrthCorr", nNonOrthCorr_);
 
         return true;
     }
@@ -87,9 +87,9 @@ void kinematicSingleLayer::resetPrimaryRegionSourceTerms()
         InfoInFunction << endl;
     }
 
-    rhoSpPrimary_ == dimensionedScalar("zero", rhoSp_.dimensions(), 0.0);
-    USpPrimary_ == dimensionedVector("zero", USp_.dimensions(), Zero);
-    pSpPrimary_ == dimensionedScalar("zero", pSp_.dimensions(), 0.0);
+    rhoSpPrimary_ == dimensionedScalar(rhoSp_.dimensions(), Zero);
+    USpPrimary_ == dimensionedVector(USp_.dimensions(), Zero);
+    pSpPrimary_ == dimensionedScalar(pSp_.dimensions(), Zero);
 }
 
 
@@ -122,7 +122,7 @@ void kinematicSingleLayer::transferPrimaryRegionSourceFields()
     volScalarField::Boundary& pSpPrimaryBf =
         pSpPrimary_.boundaryFieldRef();
 
-    // Convert accummulated source terms into per unit area per unit time
+    // Convert accumulated source terms into per unit area per unit time
     const scalar deltaT = time_.deltaTValue();
     forAll(rhoSpPrimary_.boundaryField(), patchi)
     {
@@ -462,10 +462,10 @@ kinematicSingleLayer::kinematicSingleLayer
 
     momentumPredictor_(solution().subDict("PISO").lookup("momentumPredictor")),
     nOuterCorr_(solution().subDict("PISO").lookupOrDefault("nOuterCorr", 1)),
-    nCorr_(readLabel(solution().subDict("PISO").lookup("nCorr"))),
+    nCorr_(solution().subDict("PISO").get<label>("nCorr")),
     nNonOrthCorr_
     (
-        readLabel(solution().subDict("PISO").lookup("nNonOrthCorr"))
+        solution().subDict("PISO").get<label>("nNonOrthCorr")
     ),
 
     cumulativeContErr_(0.0),
@@ -484,7 +484,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimDensity, 0.0),
+        dimensionedScalar(dimDensity, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     mu_
@@ -498,7 +498,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimPressure*dimTime, 0.0),
+        dimensionedScalar(dimPressure*dimTime, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     sigma_
@@ -512,7 +512,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimMass/sqr(dimTime), 0.0),
+        dimensionedScalar(dimMass/sqr(dimTime), Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
 
@@ -539,7 +539,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimless, 0.0),
+        dimensionedScalar(dimless, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     U_
@@ -591,7 +591,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", delta_.dimensions()*rho_.dimensions(), 0.0),
+        dimensionedScalar(delta_.dimensions()*rho_.dimensions(), Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
 
@@ -606,7 +606,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("0", dimLength*dimMass/dimTime, 0.0)
+        dimensionedScalar(dimLength*dimMass/dimTime, Zero)
     ),
 
     primaryMassTrans_
@@ -620,7 +620,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimMass, 0.0),
+        dimensionedScalar(dimMass, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     cloudMassTrans_
@@ -634,7 +634,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimMass, 0.0),
+        dimensionedScalar(dimMass, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     cloudDiameterTrans_
@@ -648,7 +648,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimLength, -1.0),
+        dimensionedScalar("minus1", dimLength, -1.0),
         zeroGradientFvPatchScalarField::typeName
     ),
 
@@ -663,10 +663,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedVector
-        (
-            "zero", dimMass*dimVelocity/dimArea/dimTime, Zero
-        ),
+        dimensionedVector(dimMass*dimVelocity/dimArea/dimTime, Zero),
         this->mappedPushedFieldPatchTypes<vector>()
     ),
     pSp_
@@ -680,7 +677,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimPressure, 0.0),
+        dimensionedScalar(dimPressure, Zero),
         this->mappedPushedFieldPatchTypes<scalar>()
     ),
     rhoSp_
@@ -694,7 +691,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimMass/dimTime/dimArea, 0.0),
+        dimensionedScalar(dimMass/dimTime/dimArea, Zero),
         this->mappedPushedFieldPatchTypes<scalar>()
     ),
 
@@ -709,7 +706,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         primaryMesh(),
-        dimensionedVector("zero", USp_.dimensions(), Zero)
+        dimensionedVector(USp_.dimensions(), Zero)
     ),
     pSpPrimary_
     (
@@ -722,7 +719,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         primaryMesh(),
-        dimensionedScalar("zero", pSp_.dimensions(), 0.0)
+        dimensionedScalar(pSp_.dimensions(), Zero)
     ),
     rhoSpPrimary_
     (
@@ -735,7 +732,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         primaryMesh(),
-        dimensionedScalar("zero", rhoSp_.dimensions(), 0.0)
+        dimensionedScalar(rhoSp_.dimensions(), Zero)
     ),
 
     UPrimary_
@@ -749,7 +746,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedVector("zero", dimVelocity, Zero),
+        dimensionedVector(dimVelocity, Zero),
         this->mappedFieldAndInternalPatchTypes<vector>()
     ),
     pPrimary_
@@ -763,7 +760,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimPressure, 0.0),
+        dimensionedScalar(dimPressure, Zero),
         this->mappedFieldAndInternalPatchTypes<scalar>()
     ),
     rhoPrimary_
@@ -777,7 +774,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimDensity, 0.0),
+        dimensionedScalar(dimDensity, Zero),
         this->mappedFieldAndInternalPatchTypes<scalar>()
     ),
     muPrimary_
@@ -791,7 +788,7 @@ kinematicSingleLayer::kinematicSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimPressure*dimTime, 0.0),
+        dimensionedScalar(dimPressure*dimTime, Zero),
         this->mappedFieldAndInternalPatchTypes<scalar>()
     ),
 
@@ -893,11 +890,10 @@ void kinematicSingleLayer::preEvolveRegion()
     correctAlpha();
 
     // Reset transfer fields
-    //availableMass_ = mass();
-    availableMass_ = netMass();
-    cloudMassTrans_ == dimensionedScalar("zero", dimMass, 0.0);
-    cloudDiameterTrans_ == dimensionedScalar("zero", dimLength, 0.0);
-    primaryMassTrans_ == dimensionedScalar("zero", dimMass, 0.0);
+    availableMass_ = mass();
+    cloudMassTrans_ == dimensionedScalar(dimMass, Zero);
+    cloudDiameterTrans_ == dimensionedScalar(dimLength, Zero);
+    primaryMassTrans_ == dimensionedScalar(dimMass, Zero);
 }
 
 
@@ -1116,22 +1112,19 @@ void kinematicSingleLayer::info()
 
 tmp<volScalarField::Internal> kinematicSingleLayer::Srho() const
 {
-    return tmp<volScalarField::Internal>
+    return tmp<volScalarField::Internal>::New
     (
-        new volScalarField::Internal
+        IOobject
         (
-            IOobject
-            (
-                typeName + ":Srho",
-                time().timeName(),
-                primaryMesh(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            typeName + ":Srho",
+            time().timeName(),
             primaryMesh(),
-            dimensionedScalar("zero", dimMass/dimVolume/dimTime, 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        primaryMesh(),
+        dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
     );
 }
 
@@ -1141,44 +1134,38 @@ tmp<volScalarField::Internal> kinematicSingleLayer::Srho
     const label i
 ) const
 {
-    return tmp<volScalarField::Internal>
+    return tmp<volScalarField::Internal>::New
     (
-        new volScalarField::Internal
+        IOobject
         (
-            IOobject
-            (
-                typeName + ":Srho(" + Foam::name(i) + ")",
-                time().timeName(),
-                primaryMesh(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            typeName + ":Srho(" + Foam::name(i) + ")",
+            time().timeName(),
             primaryMesh(),
-            dimensionedScalar("zero", dimMass/dimVolume/dimTime, 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        primaryMesh(),
+        dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
     );
 }
 
 
 tmp<volScalarField::Internal> kinematicSingleLayer::Sh() const
 {
-    return tmp<volScalarField::Internal>
+    return tmp<volScalarField::Internal>::New
     (
-        new volScalarField::Internal
+        IOobject
         (
-            IOobject
-            (
-                typeName + ":Sh",
-                time().timeName(),
-                primaryMesh(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            typeName + ":Sh",
+            time().timeName(),
             primaryMesh(),
-            dimensionedScalar("zero", dimEnergy/dimVolume/dimTime, 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        primaryMesh(),
+        dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
     );
 }
 

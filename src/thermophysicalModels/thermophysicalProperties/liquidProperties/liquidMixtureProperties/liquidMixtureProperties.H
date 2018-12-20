@@ -91,16 +91,12 @@ public:
         //- Construct and return a clone
         virtual autoPtr<liquidMixtureProperties> clone() const
         {
-            return autoPtr<liquidMixtureProperties>
-            (
-                new liquidMixtureProperties(*this)
-            );
+            return autoPtr<liquidMixtureProperties>::New(*this);
         }
 
 
     //- Destructor
-    virtual ~liquidMixtureProperties()
-    {}
+    virtual ~liquidMixtureProperties() = default;
 
 
     // Selectors
@@ -225,7 +221,7 @@ public:
             const scalarField& X
         ) const;
 
-        //- Vapour diffussivity [m2/s]
+        //- Vapour diffusivity [m2/s]
         scalar D
         (
             const scalar p,

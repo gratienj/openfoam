@@ -25,7 +25,6 @@ License
 
 #include "liquidProperties.H"
 #include "HashTable.H"
-#include "Switch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -70,16 +69,16 @@ Foam::liquidProperties::liquidProperties
 Foam::liquidProperties::liquidProperties(const dictionary& dict)
 :
     thermophysicalProperties(dict),
-    Tc_(readScalar(dict.lookup("Tc"))),
-    Pc_(readScalar(dict.lookup("Pc"))),
-    Vc_(readScalar(dict.lookup("Vc"))),
-    Zc_(readScalar(dict.lookup("Zc"))),
-    Tt_(readScalar(dict.lookup("Tt"))),
-    Pt_(readScalar(dict.lookup("Pt"))),
-    Tb_(readScalar(dict.lookup("Tb"))),
-    dipm_(readScalar(dict.lookup("dipm"))),
-    omega_(readScalar(dict.lookup("omega"))),
-    delta_(readScalar(dict.lookup("delta")))
+    Tc_(dict.get<label>("Tc")),
+    Pc_(dict.get<label>("Pc")),
+    Vc_(dict.get<label>("Vc")),
+    Zc_(dict.get<label>("Zc")),
+    Tt_(dict.get<label>("Tt")),
+    Pt_(dict.get<label>("Pt")),
+    Tb_(dict.get<label>("Tb")),
+    dipm_(dict.get<label>("dipm")),
+    omega_(dict.get<label>("omega")),
+    delta_(dict.get<label>("delta"))
 {}
 
 
@@ -121,41 +120,17 @@ Foam::autoPtr<Foam::liquidProperties> Foam::liquidProperties::New
         InfoInFunction << "Constructing liquidProperties" << endl;
     }
 
-    const word& liquidType = dict.dictName();
+    const word liquidType(dict.dictName());
 
     if (dict.found("defaultCoeffs"))
     {
         // Backward-compatibility
 
-        if (Switch(dict.lookup("defaultCoeffs")))
+        if (dict.get<bool>("defaultCoeffs"))
         {
             return New(liquidType);
         }
-        else
-        {
-            auto cstrIter = dictionaryConstructorTablePtr_->cfind(liquidType);
 
-            if (!cstrIter.found())
-            {
-                FatalErrorInFunction
-                    << "Unknown liquidProperties type "
-                    << liquidType << nl << nl
-                    << "Valid liquidProperties types :" << nl
-                    << dictionaryConstructorTablePtr_->sortedToc()
-                    << exit(FatalError);
-            }
-
-            return autoPtr<liquidProperties>
-            (
-                cstrIter()
-                (
-                    dict.optionalSubDict(liquidType + "Coeffs")
-                )
-            );
-        }
-    }
-    else
-    {
         auto cstrIter = dictionaryConstructorTablePtr_->cfind(liquidType);
 
         if (!cstrIter.found())
@@ -168,8 +143,28 @@ Foam::autoPtr<Foam::liquidProperties> Foam::liquidProperties::New
                 << exit(FatalError);
         }
 
-        return autoPtr<liquidProperties>(cstrIter()(dict));
+        return autoPtr<liquidProperties>
+        (
+            cstrIter()
+            (
+                dict.optionalSubDict(liquidType + "Coeffs")
+            )
+        );
     }
+
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(liquidType);
+
+    if (!cstrIter.found())
+    {
+        FatalErrorInFunction
+            << "Unknown liquidProperties type "
+            << liquidType << nl << nl
+            << "Valid liquidProperties types :" << nl
+            << dictionaryConstructorTablePtr_->sortedToc()
+            << exit(FatalError);
+    }
+
+    return autoPtr<liquidProperties>(cstrIter()(dict));
 }
 
 

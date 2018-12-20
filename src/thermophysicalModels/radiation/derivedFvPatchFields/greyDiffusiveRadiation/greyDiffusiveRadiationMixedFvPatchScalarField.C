@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -79,7 +79,7 @@ greyDiffusiveRadiationMixedFvPatchScalarField
 :
     mixedFvPatchScalarField(p, iF),
     TName_(dict.lookupOrDefault<word>("T", "T")),
-    solarLoad_(dict.lookupOrDefault<bool>("solarLoad", false))
+    solarLoad_(dict.lookupOrDefault("solarLoad", false))
 {
     if (dict.found("refValue"))
     {
@@ -145,10 +145,7 @@ updateCoeffs()
     const scalarField& Tp =
         patch().lookupPatchField<volScalarField, scalar>(TName_);
 
-    const radiationModel& radiation =
-        db().lookupObject<radiationModel>("radiationProperties");
-
-    const fvDOM& dom(refCast<const fvDOM>(radiation));
+    const fvDOM& dom = db().lookupObject<fvDOM>("radiationProperties");
 
     label rayId = -1;
     label lambdaId = -1;
@@ -202,7 +199,7 @@ updateCoeffs()
     {
         Ir += patch().lookupPatchField<volScalarField,scalar>
         (
-            radiation.externalRadHeatFieldName_
+            dom.externalRadHeatFieldName_
         );
     }
 
@@ -215,12 +212,12 @@ updateCoeffs()
             valueFraction()[faceI] = 1.0;
             refValue()[faceI] =
                 (
-                    Ir[faceI]*(scalar(1.0) - emissivity[faceI])
+                    Ir[faceI]*(scalar(1) - emissivity[faceI])
                   + emissivity[faceI]*physicoChemical::sigma.value()
                   * pow4(Tp[faceI])
                 )/pi;
 
-            // Emmited heat flux from this ray direction
+            // Emitted heat flux from this ray direction
             qem[faceI] = refValue()[faceI]*nAve[faceI];
         }
         else

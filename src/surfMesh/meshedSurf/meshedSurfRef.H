@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -54,10 +54,10 @@ class meshedSurfRef
 
     // Private Member Functions
 
-        //- Disallow construct as copy
+        //- No copy construct
         meshedSurfRef(const meshedSurfRef&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const meshedSurfRef&) = delete;
 
 public:
@@ -69,7 +69,7 @@ public:
         (
             const pointField& pts,
             const faceList& faces,
-            const labelList& ids = Foam::emptyLabelList
+            const labelList& ids = labelList()
         )
         :
             points_(pts),

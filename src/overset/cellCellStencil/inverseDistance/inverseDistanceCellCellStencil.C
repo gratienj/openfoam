@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -434,12 +434,56 @@ void Foam::cellCellStencils::inverseDistance::markPatchesAsHoles
 }
 
 
+bool Foam::cellCellStencils::inverseDistance::betterDonor
+(
+    const label destMesh,
+    const label currentDonorMesh,
+    const label newDonorMesh
+) const
+{
+    // This determines for multiple overlapping meshes which one provides
+    // the best donors. Is very basic and only looks at indices of meshes:
+    // - 'nearest' mesh index wins, i.e. on mesh 0 it preferentially uses donors
+    //   from mesh 1 over mesh 2 (if applicable)
+    // - if same 'distance' the highest mesh wins. So on mesh 1 it
+    //   preferentially uses donors from mesh 2 over mesh 0. This particular
+    //   rule helps to avoid some interpolation loops where mesh 1 uses donors
+    //   from mesh 0 (usually the background) but mesh 0 then uses
+    //   donors from 1.
+
+    if (currentDonorMesh == -1)
+    {
+        return true;
+    }
+    else
+    {
+        const label currentDist = mag(currentDonorMesh-destMesh);
+        const label newDist = mag(newDonorMesh-destMesh);
+
+        if (newDist < currentDist)
+        {
+            return true;
+        }
+        else if (newDist == currentDist && newDonorMesh > currentDonorMesh)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+}
+
+
 void Foam::cellCellStencils::inverseDistance::markDonors
 (
     const globalIndex& globalCells,
     PstreamBuffers& pBufs,
     const PtrList<fvMeshSubset>& meshParts,
     const List<treeBoundBoxList>& meshBb,
+
+    const labelList& allCellTypes,
 
     const label srcI,
     const label tgtI,
@@ -463,14 +507,20 @@ void Foam::cellCellStencils::inverseDistance::markDonors
         forAll(tgtCellMap, tgtCelli)
         {
             label srcCelli = tgtToSrcAddr[tgtCelli];
-            if (srcCelli != -1)
+            if (srcCelli != -1 && allCellTypes[srcCellMap[srcCelli]] != HOLE)
             {
                 label celli = tgtCellMap[tgtCelli];
-                label globalDonor =
-                    globalCells.toGlobal(srcCellMap[srcCelli]);
-                allStencil[celli].setSize(1);
-                allStencil[celli][0] = globalDonor;
-                allDonor[celli] = srcI;
+
+                // TBD: check for multiple donors. Maybe better one? For
+                //      now check 'nearer' mesh
+                if (betterDonor(tgtI, allDonor[celli], srcI))
+                {
+                    label globalDonor =
+                        globalCells.toGlobal(srcCellMap[srcCelli]);
+                    allStencil[celli].setSize(1);
+                    allStencil[celli][0] = globalDonor;
+                    allDonor[celli] = srcI;
+                }
             }
         }
     }
@@ -557,7 +607,7 @@ void Foam::cellCellStencils::inverseDistance::markDonors
         {
             const point& sample = samples[sampleI];
             label srcCelli = srcMesh.findCell(sample, polyMesh::CELL_TETS);
-            if (srcCelli != -1)
+            if (srcCelli != -1 && allCellTypes[srcCellMap[srcCelli]] != HOLE)
             {
                 donors[sampleI] = globalCells.toGlobal(srcCellMap[srcCelli]);
             }
@@ -591,8 +641,9 @@ void Foam::cellCellStencils::inverseDistance::markDonors
             {
                 label celli = tgtCellMap[cellIDs[donorI]];
 
-                // TBD: check for multiple donors. Maybe better one?
-                if (allStencil[celli].empty())
+                // TBD: check for multiple donors. Maybe better one? For
+                //      now check 'nearer' mesh
+                if (betterDonor(tgtI, allDonor[celli], srcI))
                 {
                     allStencil[celli].setSize(1);
                     allStencil[celli][0] = globalDonor;
@@ -1001,7 +1052,7 @@ void Foam::cellCellStencils::inverseDistance::findHoles
     // real patches
 
     //  0 : region not yet determined
-    //  1 : borders blockage so is not ok (but can be overriden by real
+    //  1 : borders blockage so is not ok (but can be overridden by real
     //      patch)
     //  2 : has real patch in it so is reachable
     labelList regionType(nRegions, 0);
@@ -1173,7 +1224,7 @@ void Foam::cellCellStencils::inverseDistance::seedCell
 (
     const label cellI,
     const scalar wantedFraction,
-    PackedBoolList& isFront,
+    bitSet& isFront,
     scalarField& fraction
 ) const
 {
@@ -1199,7 +1250,7 @@ void Foam::cellCellStencils::inverseDistance::walkFront
 ) const
 {
     // Current front
-    PackedBoolList isFront(mesh_.nFaces());
+    bitSet isFront(mesh_.nFaces());
 
     const fvBoundaryMesh& fvm = mesh_.boundary();
 
@@ -1219,7 +1270,7 @@ void Foam::cellCellStencils::inverseDistance::walkFront
                     // Note that acceptors might have been marked hole if
                     // there are no donors in which case we do not want to
                     // walk this out. This is an extreme situation.
-                    isFront[fvm[patchI].start()+i] = true;
+                    isFront.set(fvm[patchI].start()+i);
                 }
             }
         }
@@ -1243,7 +1294,7 @@ void Foam::cellCellStencils::inverseDistance::walkFront
             {
                 //Pout<< "Front at face:" << faceI
                 //    << " at:" << mesh_.faceCentres()[faceI] << endl;
-                isFront[faceI] = true;
+                isFront.set(faceI);
             }
         }
 
@@ -1268,7 +1319,7 @@ void Foam::cellCellStencils::inverseDistance::walkFront
             {
                 //Pout<< "Front at coupled face:" << faceI
                 //    << " at:" << mesh_.faceCentres()[faceI] << endl;
-                isFront[faceI] = true;
+                isFront.set(faceI);
             }
         }
     }
@@ -1279,21 +1330,21 @@ void Foam::cellCellStencils::inverseDistance::walkFront
 
     forAll(isFront, faceI)
     {
-        if (isFront[faceI])
+        if (isFront.test(faceI))
         {
             fraction[faceI] = 1.0;
         }
     }
 
 
-    while (returnReduce(isFront.count(), sumOp<label>()))
+    while (returnReduce(isFront.any(), orOp<bool>()))
     {
         // Interpolate cells on front
-        PackedBoolList newIsFront(mesh_.nFaces());
+        bitSet newIsFront(mesh_.nFaces());
         scalarField newFraction(fraction);
         forAll(isFront, faceI)
         {
-            if (isFront[faceI])
+            if (isFront.test(faceI))
             {
                 label own = mesh_.faceOwner()[faceI];
                 if (allCellTypes[own] != HOLE)
@@ -1423,7 +1474,7 @@ void Foam::cellCellStencils::inverseDistance::createStencil
     // (but with different weights obviously)
     // So we do multi-pass:
     // - send over cc of acceptor for which we want stencil.
-    //   Consistenly choose the acceptor with smallest magSqr in case of
+    //   Consistently choose the acceptor with smallest magSqr in case of
     //   multiple acceptors for the containing cell/donor.
     // - find the cell-cells and weights for the donor
     // - send back together with the acceptor cc
@@ -1434,12 +1485,22 @@ void Foam::cellCellStencils::inverseDistance::createStencil
     // Special value for unused points
     const vector greatPoint(GREAT, GREAT, GREAT);
 
+    boolList isValidDonor(mesh_.nCells(), true);
+    forAll(cellTypes_, celli)
+    {
+        if (cellTypes_[celli] == HOLE)
+        {
+            isValidDonor[celli] = false;
+        }
+    }
+
+
     // Has acceptor been handled already?
-    PackedBoolList doneAcceptor(interpolationCells_.size());
+    bitSet doneAcceptor(interpolationCells_.size());
 
     while (true)
     {
-        pointField samples(cellInterpolationMap_.constructSize(), greatPoint);
+        pointField samples(cellInterpolationMap().constructSize(), greatPoint);
 
         // Fill remote slots (override old content). We'll find out later
         // on which one has won and mark this one in doneAcceptor.
@@ -1483,9 +1544,9 @@ void Foam::cellCellStencils::inverseDistance::createStencil
             Pstream::commsTypes::nonBlocking,
             List<labelPair>(),
             mesh_.nCells(),
-            cellInterpolationMap_.constructMap(),
+            cellInterpolationMap().constructMap(),
             false,
-            cellInterpolationMap_.subMap(),
+            cellInterpolationMap().subMap(),
             false,
             samples,
             minMagSqrEqOp<point>(),
@@ -1513,6 +1574,7 @@ void Foam::cellCellStencils::inverseDistance::createStencil
         (
             globalCells,
             mesh_,
+            isValidDonor,
             donorCells,
             donorCellCells,
             donorCellCentres
@@ -1535,9 +1597,9 @@ void Foam::cellCellStencils::inverseDistance::createStencil
         // Transfer the information back to the acceptor:
         // - donorCellCells : stencil (with first element the original donor)
         // - donorWeights : weights for donorCellCells
-        cellInterpolationMap_.distribute(donorCellCells);
-        cellInterpolationMap_.distribute(donorWeights);
-        cellInterpolationMap_.distribute(samples);
+        cellInterpolationMap().distribute(donorCellCells);
+        cellInterpolationMap().distribute(donorWeights);
+        cellInterpolationMap().distribute(samples);
 
         // Check which acceptor has won and transfer
         forAll(interpolationCells_, i)
@@ -1565,7 +1627,7 @@ void Foam::cellCellStencils::inverseDistance::createStencil
                     );
                     // Mark cell as being done so it does not get sent over
                     // again.
-                    doneAcceptor[i] = true;
+                    doneAcceptor.set(i);
                 }
             }
         }
@@ -1573,8 +1635,15 @@ void Foam::cellCellStencils::inverseDistance::createStencil
 
     // Re-do the mapDistribute
     List<Map<label>> compactMap;
-    mapDistribute map(globalCells, cellStencil_, compactMap);
-    cellInterpolationMap_.transfer(map);
+    cellInterpolationMap_.reset
+    (
+        new mapDistribute
+        (
+            globalCells,
+            cellStencil_,
+            compactMap
+        )
+    );
 }
 
 
@@ -1607,10 +1676,51 @@ Foam::cellCellStencils::inverseDistance::inverseDistance
             false
         ),
         mesh_,
-        dimensionedScalar("zero", dimless, 0.0),
+        dimensionedScalar(dimless, Zero),
         zeroGradientFvPatchScalarField::typeName
     )
 {
+    // Protect local fields from interpolation
+    nonInterpolatedFields_.insert("cellInterpolationWeight");
+    nonInterpolatedFields_.insert("cellTypes");
+    nonInterpolatedFields_.insert("maxMagWeight");
+
+    // For convenience also suppress frequently used displacement field
+    nonInterpolatedFields_.insert("cellDisplacement");
+    nonInterpolatedFields_.insert("grad(cellDisplacement)");
+    const word w("snGradCorr(cellDisplacement)");
+    const word d("((viscosity*faceDiffusivity)*magSf)");
+    nonInterpolatedFields_.insert("surfaceIntegrate(("+d+"*"+w+"))");
+
+    // Read zoneID
+    this->zoneID();
+
+    // Read old-time cellTypes
+    IOobject io
+    (
+        "cellTypes",
+        mesh_.time().timeName(),
+        mesh_,
+        IOobject::READ_IF_PRESENT,
+        IOobject::NO_WRITE,
+        false
+    );
+    if (io.typeHeaderOk<volScalarField>(true))
+    {
+        if (debug)
+        {
+            Pout<< "Reading cellTypes from time " << mesh_.time().timeName()
+                << endl;
+        }
+
+        const volScalarField volCellTypes(io, mesh_);
+        forAll(volCellTypes, celli)
+        {
+            // Round to integer
+            cellTypes_[celli] = volCellTypes[celli];
+        }
+    }
+
     if (doUpdate)
     {
         update();
@@ -1657,11 +1767,14 @@ bool Foam::cellCellStencils::inverseDistance::update()
         List<treeBoundBoxList> procBb(Pstream::nProcs());
         procBb[Pstream::myProcNo()].setSize(nZones);
 
-        forAll(nCellsPerZone, zoneI)
+        forAll(meshParts, zonei)
         {
-            meshParts.set(zoneI, new fvMeshSubset(mesh_));
-            meshParts[zoneI].setLargeCellSubset(zoneID, zoneI);
-            const fvMesh& subMesh = meshParts[zoneI].subMesh();
+            meshParts.set
+            (
+                zonei,
+                new fvMeshSubset(mesh_, zonei, zoneID)
+            );
+            const fvMesh& subMesh = meshParts[zonei].subMesh();
 
             // Trigger early evaluation of mesh dimension (in case there are
             // zero cells in mesh)
@@ -1669,19 +1782,19 @@ bool Foam::cellCellStencils::inverseDistance::update()
 
             if (subMesh.nPoints())
             {
-                procBb[Pstream::myProcNo()][zoneI] =
+                procBb[Pstream::myProcNo()][zonei] =
                     treeBoundBox(subMesh.points());
-                procBb[Pstream::myProcNo()][zoneI].inflate(1e-6);
+                procBb[Pstream::myProcNo()][zonei].inflate(1e-6);
             }
             else
             {
                 // No part of zone on this processor. Make up bb.
-                procBb[Pstream::myProcNo()][zoneI] = treeBoundBox
+                procBb[Pstream::myProcNo()][zonei] = treeBoundBox
                 (
                     allBb.min() - 2*allBb.span(),
                     allBb.min() - allBb.span()
                 );
-                procBb[Pstream::myProcNo()][zoneI].inflate(1e-6);
+                procBb[Pstream::myProcNo()][zonei].inflate(1e-6);
             }
         }
 
@@ -1813,6 +1926,7 @@ bool Foam::cellCellStencils::inverseDistance::update()
 
     PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
 
+    // Mark holes (in allCellTypes)
     for (label srcI = 0; srcI < meshParts.size()-1; srcI++)
     {
         for (label tgtI = srcI+1; tgtI < meshParts.size(); tgtI++)
@@ -1845,13 +1959,21 @@ bool Foam::cellCellStencils::inverseDistance::update()
                 srcI,
                 allCellTypes
             );
+        }
+    }
 
+    // Find donors (which are not holes) in allStencil, allDonorID
+    for (label srcI = 0; srcI < meshParts.size()-1; srcI++)
+    {
+        for (label tgtI = srcI+1; tgtI < meshParts.size(); tgtI++)
+        {
             markDonors
             (
                 globalCells,
                 pBufs,
                 meshParts,
                 meshBb,
+                allCellTypes,
 
                 tgtI,
                 srcI,
@@ -1864,6 +1986,7 @@ bool Foam::cellCellStencils::inverseDistance::update()
                 pBufs,
                 meshParts,
                 meshBb,
+                allCellTypes,
 
                 srcI,
                 tgtI,
@@ -1873,6 +1996,12 @@ bool Foam::cellCellStencils::inverseDistance::update()
         }
     }
 
+    if (debug)
+    {
+        tmp<volScalarField> tfld(createField("allCellTypes", allCellTypes));
+        //tfld.ref().correctBoundaryConditions();
+        tfld().write();
+    }
 
     // Use the patch types and weights to decide what to do
     forAll(allPatchTypes, cellI)
@@ -1908,14 +2037,95 @@ bool Foam::cellCellStencils::inverseDistance::update()
         }
     }
 
+    if (debug)
+    {
+        tmp<volScalarField> tfld
+        (
+            createField("allCellTypes_patch", allCellTypes)
+        );
+        //tfld.ref().correctBoundaryConditions();
+        tfld().write();
+    }
 
     // Mark unreachable bits
     findHoles(globalCells, mesh_, zoneID, allStencil, allCellTypes);
+
+    if (debug)
+    {
+        tmp<volScalarField> tfld
+        (
+            createField("allCellTypes_hole", allCellTypes)
+        );
+        //tfld.ref().correctBoundaryConditions();
+        tfld().write();
+    }
+    if (debug)
+    {
+        labelList stencilSize(mesh_.nCells());
+        forAll(allStencil, celli)
+        {
+            stencilSize[celli] = allStencil[celli].size();
+        }
+        tmp<volScalarField> tfld(createField("allStencil_hole", stencilSize));
+        //tfld.ref().correctBoundaryConditions();
+        tfld().write();
+    }
 
 
     // Add buffer interpolation layer(s) around holes
     scalarField allWeight(mesh_.nCells(), 0.0);
     walkFront(layerRelax, allStencil, allCellTypes, allWeight);
+
+    if (debug)
+    {
+        tmp<volScalarField> tfld
+        (
+            createField("allCellTypes_front", allCellTypes)
+        );
+        //tfld.ref().correctBoundaryConditions();
+        tfld().write();
+    }
+
+
+    // Check previous iteration cellTypes_ for any hole->calculated changes
+    {
+        label nCalculated = 0;
+
+        forAll(cellTypes_, celli)
+        {
+            if (allCellTypes[celli] == CALCULATED && cellTypes_[celli] == HOLE)
+            {
+                if (allStencil[celli].size() == 0)
+                {
+                    FatalErrorInFunction
+                    //WarningInFunction
+                        << "Cell:" << celli
+                        << " at:" << mesh_.cellCentres()[celli]
+                        << " zone:" << zoneID[celli]
+                        << " changed from hole to calculated"
+                        << " but there is no donor"
+                        //<< endl;
+                        << exit(FatalError);
+                }
+                else
+                {
+                    //Pout<< "cell:" << mesh_.cellCentres()[celli]
+                    //    << " changed from hole to calculated"
+                    //    << " using donors:" << allStencil[celli]
+                    //    << endl;
+                    allCellTypes[celli] = INTERPOLATED;
+                    nCalculated++;
+                }
+            }
+        }
+
+        if (debug)
+        {
+            Pout<< "Detected " << nCalculated << " cells changing from hole"
+                << " to calculated. Changed to interpolated"
+                << endl;
+        }
+    }
 
 
     // Convert cell-cell addressing to stencil in compact notation
@@ -1942,22 +2152,26 @@ bool Foam::cellCellStencils::inverseDistance::update()
     interpolationCells_.transfer(interpolationCells);
 
     List<Map<label>> compactMap;
-    mapDistribute map(globalCells, cellStencil_, compactMap);
-    cellInterpolationMap_.transfer(map);
-
+    cellInterpolationMap_.reset
+    (
+        new mapDistribute(globalCells, cellStencil_, compactMap)
+    );
     cellInterpolationWeight_.transfer(allWeight);
     cellInterpolationWeight_.correctBoundaryConditions();
 
 
     if (debug&2)
     {
+        // Dump mesh
+        mesh_.time().write();
+
         // Dump stencil
         mkDir(mesh_.time().timePath());
         OBJstream str(mesh_.time().timePath()/"injectionStencil.obj");
         Pout<< type() << " : dumping injectionStencil to "
             << str.name() << endl;
         pointField cc(mesh_.cellCentres());
-        cellInterpolationMap_.distribute(cc);
+        cellInterpolationMap().distribute(cc);
 
         forAll(cellStencil_, celli)
         {
@@ -1985,36 +2199,53 @@ bool Foam::cellCellStencils::inverseDistance::update()
         cellInterpolationWeight_.instance() = mesh_.time().timeName();
         cellInterpolationWeight_.write();
 
-        // Dump cell types
-        volScalarField volTypes
-        (
-            IOobject
-            (
-                "cellTypes",
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
-            mesh_,
-            dimensionedScalar("zero", dimless, 0.0),
-            zeroGradientFvPatchScalarField::typeName
-        );
-
-        forAll(volTypes.internalField(), cellI)
+        // Dump max weight
         {
-            volTypes[cellI] = cellTypes_[cellI];
+            scalarField maxMagWeight(mesh_.nCells(), 0.0);
+            forAll(cellStencil_, celli)
+            {
+                const scalarList& wghts = cellInterpolationWeights_[celli];
+                forAll(wghts, i)
+                {
+                    if (mag(wghts[i]) > mag(maxMagWeight[celli]))
+                    {
+                        maxMagWeight[celli] = wghts[i];
+                    }
+                }
+                if (mag(maxMagWeight[celli]) > 1)
+                {
+                    const pointField& cc = mesh_.cellCentres();
+                    Pout<< "cell:" << celli
+                        << " at:" << cc[celli]
+                        << " zone:" << zoneID[celli]
+                        << " donors:" << cellStencil_[celli]
+                        << " weights:" << wghts
+                        << " coords:"
+                        << UIndirectList<point>(cc, cellStencil_[celli])
+                        << " donorZone:"
+                        << UIndirectList<label>(zoneID, cellStencil_[celli])
+                        << endl;
+                }
+            }
+            tmp<volScalarField> tfld(createField("maxMagWeight", maxMagWeight));
+            tfld.ref().correctBoundaryConditions();
+            tfld().write();
         }
-        volTypes.correctBoundaryConditions();
-        volTypes.write();
+
+        // Dump cell types
+        {
+            tmp<volScalarField> tfld(createField("cellTypes", cellTypes_));
+            tfld.ref().correctBoundaryConditions();
+            tfld().write();
+        }
+
 
         // Dump stencil
         mkDir(mesh_.time().timePath());
         OBJstream str(mesh_.time().timePath()/"stencil.obj");
         Pout<< type() << " : dumping to " << str.name() << endl;
         pointField cc(mesh_.cellCentres());
-        cellInterpolationMap_.distribute(cc);
+        cellInterpolationMap().distribute(cc);
 
         forAll(cellStencil_, celli)
         {

@@ -72,6 +72,7 @@ constantFilmThermo::constantFilmThermo
     sigma0_("sigma0"),
     Cp0_("Cp0"),
     kappa0_("kappa0"),
+    D0_("D0"),
     hl0_("hl0"),
     pv0_("pv0"),
     W0_("W0"),
@@ -82,6 +83,7 @@ constantFilmThermo::constantFilmThermo
     init(sigma0_);
     init(Cp0_);
     init(kappa0_);
+    init(D0_);
     init(hl0_);
     init(pv0_);
     init(W0_);
@@ -111,7 +113,7 @@ scalar constantFilmThermo::rho
 {
     if (!rho0_.set_)
     {
-        coeffDict_.lookup(rho0_.name_) >> rho0_.value_;
+        coeffDict_.readEntry(rho0_.name_, rho0_.value_);
         rho0_.set_ = true;
     }
 
@@ -127,7 +129,7 @@ scalar constantFilmThermo::mu
 {
     if (!mu0_.set_)
     {
-        coeffDict_.lookup(mu0_.name_) >> mu0_.value_;
+        coeffDict_.readEntry(mu0_.name_, mu0_.value_);
         mu0_.set_ = true;
     }
 
@@ -143,7 +145,7 @@ scalar constantFilmThermo::sigma
 {
     if (!sigma0_.set_)
     {
-        coeffDict_.lookup(sigma0_.name_) >> sigma0_.value_;
+        coeffDict_.readEntry(sigma0_.name_, sigma0_.value_);
         sigma0_.set_ = true;
     }
 
@@ -159,7 +161,7 @@ scalar constantFilmThermo::Cp
 {
     if (!Cp0_.set_)
     {
-        coeffDict_.lookup(Cp0_.name_) >> Cp0_.value_;
+        coeffDict_.readEntry(Cp0_.name_, Cp0_.value_);
         Cp0_.set_ = true;
     }
 
@@ -175,7 +177,7 @@ scalar constantFilmThermo::kappa
 {
     if (!kappa0_.set_)
     {
-        coeffDict_.lookup(kappa0_.name_) >> kappa0_.value_;
+        coeffDict_.readEntry(kappa0_.name_, kappa0_.value_);
         kappa0_.set_ = true;
     }
 
@@ -191,7 +193,7 @@ scalar constantFilmThermo::D
 {
     if (!D0_.set_)
     {
-        coeffDict_.lookup(D0_.name_) >> D0_.value_;
+        coeffDict_.readEntry(D0_.name_, D0_.value_);
         D0_.set_ = true;
     }
 
@@ -207,7 +209,7 @@ scalar constantFilmThermo::hl
 {
     if (!hl0_.set_)
     {
-        coeffDict_.lookup(hl0_.name_) >> hl0_.value_;
+        coeffDict_.readEntry(hl0_.name_, hl0_.value_);
         hl0_.set_ = true;
     }
 
@@ -223,7 +225,7 @@ scalar constantFilmThermo::pv
 {
     if (!pv0_.set_)
     {
-        coeffDict_.lookup(pv0_.name_) >> pv0_.value_;
+        coeffDict_.readEntry(pv0_.name_, pv0_.value_);
         pv0_.set_ = true;
     }
 
@@ -235,7 +237,7 @@ scalar constantFilmThermo::W() const
 {
     if (!W0_.set_)
     {
-        coeffDict_.lookup(W0_.name_) >> W0_.value_;
+        coeffDict_.readEntry(W0_.name_, W0_.value_);
         W0_.set_ = true;
     }
 
@@ -247,7 +249,7 @@ scalar constantFilmThermo::Tb(const scalar p) const
 {
     if (!Tb0_.set_)
     {
-        coeffDict_.lookup(Tb0_.name_) >> Tb0_.value_;
+        coeffDict_.readEntry(Tb0_.name_, Tb0_.value_);
         Tb0_.set_ = true;
     }
 
@@ -270,7 +272,7 @@ tmp<volScalarField> constantFilmThermo::rho() const
                 IOobject::NO_WRITE
             ),
             film().regionMesh(),
-            dimensionedScalar("0", dimDensity, 0.0),
+            dimensionedScalar(dimDensity, Zero),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -297,7 +299,7 @@ tmp<volScalarField> constantFilmThermo::mu() const
                 IOobject::NO_WRITE
             ),
             film().regionMesh(),
-            dimensionedScalar("0", dimPressure*dimTime, 0.0),
+            dimensionedScalar(dimPressure*dimTime, Zero),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -324,7 +326,7 @@ tmp<volScalarField> constantFilmThermo::sigma() const
                 IOobject::NO_WRITE
             ),
             film().regionMesh(),
-            dimensionedScalar("0", dimMass/sqr(dimTime), 0.0),
+            dimensionedScalar(dimMass/sqr(dimTime), Zero),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -351,7 +353,7 @@ tmp<volScalarField> constantFilmThermo::Cp() const
                 IOobject::NO_WRITE
             ),
             film().regionMesh(),
-            dimensionedScalar("0", dimEnergy/dimMass/dimTemperature, 0.0),
+            dimensionedScalar(dimEnergy/dimMass/dimTemperature, Zero),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );
@@ -378,7 +380,7 @@ tmp<volScalarField> constantFilmThermo::kappa() const
                 IOobject::NO_WRITE
             ),
             film().regionMesh(),
-            dimensionedScalar("0", dimPower/dimLength/dimTemperature, 0.0),
+            dimensionedScalar(dimPower/dimLength/dimTemperature, Zero),
             extrapolatedCalculatedFvPatchScalarField::typeName
         )
     );

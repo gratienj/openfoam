@@ -41,7 +41,6 @@ SourceFiles
 #include "autoPtr.H"
 #include "boolList.H"
 #include "labelList.H"
-#include "Switch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -71,7 +70,7 @@ protected:
         const dictionary dict_;
 
         //- Switch direction?
-        const Switch flip_;
+        const bool flip_;
 
 public:
 
@@ -109,7 +108,7 @@ public:
         autoPtr<faceSelection> clone() const
         {
             NotImplemented;
-            return autoPtr<faceSelection>(nullptr);
+            return nullptr;
         }
 
 

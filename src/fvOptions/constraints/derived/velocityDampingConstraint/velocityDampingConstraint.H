@@ -46,7 +46,8 @@ Description
             UMax        100;
 
             // Optional: name of velocity field (default: U)
-            //UName       U;
+            //U         U;
+            //UNames    (U);
         }
 
 
@@ -68,7 +69,7 @@ namespace fv
 {
 
 /*---------------------------------------------------------------------------*\
-                 Class velocityDampingConstraint Declaration
+                  Class velocityDampingConstraint Declaration
 \*---------------------------------------------------------------------------*/
 
 class velocityDampingConstraint
@@ -93,11 +94,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        velocityDampingConstraint(const velocityDampingConstraint&);
+        //- No copy construct
+        velocityDampingConstraint(const velocityDampingConstraint&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const velocityDampingConstraint&);
+        //- No copy assignment
+        void operator=(const velocityDampingConstraint&) = delete;
 
 
 public:
@@ -119,8 +120,7 @@ public:
 
 
     //- Destructor
-    virtual ~velocityDampingConstraint()
-    {}
+    virtual ~velocityDampingConstraint() = default;
 
 
     // Member Functions
@@ -128,13 +128,13 @@ public:
         // Set values directly
 
             //- Constrain vector matrix
-            virtual void constrain(fvMatrix<vector>& eqn, const label fieldI);
+            virtual void constrain(fvMatrix<vector>& eqn, const label fieldi);
 
 
         // I-O
 
             //- Write data
-            virtual void writeData(Ostream&) const;
+            virtual void writeData(Ostream& os) const;
 
             //- Read dictionary
             virtual bool read(const dictionary& dict);

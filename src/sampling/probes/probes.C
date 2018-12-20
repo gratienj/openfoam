@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -195,50 +195,45 @@ Foam::label Foam::probes::prepare()
             << endl;
 
 
-        fileName probeDir;
         fileName probeSubDir = name();
 
         if (mesh_.name() != polyMesh::defaultRegion)
         {
             probeSubDir = probeSubDir/mesh_.name();
         }
-        probeSubDir = "postProcessing"/probeSubDir/mesh_.time().timeName();
 
-        if (Pstream::parRun())
-        {
-            // Put in undecomposed case
-            // (Note: gives problems for distributed data running)
-            probeDir = mesh_.time().path()/".."/probeSubDir;
-        }
-        else
-        {
-            probeDir = mesh_.time().path()/probeSubDir;
-        }
-        // Remove ".."
-        probeDir.clean();
+        // Put in undecomposed case
+        // (Note: gives problems for distributed data running)
+
+        fileName probeDir =
+        (
+            mesh_.time().globalPath()
+          / functionObject::outputPrefix
+          / probeSubDir
+          / mesh_.time().timeName()
+        );
+
+        probeDir.clean();  // Remove unneeded ".."
 
         // ignore known fields, close streams for fields that no longer exist
-        forAllIter(HashPtrTable<OFstream>, probeFilePtrs_, iter)
+        forAllIters(probeFilePtrs_, iter)
         {
             if (!currentFields.erase(iter.key()))
             {
                 DebugInfo<< "close probe stream: " << iter()->name() << endl;
 
-                delete probeFilePtrs_.remove(iter);
+                probeFilePtrs_.remove(iter);
             }
         }
 
         // currentFields now just has the new fields - open streams for them
-        forAllConstIter(wordHashSet, currentFields, iter)
+        for (const word& fieldName : currentFields)
         {
-            const word& fieldName = iter.key();
-
             // Create directory if does not exist.
             mkDir(probeDir);
 
-            OFstream* fPtr = new OFstream(probeDir/fieldName);
-
-            OFstream& fout = *fPtr;
+            auto fPtr = autoPtr<OFstream>::New(probeDir/fieldName);
+            auto& fout = *fPtr;
 
             DebugInfo<< "open probe stream: " << fout.name() << endl;
 
@@ -313,18 +308,13 @@ Foam::probes::probes
     }
 }
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::probes::~probes()
-{}
-
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::probes::read(const dictionary& dict)
 {
-    dict.lookup("probeLocations") >> *this;
-    dict.lookup("fields") >> fieldSelection_;
+    dict.readEntry("probeLocations", static_cast<pointField&>(*this));
+    dict.readEntry("fields", fieldSelection_);
 
     dict.readIfPresent("fixedLocations", fixedLocations_);
     if (dict.readIfPresent("interpolationScheme", interpolationScheme_))
@@ -434,9 +424,8 @@ void Foam::probes::updateMesh(const mapPolyMesh& mpm)
             DynamicList<label> elems(faceList_.size());
 
             const labelList& reverseMap = mpm.reverseFaceMap();
-            forAll(faceList_, i)
+            for (const label facei : faceList_)
             {
-                label facei = faceList_[i];
                 if (facei != -1)
                 {
                     label newFacei = reverseMap[facei];

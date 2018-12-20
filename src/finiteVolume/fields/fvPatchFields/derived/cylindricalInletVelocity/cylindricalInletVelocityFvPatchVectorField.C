@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,7 +28,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "fvPatchFieldMapper.H"
 #include "surfaceFields.H"
-#include "mathematicalConstants.H"
+#include "unitConversion.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -40,7 +40,7 @@ cylindricalInletVelocityFvPatchVectorField
 )
 :
     fixedValueFvPatchField<vector>(p, iF),
-    centre_(Zero),
+    origin_(Zero),
     axis_(Zero),
     axialVelocity_(),
     radialVelocity_(),
@@ -58,11 +58,11 @@ cylindricalInletVelocityFvPatchVectorField
 )
 :
     fixedValueFvPatchField<vector>(ptf, p, iF, mapper),
-    centre_(ptf.centre_),
+    origin_(ptf.origin_),
     axis_(ptf.axis_),
-    axialVelocity_(ptf.axialVelocity_, false),
-    radialVelocity_(ptf.radialVelocity_, false),
-    rpm_(ptf.rpm_, false)
+    axialVelocity_(ptf.axialVelocity_.clone()),
+    radialVelocity_(ptf.radialVelocity_.clone()),
+    rpm_(ptf.rpm_.clone())
 {}
 
 
@@ -75,7 +75,7 @@ cylindricalInletVelocityFvPatchVectorField
 )
 :
     fixedValueFvPatchField<vector>(p, iF, dict),
-    centre_(dict.lookup("centre")),
+    origin_(dict.getCompat<vector>("origin", {{"centre", 1712}})),
     axis_(dict.lookup("axis")),
     axialVelocity_(Function1<scalar>::New("axialVelocity", dict)),
     radialVelocity_(Function1<scalar>::New("radialVelocity", dict)),
@@ -90,11 +90,11 @@ cylindricalInletVelocityFvPatchVectorField
 )
 :
     fixedValueFvPatchField<vector>(ptf),
-    centre_(ptf.centre_),
+    origin_(ptf.origin_),
     axis_(ptf.axis_),
-    axialVelocity_(ptf.axialVelocity_, false),
-    radialVelocity_(ptf.radialVelocity_, false),
-    rpm_(ptf.rpm_, false)
+    axialVelocity_(ptf.axialVelocity_.clone()),
+    radialVelocity_(ptf.radialVelocity_.clone()),
+    rpm_(ptf.rpm_.clone())
 {}
 
 
@@ -106,11 +106,11 @@ cylindricalInletVelocityFvPatchVectorField
 )
 :
     fixedValueFvPatchField<vector>(ptf, iF),
-    centre_(ptf.centre_),
+    origin_(ptf.origin_),
     axis_(ptf.axis_),
-    axialVelocity_(ptf.axialVelocity_, false),
-    radialVelocity_(ptf.radialVelocity_, false),
-    rpm_(ptf.rpm_, false)
+    axialVelocity_(ptf.axialVelocity_.clone()),
+    radialVelocity_(ptf.radialVelocity_.clone()),
+    rpm_(ptf.rpm_.clone())
 {}
 
 
@@ -126,19 +126,19 @@ void Foam::cylindricalInletVelocityFvPatchVectorField::updateCoeffs()
     const scalar t = this->db().time().timeOutputValue();
     const scalar axialVelocity = axialVelocity_->value(t);
     const scalar radialVelocity = radialVelocity_->value(t);
-    const scalar rpm = rpm_->value(t);
+    const scalar omega = rpmToRads(rpm_->value(t));
 
-    vector hatAxis = axis_/mag(axis_);
+    const vector axisHat = axis_/mag(axis_);
 
-    const vectorField r(patch().Cf() - centre_);
-    const vectorField d(r - (hatAxis & r)*hatAxis);
+    const vectorField r(patch().Cf() - origin_);
+    const vectorField d(r - (axisHat & r)*axisHat);
 
     tmp<vectorField> tangVel
     (
-        (rpm*constant::mathematical::pi/30.0)*(hatAxis) ^ d
+        (omega * axisHat) ^ d
     );
 
-    operator==(tangVel + hatAxis*axialVelocity + radialVelocity*d/mag(d));
+    operator==(tangVel + axisHat*axialVelocity + radialVelocity*d/mag(d));
 
     fixedValueFvPatchField<vector>::updateCoeffs();
 }
@@ -147,7 +147,7 @@ void Foam::cylindricalInletVelocityFvPatchVectorField::updateCoeffs()
 void Foam::cylindricalInletVelocityFvPatchVectorField::write(Ostream& os) const
 {
     fvPatchField<vector>::write(os);
-    os.writeEntry("centre", centre_);
+    os.writeEntry("origin", origin_);
     os.writeEntry("axis", axis_);
     axialVelocity_->writeData(os);
     radialVelocity_->writeData(os);

@@ -880,7 +880,6 @@ bool Foam::slidingInterface::projectPoints() const
             for (const label facei : curFaceMap)
             {
                 const face& f = masterLocalFaces[facei];
-
                 curPointMap.insert(f);  // Insert all face points
             }
 
@@ -921,14 +920,15 @@ bool Foam::slidingInterface::projectPoints() const
             // projected-master-to-edge distance is used, to avoid
             // problems with badly defined master planes.  HJ,
             // 17/Oct/2004
-            vector edgeNormalInPlane =
-                edgeVec
-              ^ (
-                    slavePointNormals[curEdge.start()]
-                  + slavePointNormals[curEdge.end()]
+            const vector edgeNormalInPlane =
+                normalised
+                (
+                    edgeVec
+                  ^ (
+                        slavePointNormals[curEdge.start()]
+                      + slavePointNormals[curEdge.end()]
+                    )
                 );
-
-            edgeNormalInPlane /= mag(edgeNormalInPlane);
 
             for (const label cmp : curMasterPoints)
             {

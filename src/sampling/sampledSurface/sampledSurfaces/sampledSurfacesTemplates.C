@@ -35,12 +35,19 @@ template<class Type>
 void Foam::sampledSurfaces::writeSurface
 (
     const Field<Type>& values,
-    const label surfI,
+    const label surfi,
     const word& fieldName,
     const fileName& outputDir
 )
 {
-    const sampledSurface& s = operator[](surfI);
+    const sampledSurface& s = operator[](surfi);
+
+    if (changedGeom_[surfi])
+    {
+        // Trigger any changes
+        formatter_->updateMesh(outputDir, s.name());
+        changedGeom_[surfi] = false;
+    }
 
     if (Pstream::parRun())
     {
@@ -63,21 +70,21 @@ void Foam::sampledSurfaces::writeSurface
             );
 
             // Renumber (point data) to correspond to merged points
-            if (mergedList_[surfI].pointsMap().size() == allValues.size())
+            if (mergedList_[surfi].pointsMap().size() == allValues.size())
             {
-                inplaceReorder(mergedList_[surfI].pointsMap(), allValues);
-                allValues.setSize(mergedList_[surfI].points().size());
+                inplaceReorder(mergedList_[surfi].pointsMap(), allValues);
+                allValues.setSize(mergedList_[surfi].points().size());
             }
 
             // Write to time directory under outputPath_
             // skip surface without faces (eg, a failed cut-plane)
-            if (mergedList_[surfI].size())
+            if (mergedList_[surfi].size())
             {
                 sampleFile = formatter_->write
                 (
                     outputDir,
                     s.name(),
-                    mergedList_[surfI],
+                    mergedList_[surfi],
                     fieldName,
                     allValues,
                     s.interpolate()
@@ -88,8 +95,14 @@ void Foam::sampledSurfaces::writeSurface
         Pstream::scatter(sampleFile);
         if (sampleFile.size())
         {
+            // Case-local file name with "<case>" to make relocatable
+
             dictionary propsDict;
-            propsDict.add("file", sampleFile);
+            propsDict.add
+            (
+                "file",
+                time_.relativePath(sampleFile, true)
+            );
             setProperty(fieldName, propsDict);
         }
     }
@@ -109,8 +122,14 @@ void Foam::sampledSurfaces::writeSurface
                 s.interpolate()
             );
 
+            // Case-local file name with "<case>" to make relocatable
+
             dictionary propsDict;
-            propsDict.add("file", fName);
+            propsDict.add
+            (
+                "file",
+                time_.relativePath(fName, true)
+            );
             setProperty(fieldName, propsDict);
         }
     }
@@ -123,37 +142,46 @@ void Foam::sampledSurfaces::sampleAndWrite
     const GeometricField<Type, fvPatchField, volMesh>& vField
 )
 {
-    // interpolator for this field
-    autoPtr<interpolation<Type>> interpolatorPtr;
+    // sampler/interpolator for this field
+    autoPtr<interpolation<Type>> interpPtr;
 
     const word& fieldName = vField.name();
     const fileName outputDir = outputPath_/vField.time().timeName();
 
-    forAll(*this, surfI)
+    forAll(*this, surfi)
     {
-        const sampledSurface& s = operator[](surfI);
+        const sampledSurface& s = operator[](surfi);
 
         Field<Type> values;
 
         if (s.interpolate())
         {
-            if (interpolatorPtr.empty())
+            if (interpPtr.empty())
             {
-                interpolatorPtr = interpolation<Type>::New
+                interpPtr = interpolation<Type>::New
                 (
-                    interpolationScheme_,
+                    sampleNodeScheme_,
                     vField
                 );
             }
 
-            values = s.interpolate(interpolatorPtr());
+            values = s.interpolate(*interpPtr);
         }
         else
         {
-            values = s.sample(vField);
+            if (interpPtr.empty())
+            {
+                interpPtr = interpolation<Type>::New
+                (
+                    sampleFaceScheme_,
+                    vField
+                );
+            }
+
+            values = s.sample(*interpPtr);
         }
 
-        writeSurface<Type>(values, surfI, fieldName, outputDir);
+        writeSurface<Type>(values, surfi, fieldName, outputDir);
     }
 }
 
@@ -167,11 +195,11 @@ void Foam::sampledSurfaces::sampleAndWrite
     const word& fieldName = sField.name();
     const fileName outputDir = outputPath_/sField.time().timeName();
 
-    forAll(*this, surfI)
+    forAll(*this, surfi)
     {
-        const sampledSurface& s = operator[](surfI);
+        const sampledSurface& s = operator[](surfi);
         Field<Type> values(s.sample(sField));
-        writeSurface<Type>(values, surfI, fieldName, outputDir);
+        writeSurface<Type>(values, surfi, fieldName, outputDir);
     }
 }
 
@@ -191,13 +219,11 @@ void Foam::sampledSurfaces::sampleAndWrite(const IOobjectList& objects)
         writeOriginalIds();
     }
 
-    forAll(fieldNames, fieldi)
+    for (const word& fieldName : fieldNames)
     {
-        const word& fieldName = fieldNames[fieldi];
-
-        if ((Pstream::master()) && verbose_)
+        if (verbose_)
         {
-            Pout<< "sampleAndWrite: " << fieldName << endl;
+            Info<< "sampleAndWrite: " << fieldName << endl;
         }
 
         if (loadFromFiles_)

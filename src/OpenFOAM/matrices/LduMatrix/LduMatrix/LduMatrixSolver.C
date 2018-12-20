@@ -37,7 +37,7 @@ Foam::LduMatrix<Type, DType, LUType>::solver::New
     const dictionary& solverDict
 )
 {
-    const word solverName = solverDict.lookup("solver");
+    const word solverName(solverDict.get<word>("solver"));
 
     if (matrix.diagonal())
     {
@@ -99,18 +99,13 @@ Foam::LduMatrix<Type, DType, LUType>::solver::New
             )
         );
     }
-    else
-    {
-        FatalIOErrorInFunction(solverDict)
-            << "cannot solve incomplete matrix, "
-               "no diagonal or off-diagonal coefficient"
-            << exit(FatalIOError);
 
-        return autoPtr<typename LduMatrix<Type, DType, LUType>::solver>
-        (
-            nullptr
-        );
-    }
+    FatalIOErrorInFunction(solverDict)
+        << "cannot solve incomplete matrix, "
+           "no diagonal or off-diagonal coefficient"
+        << exit(FatalIOError);
+
+    return nullptr;
 }
 
 

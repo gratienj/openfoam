@@ -2,26 +2,28 @@ global/global.Cver
 /* global/constants/constants.C in global.Cver */
 /* global/constants/dimensionedConstants.C in global.Cver */
 global/argList/argList.C
+global/argList/argListHelp.C
 global/clock/clock.C
 global/profiling/profiling.C
 global/profiling/profilingInformation.C
 global/profiling/profilingSysInfo.C
 global/profiling/profilingTrigger.C
 global/etcFiles/etcFiles.C
+global/version/foamVersion.C
 
 fileOps = global/fileOperations
 $(fileOps)/fileOperation/fileOperation.C
+$(fileOps)/fileOperationInitialise/fileOperationInitialise.C
 $(fileOps)/uncollatedFileOperation/uncollatedFileOperation.C
 $(fileOps)/masterUncollatedFileOperation/masterUncollatedFileOperation.C
 $(fileOps)/collatedFileOperation/collatedFileOperation.C
+$(fileOps)/collatedFileOperation/hostCollatedFileOperation.C
 $(fileOps)/collatedFileOperation/threadedCollatedOFstream.C
 $(fileOps)/collatedFileOperation/OFstreamCollator.C
 
 bools = primitives/bools
 $(bools)/bool/bool.C
-$(bools)/bool/boolIO.C
 $(bools)/Switch/Switch.C
-$(bools)/Switch/SwitchIO.C
 $(bools)/lists/boolList.C
 
 chars = primitives/chars
@@ -31,11 +33,13 @@ $(chars)/wchar/wcharIO.C
 primitives/direction/directionIO.C
 
 ints = primitives/ints
+$(ints)/uint16/uint16.C
 $(ints)/uint32/uint32.C
 $(ints)/uint32/uint32IO.C
 $(ints)/uint64/uint64.C
 $(ints)/uint64/uint64IO.C
 $(ints)/uint/uintIO.C
+$(ints)/int16/int16.C
 $(ints)/int32/int32.C
 $(ints)/int32/int32IO.C
 $(ints)/int64/int64.C
@@ -66,6 +70,10 @@ primitives/Tensor/lists/symmTensorList.C
 primitives/Tensor/lists/tensorList.C
 
 primitives/Vector/complexVector/complexVector.C
+#if !defined(WM_DP)
+primitives/Vector/doubleVector/doubleVector.C
+primitives/Tensor/doubleTensor/doubleTensor.C
+#endif
 #if !defined(WM_SP)
 primitives/Vector/floatVector/floatVector.C
 primitives/Tensor/floatTensor/floatTensor.C
@@ -121,6 +129,8 @@ $(strings)/parsing/parsing.C
 ops = primitives/ops
 $(ops)/flipOp.C
 
+primitives/predicates/scalar/scalarPredicates.C
+
 primitives/hashes/Hasher/Hasher.C
 
 sha1 = primitives/hashes/SHA1
@@ -147,10 +157,13 @@ primitives/polynomialEqns/quadraticEqn/quadraticEqn.C
 primitives/Barycentric/barycentric/barycentric.C
 primitives/Barycentric2D/barycentric2D/barycentric2D.C
 
+containers/Bits/bitSet/bitSet.C
+containers/Bits/bitSet/bitSetIO.C
+containers/Bits/BitOps/BitOps.C
+containers/Bits/PackedList/PackedListCore.C
+containers/HashTables/HashOps/HashOps.C
 containers/HashTables/HashTable/HashTableCore.C
 containers/Lists/SortableList/ParSortableListName.C
-containers/Lists/PackedList/PackedListCore.C
-containers/Lists/PackedList/PackedBoolList.C
 containers/Lists/ListOps/ListOps.C
 containers/LinkedLists/linkTypes/SLListBase/SLListBase.C
 containers/LinkedLists/linkTypes/DLListBase/DLListBase.C
@@ -159,6 +172,7 @@ Streams = db/IOstreams
 $(Streams)/token/tokenIO.C
 
 IOstreams = $(Streams)/IOstreams
+$(IOstreams)/IOstreamOption.C
 $(IOstreams)/IOstream.C
 $(IOstreams)/Istream.C
 $(IOstreams)/Ostream.C
@@ -228,7 +242,6 @@ $(functionEntries)/functionEntry/functionEntry.C
 $(functionEntries)/includeEntry/includeEntry.C
 $(functionEntries)/includeEtcEntry/includeEtcEntry.C
 $(functionEntries)/includeFuncEntry/includeFuncEntry.C
-$(functionEntries)/includeIfPresentEntry/includeIfPresentEntry.C
 $(functionEntries)/inputMode/inputMode.C
 $(functionEntries)/removeEntry/removeEntry.C
 
@@ -282,10 +295,8 @@ $(Time)/TimePaths.C
 $(Time)/TimeState.C
 $(Time)/Time.C
 $(Time)/TimeIO.C
-$(Time)/findTimes.C
 $(Time)/subCycleTime.C
 $(Time)/subLoopTime.C
-$(Time)/findInstance.C
 $(Time)/timeSelector.C
 
 $(Time)/instant/instant.C
@@ -624,37 +635,38 @@ fields/cloud/cloud.C
 
 Fields = fields/Fields
 
+$(Fields)/Field/FieldBase.C
 $(Fields)/labelField/labelField.C
-$(Fields)/scalarField/scalarField.C
-$(Fields)/vectorField/vectorField.C
-$(Fields)/vector2DField/vector2DField.C
-$(Fields)/sphericalTensorField/sphericalTensorField.C
-$(Fields)/diagTensorField/diagTensorField.C
-$(Fields)/symmTensorField/symmTensorField.C
-$(Fields)/tensorField/tensorField.C
-$(Fields)/quaternionField/quaternionField.C
-$(Fields)/triadField/triadField.C
-$(Fields)/complexFields/complexFields.C
-
 $(Fields)/labelField/labelIOField.C
 $(Fields)/labelField/labelFieldIOField.C
+$(Fields)/scalarField/scalarField.C
 $(Fields)/scalarField/scalarIOField.C
 $(Fields)/scalarField/scalarFieldIOField.C
+$(Fields)/vectorField/vectorField.C
 $(Fields)/vectorField/vectorIOField.C
 $(Fields)/vectorField/vectorFieldIOField.C
+$(Fields)/vector2DField/vector2DField.C
 $(Fields)/vector2DField/vector2DIOField.C
 $(Fields)/vector2DField/vector2DFieldIOField.C
+$(Fields)/sphericalTensorField/sphericalTensorField.C
 $(Fields)/sphericalTensorField/sphericalTensorIOField.C
 $(Fields)/sphericalTensorField/sphericalTensorFieldIOField.C
+$(Fields)/diagTensorField/diagTensorField.C
 $(Fields)/diagTensorField/diagTensorIOField.C
 $(Fields)/diagTensorField/diagTensorFieldIOField.C
+$(Fields)/symmTensorField/symmTensorField.C
 $(Fields)/symmTensorField/symmTensorIOField.C
 $(Fields)/symmTensorField/symmTensorFieldIOField.C
+$(Fields)/tensorField/tensorField.C
 $(Fields)/tensorField/tensorIOField.C
 $(Fields)/tensorField/tensorFieldIOField.C
+$(Fields)/quaternionField/quaternionField.C
 $(Fields)/quaternionField/quaternionIOField.C
+$(Fields)/triadField/triadField.C
 $(Fields)/triadField/triadIOField.C
+$(Fields)/complexFields/complexFields.C
 $(Fields)/transformField/transformField.C
+$(Fields)/fieldTypes.C
 
 
 pointPatchFields = fields/pointPatchFields
@@ -686,8 +698,6 @@ $(derivedPointPatchFields)/timeVaryingUniformFixedValue/timeVaryingUniformFixedV
 $(derivedPointPatchFields)/codedFixedValue/codedFixedValuePointPatchFields.C
 
 fields/GeometricFields/pointFields/pointFields.C
-
-fields/ReadFields/ReadFields.C
 
 meshes/bandCompression/bandCompression.C
 meshes/preservePatchTypes/preservePatchTypes.C

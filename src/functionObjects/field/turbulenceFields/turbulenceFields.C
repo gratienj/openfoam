@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,17 +50,20 @@ const Foam::Enum
     Foam::functionObjects::turbulenceFields::compressibleField
 >
 Foam::functionObjects::turbulenceFields::compressibleFieldNames_
-{
+({
     { compressibleField::cfK, "k" },
     { compressibleField::cfEpsilon, "epsilon" },
     { compressibleField::cfOmega, "omega" },
+    { compressibleField::cfNuTilda, "nuTilda" },
     { compressibleField::cfMut, "mut" },
     { compressibleField::cfMuEff, "muEff" },
     { compressibleField::cfAlphat, "alphat" },
     { compressibleField::cfAlphaEff, "alphaEff" },
     { compressibleField::cfR, "R" },
     { compressibleField::cfDevRhoReff, "devRhoReff" },
-};
+    { compressibleField::cfL, "L" },
+    { compressibleField::cfI, "I" },
+});
 
 
 const Foam::Enum
@@ -68,15 +71,18 @@ const Foam::Enum
     Foam::functionObjects::turbulenceFields::incompressibleField
 >
 Foam::functionObjects::turbulenceFields::incompressibleFieldNames_
-{
+({
     { incompressibleField::ifK, "k" },
     { incompressibleField::ifEpsilon, "epsilon" },
     { incompressibleField::ifOmega, "omega" },
+    { incompressibleField::ifNuTilda, "nuTilda" },
     { incompressibleField::ifNut, "nut" },
     { incompressibleField::ifNuEff, "nuEff" },
     { incompressibleField::ifR, "R" },
     { incompressibleField::ifDevReff, "devReff" },
-};
+    { incompressibleField::ifL, "L" },
+    { incompressibleField::ifI, "I" },
+});
 
 
 const Foam::word Foam::functionObjects::turbulenceFields::modelName
@@ -97,12 +103,10 @@ bool Foam::functionObjects::turbulenceFields::compressible()
     {
         return false;
     }
-    else
-    {
-        FatalErrorInFunction
-            << "Turbulence model not found in database, deactivating"
-            << exit(FatalError);
-    }
+
+    FatalErrorInFunction
+        << "Turbulence model not found in database, deactivating"
+        << exit(FatalError);
 
     return false;
 }
@@ -138,20 +142,20 @@ bool Foam::functionObjects::turbulenceFields::read(const dictionary& dict)
 
     if (dict.found("field"))
     {
-        fieldSet_.insert(word(dict.lookup("field")));
+        fieldSet_.insert(dict.get<word>("field"));
     }
     else
     {
-        fieldSet_.insert(wordList(dict.lookup("fields")));
+        fieldSet_.insert(dict.get<wordList>("fields"));
     }
 
     Info<< type() << " " << name() << ": ";
     if (fieldSet_.size())
     {
         Info<< "storing fields:" << nl;
-        forAllConstIter(wordHashSet, fieldSet_, iter)
+        for (const word& f : fieldSet_)
         {
-            Info<< "    " << modelName << ':' << iter.key() << nl;
+            Info<< "    " << modelName << ':' << f << nl;
         }
         Info<< endl;
     }
@@ -173,9 +177,8 @@ bool Foam::functionObjects::turbulenceFields::execute()
         const compressible::turbulenceModel& model =
             obr_.lookupObject<compressible::turbulenceModel>(modelName);
 
-        forAllConstIter(wordHashSet, fieldSet_, iter)
+        for (const word& f : fieldSet_)
         {
-            const word& f = iter.key();
             switch (compressibleFieldNames_[f])
             {
                 case cfK:
@@ -191,6 +194,11 @@ bool Foam::functionObjects::turbulenceFields::execute()
                 case cfOmega:
                 {
                     processField<scalar>(f, omega(model));
+                    break;
+                }
+                case cfNuTilda:
+                {
+                    processField<scalar>(f, nuTilda(model));
                     break;
                 }
                 case cfMut:
@@ -223,6 +231,16 @@ bool Foam::functionObjects::turbulenceFields::execute()
                     processField<symmTensor>(f, model.devRhoReff());
                     break;
                 }
+                case cfL:
+                {
+                    processField<scalar>(f, L(model));
+                    break;
+                }
+                case cfI:
+                {
+                    processField<scalar>(f, I(model));
+                    break;
+                }
                 default:
                 {
                     FatalErrorInFunction
@@ -236,9 +254,8 @@ bool Foam::functionObjects::turbulenceFields::execute()
         const incompressible::turbulenceModel& model =
             obr_.lookupObject<incompressible::turbulenceModel>(modelName);
 
-        forAllConstIter(wordHashSet, fieldSet_, iter)
+        for (const word& f : fieldSet_)
         {
-            const word& f = iter.key();
             switch (incompressibleFieldNames_[f])
             {
                 case ifK:
@@ -254,6 +271,11 @@ bool Foam::functionObjects::turbulenceFields::execute()
                 case ifOmega:
                 {
                     processField<scalar>(f, omega(model));
+                    break;
+                }
+                case ifNuTilda:
+                {
+                    processField<scalar>(f, nuTilda(model));
                     break;
                 }
                 case ifNut:
@@ -276,6 +298,16 @@ bool Foam::functionObjects::turbulenceFields::execute()
                     processField<symmTensor>(f, model.devReff());
                     break;
                 }
+                case ifL:
+                {
+                    processField<scalar>(f, L(model));
+                    break;
+                }
+                case ifI:
+                {
+                    processField<scalar>(f, I(model));
+                    break;
+                }
                 default:
                 {
                     FatalErrorInFunction
@@ -291,9 +323,9 @@ bool Foam::functionObjects::turbulenceFields::execute()
 
 bool Foam::functionObjects::turbulenceFields::write()
 {
-    forAllConstIter(wordHashSet, fieldSet_, iter)
+    for (const word& f : fieldSet_)
     {
-        const word fieldName = modelName + ':' + iter.key();
+        const word fieldName = modelName + ':' + f;
         writeObject(fieldName);
     }
 

@@ -134,12 +134,8 @@ Foam::oversetGAMGInterface::oversetGAMGInterface
         label nCoarseCells = max(restrictMap)+1;
         globalIndex globalNumbering(nCoarseCells);
 
-        labelList globalCoarseIDs(restrictMap.size());
-        forAll(restrictMap, fineCelli)
-        {
-            globalCoarseIDs[fineCelli] =
-                globalNumbering.toGlobal(restrictMap[fineCelli]);
-        }
+        labelList globalCoarseIDs(globalNumbering.toGlobal(restrictMap));
+
         fineMap.distribute(globalCoarseIDs);
 
         //Pout<< this->name()
@@ -257,7 +253,7 @@ Foam::tmp<Foam::labelField> Foam::oversetGAMGInterface::internalFieldTransfer
         restrictMap_ = restrictMap;
     }
 
-    return tmp<labelField>(new labelField(restrictMap, faceCells()));
+    return tmp<labelField>::New(restrictMap, faceCells());
 }
 
 

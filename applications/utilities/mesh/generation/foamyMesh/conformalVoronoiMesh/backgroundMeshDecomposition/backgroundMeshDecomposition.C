@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,9 +36,7 @@ License
 
 namespace Foam
 {
-
-defineTypeNameAndDebug(backgroundMeshDecomposition, 0);
-
+    defineTypeNameAndDebug(backgroundMeshDecomposition, 0);
 }
 
 
@@ -114,14 +112,11 @@ Foam::autoPtr<Foam::mapDistribute> Foam::backgroundMeshDecomposition::buildMap
         }
     }
 
-    return autoPtr<mapDistribute>
+    return autoPtr<mapDistribute>::New
     (
-        new mapDistribute
-        (
-            constructSize,
-            sendMap.xfer(),
-            constructMap.xfer()
-        )
+        constructSize,
+        std::move(sendMap),
+        std::move(constructMap)
     );
 }
 
@@ -248,10 +243,10 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
                 );
 
                 // Update fields
-                mesh_.updateMesh(map);
+                mesh_.updateMesh(map());
 
                 // Update numbering of cells/vertices.
-                meshCutter_.updateMesh(map);
+                meshCutter_.updateMesh(map());
 
                 {
                     // Map volumeStatus
@@ -357,11 +352,11 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
                 );
 
                 // Update fields
-                mesh_.updateMesh(map);
+                mesh_.updateMesh(map());
 
                 // Update numbering of cells/vertices.
-                meshCutter_.updateMesh(map);
-                cellRemover.updateMesh(map);
+                meshCutter_.updateMesh(map());
+                cellRemover.updateMesh(map());
 
                 {
                     // Map volumeStatus
@@ -416,7 +411,7 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
                 newDecomp
             );
 
-            meshCutter_.distribute(mapDist);
+            meshCutter_.distribute(mapDist());
 
             mapDist().distributeCellData(volumeStatus);
 
@@ -473,7 +468,7 @@ void Foam::backgroundMeshDecomposition::printMeshData
 
     // // Print stats
 
-    // globalIndex globalBoundaryFaces(mesh.nFaces()-mesh.nInternalFaces());
+    // globalIndex globalBoundaryFaces(mesh.nBoundaryFaces());
 
     for (label proci = 0; proci < Pstream::nProcs(); proci++)
     {
@@ -676,7 +671,7 @@ void Foam::backgroundMeshDecomposition::buildPatchAndTree()
         SubList<face>
         (
             mesh_.faces(),
-            mesh_.nFaces() - mesh_.nInternalFaces(),
+            mesh_.nBoundaryFaces(),
             mesh_.nInternalFaces()
         ),
         mesh_.points()
@@ -806,14 +801,14 @@ Foam::backgroundMeshDecomposition::backgroundMeshDecomposition
     allBackgroundMeshBounds_(Pstream::nProcs()),
     globalBackgroundBounds_(),
     mergeDist_(1e-6*mesh_.bounds().mag()),
-    spanScale_(readScalar(coeffsDict.lookup("spanScale"))),
+    spanScale_(coeffsDict.get<scalar>("spanScale")),
     minCellSizeLimit_
     (
         coeffsDict.lookupOrDefault<scalar>("minCellSizeLimit", 0.0)
     ),
-    minLevels_(readLabel(coeffsDict.lookup("minLevels"))),
-    volRes_(readLabel(coeffsDict.lookup("sampleResolution"))),
-    maxCellWeightCoeff_(readScalar(coeffsDict.lookup("maxCellWeightCoeff")))
+    minLevels_(coeffsDict.get<label>("minLevels")),
+    volRes_(coeffsDict.get<label>("sampleResolution")),
+    maxCellWeightCoeff_(coeffsDict.get<scalar>("maxCellWeightCoeff"))
 {
     if (!Pstream::parRun())
     {
@@ -838,12 +833,6 @@ Foam::backgroundMeshDecomposition::backgroundMeshDecomposition
 
     initialRefinement();
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::backgroundMeshDecomposition::~backgroundMeshDecomposition()
-{}
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -954,10 +943,10 @@ Foam::backgroundMeshDecomposition::distribute
         );
 
         // Update fields
-        mesh_.updateMesh(map);
+        mesh_.updateMesh(map());
 
         // Update numbering of cells/vertices.
-        meshCutter_.updateMesh(map);
+        meshCutter_.updateMesh(map());
 
         Info<< "    Background mesh refined from "
             << returnReduce(map().nOldCells(), sumOp<label>())
@@ -1000,7 +989,7 @@ Foam::backgroundMeshDecomposition::distribute
 
     autoPtr<mapDistributePolyMesh> mapDist = distributor.distribute(newDecomp);
 
-    meshCutter_.distribute(mapDist);
+    meshCutter_.distribute(mapDist());
 
     if (debug)
     {

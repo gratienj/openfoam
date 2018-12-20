@@ -85,9 +85,8 @@ void Foam::mapNearestAMI<SourcePatch, TargetPatch>::setNextNearestFaces
 
     srcFacei = -1;
 
-    forAll(srcNbr, i)
+    for (const label facei : srcNbr)
     {
-        label facei = srcNbr[i];
         if (mapFlag[facei])
         {
             srcFacei = facei;
@@ -149,11 +148,11 @@ Foam::label Foam::mapNearestAMI<SourcePatch, TargetPatch>::findMappedSrcFace
             {
                 const labelList& nbrFaces = this->tgtPatch_.faceFaces()[tgtI];
 
-                forAll(nbrFaces, i)
+                for (const label nbrFacei : nbrFaces)
                 {
-                    if (!visitedFaces.found(nbrFaces[i]))
+                    if (findIndex(visitedFaces, nbrFacei) == -1)
                     {
-                        testFaces.append(nbrFaces[i]);
+                        testFaces.append(nbrFacei);
                     }
                 }
             }
@@ -172,8 +171,6 @@ Foam::mapNearestAMI<SourcePatch, TargetPatch>::mapNearestAMI
 (
     const SourcePatch& srcPatch,
     const TargetPatch& tgtPatch,
-    const scalarField& srcMagSf,
-    const scalarField& tgtMagSf,
     const faceAreaIntersect::triangulationMode& triMode,
     const bool reverseTarget,
     const bool requireMatch
@@ -183,8 +180,6 @@ Foam::mapNearestAMI<SourcePatch, TargetPatch>::mapNearestAMI
     (
         srcPatch,
         tgtPatch,
-        srcMagSf,
-        tgtMagSf,
         triMode,
         reverseTarget,
         requireMatch
@@ -280,7 +275,7 @@ void Foam::mapNearestAMI<SourcePatch, TargetPatch>::calculate
             label srcFacei = srcFaces[0];
             scalar d = magSqr(tgtC - srcCf[srcFacei]);
 
-            for (label i = 1; i < srcFaces.size(); i++)
+            for (label i = 1; i < srcFaces.size(); ++i)
             {
                 label srcI = srcFaces[i];
                 scalar dNew = magSqr(tgtC - srcCf[srcI]);
@@ -353,6 +348,20 @@ void Foam::mapNearestAMI<SourcePatch, TargetPatch>::calculate
 
 
 template<class SourcePatch, class TargetPatch>
+void Foam::mapNearestAMI<SourcePatch, TargetPatch>::setMagSf
+(
+    const TargetPatch& tgtPatch,
+    const mapDistribute& map,
+    scalarList& srcMagSf,
+    scalarList& tgtMagSf
+) const
+{
+    srcMagSf = std::move(this->srcMagSf_);
+    tgtMagSf = scalarList(tgtPatch.size(), 1.0);
+}
+
+
+template<class SourcePatch, class TargetPatch>
 void Foam::mapNearestAMI<SourcePatch, TargetPatch>::normaliseWeights
 (
     const bool verbose,
@@ -375,7 +384,7 @@ void Foam::mapNearestAMI<SourcePatch, TargetPatch>::normaliseWeights
                 label minFaceI = addr[0];
                 scalar minWeight = wghts[0];
 
-                for (label i = 0; i < addr.size(); i++)
+                for (label i = 0; i < addr.size(); ++i)
                 {
                     if (wghts[i] < minWeight)
                     {
@@ -408,7 +417,7 @@ void Foam::mapNearestAMI<SourcePatch, TargetPatch>::normaliseWeights
                 label minFaceI = addr[0];
                 scalar minWeight = wghts[0];
 
-                for (label i = 0; i < addr.size(); i++)
+                forAll(addr, i)
                 {
                     if (wghts[i] < minWeight)
                     {

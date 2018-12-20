@@ -51,7 +51,7 @@ namespace functionObjects
 
 Foam::tetIndices Foam::functionObjects::wallBoundedStreamLine::findNearestTet
 (
-    const PackedBoolList& isWallPatch,
+    const bitSet& isWallPatch,
     const point& seedPt,
     const label celli
 ) const
@@ -108,12 +108,7 @@ void Foam::functionObjects::wallBoundedStreamLine::track()
     // These are the faces that need to be followed
 
     autoPtr<indirectPrimitivePatch> boundaryPatch(wallPatch());
-    PackedBoolList isWallPatch(mesh_.nFaces());
-    forAll(boundaryPatch().addressing(), i)
-    {
-        isWallPatch[boundaryPatch().addressing()[i]] = 1;
-    }
-
+    bitSet isWallPatch(mesh_.nFaces(), boundaryPatch().addressing());
 
 
     // Find nearest wall particle for the seedPoints
@@ -236,6 +231,20 @@ Foam::functionObjects::wallBoundedStreamLine::wallBoundedStreamLine
 )
 :
     streamLineBase(name, runTime, dict)
+{
+    read(dict_);
+}
+
+
+Foam::functionObjects::wallBoundedStreamLine::wallBoundedStreamLine
+(
+    const word& name,
+    const Time& runTime,
+    const dictionary& dict,
+    const wordList& fieldNames
+)
+:
+    streamLineBase(name, runTime, dict, fieldNames)
 {
     read(dict_);
 }

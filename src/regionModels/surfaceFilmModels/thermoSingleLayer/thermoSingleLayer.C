@@ -29,11 +29,12 @@ License
 #include "fvcLaplacian.H"
 #include "fvcFlux.H"
 #include "fvm.H"
-#include "addToRunTimeSelectionTable.H"
 #include "zeroGradientFvPatchFields.H"
+#include "mixedFvPatchFields.H"
 #include "mappedFieldFvPatchField.H"
 #include "mapDistribute.H"
 #include "constants.H"
+#include "addToRunTimeSelectionTable.H"
 
 // Sub-models
 #include "filmThermoModel.H"
@@ -67,7 +68,8 @@ wordList thermoSingleLayer::hsBoundaryTypes()
         if
         (
             T_.boundaryField()[patchi].fixesValue()
-         || bTypes[patchi] == mappedFieldFvPatchField<scalar>::typeName
+         || isA<mixedFvPatchScalarField>(T_.boundaryField()[patchi])
+         || isA<mappedFieldFvPatchField<scalar>>(T_.boundaryField()[patchi])
         )
         {
             bTypes[patchi] = fixedValueFvPatchField<scalar>::typeName;
@@ -96,7 +98,7 @@ void thermoSingleLayer::resetPrimaryRegionSourceTerms()
 
     kinematicSingleLayer::resetPrimaryRegionSourceTerms();
 
-    hsSpPrimary_ == dimensionedScalar("zero", hsSp_.dimensions(), 0.0);
+    hsSpPrimary_ == dimensionedScalar(hsSp_.dimensions(), Zero);
 }
 
 
@@ -177,7 +179,7 @@ void thermoSingleLayer::transferPrimaryRegionSourceFields()
     volScalarField::Boundary& hsSpPrimaryBf =
         hsSpPrimary_.boundaryFieldRef();
 
-    // Convert accummulated source terms into per unit area per unit time
+    // Convert accumulated source terms into per unit area per unit time
     const scalar deltaT = time_.deltaTValue();
     forAll(hsSpPrimaryBf, patchi)
     {
@@ -341,7 +343,7 @@ thermoSingleLayer::thermoSingleLayer
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("Cp", dimEnergy/dimMass/dimTemperature, 0.0),
+        dimensionedScalar(dimEnergy/dimMass/dimTemperature, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     kappa_
@@ -355,12 +357,7 @@ thermoSingleLayer::thermoSingleLayer
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar
-        (
-            "kappa",
-            dimEnergy/dimTime/dimLength/dimTemperature,
-            0.0
-        ),
+        dimensionedScalar(dimEnergy/dimTime/dimLength/dimTemperature, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
 
@@ -413,7 +410,7 @@ thermoSingleLayer::thermoSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimEnergy/dimMass, 0.0),
+        dimensionedScalar(dimEnergy/dimMass, Zero),
         hsBoundaryTypes()
     ),
 
@@ -428,12 +425,12 @@ thermoSingleLayer::thermoSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimEnergy, 0),
+        dimensionedScalar(dimEnergy, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
 
-    deltaWet_(readScalar(coeffs_.lookup("deltaWet"))),
-    hydrophilic_(readBool(coeffs_.lookup("hydrophilic"))),
+    deltaWet_(coeffs_.get<scalar>("deltaWet")),
+    hydrophilic_(coeffs_.get<bool>("hydrophilic")),
     hydrophilicDryScale_(0.0),
     hydrophilicWetScale_(0.0),
 
@@ -448,7 +445,7 @@ thermoSingleLayer::thermoSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimEnergy/dimArea/dimTime, 0.0),
+        dimensionedScalar(dimEnergy/dimArea/dimTime, Zero),
         this->mappedPushedFieldPatchTypes<scalar>()
     ),
 
@@ -463,7 +460,7 @@ thermoSingleLayer::thermoSingleLayer
             IOobject::NO_WRITE
         ),
         primaryMesh(),
-        dimensionedScalar("zero", hsSp_.dimensions(), 0.0)
+        dimensionedScalar(hsSp_.dimensions(), Zero)
     ),
 
     TPrimary_
@@ -477,7 +474,7 @@ thermoSingleLayer::thermoSingleLayer
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar("zero", dimTemperature, 0.0),
+        dimensionedScalar(dimTemperature, Zero),
         this->mappedFieldAndInternalPatchTypes<scalar>()
     ),
 
@@ -527,7 +524,7 @@ thermoSingleLayer::thermoSingleLayer
                         IOobject::NO_WRITE
                     ),
                     regionMesh(),
-                    dimensionedScalar("zero", dimless, 0.0),
+                    dimensionedScalar(dimless, Zero),
                     pSp_.boundaryField().types()
                 )
             );
@@ -536,8 +533,8 @@ thermoSingleLayer::thermoSingleLayer
 
     if (hydrophilic_)
     {
-        coeffs_.lookup("hydrophilicDryScale") >> hydrophilicDryScale_;
-        coeffs_.lookup("hydrophilicWetScale") >> hydrophilicWetScale_;
+        coeffs_.readEntry("hydrophilicDryScale", hydrophilicDryScale_);
+        coeffs_.readEntry("hydrophilicWetScale", hydrophilicWetScale_);
     }
 
     if (readFields)
@@ -620,7 +617,7 @@ void thermoSingleLayer::preEvolveRegion()
     }
 
     kinematicSingleLayer::preEvolveRegion();
-    primaryEnergyTrans_ == dimensionedScalar("zero", dimEnergy, 0.0);
+    primaryEnergyTrans_ == dimensionedScalar(dimEnergy, Zero);
 }
 
 
@@ -630,6 +627,9 @@ void thermoSingleLayer::evolveRegion()
     {
         InfoInFunction << endl;
     }
+
+    // Solve continuity for deltaRho_
+    solveContinuity();
 
     // Update sub-models to provide updated source contributions
     updateSubmodels();
@@ -734,7 +734,7 @@ tmp<volScalarField::Internal> thermoSingleLayer::Srho() const
                 false
             ),
             primaryMesh(),
-            dimensionedScalar("zero", dimMass/dimVolume/dimTime, 0.0)
+            dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
         )
     );
 
@@ -786,7 +786,7 @@ tmp<volScalarField::Internal> thermoSingleLayer::Srho
                 false
             ),
             primaryMesh(),
-            dimensionedScalar("zero", dimMass/dimVolume/dimTime, 0.0)
+            dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
         )
     );
 
@@ -836,7 +836,7 @@ tmp<volScalarField::Internal> thermoSingleLayer::Sh() const
                 false
             ),
             primaryMesh(),
-            dimensionedScalar("zero", dimEnergy/dimVolume/dimTime, 0.0)
+            dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
         )
     );
 
@@ -869,8 +869,8 @@ tmp<volScalarField::Internal> thermoSingleLayer::Sh() const
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // end namespace Foam
-} // end namespace regionModels
-} // end namespace surfaceFilmModels
+} // End namespace Foam
+} // End namespace regionModels
+} // End namespace surfaceFilmModels
 
 // ************************************************************************* //

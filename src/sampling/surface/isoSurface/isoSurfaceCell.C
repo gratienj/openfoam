@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -52,16 +52,14 @@ Foam::scalar Foam::isoSurfaceCell::isoFraction
     const scalar s1
 ) const
 {
-    scalar d = s1-s0;
+    const scalar d = s1-s0;
 
     if (mag(d) > VSMALL)
     {
         return (iso_-s0)/d;
     }
-    else
-    {
-        return -1.0;
-    }
+
+    return -1.0;
 }
 
 
@@ -71,9 +69,9 @@ bool Foam::isoSurfaceCell::isTriCut
     const scalarField& pointValues
 ) const
 {
-    bool aLower = (pointValues[tri[0]] < iso_);
-    bool bLower = (pointValues[tri[1]] < iso_);
-    bool cLower = (pointValues[tri[2]] < iso_);
+    const bool aLower = (pointValues[tri[0]] < iso_);
+    const bool bLower = (pointValues[tri[1]] < iso_);
+    const bool cLower = (pointValues[tri[2]] < iso_);
 
     return !(aLower == bLower && aLower == cLower);
 }
@@ -81,21 +79,26 @@ bool Foam::isoSurfaceCell::isTriCut
 
 Foam::isoSurfaceCell::cellCutType Foam::isoSurfaceCell::calcCutType
 (
-    const PackedBoolList& isTet,
+    const bitSet& isTet,
     const scalarField& cellValues,
     const scalarField& pointValues,
     const label celli
 ) const
 {
+    if (ignoreCells_.test(celli))
+    {
+        return NOTCUT;
+    }
+
     const cell& cFaces = mesh_.cells()[celli];
 
-    if (isTet.get(celli) == 1)
+    if (isTet.test(celli))
     {
-        forAll(cFaces, cFacei)
+        for (const label facei : cFaces)
         {
-            const face& f = mesh_.faces()[cFaces[cFacei]];
+            const face& f = mesh_.faces()[facei];
 
-            for (label fp = 1; fp < f.size() - 1; fp++)
+            for (label fp = 1; fp < f.size() - 1; ++fp)
             {
                 triFace tri(f[0], f[fp], f[f.fcIndex(fp)]);
 
@@ -107,112 +110,115 @@ Foam::isoSurfaceCell::cellCutType Foam::isoSurfaceCell::calcCutType
         }
         return NOTCUT;
     }
-    else
+
+    const bool cellLower = (cellValues[celli] < iso_);
+
+    // First check if there is any cut in cell
+    bool edgeCut = false;
+
+    for (const label facei : cFaces)
     {
-        bool cellLower = (cellValues[celli] < iso_);
+        const face& f = mesh_.faces()[facei];
 
-        // First check if there is any cut in cell
-        bool edgeCut = false;
-
-        forAll(cFaces, cFacei)
+        // Check pyramid edges (corner point to cell centre)
+        for (const label pointi : f)
         {
-            label facei = cFaces[cFacei];
-            const face& f = mesh_.faces()[facei];
-
-            // Check pyramids cut
-            forAll(f, fp)
+            if (cellLower != (pointValues[pointi] < iso_))
             {
-                if ((pointValues[f[fp]] < iso_) != cellLower)
-                {
-                    edgeCut = true;
-                    break;
-                }
-            }
-
-            if (edgeCut)
-            {
-                break;
-            }
-
-            const label fp0 = mesh_.tetBasePtIs()[facei];
-            label fp = f.fcIndex(fp0);
-            for (label i = 2; i < f.size(); i++)
-            {
-                label nextFp = f.fcIndex(fp);
-
-                if (isTriCut(triFace(f[fp0], f[fp], f[nextFp]), pointValues))
-                {
-                    edgeCut = true;
-                    break;
-                }
-
-                fp = nextFp;
-            }
-
-            if (edgeCut)
-            {
+                edgeCut = true;
                 break;
             }
         }
 
         if (edgeCut)
         {
-            // Count actual cuts (expensive since addressing needed)
-            // Note: not needed if you don't want to preserve maxima/minima
-            // centred around cellcentre. In that case just always return CUT
-
-            const labelList& cPoints = mesh_.cellPoints(celli);
-
-            label nPyrCuts = 0;
-
-            forAll(cPoints, i)
-            {
-                if ((pointValues[cPoints[i]] < iso_) != cellLower)
-                {
-                    nPyrCuts++;
-                }
-            }
-
-            if (nPyrCuts == cPoints.size())
-            {
-                return SPHERE;
-            }
-            else
-            {
-                return CUT;
-            }
+            break;
         }
-        else
+
+        // Check (triangulated) face edges
+        const label fp0 = mesh_.tetBasePtIs()[facei];
+        label fp = f.fcIndex(fp0);
+        for (label i = 2; i < f.size(); ++i)
         {
-            return NOTCUT;
+            const label nextFp = f.fcIndex(fp);
+
+            if (isTriCut(triFace(f[fp0], f[fp], f[nextFp]), pointValues))
+            {
+                edgeCut = true;
+                break;
+            }
+
+            fp = nextFp;
+        }
+
+        if (edgeCut)
+        {
+            break;
         }
     }
+
+
+    if (edgeCut)
+    {
+        // Count actual cuts (expensive since addressing needed)
+        // Note: not needed if you don't want to preserve maxima/minima
+        // centred around cellcentre. In that case just always return CUT
+
+        const labelList& cPoints = mesh_.cellPoints(celli);
+
+        label nPyrEdgeCuts = 0;
+
+        for (const label pointi : cPoints)
+        {
+            if (cellLower != (pointValues[pointi] < iso_))
+            {
+                ++nPyrEdgeCuts;
+            }
+        }
+
+        if (nPyrEdgeCuts == cPoints.size())
+        {
+            return SPHERE;
+        }
+        else if (nPyrEdgeCuts)
+        {
+            // There is a pyramid edge cut. E.g. lopping off a tet from a corner
+            return CUT;
+        }
+    }
+
+    return NOTCUT;
 }
 
 
 void Foam::isoSurfaceCell::calcCutTypes
 (
-    const PackedBoolList& isTet,
+    const bitSet& isTet,
     const scalarField& cVals,
     const scalarField& pVals
 )
 {
     cellCutType_.setSize(mesh_.nCells());
     nCutCells_ = 0;
+
+    // Some processor domains may require tetBasePtIs and others do not.
+    // Do now to ensure things stay synchronized.
+    (void)mesh_.tetBasePtIs();
+
     forAll(mesh_.cells(), celli)
     {
         cellCutType_[celli] = calcCutType(isTet, cVals, pVals, celli);
 
         if (cellCutType_[celli] == CUT)
         {
-            nCutCells_++;
+            ++nCutCells_;
         }
     }
 
     if (debug)
     {
-        Pout<< "isoSurfaceCell : detected " << nCutCells_
-            << " candidate cut cells." << endl;
+        Pout<< "isoSurfaceCell : candidate cut cells "
+            << nCutCells_ << " / " << mesh_.nCells() << endl;
     }
 }
 
@@ -290,16 +296,18 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
 
         if (shared[0] != -1)
         {
-            vector n0 = tri0.normal(localPoints);
-            n0 /= mag(n0);
-            vector n1 = tri1.normal(localPoints);
-            n1 /= mag(n1);
+            const vector n0 = tri0.areaNormal(localPoints);
+            const vector n1 = tri1.areaNormal(localPoints);
 
-            if ((n0 & n1) < 0)
-            {
-                // Too big an angle. Do not simplify.
-            }
-            else
+            // Merge any zero-sized triangles,
+            // or if they point in the same direction.
+
+            if
+            (
+                mag(n0) <= ROOTVSMALL
+             || mag(n1) <= ROOTVSMALL
+             || (n0 & n1) >= 0
+            )
             {
                 info.setPoint
                 (
@@ -337,7 +345,7 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
             // Check that all normals make a decent angle
             scalar minCos = GREAT;
             const vector& n0 = surf.faceNormals()[0];
-            for (label i = 1; i < surf.size(); i++)
+            for (label i = 1; i < surf.size(); ++i)
             {
                 scalar cosAngle = (n0 & surf.faceNormals()[i]);
                 if (cosAngle < minCos)
@@ -360,7 +368,7 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
 
 void Foam::isoSurfaceCell::calcSnappedCc
 (
-    const PackedBoolList& isTet,
+    const bitSet& isTet,
     const scalarField& cVals,
     const scalarField& pVals,
 
@@ -381,9 +389,9 @@ void Foam::isoSurfaceCell::calcSnappedCc
 
     forAll(mesh_.cells(), celli)
     {
-        if (cellCutType_[celli] == CUT && isTet.get(celli) == 0)
+        if (cellCutType_[celli] == CUT && !isTet.test(celli))
         {
-            scalar cVal = cVals[celli];
+            const scalar cVal = cVals[celli];
 
             const cell& cFaces = mesh_.cells()[celli];
 
@@ -394,14 +402,12 @@ void Foam::isoSurfaceCell::calcSnappedCc
             // Create points for all intersections close to cell centre
             // (i.e. from pyramid edges)
 
-            forAll(cFaces, cFacei)
+            for (const label facei : cFaces)
             {
-                const face& f = mesh_.faces()[cFaces[cFacei]];
+                const face& f = mesh_.faces()[facei];
 
-                forAll(f, fp)
+                for (const label pointi : f)
                 {
-                    label pointi = f[fp];
-
                     scalar s = isoFraction(cVal, pVals[pointi]);
 
                     if (s >= 0.0 && s <= 0.5)
@@ -441,9 +447,8 @@ void Foam::isoSurfaceCell::calcSnappedCc
             else if (localPoints.size())
             {
                 // Need to analyse
-                forAll(cFaces, cFacei)
+                for (const label facei : cFaces)
                 {
-                    label facei = cFaces[cFacei];
                     const face& f = mesh_.faces()[facei];
 
                     // Do a tetrahedralisation. Each face to cc becomes pyr.
@@ -452,7 +457,7 @@ void Foam::isoSurfaceCell::calcSnappedCc
 
                     const label fp0 = mesh_.tetBasePtIs()[facei];
                     label fp = f.fcIndex(fp0);
-                    for (label i = 2; i < f.size(); i++)
+                    for (label i = 2; i < f.size(); ++i)
                     {
                         label nextFp = f.fcIndex(fp);
                         triFace tri(f[fp0], f[fp], f[nextFp]);
@@ -548,7 +553,7 @@ void Foam::isoSurfaceCell::genPointTris
 
     const label fp0 = mesh_.tetBasePtIs()[facei];
     label fp = f.fcIndex(fp0);
-    for (label i = 2; i < f.size(); i++)
+    for (label i = 2; i < f.size(); ++i)
     {
         label nextFp = f.fcIndex(fp);
         triFace tri(f[fp0], f[fp], f[nextFp]);
@@ -616,21 +621,17 @@ void Foam::isoSurfaceCell::genPointTris
     const pointField& pts = mesh_.points();
     const cell& cFaces = mesh_.cells()[celli];
 
-    FixedList<label, 4> tet;
-
     // Make tet from this face to the 4th point (same as cellcentre in
     // non-tet cells)
     const face& f = mesh_.faces()[facei];
 
     // Find 4th point
     label ccPointi = -1;
-    forAll(cFaces, cFacei)
+    for (const label cfacei : cFaces)
     {
-        const face& f1 = mesh_.faces()[cFaces[cFacei]];
-        forAll(f1, fp)
+        const face& f1 = mesh_.faces()[cfacei];
+        for (const label p1 : f1)
         {
-            label p1 = f1[fp];
-
             if (!f.found(p1))
             {
                 ccPointi = p1;
@@ -687,7 +688,7 @@ void Foam::isoSurfaceCell::genPointTris
 
 void Foam::isoSurfaceCell::calcSnappedPoint
 (
-    const PackedBoolList& isTet,
+    const bitSet& isTet,
     const scalarField& cVals,
     const scalarField& pVals,
 
@@ -697,12 +698,10 @@ void Foam::isoSurfaceCell::calcSnappedPoint
 {
     // Determine if point is on boundary. Points on boundaries are never
     // snapped. Coupled boundaries are handled explicitly so not marked here.
-    PackedBoolList isBoundaryPoint(mesh_.nPoints());
+    bitSet isBoundaryPoint(mesh_.nPoints());
     const polyBoundaryMesh& patches = mesh_.boundaryMesh();
-    forAll(patches, patchi)
+    for (const polyPatch& pp : patches)
     {
-        const polyPatch& pp = patches[patchi];
-
         if (!pp.coupled())
         {
             label facei = pp.start();
@@ -710,10 +709,7 @@ void Foam::isoSurfaceCell::calcSnappedPoint
             {
                 const face& f = mesh_.faces()[facei++];
 
-                forAll(f, fp)
-                {
-                    isBoundaryPoint.set(f[fp], 1);
-                }
+                isBoundaryPoint.set(f);
             }
         }
     }
@@ -730,7 +726,7 @@ void Foam::isoSurfaceCell::calcSnappedPoint
 
     forAll(mesh_.pointFaces(), pointi)
     {
-        if (isBoundaryPoint.get(pointi) == 1)
+        if (isBoundaryPoint.test(pointi))
         {
             continue;
         }
@@ -739,10 +735,8 @@ void Foam::isoSurfaceCell::calcSnappedPoint
 
         bool anyCut = false;
 
-        forAll(pFaces, i)
+        for (const label facei : pFaces)
         {
-            label facei = pFaces[i];
-
             if
             (
                 cellCutType_[mesh_.faceOwner()[facei]] == CUT
@@ -768,12 +762,11 @@ void Foam::isoSurfaceCell::calcSnappedPoint
         localPointCells.clear();
         localTriPoints.clear();
 
-        forAll(pFaces, pFacei)
+        for (const label facei : pFaces)
         {
-            label facei = pFaces[pFacei];
-            label own = mesh_.faceOwner()[facei];
+            const label own = mesh_.faceOwner()[facei];
 
-            if (isTet.get(own) == 1)
+            if (isTet.test(own))
             {
                 // Since tets have no cell centre to include make sure
                 // we only generate a triangle once per point.
@@ -797,9 +790,9 @@ void Foam::isoSurfaceCell::calcSnappedPoint
 
             if (mesh_.isInternalFace(facei))
             {
-                label nei = mesh_.faceNeighbour()[facei];
+                const label nei = mesh_.faceNeighbour()[facei];
 
-                if (isTet.get(nei) == 1)
+                if (isTet.test(nei))
                 {
                     if (localPointCells.insert(nei))
                     {
@@ -862,7 +855,7 @@ void Foam::isoSurfaceCell::calcSnappedPoint
                 // Check that all normals make a decent angle
                 scalar minCos = GREAT;
                 const vector& n0 = surf.faceNormals()[0];
-                for (label i = 1; i < surf.size(); i++)
+                for (label i = 1; i < surf.size(); ++i)
                 {
                     const vector& n = surf.faceNormals()[i];
                     scalar cosAngle = (n0 & n);
@@ -965,7 +958,7 @@ Foam::triSurface Foam::isoSurfaceCell::stitchTriPoints
         label rawPointi = 0;
         DynamicList<label> newToOldTri(nTris);
 
-        for (label oldTriI = 0; oldTriI < nTris; oldTriI++)
+        for (label oldTriI = 0; oldTriI < nTris; ++oldTriI)
         {
             labelledTri tri
             (
@@ -1159,22 +1152,15 @@ bool Foam::isoSurfaceCell::danglingTriangle
 )
 {
     label nOpen = 0;
-    forAll(fEdges, i)
+    for (const label edgei : fEdges)
     {
-        if (edgeFace1[fEdges[i]] == -1)
+        if (edgeFace1[edgei] == -1)
         {
-            nOpen++;
+            ++nOpen;
         }
     }
 
-    if (nOpen == 1 || nOpen == 2 || nOpen == 3)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return (nOpen == 1 || nOpen == 2 || nOpen == 3);
 }
 
 
@@ -1193,32 +1179,31 @@ Foam::label Foam::isoSurfaceCell::markDanglingTriangles
     label nDangling = 0;
 
     // Remove any dangling triangles
-    forAllConstIter(Map<labelList>,  edgeFacesRest, iter)
+    forAllConstIters(edgeFacesRest, iter)
     {
         // These are all the non-manifold edges. Filter out all triangles
         // with only one connected edge (= this edge)
 
-        label edgeI = iter.key();
-        const labelList& otherEdgeFaces = iter();
+        const label edgeI = iter.key();
+        const labelList& otherEdgeFaces = iter.object();
 
         // Remove all dangling triangles
         if (danglingTriangle(faceEdges[edgeFace0[edgeI]], edgeFace1))
         {
             keepTriangles[edgeFace0[edgeI]] = false;
-            nDangling++;
+            ++nDangling;
         }
         if (danglingTriangle(faceEdges[edgeFace1[edgeI]], edgeFace1))
         {
             keepTriangles[edgeFace1[edgeI]] = false;
-            nDangling++;
+            ++nDangling;
         }
-        forAll(otherEdgeFaces, i)
+        for (const label triI : otherEdgeFaces)
         {
-            label triI = otherEdgeFaces[i];
             if (danglingTriangle(faceEdges[triI], edgeFace1))
             {
                 keepTriangles[triI] = false;
-                nDangling++;
+                ++nDangling;
             }
         }
     }
@@ -1236,13 +1221,7 @@ Foam::triSurface Foam::isoSurfaceCell::subsetMesh
 {
     const boolList include
     (
-        createWithValues<boolList>
-        (
-            s.size(),
-            false,
-            newToOldFaces,
-            true
-        )
+        ListOps::createWithValue<bool>(s.size(), newToOldFaces, true, false)
     );
 
     newToOldPoints.setSize(s.points().size());
@@ -1258,10 +1237,8 @@ Foam::triSurface Foam::isoSurfaceCell::subsetMesh
                 // Renumber labels for face
                 const triSurface::FaceType& f = s[oldFacei];
 
-                forAll(f, fp)
+                for (const label oldPointi : f)
                 {
-                    label oldPointi = f[fp];
-
                     if (oldToNewPoints[oldPointi] == -1)
                     {
                         oldToNewPoints[oldPointi] = pointi;
@@ -1303,31 +1280,45 @@ Foam::triSurface Foam::isoSurfaceCell::subsetMesh
 Foam::isoSurfaceCell::isoSurfaceCell
 (
     const polyMesh& mesh,
-    const scalarField& cVals,
-    const scalarField& pVals,
+    const scalarField& cellValues,
+    const scalarField& pointValues,
     const scalar iso,
     const bool regularise,
     const boundBox& bounds,
-    const scalar mergeTol
+    const scalar mergeTol,
+    const bitSet& ignoreCells
 )
 :
     MeshStorage(),
     mesh_(mesh),
-    cVals_(cVals),
-    pVals_(pVals),
+    cVals_(cellValues),
+    pVals_(pointValues),
     iso_(iso),
     bounds_(bounds),
+    ignoreCells_(ignoreCells),
     mergeDistance_(mergeTol*mesh.bounds().mag())
 {
     if (debug)
     {
-        Pout<< "isoSurfaceCell : mergeTol:" << mergeTol
-            << " mesh span:" << mesh.bounds().mag()
-            << " mergeDistance:" << mergeDistance_ << endl;
+        Pout<< "isoSurfaceCell::"
+            << "    cell min/max  : "
+            << min(cVals_) << " / "
+            << max(cVals_) << nl
+            << "    point min/max : "
+            << min(pVals_) << " / "
+            << max(pVals_) << nl
+            << "    isoValue      : " << iso << nl
+            << "    regularise    : " << regularise << nl
+            << "    mergeTol      : " << mergeTol << nl
+            << "    mesh span     : " << mesh.bounds().mag() << nl
+            << "    mergeDistance : " << mergeDistance_ << nl
+            << "    ignoreCells   : " << ignoreCells_.count()
+            << " / " << cVals_.size() << nl
+            << endl;
     }
 
     // Determine if cell is tet
-    PackedBoolList isTet(mesh_.nCells());
+    bitSet isTet(mesh_.nCells());
     {
         tetMatcher tet;
 
@@ -1335,14 +1326,47 @@ Foam::isoSurfaceCell::isoSurfaceCell
         {
             if (tet.isA(mesh_, celli))
             {
-                isTet.set(celli, 1);
+                isTet.set(celli);
             }
         }
     }
 
 
     // Determine if any cut through cell
-    calcCutTypes(isTet, cVals, pVals);
+    calcCutTypes(isTet, cellValues, pointValues);
+
+    if (debug && isA<fvMesh>(mesh))
+    {
+        const fvMesh& fvm = dynamicCast<const fvMesh&>(mesh);
+
+        volScalarField debugField
+        (
+            IOobject
+            (
+                "isoSurfaceCell.cutType",
+                fvm.time().timeName(),
+                fvm.time(),
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                false
+            ),
+            fvm,
+            dimensionedScalar(dimless, Zero)
+        );
+
+        auto& debugFld = debugField.primitiveFieldRef();
+
+        forAll(cellCutType_, celli)
+        {
+            debugFld[celli] = cellCutType_[celli];
+        }
+
+        Pout<< "Writing cut types:"
+            << debugField.objectPath() << endl;
+
+        debugField.write();
+    }
+
 
     DynamicList<point> snappedPoints(nCutCells_);
 
@@ -1353,8 +1377,8 @@ Foam::isoSurfaceCell::isoSurfaceCell
         calcSnappedCc
         (
             isTet,
-            cVals,
-            pVals,
+            cellValues,
+            pointValues,
             snappedPoints,
             snappedCc
         );
@@ -1381,8 +1405,8 @@ Foam::isoSurfaceCell::isoSurfaceCell
         calcSnappedPoint
         (
             isTet,
-            cVals,
-            pVals,
+            cellValues,
+            pointValues,
             snappedPoints,
             snappedPoint
         );
@@ -1409,8 +1433,8 @@ Foam::isoSurfaceCell::isoSurfaceCell
 
         generateTriPoints
         (
-            cVals,
-            pVals,
+            cellValues,
+            pointValues,
 
             mesh_.cellCentres(),
             mesh_.points(),
@@ -1569,19 +1593,21 @@ Foam::isoSurfaceCell::isoSurfaceCell
     }
 
 
-    // Transfer to mesh storage
+    // Transfer to mesh storage. Note, an iso-surface has no zones
     {
+        // Recover the pointField
+        pointField pts;
+        tmpsurf.swapPoints(pts);
+
+        // Transcribe from triFace to face
         faceList faces;
         tmpsurf.triFaceFaces(faces);
 
-        // An iso-surface has no zones
-        surfZoneList zones(0);
+        tmpsurf.clearOut();
 
-        // Reset primitive data (points, faces and zones)
-        this->MeshStorage::reset
-        (
-            tmpsurf.xferPoints(), faces.xfer(), zones.xfer()
-        );
+        MeshStorage updated(std::move(pts), std::move(faces), surfZoneList());
+
+        this->MeshStorage::transfer(updated);
     }
 }
 

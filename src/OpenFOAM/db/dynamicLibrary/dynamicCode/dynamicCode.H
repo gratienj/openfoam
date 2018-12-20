@@ -44,7 +44,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class dynamicCodeContext;
 class ISstream;
 class OSstream;
@@ -92,11 +92,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        dynamicCode(const dynamicCode&);
+        //- No copy construct
+        dynamicCode(const dynamicCode&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const dynamicCode&);
+        //- No copy assignment
+        void operator=(const dynamicCode&) = delete;
 
 
 protected:
@@ -197,7 +197,7 @@ public:
         }
 
         //- Root for dynamic code compilation
-        //  Expanded from \$FOAM_CASE/dynamicCode
+        //  Expanded from \<case\>/dynamicCode
         const fileName& codeRoot() const
         {
             return codeRoot_;
@@ -221,15 +221,19 @@ public:
         //  Corresponds to codeRoot()/libSubDir()/lib\<codeName\>.so
         fileName libPath() const
         {
+            #ifdef darwin
+            return codeRoot_/libSubDir_/"lib" + codeName_ + ".dylib";
+            #else
             return codeRoot_/libSubDir_/"lib" + codeName_ + ".so";
+            #endif
         }
 
-        //- Path for specified code name relative to \$FOAM_CASE
+        //- Path for specified code name relative to \<case\>
         //  Corresponds to topDirName/codeDirName()
         fileName codeRelPath() const;
 
 
-        //- Library path for specified code name relative to \$FOAM_CASE
+        //- Library path for specified code name relative to \<case\>
         //  Corresponds to
         //  dynamicCode/codeDirName()/libSubDir()/lib\<codeName\>.so
         fileName libRelPath() const;

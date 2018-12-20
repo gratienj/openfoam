@@ -64,21 +64,19 @@ Foam::BrownianMotionForce<CloudType>::kModel() const
             this->owner().U().group()
         );
 
-    if (obr.foundObject<turbulenceModel>(turbName))
-    {
-        const turbulenceModel& model =
-            obr.lookupObject<turbulenceModel>(turbName);
-        return model.k();
-    }
-    else
-    {
-        FatalErrorInFunction
-            << "Turbulence model not found in mesh database" << nl
-            << "Database objects include: " << obr.sortedToc()
-            << abort(FatalError);
+    const turbulenceModel* turb = obr.findObject<turbulenceModel>(turbName);
 
-        return tmp<volScalarField>(nullptr);
+    if (turb)
+    {
+        return turb->k();
     }
+
+    FatalErrorInFunction
+        << "Turbulence model not found in mesh database" << nl
+        << "Database objects include: " << obr.sortedToc()
+        << abort(FatalError);
+
+    return nullptr;
 }
 
 
@@ -94,8 +92,8 @@ Foam::BrownianMotionForce<CloudType>::BrownianMotionForce
 :
     ParticleForce<CloudType>(owner, mesh, dict, typeName, true),
     rndGen_(owner.rndGen()),
-    lambda_(readScalar(this->coeffs().lookup("lambda"))),
-    turbulence_(readBool(this->coeffs().lookup("turbulence"))),
+    lambda_(this->coeffs().getScalar("lambda")),
+    turbulence_(this->coeffs().getBool("turbulence")),
     kPtr_(nullptr),
     ownK_(false)
 {}

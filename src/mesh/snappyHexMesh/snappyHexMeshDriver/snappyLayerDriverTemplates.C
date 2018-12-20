@@ -32,7 +32,7 @@ template<class Type>
 void Foam::snappyLayerDriver::averageNeighbours
 (
     const polyMesh& mesh,
-    const PackedBoolList& isMasterEdge,
+    const bitSet& isMasterEdge,
     const labelList& meshEdges,
     const labelList& meshPoints,
     const edgeList& edges,
@@ -47,7 +47,7 @@ void Foam::snappyLayerDriver::averageNeighbours
 
     forAll(edges, edgeI)
     {
-        if (isMasterEdge.get(meshEdges[edgeI]) == 1)
+        if (isMasterEdge.test(meshEdges[edgeI]))
         {
             const edge& e = edges[edgeI];
             //scalar eWeight = edgeWeights[edgeI];

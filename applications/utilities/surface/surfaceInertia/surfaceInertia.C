@@ -3,7 +3,7 @@
  \\      /   F ield          | OpenFOAM: The Open Source CFD Toolbox
   \\    /    O peration      |
    \\  /     A nd            | Copyright (C) 2011-2016 OpenFOAM Foundation
-    \\/      M anipulation   | Copyright (C) 2015 OpenCFD Ltd.
+    \\/      M anipulation   | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -54,17 +54,18 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "Calculates the inertia tensor and principal axes and moments "
-        "of the specified surface.\n"
+        "Calculates the inertia tensor and principal axes and moments"
+        " of the specified surface.\n"
         "Inertia can either be of the solid body or of a thin shell."
     );
 
     argList::noParallel();
-    argList::addArgument("surfaceFile");
+    argList::addArgument("input", "The input surface file");
+
     argList::addBoolOption
     (
         "shellProperties",
-        "inertia of a thin shell"
+        "Inertia of a thin shell"
     );
 
     argList::addOption
@@ -85,10 +86,10 @@ int main(int argc, char *argv[])
     argList args(argc, argv);
 
     const fileName surfFileName = args[1];
-    const scalar density = args.optionLookupOrDefault("density", 1.0);
+    const scalar density = args.opt<scalar>("density", 1);
 
     vector refPt = Zero;
-    bool calcAroundRefPt = args.optionReadIfPresent("referencePoint", refPt);
+    bool calcAroundRefPt = args.readIfPresent("referencePoint", refPt);
 
     const triSurface surf(surfFileName);
 
@@ -96,7 +97,7 @@ int main(int argc, char *argv[])
     vector cM = Zero;
     tensor J = Zero;
 
-    if (args.optionFound("shellProperties"))
+    if (args.found("shellProperties"))
     {
         momentOfInertia::massPropertiesShell(surf, density, m, cM, J);
     }

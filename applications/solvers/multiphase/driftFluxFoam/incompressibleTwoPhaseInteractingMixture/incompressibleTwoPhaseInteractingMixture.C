@@ -102,7 +102,7 @@ incompressibleTwoPhaseInteractingMixture
             U_.db()
         ),
         U_.mesh(),
-        dimensionedScalar("mu", dimensionSet(1, -1, -1, 0, 0), 0),
+        dimensionedScalar(dimensionSet(1, -1, -1, 0, 0), Zero),
         calculatedFvPatchScalarField::typeName
     )
 {
@@ -122,8 +122,8 @@ bool Foam::incompressibleTwoPhaseInteractingMixture::read()
          && nucModel_().read(subDict(phase2Name_))
         )
         {
-            muModel_->viscosityProperties().lookup("rho") >> rhod_;
-            nucModel_->viscosityProperties().lookup("rho") >> rhoc_;
+            muModel_->viscosityProperties().readEntry("rho", rhod_);
+            nucModel_->viscosityProperties().readEntry("rho", rhoc_);
 
             dd_ = dimensionedScalar
             (

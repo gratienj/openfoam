@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,13 +29,13 @@ License
 #include "slidingInterface.H"
 #include "addToRunTimeSelectionTable.H"
 #include "mapPolyMesh.H"
+#include "unitConversion.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
     defineTypeNameAndDebug(mixerFvMesh, 0);
-
     addToRunTimeSelectionTable(topoChangerFvMesh, mixerFvMesh, IOobject);
 }
 
@@ -76,40 +76,32 @@ void Foam::mixerFvMesh::addZonesAndModifiers()
     List<faceZone*> fz(3);
 
     // Inner slider
-    const word innerSliderName(motionDict_.subDict("slider").lookup("inside"));
+    const word innerSliderName
+    (
+        motionDict_.subDict("slider").get<word>("inside")
+    );
     const polyPatch& innerSlider = boundaryMesh()[innerSliderName];
-
-    labelList isf(innerSlider.size());
-
-    forAll(isf, i)
-    {
-        isf[i] = innerSlider.start() + i;
-    }
 
     fz[0] = new faceZone
     (
         "insideSliderZone",
-        isf,
+        identity(innerSlider.size(), innerSlider.start()),
         false, // none are flipped
         0,
         faceZones()
     );
 
     // Outer slider
-    const word outerSliderName(motionDict_.subDict("slider").lookup("outside"));
+    const word outerSliderName
+    (
+        motionDict_.subDict("slider").get<word>("outside")
+    );
     const polyPatch& outerSlider = boundaryMesh()[outerSliderName];
-
-    labelList osf(outerSlider.size());
-
-    forAll(osf, i)
-    {
-        osf[i] = outerSlider.start() + i;
-    }
 
     fz[1] = new faceZone
     (
         "outsideSliderZone",
-        osf,
+        identity(outerSlider.size(), outerSlider.start()),
         false, // none are flipped
         1,
         faceZones()
@@ -124,7 +116,7 @@ void Foam::mixerFvMesh::addZonesAndModifiers()
     regionSplit rs(*this);
 
     // Get the region of the cell containing the origin.
-    label originRegion = rs[findNearestCell(cs().origin())];
+    const label originRegion = rs[findNearestCell(csys_.origin())];
 
     labelList movingCells(nCells());
     label nMovingCells = 0;
@@ -134,17 +126,17 @@ void Foam::mixerFvMesh::addZonesAndModifiers()
         if (rs[celli] == originRegion)
         {
             movingCells[nMovingCells] = celli;
-            nMovingCells++;
+            ++nMovingCells;
         }
     }
 
-    movingCells.setSize(nMovingCells);
+    movingCells.resize(nMovingCells);
     Info<< "Number of cells in the moving region: " << nMovingCells << endl;
 
     cz[0] = new cellZone
     (
         "movingCells",
-        movingCells,
+        std::move(movingCells),
         0,
         cellZones()
     );
@@ -203,14 +195,14 @@ void Foam::mixerFvMesh::calcMovingMasks() const
 
     const labelList& cellAddr = cellZones()["movingCells"];
 
-    forAll(cellAddr, celli)
+    for (const label celli : cellAddr)
     {
-        const cell& curCell = c[cellAddr[celli]];
+        const cell& curCell = c[celli];
 
-        forAll(curCell, facei)
+        for (const label facei : curCell)
         {
             // Mark all the points as moving
-            const face& curFace = f[curCell[facei]];
+            const face& curFace = f[facei];
 
             forAll(curFace, pointi)
             {
@@ -221,15 +213,14 @@ void Foam::mixerFvMesh::calcMovingMasks() const
 
     const word innerSliderZoneName
     (
-        word(motionDict_.subDict("slider").lookup("inside"))
-      + "Zone"
+        motionDict_.subDict("slider").get<word>("inside") + "Zone"
     );
 
     const labelList& innerSliderAddr = faceZones()[innerSliderZoneName];
 
-    forAll(innerSliderAddr, facei)
+    for (const label facei : innerSliderAddr)
     {
-        const face& curFace = f[innerSliderAddr[facei]];
+        const face& curFace = f[facei];
 
         forAll(curFace, pointi)
         {
@@ -239,15 +230,14 @@ void Foam::mixerFvMesh::calcMovingMasks() const
 
     const word outerSliderZoneName
     (
-        word(motionDict_.subDict("slider").lookup("outside"))
-      + "Zone"
+        motionDict_.subDict("slider").get<word>("outside") + "Zone"
     );
 
     const labelList& outerSliderAddr = faceZones()[outerSliderZoneName];
 
-    forAll(outerSliderAddr, facei)
+    for (const label facei : outerSliderAddr)
     {
-        const face& curFace = f[outerSliderAddr[facei]];
+        const face& curFace = f[facei];
 
         forAll(curFace, pointi)
         {
@@ -259,7 +249,6 @@ void Foam::mixerFvMesh::calcMovingMasks() const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-// Construct from components
 Foam::mixerFvMesh::mixerFvMesh
 (
     const IOobject& io
@@ -281,22 +270,26 @@ Foam::mixerFvMesh::mixerFvMesh
             )
         ).optionalSubDict(typeName + "Coeffs")
     ),
-    csPtr_
-    (
-        coordinateSystem::New
-        (
-            "coordinateSystem",
-            motionDict_.subDict("coordinateSystem")
-        )
-    ),
-    rpm_(readScalar(motionDict_.lookup("rpm"))),
+    csys_(),
+    rpm_(motionDict_.get<scalar>("rpm")),
     movingPointsMaskPtr_(nullptr)
 {
+    if (motionDict_.found(coordinateSystem::typeName_()))
+    {
+        // New() for access to indirect (global) coordSystem.
+        static_cast<coordinateSystem&>(csys_) =
+            *coordinateSystem::New(*this, motionDict_);
+    }
+    else
+    {
+        csys_ = coordSystem::cylindrical(motionDict_);
+    }
+
     addZonesAndModifiers();
 
     Info<< "Mixer mesh:" << nl
-        << "    origin: " << cs().origin() << nl
-        << "    axis: " << cs().axis() << nl
+        << "    origin: " << csys_.origin() << nl
+        << "    axis: " << csys_.e3() << nl
         << "    rpm: " << rpm_ << endl;
 }
 
@@ -307,6 +300,7 @@ Foam::mixerFvMesh::~mixerFvMesh()
 {
     deleteDemandDrivenData(movingPointsMaskPtr_);
 }
+
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -324,13 +318,15 @@ const Foam::scalarField& Foam::mixerFvMesh::movingPointsMask() const
 
 bool Foam::mixerFvMesh::update()
 {
-    // Rotational speed needs to be converted from rpm
+    // The tangential sweep (radians)
+    const vector theta(0, rpmToRads(rpm_)*time().deltaTValue(), 0);
+
     movePoints
     (
-        csPtr_->globalPosition
+        csys_.globalPosition
         (
-            csPtr_->localPosition(points())
-          + vector(0, rpm_*360.0*time().deltaTValue()/60.0, 0)
+            csys_.localPosition(points())
+          + theta
             *movingPointsMask()
         )
     );
@@ -350,10 +346,10 @@ bool Foam::mixerFvMesh::update()
 
     movePoints
     (
-        csPtr_->globalPosition
+        csys_.globalPosition
         (
-            csPtr_->localPosition(oldPoints())
-          + vector(0, rpm_*360.0*time().deltaTValue()/60.0, 0)
+            csys_.localPosition(oldPoints())
+          + theta
             *movingPointsMask()
         )
     );

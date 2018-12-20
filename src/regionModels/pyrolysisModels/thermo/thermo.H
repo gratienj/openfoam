@@ -62,11 +62,11 @@ private:
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        thermo(const thermo&);
+        //- No copy construct
+        thermo(const thermo&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const thermo&);
+        //- No copy assignment
+        void operator=(const thermo&) = delete;
 
 
 protected:
@@ -97,7 +97,7 @@ protected:
             //- Number of non-orthogonal correctors
             label nNonOrthCorr_;
 
-            //- Maximum diffussivity
+            //- Maximum diffusivity
             scalar maxDiff_;
 
 

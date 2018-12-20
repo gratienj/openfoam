@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -53,7 +53,7 @@ volScalarField dynamicKEqn<BasicTurbulenceModel>::Ck
         (
             -2.0*this->delta()*sqrt
             (
-                max(KK, dimensionedScalar("zero", KK.dimensions(), 0.0))
+                max(KK, dimensionedScalar(KK.dimensions(), Zero))
             )*filter_(D)
         )
     );
@@ -178,7 +178,7 @@ dynamicKEqn<BasicTurbulenceModel>::dynamicKEqn
     (
         IOobject
         (
-            IOobject::groupName("k", this->U_.group()),
+            IOobject::groupName("k", this->alphaRhoPhi_.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -227,7 +227,7 @@ tmp<volScalarField> dynamicKEqn<BasicTurbulenceModel>::epsilon() const
         (
             IOobject
             (
-                IOobject::groupName("epsilon", this->U_.group()),
+                IOobject::groupName("epsilon", this->alphaRhoPhi_.group()),
                 this->runTime_.timeName(),
                 this->mesh_,
                 IOobject::NO_READ,

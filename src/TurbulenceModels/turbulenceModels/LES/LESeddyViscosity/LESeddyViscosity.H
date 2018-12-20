@@ -59,9 +59,11 @@ class LESeddyViscosity
 {
     // Private Member Functions
 
-        // Disallow default bitwise copy construct and assignment
-        LESeddyViscosity(const LESeddyViscosity&);
-        void operator=(const LESeddyViscosity&);
+        //- No copy construct
+        LESeddyViscosity(const LESeddyViscosity&) = delete;
+
+        //- No copy assignment
+        void operator=(const LESeddyViscosity&) = delete;
 
 
 protected:
@@ -104,7 +106,7 @@ public:
         //- Read model coefficients if they have changed
         virtual bool read();
 
-        //- Return sub-grid disipation rate
+        //- Return sub-grid dissipation rate
         virtual tmp<volScalarField> epsilon() const;
 };
 

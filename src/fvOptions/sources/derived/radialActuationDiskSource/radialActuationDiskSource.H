@@ -95,7 +95,7 @@ class radialActuationDiskSource
 {
     // Private data
 
-        //- Coeffcients for the radial distribution
+        //- Coefficients for the radial distribution
         FixedList<scalar, 3> radialCoeffs_;
 
 
@@ -112,11 +112,11 @@ class radialActuationDiskSource
             const vectorField& U
         ) const;
 
-        //- Disallow default bitwise copy construct
-        radialActuationDiskSource(const radialActuationDiskSource&);
+        //- No copy construct
+        radialActuationDiskSource(const radialActuationDiskSource&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const radialActuationDiskSource&);
+        //- No copy assignment
+        void operator=(const radialActuationDiskSource&) = delete;
 
 
 public:
@@ -138,8 +138,7 @@ public:
 
 
     //- Destructor
-    virtual ~radialActuationDiskSource()
-    {}
+    virtual ~radialActuationDiskSource() = default;
 
 
     // Member Functions
@@ -159,8 +158,6 @@ public:
             const label fieldi
         );
 
-
-    // IO
 
         //- Read dictionary
         virtual bool read(const dictionary& dict);

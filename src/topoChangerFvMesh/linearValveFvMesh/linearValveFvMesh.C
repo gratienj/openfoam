@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,40 +76,32 @@ void Foam::linearValveFvMesh::addZonesAndModifiers()
     List<faceZone*> fz(3);
 
     // Inner slider
-    const word innerSliderName(motionDict_.subDict("slider").lookup("inside"));
+    const word innerSliderName
+    (
+        motionDict_.subDict("slider").get<word>("inside")
+    );
     const polyPatch& innerSlider = boundaryMesh()[innerSliderName];
-
-    labelList isf(innerSlider.size());
-
-    forAll(isf, i)
-    {
-        isf[i] = innerSlider.start() + i;
-    }
 
     fz[0] = new faceZone
     (
         "insideSliderZone",
-        isf,
+        identity(innerSlider.size(), innerSlider.start()),
         false, // none are flipped
         0,
         faceZones()
     );
 
     // Outer slider
-    const word outerSliderName(motionDict_.subDict("slider").lookup("outside"));
+    const word outerSliderName
+    (
+        motionDict_.subDict("slider").get<word>("outside")
+    );
     const polyPatch& outerSlider = boundaryMesh()[outerSliderName];
-
-    labelList osf(outerSlider.size());
-
-    forAll(osf, i)
-    {
-        osf[i] = outerSlider.start() + i;
-    }
 
     fz[1] = new faceZone
     (
         "outsideSliderZone",
-        osf,
+        identity(outerSlider.size(), outerSlider.start()),
         false, // none are flipped
         1,
         faceZones()

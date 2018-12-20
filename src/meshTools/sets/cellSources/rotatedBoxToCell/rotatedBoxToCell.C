@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,20 +26,31 @@ License
 #include "rotatedBoxToCell.H"
 #include "polyMesh.H"
 #include "cellModel.H"
-
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-
-defineTypeNameAndDebug(rotatedBoxToCell, 0);
-
-addToRunTimeSelectionTable(topoSetSource, rotatedBoxToCell, word);
-
-addToRunTimeSelectionTable(topoSetSource, rotatedBoxToCell, istream);
-
+    defineTypeNameAndDebug(rotatedBoxToCell, 0);
+    addToRunTimeSelectionTable(topoSetSource, rotatedBoxToCell, word);
+    addToRunTimeSelectionTable(topoSetSource, rotatedBoxToCell, istream);
+    addToRunTimeSelectionTable(topoSetCellSource, rotatedBoxToCell, word);
+    addToRunTimeSelectionTable(topoSetCellSource, rotatedBoxToCell, istream);
+    addNamedToRunTimeSelectionTable
+    (
+        topoSetCellSource,
+        rotatedBoxToCell,
+        word,
+        rotatedBox
+    );
+    addNamedToRunTimeSelectionTable
+    (
+        topoSetCellSource,
+        rotatedBoxToCell,
+        istream,
+        rotatedBox
+    );
 }
 
 
@@ -67,11 +78,7 @@ void Foam::rotatedBoxToCell::combine(topoSet& set, const bool add) const
     boxPoints[6] = origin_ + k_ + i_ + j_;
     boxPoints[7] = origin_ + k_ + j_;
 
-    labelList boxVerts(8);
-    forAll(boxVerts, i)
-    {
-        boxVerts[i] = i;
-    }
+    labelList boxVerts(identity(8));
 
     const cellModel& hex = cellModel::ref(cellModel::HEX);
 
@@ -82,7 +89,7 @@ void Foam::rotatedBoxToCell::combine(topoSet& set, const bool add) const
     vectorField boxFaceNormals(boxFaces.size());
     forAll(boxFaces, i)
     {
-        boxFaceNormals[i] = boxFaces[i].normal(boxPoints);
+        boxFaceNormals[i] = boxFaces[i].areaNormal(boxPoints);
 
         //Pout<< "Face:" << i << " position:" << boxFaces[i].centre(boxPoints)
         //    << " normal:" << boxFaceNormals[i] << endl;
@@ -117,7 +124,6 @@ void Foam::rotatedBoxToCell::combine(topoSet& set, const bool add) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-// Construct from components
 Foam::rotatedBoxToCell::rotatedBoxToCell
 (
     const polyMesh& mesh,
@@ -127,7 +133,7 @@ Foam::rotatedBoxToCell::rotatedBoxToCell
     const vector& k
 )
 :
-    topoSetSource(mesh),
+    topoSetCellSource(mesh),
     origin_(origin),
     i_(i),
     j_(j),
@@ -135,35 +141,30 @@ Foam::rotatedBoxToCell::rotatedBoxToCell
 {}
 
 
-// Construct from dictionary
 Foam::rotatedBoxToCell::rotatedBoxToCell
 (
     const polyMesh& mesh,
     const dictionary& dict
 )
 :
-    topoSetSource(mesh),
-    origin_(dict.lookup("origin")),
-    i_(dict.lookup("i")),
-    j_(dict.lookup("j")),
-    k_(dict.lookup("k"))
+    rotatedBoxToCell
+    (
+        mesh,
+        dict.get<point>("origin"),
+        dict.get<vector>("i"),
+        dict.get<vector>("j"),
+        dict.get<vector>("k")
+    )
 {}
 
 
-// Construct from Istream
 Foam::rotatedBoxToCell::rotatedBoxToCell(const polyMesh& mesh, Istream& is)
 :
-    topoSetSource(mesh),
+    topoSetCellSource(mesh),
     origin_(is),
     i_(is),
     j_(is),
     k_(is)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::rotatedBoxToCell::~rotatedBoxToCell()
 {}
 
 
@@ -175,15 +176,23 @@ void Foam::rotatedBoxToCell::applyToSet
     topoSet& set
 ) const
 {
-    if ((action == topoSetSource::NEW) || (action == topoSetSource::ADD))
+    if (action == topoSetSource::ADD || action == topoSetSource::NEW)
     {
-        Info<< "    Adding cells with center within rotated box " << endl;
+        if (verbose_)
+        {
+            Info<< "    Adding cells with centre within rotated box"
+                << endl;
+        }
 
         combine(set, true);
     }
-    else if (action == topoSetSource::DELETE)
+    else if (action == topoSetSource::SUBTRACT)
     {
-        Info<< "    Removing cells with center within rotated box " << endl;
+        if (verbose_)
+        {
+            Info<< "    Removing cells with centre within rotated box"
+                << endl;
+        }
 
         combine(set, false);
     }

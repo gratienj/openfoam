@@ -100,9 +100,9 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::calcOverlappingProcs
     {
         const treeBoundBoxList& bbp = procBb[proci];
 
-        forAll(bbp, bbi)
+        for (const treeBoundBox& tbb: bbp)
         {
-            if (bbp[bbi].overlaps(bb))
+            if (tbb.overlaps(bb))
             {
                 overlaps[proci] = true;
                 nOverlaps++;
@@ -128,18 +128,12 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::distributePatches
 {
     PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
 
-    for (label domain = 0; domain < Pstream::nProcs(); domain++)
+    for (label domain = 0; domain < Pstream::nProcs(); ++domain)
     {
         const labelList& sendElems = map.subMap()[domain];
 
         if (domain != Pstream::myProcNo() && sendElems.size())
         {
-            labelList globalElems(sendElems.size());
-            forAll(sendElems, i)
-            {
-                globalElems[i] = gi.toGlobal(sendElems[i]);
-            }
-
             faceList subFaces(UIndirectList<face>(pp, sendElems));
             primitivePatch subPatch
             (
@@ -156,7 +150,7 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::distributePatches
             UOPstream toDomain(domain, pBufs);
             toDomain
                 << subPatch.localFaces() << subPatch.localPoints()
-                << globalElems;
+                << gi.toGlobal(sendElems);
         }
     }
 
@@ -186,16 +180,11 @@ void Foam::AMIInterpolation<SourcePatch, TargetPatch>::distributePatches
 
         faces[Pstream::myProcNo()] = subPatch.localFaces();
         points[Pstream::myProcNo()] = subPatch.localPoints();
-
-        faceIDs[Pstream::myProcNo()].setSize(sendElems.size());
-        forAll(sendElems, i)
-        {
-            faceIDs[Pstream::myProcNo()][i] = gi.toGlobal(sendElems[i]);
-        }
+        faceIDs[Pstream::myProcNo()] = gi.toGlobal(sendElems);
     }
 
     // Consume
-    for (label domain = 0; domain < Pstream::nProcs(); domain++)
+    for (label domain = 0; domain < Pstream::nProcs(); ++domain)
     {
         const labelList& recvElems = map.constructMap()[domain];
 
@@ -251,9 +240,8 @@ distributeAndMergePatches
         SubList<label>(tgtFaceIDs, faceIDs.size()) = faceIDs;
 
         const faceList& fcs = allFaces[Pstream::myProcNo()];
-        forAll(fcs, i)
+        for (const face& f : fcs)
         {
-            const face& f = fcs[i];
             face& newF = tgtFaces[nFaces++];
             newF.setSize(f.size());
             forAll(f, fp)
@@ -263,9 +251,9 @@ distributeAndMergePatches
         }
 
         const pointField& pts = allPoints[Pstream::myProcNo()];
-        forAll(pts, i)
+        for (const point& pt: pts)
         {
-            tgtPoints[nPoints++] = pts[i];
+            tgtPoints[nPoints++] = pt;
         }
     }
 
@@ -279,9 +267,8 @@ distributeAndMergePatches
             SubList<label>(tgtFaceIDs, faceIDs.size(), nFaces) = faceIDs;
 
             const faceList& fcs = allFaces[proci];
-            forAll(fcs, i)
+            for (const face& f : fcs)
             {
-                const face& f = fcs[i];
                 face& newF = tgtFaces[nFaces++];
                 newF.setSize(f.size());
                 forAll(f, fp)
@@ -291,9 +278,9 @@ distributeAndMergePatches
             }
 
             const pointField& pts = allPoints[proci];
-            forAll(pts, i)
+            for (const point& pt: pts)
             {
-                tgtPoints[nPoints++] = pts[i];
+                tgtPoints[nPoints++] = pt;
             }
         }
     }
@@ -319,9 +306,9 @@ distributeAndMergePatches
         }
 
         tgtPoints.transfer(newTgtPoints);
-        forAll(tgtFaces, i)
+        for (face& f : tgtFaces)
         {
-            inplaceRenumber(oldToNew, tgtFaces[i]);
+            inplaceRenumber(oldToNew, f);
         }
     }
 }
@@ -447,24 +434,19 @@ Foam::AMIInterpolation<SourcePatch, TargetPatch>::calcProcMap
             label nRecv = sendSizes[proci][Pstream::myProcNo()];
             constructMap[proci].setSize(nRecv);
 
-            for (label i = 0; i < nRecv; i++)
+            for (label i = 0; i < nRecv; ++i)
             {
                 constructMap[proci][i] = segmentI++;
             }
         }
     }
 
-    autoPtr<mapDistribute> mapPtr
+    return autoPtr<mapDistribute>::New
     (
-        new mapDistribute
-        (
-            segmentI,       // size after construction
-            sendMap.xfer(),
-            constructMap.xfer()
-        )
+        segmentI, // size after construction
+        std::move(sendMap),
+        std::move(constructMap)
     );
-
-    return mapPtr;
 }
 
 

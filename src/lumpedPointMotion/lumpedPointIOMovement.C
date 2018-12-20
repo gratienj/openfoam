@@ -39,9 +39,9 @@ namespace Foam
 const Foam::lumpedPointIOMovement*
 Foam::lumpedPointIOMovement::lookupInRegistry(const objectRegistry& obr)
 {
-    return obr.lookupObjectPtr<lumpedPointIOMovement>
+    return obr.findObject<lumpedPointIOMovement>
     (
-        lumpedPointMovement::dictionaryName
+        lumpedPointMovement::canonicalName
     );
 }
 
@@ -53,21 +53,18 @@ Foam::lumpedPointIOMovement::New
     label ownerId
 )
 {
-    return autoPtr<lumpedPointIOMovement>
+    return autoPtr<lumpedPointIOMovement>::New
     (
-        new lumpedPointIOMovement
+        IOobject
         (
-            IOobject
-            (
-                lumpedPointMovement::dictionaryName,
-                obr.time().caseSystem(),
-                obr,
-                IOobject::MUST_READ,
-                IOobject::NO_WRITE,
-                true // register object
-            ),
-            ownerId  // tag this patch as owner too
-        )
+            lumpedPointMovement::canonicalName,
+            obr.time().caseSystem(),
+            obr,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE,
+            true // register object
+        ),
+        ownerId  // tag this patch as owner too
     );
 }
 
@@ -102,14 +99,7 @@ Foam::lumpedPointIOMovement::lumpedPointIOMovement
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::lumpedPointIOMovement::~lumpedPointIOMovement()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
 
 bool Foam::lumpedPointIOMovement::readData(Istream& is)
 {

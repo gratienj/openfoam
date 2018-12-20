@@ -3,7 +3,7 @@
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
 #   \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-#    \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+#    \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -11,10 +11,10 @@
 #
 # File
 #     etc/config.csh/aliases
+#     - sourced by OpenFOAM-*/etc/cshrc  (or from the user's ~/.cshrc)
 #
 # Description
 #     Aliases for working with OpenFOAM
-#     Sourced from OpenFOAM-<VERSION>/etc/cshrc and/or ~/.cshrc
 #
 #------------------------------------------------------------------------------
 
@@ -49,16 +49,22 @@ alias util 'cd $FOAM_UTILITIES'
 alias tut 'cd $FOAM_TUTORIALS'
 alias run 'cd $FOAM_RUN'
 
+alias ufoam 'cd $WM_PROJECT_USER_DIR'
+alias uapp 'cd $WM_PROJECT_USER_DIR/applications'
+alias usol 'cd $WM_PROJECT_USER_DIR/applications/solvers'
+alias uutil 'cd $WM_PROJECT_USER_DIR/applications/utilities'
+
 
 # Refresh the environment
 # ~~~~~~~~~~~~~~~~~~~~~~~
-alias wmRefresh 'set wmProjectDir=$WM_PROJECT_DIR; set foamSettings=$FOAM_SETTINGS; wmUnset; source $wmProjectDir/etc/cshrc $foamSettings'
+alias wmRefresh 'set projectDir=$WM_PROJECT_DIR; set foamSettings=$FOAM_SETTINGS; wmUnset; source $projectDir/etc/cshrc $foamSettings'
 
 
-# Change OpenFOAM version
-# ~~~~~~~~~~~~~~~~~~~~~~~
+# Query the current OpenFOAM version
+# or change to another version (if installed in a parallel directory)
+# - can be fragile
 alias foamVersion \
-    'if ( "\!*" != "" ) source $FOAM_INST_DIR/OpenFOAM-\!*/etc/cshrc; foam; echo OpenFOAM-$WM_PROJECT_VERSION'
+    'if ( "\!*" != "" ) source ${WM_PROJECT_DIR:h}/OpenFOAM-\!*/etc/cshrc; echo OpenFOAM-$WM_PROJECT_VERSION'
 
 
 # Change ParaView version

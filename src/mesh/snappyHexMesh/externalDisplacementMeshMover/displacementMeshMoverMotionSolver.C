@@ -69,7 +69,7 @@ Foam::displacementMeshMoverMotionSolver::meshMover() const
 {
     if (!meshMoverPtr_.valid())
     {
-        const word moverType(coeffDict().lookup("meshMover"));
+        const word moverType(coeffDict().get<word>("meshMover"));
 
         meshMoverPtr_ = externalDisplacementMeshMover::New
         (
@@ -79,7 +79,7 @@ Foam::displacementMeshMoverMotionSolver::meshMover() const
             pointDisplacement_
         );
     }
-    return meshMoverPtr_();
+    return *meshMoverPtr_;
 }
 
 
@@ -88,7 +88,7 @@ Foam::displacementMeshMoverMotionSolver::curPoints() const
 {
     // Return actual points. Cannot do a reference since complains about
     // assignment to self in polyMesh::movePoints
-    return tmp<pointField>(new pointField(mesh().points()));
+    return tmp<pointField>::New(mesh().points());
 }
 
 

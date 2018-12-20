@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,6 +57,7 @@ SourceFiles
 #include "faceAreaIntersect.H"
 #include "globalIndex.H"
 #include "ops.H"
+#include "Enum.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -92,16 +93,16 @@ public:
             imPartialFaceAreaWeight
         };
 
-        //- Convert interpolationMethod to word representation
-        static word interpolationMethodToWord
-        (
-            const interpolationMethod& method
-        );
+        static const Enum<interpolationMethod> interpolationMethodNames_;
 
-        //- Convert word to interpolationMethod
-        static interpolationMethod wordTointerpolationMethod
+        static bool cacheIntersections_;
+
+        //- Calculate the patch face magnitudes for the given tri-mode
+        template<class Patch>
+        static tmp<scalarField> patchMagSf
         (
-            const word& method
+            const Patch& patch,
+            const faceAreaIntersect::triangulationMode triMode
         );
 
 
@@ -113,15 +114,15 @@ private:
         const word methodName_;
 
         //- Flag to indicate that the two patches are co-directional and
-        //  that the orientation of the target patch should be reversed
+        //- that the orientation of the target patch should be reversed
         const bool reverseTarget_;
 
         //- Flag to indicate that the two patches must be matched/an overlap
-        //  exists between them
+        //- exists between them
         const bool requireMatch_;
 
         //- Index of processor that holds all of both sides. -1 in all other
-        //  cases
+        //- cases
         label singlePatchProc_;
 
         //- Threshold weight below which interpolation is deactivated
@@ -131,7 +132,7 @@ private:
         // Source patch
 
             //- Source face areas
-            scalarField srcMagSf_;
+            scalarList srcMagSf_;
 
             //- Addresses of target faces per source face
             labelListList srcAddress_;
@@ -146,7 +147,7 @@ private:
         // Target patch
 
             //- Target face areas
-            scalarField tgtMagSf_;
+            scalarList tgtMagSf_;
 
             //- Addresses of source faces per target face
             labelListList tgtAddress_;
@@ -170,11 +171,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        AMIInterpolation(const AMIInterpolation&);
+        //- No copy construct
+        AMIInterpolation(const AMIInterpolation&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const AMIInterpolation&);
+        //- No copy assignment
+        void operator=(const AMIInterpolation&) = delete;
 
 
         // Parallel functionality
@@ -233,13 +234,13 @@ private:
         // Evaluation
 
             //- Normalise the (area) weights - suppresses numerical error in
-            //  weights calculation
+            //- weights calculation
             //  NOTE: if area weights are incorrect by 'a significant amount'
             //     normalisation may stabilise the solution, but will introduce
             //     numerical error!
             static void normaliseWeights
             (
-                const scalarField& patchAreas,
+                const scalarList& patchAreas,
                 const word& patchName,
                 const labelListList& addr,
                 scalarListList& wght,
@@ -255,14 +256,14 @@ private:
             static void agglomerate
             (
                 const autoPtr<mapDistribute>& targetMap,
-                const scalarField& fineSrcMagSf,
+                const scalarList& fineSrcMagSf,
                 const labelListList& fineSrcAddress,
                 const scalarListList& fineSrcWeights,
 
                 const labelList& sourceRestrictAddressing,
                 const labelList& targetRestrictAddressing,
 
-                scalarField& srcMagSf,
+                scalarList& srcMagSf,
                 labelListList& srcAddress,
                 scalarListList& srcWeights,
                 scalarField& srcWeightsSum,
@@ -300,7 +301,7 @@ public:
             const faceAreaIntersect::triangulationMode& triMode,
             const bool requireMatch = true,
             const word& methodName =
-                interpolationMethodToWord(imFaceAreaWeight),
+                interpolationMethodNames_[imFaceAreaWeight],
             const scalar lowWeightCorrection = -1,
             const bool reverseTarget = false
         );
@@ -327,7 +328,7 @@ public:
             const faceAreaIntersect::triangulationMode& triMode,
             const bool requireMatch = true,
             const word& methodName =
-                interpolationMethodToWord(imFaceAreaWeight),
+                interpolationMethodNames_[imFaceAreaWeight],
             const scalar lowWeightCorrection = -1,
             const bool reverseTarget = false
         );
@@ -345,10 +346,10 @@ public:
     //- Destructor
     ~AMIInterpolation();
 
-    // Typedef to SourcePatch type this AMIInterplation is instantiated on
+    // Typedef to SourcePatch type this AMIInterpolation is instantiated on
     typedef SourcePatch sourcePatchType;
 
-    // Typedef to TargetPatch type this AMIInterplation is instantiated on
+    // Typedef to TargetPatch type this AMIInterpolation is instantiated on
     typedef TargetPatch targetPatchType;
 
 
@@ -357,7 +358,7 @@ public:
         // Access
 
             //- Set to -1, or the processor holding all faces (both sides) of
-            //  the AMI
+            //- the AMI
             inline label singlePatchProc() const;
 
             //- Threshold weight below which interpolation is deactivated
@@ -370,10 +371,10 @@ public:
             // Source patch
 
                 //- Return const access to source patch face areas
-                inline const scalarField& srcMagSf() const;
+                inline const List<scalar>& srcMagSf() const;
 
                 //- Return access to source patch face areas
-                inline scalarField& srcMagSf();
+                inline List<scalar>& srcMagSf();
 
                 //- Return const access to source patch addressing
                 inline const labelListList& srcAddress() const;
@@ -388,26 +389,26 @@ public:
                 inline scalarListList& srcWeights();
 
                 //- Return const access to normalisation factor of source
-                //  patch weights (i.e. the sum before normalisation)
+                //- patch weights (i.e. the sum before normalisation)
                 inline const scalarField& srcWeightsSum() const;
 
                 //- Return access to normalisation factor of source
-                //  patch weights (i.e. the sum before normalisation)
+                //- patch weights (i.e. the sum before normalisation)
                 inline scalarField& srcWeightsSum();
 
                 //- Source map pointer - valid only if singlePatchProc = -1
-                //  This gets source data into a form to be consumed by
-                //  tgtAddress, tgtWeights
+                //- This gets source data into a form to be consumed by
+                //- tgtAddress, tgtWeights
                 inline const mapDistribute& srcMap() const;
 
 
             // Target patch
 
                 //- Return const access to target patch face areas
-                inline const scalarField& tgtMagSf() const;
+                inline const List<scalar>& tgtMagSf() const;
 
                 //- Return access to target patch face areas
-                inline scalarField& tgtMagSf();
+                inline List<scalar>& tgtMagSf();
 
                 //- Return const access to target patch addressing
                 inline const labelListList& tgtAddress() const;
@@ -422,16 +423,16 @@ public:
                 inline scalarListList& tgtWeights();
 
                 //- Return const access to normalisation factor of target
-                //  patch weights (i.e. the sum before normalisation)
+                //- patch weights (i.e. the sum before normalisation)
                 inline const scalarField& tgtWeightsSum() const;
 
                 //- Return access to normalisation factor of target
-                //  patch weights (i.e. the sum before normalisation)
+                //- patch weights (i.e. the sum before normalisation)
                 inline scalarField& tgtWeightsSum();
 
                 //- Target map pointer -  valid only if singlePatchProc=-1.
-                //  This gets target data into a form to be consumed by
-                //  srcAddress, srcWeights
+                //- This gets target data into a form to be consumed by
+                //- srcAddress, srcWeights
                 inline const mapDistribute& tgtMap() const;
 
 
@@ -460,7 +461,7 @@ public:
             // Low-level
 
                 //- Interpolate from target to source with supplied op
-                //  to combine existing value with remote value and weight
+                //- to combine existing value with remote value and weight
                 template<class Type, class CombineOp>
                 void interpolateToSource
                 (
@@ -471,7 +472,7 @@ public:
                 ) const;
 
                 //- Interpolate from source to target with supplied op
-                //  to combine existing value with remote value and weight
+                //- to combine existing value with remote value and weight
                 template<class Type, class CombineOp>
                 void interpolateToTarget
                 (

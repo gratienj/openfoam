@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,44 +29,55 @@ License
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::sampledPlane::sampleField
+Foam::sampledPlane::sampleOnFaces
 (
-    const GeometricField<Type, fvPatchField, volMesh>& vField
+    const interpolation<Type>& sampler
 ) const
 {
-    return tmp<Field<Type>>(new Field<Type>(vField, meshCells()));
+    return sampledSurface::sampleOnFaces
+    (
+        sampler,
+        meshCells(),
+        faces(),
+        points()
+    );
 }
 
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::sampledPlane::interpolateField
+Foam::sampledPlane::sampleOnPoints
 (
     const interpolation<Type>& interpolator
 ) const
 {
-    // One value per point
-    tmp<Field<Type>> tvalues(new Field<Type>(points().size()));
-    Field<Type>& values = tvalues.ref();
+    // elements to sample
+    const labelList& elements = meshCells();
 
-    boolList pointDone(points().size(), false);
+    // One value per point.
+    // Initialize with Zero to handle missed/degenerate faces
 
-    forAll(faces(), cutFacei)
+    auto tvalues = tmp<Field<Type>>::New(points().size(), Zero);
+    auto& values = tvalues.ref();
+
+    bitSet pointDone(points().size());
+
+    const faceList& fcs = faces();
+
+    forAll(fcs, facei)
     {
-        const face& f = faces()[cutFacei];
+        const face& f = fcs[facei];
+        const label celli = elements[facei];
 
-        forAll(f, faceVertI)
+        for (const label pointi : f)
         {
-            label pointi = f[faceVertI];
-
-            if (!pointDone[pointi])
+            if (pointDone.set(pointi))
             {
                 values[pointi] = interpolator.interpolate
                 (
                     points()[pointi],
-                    meshCells()[cutFacei]
+                    celli
                 );
-                pointDone[pointi] = true;
             }
         }
     }

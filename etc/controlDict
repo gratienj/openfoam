@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -39,8 +39,8 @@ InfoSwitches
     writeDictionaries 0;
     writeOptionalEntries 0;
 
-    // Write lagrangian "positions" file in v1706 format (at earlier)
-    writeLagrangianPositions 0;
+    // Write lagrangian "positions" file in v1706 format (and earlier)
+    writeLagrangianPositions 1;
 
     // Report hosts used (parallel)
     // - 0 = none
@@ -54,6 +54,11 @@ InfoSwitches
     // Enable job info
     writeJobInfo    0;
 
+    // Style for "ExecutionTime = " output
+    // - 0 = seconds (with trailing 's')
+    // - 1 = day-hh:mm::ss
+    printExecutionFormat 0;
+
     // Allow profiling
     allowProfiling  1;
 
@@ -64,6 +69,9 @@ InfoSwitches
 
 OptimisationSwitches
 {
+    // Use physical (0) or logical (1) value for the cwd.
+    cwd     1;
+
     // On NFS mounted file system: maximum wait for files to appear/get
     // updated. Set to 0 on distributed case.
     fileModificationSkew 10;
@@ -121,7 +129,16 @@ OptimisationSwitches
 
     // Force dumping (at next timestep) upon signal (-1 to disable) and exit
     stopAtWriteNowSignal    -1;
+
+    //- Choose STL ASCII parser:  0=Flex, 1=Ragel, 2=Manual
+    fileFormats::stl 0;
+
+    //- Use the updated ddt correction formulation introduced by openfoam org
+    //  in commit da787200.  Default is to use the formulation from v1712
+    //  see ddtScheme.C
+    experimentalDdtCorr 0;
 }
+
 
 /* Can specify fallback profiling settings
 profiling
@@ -194,7 +211,6 @@ DebugSwitches
     Ergun               0;
     Euler               0;
     EulerImplicit       0;
-    EulerRotation       0;
     extendedCellToFaceStencil 0;
     FDIC                0;
     FaceCellWave        0;
@@ -225,7 +241,6 @@ DebugSwitches
     IFstream            0;
     IOMap<dictionary>   0;
     IOPtrList<MRFZone>  0;
-    IOPtrList<coordinateSystem> 0;
     IOPtrList<injector> 0;
     IOPtrList<porousZone>   0;
     IOobject            0;
@@ -322,7 +337,6 @@ DebugSwitches
     SLTS                0;
     SRFModel            0;
     SRFVelocity         0;
-    STARCDRotation      0;
     Schaeffer           0;
     SchillerNaumann     0;
     SinclairJackson     0;
@@ -386,6 +400,7 @@ DebugSwitches
     basicMixture        0;
     basicReactingCloud  0;
     basicReactingParcel 0;
+    bitSet              0;
     fluidThermo         0;
     fluidThermoCloud    0;
     fluidThermoParcel   0;
@@ -441,9 +456,7 @@ DebugSwitches
     constantAbsorptionEmission  0;
     constantAlphaContactAngle   0;
     constantScatter     0;
-    coordinateRotation  0;
     coordinateSystem    0;
-    coordinateSystems   0;
     corrected           0;
     coupled             0;
     cubeRootVol         0;
@@ -463,9 +476,9 @@ DebugSwitches
     diagonal            0;
     dictionary          0;
     dimensionSet        1;
-    mappedBase    0;
-    mappedPatch   0;
-    mappedVelocityFlux 0;
+    mappedBase          0;
+    mappedPatch         0;
+    mappedVelocityFlux  0;
     directionMixed      0;
     directional         0;
     disallowGenericFvPatchField 0;
@@ -730,7 +743,6 @@ DebugSwitches
     outletInlet         0;
     outletStabilised    0;
     pair                0;
-    parabolicCylindrical 0;
     parcel              0;
     partialSlip         0;
     passiveParticle     0;
@@ -813,7 +825,6 @@ DebugSwitches
     saturateEvaporationModel 0;
     scalarAverageField  0;
     scalarField         0;
-    scalarRange         0;
     scaleSimilarity     0;
     scatterModel        0;
     searchableBox       0;
@@ -1085,7 +1096,6 @@ DimensionSets
         //writeUnits (lb ft s R mol A Cd);
     }
 }
-
 
 
 // ************************************************************************* //

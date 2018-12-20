@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -33,7 +33,7 @@ geometry
         type triSurfaceMesh;
         name building;
     }
-};
+}
 
 
 // Settings for the castellatedMesh generation.
@@ -220,7 +220,7 @@ addLayersControls
     // If points get not extruded do nGrow layers of connected faces that are
     // also not grown. This helps convergence of the layer addition process
     // close to features.
-    // Note: changed(corrected) w.r.t 17x! (didn't do anything in 17x)
+    // Note: changed(corrected) w.r.t 1.7.x! (didn't do anything in 1.7.x)
     nGrow 0;
 
     // Advanced settings
@@ -254,8 +254,9 @@ addLayersControls
     maxThicknessToMedialRatio 0.3;
 
     // Angle used to pick up medial axis points
-    // Note: changed(corrected) w.r.t 17x! 90 degrees corresponds to 130 in 17x.
-    minMedianAxisAngle 90;
+    // Note: changed(corrected) w.r.t 1.7.x! 90 degrees corresponds to 130
+    // in 1.7.x.
+    minMedialAxisAngle 90;
 
 
     // Create buffer region for new layer terminations

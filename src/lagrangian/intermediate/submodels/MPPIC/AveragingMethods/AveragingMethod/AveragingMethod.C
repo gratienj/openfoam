@@ -84,7 +84,7 @@ Foam::AveragingMethod<Type>::New
     const fvMesh& mesh
 )
 {
-    const word averageType(dict.lookup(typeName));
+    const word averageType(dict.get<word>(typeName));
 
     //Info<< "Selecting averaging method "
     //    << averageType << endl;
@@ -103,13 +103,6 @@ Foam::AveragingMethod<Type>::New
 
     return autoPtr<AveragingMethod<Type>>(cstrIter()(io, dict, mesh));
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class Type>
-Foam::AveragingMethod<Type>::~AveragingMethod()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -158,7 +151,7 @@ bool Foam::AveragingMethod<Type>::write(const bool valid) const
             mesh_
         ),
         mesh_,
-        dimensioned<Type>("zero", dimless, Zero)
+        dimensioned<Type>(dimless, Zero)
     );
     GeometricField<TypeGrad, fvPatchField, volMesh> cellGrad
     (
@@ -169,7 +162,7 @@ bool Foam::AveragingMethod<Type>::write(const bool valid) const
             mesh_
         ),
         mesh_,
-        dimensioned<TypeGrad>("zero", dimless, Zero)
+        dimensioned<TypeGrad>(dimless, Zero)
     );
     GeometricField<Type, pointPatchField, pointMesh> pointValue
     (
@@ -180,7 +173,7 @@ bool Foam::AveragingMethod<Type>::write(const bool valid) const
             mesh_
         ),
         pointMesh_,
-        dimensioned<Type>("zero", dimless, Zero)
+        dimensioned<Type>(dimless, Zero)
     );
     GeometricField<TypeGrad, pointPatchField, pointMesh> pointGrad
     (
@@ -191,7 +184,7 @@ bool Foam::AveragingMethod<Type>::write(const bool valid) const
             mesh_
         ),
         pointMesh_,
-        dimensioned<TypeGrad>("zero", dimless, Zero)
+        dimensioned<TypeGrad>(dimless, Zero)
     );
 
     // Barycentric coordinates of the tet vertices

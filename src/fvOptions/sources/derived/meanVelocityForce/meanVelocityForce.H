@@ -51,8 +51,6 @@ SourceFiles
 #define meanVelocityForce_H
 
 #include "autoPtr.H"
-#include "topoSetSource.H"
-#include "cellSet.H"
 #include "fvMesh.H"
 #include "volFields.H"
 #include "cellSetOption.H"
@@ -112,11 +110,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        meanVelocityForce(const meanVelocityForce&);
+        //- No copy construct
+        meanVelocityForce(const meanVelocityForce&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const meanVelocityForce&);
+        //- No copy assignment
+        void operator=(const meanVelocityForce&) = delete;
 
 
 public:

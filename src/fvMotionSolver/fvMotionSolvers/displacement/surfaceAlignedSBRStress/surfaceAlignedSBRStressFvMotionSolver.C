@@ -35,6 +35,7 @@ License
 #include "pointMVCWeight.H"
 #include "dimensionedSymmTensor.H"
 #include "quaternion.H"
+#include "fvOptions.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -74,13 +75,13 @@ surfaceAlignedSBRStressFvMotionSolver
             IOobject::NO_WRITE
         ),
         fvMesh_,
-        dimensionedVector("zero", dimless, Zero)
+        dimensionedVector(dimless, Zero)
     ),
     maxAng_(coeffDict().lookupOrDefault<scalar>("maxAng", 80.0)),
     minAng_(coeffDict().lookupOrDefault<scalar>("minAng", 20.0)),
     accFactor_(coeffDict().lookupOrDefault<scalar>("accFactor", 1.0)),
     smoothFactor_(coeffDict().lookupOrDefault<scalar>("smoothFactor", 0.9)),
-    nNonOrthogonalCorr_(readLabel(coeffDict().lookup("nNonOrthogonalCorr"))),
+    nNonOrthogonalCorr_(coeffDict().get<label>("nNonOrthogonalCorr")),
     pointDisplacement_(pointDisplacement()),
     sigmaD_
     (
@@ -93,7 +94,7 @@ surfaceAlignedSBRStressFvMotionSolver
             IOobject::NO_WRITE
         ),
         fvMesh_,
-        dimensionedSymmTensor("zero", dimless, Zero)
+        dimensionedSymmTensor(dimless, Zero)
     ),
     minSigmaDiff_(coeffDict().lookupOrDefault<scalar>("minSigmaDiff", 1e-4))
 {
@@ -207,7 +208,7 @@ void Foam::surfaceAlignedSBRStressFvMotionSolver::calculateCellRot()
                     }
                 }
 
-                // Note: faces on boundaries that get hit are noy included as
+                // Note: faces on boundaries that get hit are not included as
                 // the pointDisplacement on boundaries is usually zero for
                 // this solver.
 
@@ -286,7 +287,7 @@ void Foam::surfaceAlignedSBRStressFvMotionSolver::calculateCellRot()
 void Foam::surfaceAlignedSBRStressFvMotionSolver::solve()
 {
     // The points have moved so before interpolation update
-    // the mtionSolver accordingly
+    // the motionSolver accordingly
     this->movePoints(fvMesh_.points());
 
     volVectorField& cellDisp = cellDisplacement();
@@ -309,7 +310,7 @@ void Foam::surfaceAlignedSBRStressFvMotionSolver::solve()
                 IOobject::NO_WRITE
             ),
             fvMesh_,
-            dimensionedVector("zero", dimLength, Zero),
+            dimensionedVector(dimLength, Zero),
             cellMotionBoundaryTypes<vector>
             (
                 pointDisplacement().boundaryField()
@@ -354,7 +355,7 @@ void Foam::surfaceAlignedSBRStressFvMotionSolver::solve()
                 IOobject::NO_WRITE
             ),
             fvMesh_,
-            dimensionedScalar("zero", dimless, 0.0)
+            dimensionedScalar(dimless, Zero)
         )
     );
     volScalarField& mu =  tmu.ref();
@@ -380,8 +381,15 @@ void Foam::surfaceAlignedSBRStressFvMotionSolver::solve()
         sigmaD_ = magNewSigmaD;
     }
 
-    const surfaceScalarField Df(diffusivity().operator()());
+    const surfaceScalarField Df
+    (
+        dimensionedScalar("viscosity", dimViscosity, 1.0)
+       *diffusivity().operator()()
+    );
+
     pointDisplacement_.boundaryFieldRef().updateCoeffs();
+
+    fv::options& fvOptions(fv::options::New(fvMesh_));
 
     const volTensorField gradCd(fvc::grad(cellDisp));
 
@@ -407,10 +415,15 @@ void Foam::surfaceAlignedSBRStressFvMotionSolver::solve()
             )
           ==
             fvc::div(sigmaD_)
+          + fvOptions(cellDisp)
         );
+
+        fvOptions.constrain(DEqn);
 
         // Note: solve uncoupled
         DEqn.solveSegregatedOrCoupled(DEqn.solverDict());
+
+        fvOptions.correct(cellDisp);
     }
 }
 

@@ -53,15 +53,15 @@ Foam::PackingModels::Implicit<CloudType>::Implicit
             IOobject::NO_WRITE
         ),
         this->owner().mesh(),
-        dimensionedScalar("zero", dimless, 0.0),
+        dimensionedScalar(dimless, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     phiCorrect_(nullptr),
     uCorrect_(nullptr),
     applyLimiting_(this->coeffDict().lookup("applyLimiting")),
     applyGravity_(this->coeffDict().lookup("applyGravity")),
-    alphaMin_(readScalar(this->coeffDict().lookup("alphaMin"))),
-    rhoMin_(readScalar(this->coeffDict().lookup("rhoMin")))
+    alphaMin_(this->coeffDict().getScalar("alphaMin")),
+    rhoMin_(this->coeffDict().getScalar("rhoMin"))
 {
     alpha_ = this->owner().theta();
     alpha_.oldTime();
@@ -147,7 +147,7 @@ void Foam::PackingModels::Implicit<CloudType>::cacheFields(const bool store)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("zero", dimDensity, 0),
+            dimensionedScalar(dimDensity, Zero),
             zeroGradientFvPatchField<scalar>::typeName
         );
         rho.primitiveFieldRef() = max(rhoAverage.primitiveField(), rhoMin_);
@@ -168,7 +168,7 @@ void Foam::PackingModels::Implicit<CloudType>::cacheFields(const bool store)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("zero", dimPressure, 0),
+            dimensionedScalar(dimPressure, Zero),
             zeroGradientFvPatchField<scalar>::typeName
         );
 
@@ -253,7 +253,7 @@ void Foam::PackingModels::Implicit<CloudType>::cacheFields(const bool store)
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                dimensionedVector("zero", dimVelocity, Zero),
+                dimensionedVector(dimVelocity, Zero),
                 fixedValueFvPatchField<vector>::typeName
             );
             U.primitiveFieldRef() = uAverage.primitiveField();
@@ -344,7 +344,7 @@ Foam::vector Foam::PackingModels::Implicit<CloudType>::velocityCorrection
     const vector U = uCorrect_()[celli];
 
     // face geometry
-    vector nHat = mesh.faces()[facei].normal(mesh.points());
+    vector nHat = mesh.faces()[facei].areaNormal(mesh.points());
     const scalar nMag = mag(nHat);
     nHat /= nMag;
 

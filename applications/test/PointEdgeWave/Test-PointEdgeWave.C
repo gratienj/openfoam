@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
     labelList patchIDs
     (
-        pbm.patchSet(wordReList(IStringStream(args[1])())).sortedToc()
+        pbm.patchSet(args.getList<wordRe>(1)).sortedToc()
     );
 
     Info<< "Starting walk from patches "
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
             IOobject::AUTO_WRITE
         ),
         pointMesh::New(mesh),
-        dimensionedScalar("wallDist", dimLength, 0.0)
+        dimensionedScalar(dimLength, Zero)
     );
 
     forAll(allPointInfo, pointi)

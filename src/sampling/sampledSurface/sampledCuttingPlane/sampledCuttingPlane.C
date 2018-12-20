@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,6 +46,51 @@ namespace Foam
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
+void Foam::sampledCuttingPlane::checkBoundsIntersection
+(
+    const plane& pln,
+    const boundBox& meshBb
+) const
+{
+    // Verify specified bounding box
+    if (!bounds_.empty())
+    {
+        // Bounding box does not overlap with (global) mesh!
+        if (!bounds_.overlaps(meshBb))
+        {
+            WarningInFunction
+                << nl
+                << name() << " : "
+                << "Bounds " << bounds_
+                << " do not overlap the mesh bounding box " << meshBb
+                << nl << endl;
+        }
+
+        // Plane does not intersect the bounding box
+        if (!bounds_.intersects(pln))
+        {
+            WarningInFunction
+                << nl
+                << name() << " : "
+                << "Plane "<< pln << " does not intersect the bounds "
+                << bounds_
+                << nl << endl;
+        }
+    }
+
+    // Plane does not intersect the (global) mesh!
+    if (!meshBb.intersects(pln))
+    {
+        WarningInFunction
+            << nl
+            << name() << " : "
+            << "Plane "<< pln << " does not intersect the mesh bounds "
+            << meshBb
+            << nl << endl;
+    }
+}
+
+
 void Foam::sampledCuttingPlane::createGeometry()
 {
     if (debug)
@@ -62,29 +107,51 @@ void Foam::sampledCuttingPlane::createGeometry()
     // Clear derived data
     clearGeom();
 
-    // Get any subMesh
-    if (zoneID_.index() != -1 && !subMeshPtr_.valid())
+    const fvMesh& fvm = static_cast<const fvMesh&>(this->mesh());
+
+    // Get sub-mesh if any
+    if
+    (
+        (-1 != mesh().cellZones().findIndex(zoneNames_))
+     && subMeshPtr_.empty()
+    )
     {
         const polyBoundaryMesh& patches = mesh().boundaryMesh();
 
         // Patch to put exposed internal faces into
         const label exposedPatchi = patches.findPatchID(exposedPatchName_);
 
+        bitSet cellsToSelect = mesh().cellZones().selection(zoneNames_);
+
         DebugInfo
             << "Allocating subset of size "
-            << mesh().cellZones()[zoneID_.index()].size()
+            << cellsToSelect.count()
             << " with exposed faces into patch "
             << patches[exposedPatchi].name() << endl;
 
-        subMeshPtr_.reset
-        (
-            new fvMeshSubset(static_cast<const fvMesh&>(mesh()))
-        );
-        subMeshPtr_().setLargeCellSubset
-        (
-            labelHashSet(mesh().cellZones()[zoneID_.index()]),
-            exposedPatchi
-        );
+
+        // If we will use a fvMeshSubset so can apply bounds as well to make
+        // the initial selection smaller.
+        if (!bounds_.empty() && cellsToSelect.any())
+        {
+            const auto& cellCentres = fvm.C();
+
+            for (const label celli : cellsToSelect)
+            {
+                const point& cc = cellCentres[celli];
+
+                if (!bounds_.contains(cc))
+                {
+                    cellsToSelect.unset(celli);
+                }
+            }
+
+            DebugInfo
+                << "Bounded subset of size "
+                << cellsToSelect.count() << endl;
+        }
+
+        subMeshPtr_.reset(new fvMeshSubset(fvm, cellsToSelect, exposedPatchi));
     }
 
 
@@ -93,8 +160,10 @@ void Foam::sampledCuttingPlane::createGeometry()
     (
         subMeshPtr_.valid()
       ? subMeshPtr_().subMesh()
-      : static_cast<const fvMesh&>(this->mesh())
+      : fvm
     );
+
+    checkBoundsIntersection(plane_, mesh.bounds());
 
 
     // Distance to cell centres
@@ -114,20 +183,19 @@ void Foam::sampledCuttingPlane::createGeometry()
                 false
             ),
             mesh,
-            dimensionedScalar("zero", dimLength, 0)
+            dimensionedScalar(dimLength, Zero)
         )
     );
     volScalarField& cellDistance = cellDistancePtr_();
 
     // Internal field
     {
-        const pointField& cc = mesh.cellCentres();
+        const auto& cc = mesh.cellCentres();
         scalarField& fld = cellDistance.primitiveFieldRef();
 
         forAll(cc, i)
         {
-            // Signed distance
-            fld[i] = (cc[i] - plane_.refPoint()) & plane_.normal();
+            fld[i] = plane_.signedDistance(cc[i]);
         }
     }
 
@@ -163,17 +231,18 @@ void Foam::sampledCuttingPlane::createGeometry()
                 fld.setSize(pp.size());
                 forAll(fld, i)
                 {
-                    fld[i] = (cc[i] - plane_.refPoint()) & plane_.normal();
+                    fld[i] = plane_.signedDistance(cc[i]);
                 }
             }
             else
             {
+                // Other side cell centres?
                 const pointField& cc = mesh.C().boundaryField()[patchi];
                 fvPatchScalarField& fld = cellDistanceBf[patchi];
 
                 forAll(fld, i)
                 {
-                    fld[i] = (cc[i] - plane_.refPoint()) & plane_.normal();
+                    fld[i] = plane_.signedDistance(cc[i]);
                 }
             }
         }
@@ -191,7 +260,7 @@ void Foam::sampledCuttingPlane::createGeometry()
 
         forAll(pointDistance_, i)
         {
-            pointDistance_[i] = (pts[i] - plane_.refPoint()) & plane_.normal();
+            pointDistance_[i] = plane_.signedDistance(pts[i]);
         }
     }
 
@@ -212,14 +281,13 @@ void Foam::sampledCuttingPlane::createGeometry()
                 false
             ),
             pointMesh::New(mesh),
-            dimensionedScalar("zero", dimLength, 0)
+            dimensionedScalar(dimLength, Zero)
         );
         pDist.primitiveFieldRef() = pointDistance_;
 
         Pout<< "Writing point distance:" << pDist.objectPath() << endl;
         pDist.write();
     }
-
 
     //- Direct from cell field and point field.
     isoSurfPtr_.reset
@@ -267,40 +335,38 @@ Foam::sampledCuttingPlane::sampledCuttingPlane
     mergeTol_(dict.lookupOrDefault("mergeTol", 1e-6)),
     regularise_(dict.lookupOrDefault("regularise", true)),
     average_(dict.lookupOrDefault("average", false)),
-    zoneID_(dict.lookupOrDefault("zone", word::null), mesh.cellZones()),
-    exposedPatchName_(word::null),
+    zoneNames_(),
+    exposedPatchName_(),
     needsUpdate_(true),
     subMeshPtr_(nullptr),
     cellDistancePtr_(nullptr),
     isoSurfPtr_(nullptr)
 {
-    if (zoneID_.index() != -1)
+    if (!dict.readIfPresent("zones", zoneNames_) && dict.found("zone"))
     {
-        dict.lookup("exposedPatchName") >> exposedPatchName_;
+        zoneNames_.resize(1);
+        dict.readEntry("zone", zoneNames_.first());
+    }
 
-        if (mesh.boundaryMesh().findPatchID(exposedPatchName_) == -1)
+    if (-1 != mesh.cellZones().findIndex(zoneNames_))
+    {
+        dict.readEntry("exposedPatchName", exposedPatchName_);
+
+        if (-1 == mesh.boundaryMesh().findPatchID(exposedPatchName_))
         {
-            FatalErrorInFunction
+            FatalIOErrorInFunction(dict)
                 << "Cannot find patch " << exposedPatchName_
                 << " in which to put exposed faces." << endl
                 << "Valid patches are " << mesh.boundaryMesh().names()
                 << exit(FatalError);
         }
 
-        if (debug && zoneID_.index() != -1)
-        {
-            Info<< "Restricting to cellZone " << zoneID_.name()
-                << " with exposed internal faces into patch "
-                << exposedPatchName_ << endl;
-        }
+        DebugInfo
+            << "Restricting to cellZone(s) " << flatOutput(zoneNames_)
+            << " with exposed internal faces into patch "
+            << exposedPatchName_ << endl;
     }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::sampledCuttingPlane::~sampledCuttingPlane()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -356,50 +422,50 @@ bool Foam::sampledCuttingPlane::update()
 Foam::tmp<Foam::scalarField>
 Foam::sampledCuttingPlane::sample
 (
-    const volScalarField& vField
+    const interpolation<scalar>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::vectorField>
 Foam::sampledCuttingPlane::sample
 (
-    const volVectorField& vField
+    const interpolation<vector>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::sphericalTensorField>
 Foam::sampledCuttingPlane::sample
 (
-    const volSphericalTensorField& vField
+    const interpolation<sphericalTensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::symmTensorField>
 Foam::sampledCuttingPlane::sample
 (
-    const volSymmTensorField& vField
+    const interpolation<symmTensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::tensorField>
 Foam::sampledCuttingPlane::sample
 (
-    const volTensorField& vField
+    const interpolation<tensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
@@ -409,7 +475,7 @@ Foam::sampledCuttingPlane::interpolate
     const interpolation<scalar>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -419,8 +485,9 @@ Foam::sampledCuttingPlane::interpolate
     const interpolation<vector>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
+
 
 Foam::tmp<Foam::sphericalTensorField>
 Foam::sampledCuttingPlane::interpolate
@@ -428,7 +495,7 @@ Foam::sampledCuttingPlane::interpolate
     const interpolation<sphericalTensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -438,7 +505,7 @@ Foam::sampledCuttingPlane::interpolate
     const interpolation<symmTensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -448,7 +515,7 @@ Foam::sampledCuttingPlane::interpolate
     const interpolation<tensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 

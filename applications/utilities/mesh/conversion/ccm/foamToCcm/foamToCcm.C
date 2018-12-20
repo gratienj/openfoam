@@ -86,49 +86,50 @@ int main(int argc, char *argv[])
         "Translate OPENFOAM data to CCM format"
     );
 
-    Foam::timeSelector::addOptions();
+    timeSelector::addOptions();
     argList::noParallel();
     argList::addBoolOption
     (
         "mesh",
-        "convert mesh only"
+        "Convert mesh only"
     );
     argList::addOption
     (
         "name",
         "name",
-        "provide alternative base name. Default is <meshExport>."
+        "Provide alternative base name. Default is <meshExport>."
     );
     argList::addBoolOption
     (
         "overwrite",
-        "no backup of existing output files"
+        "No backup of existing output files"
     );
     argList::addOption
     (
         "remap",
         "name",
-        "use specified remapping dictionary instead of <constant/remapping>"
+        "Use specified remapping dictionary instead of <constant/remapping>"
     );
     argList::addBoolOption
     (
         "results",
-        "convert results only"
+        "Convert results only"
     );
+
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
 
-    // get times list
+    // The times list
     instantList timeDirs = Foam::timeSelector::select0(runTime, args);
 
-    const bool optMesh      = args.optionFound("mesh");
-    const bool optResults   = args.optionFound("results");
-    const bool optOverwrite = args.optionFound("overwrite");
+    const bool optMesh      = args.found("mesh");
+    const bool optResults   = args.found("results");
+    const bool optOverwrite = args.found("overwrite");
 
     fileName exportName = ccm::writer::defaultMeshName;
-    if (args.optionReadIfPresent("name", exportName))
+    if (args.readIfPresent("name", exportName))
     {
         const word ext = exportName.ext();
         // strip erroneous extension (.ccm, .ccmg, .ccmp)
@@ -137,7 +138,7 @@ int main(int argc, char *argv[])
             exportName = exportName.lessExt();
         }
     }
-    else if (args.optionFound("case"))
+    else if (args.found("case"))
     {
         exportName += '-' + args.globalCaseName();
     }
@@ -154,9 +155,9 @@ int main(int argc, char *argv[])
 //     // skip over time=0, unless some other time option has been specified
 //     if
 //     (
-//         !args.optionFound("zeroTime")
-//      && !args.optionFound("time")
-//      && !args.optionFound("latestTime")
+//         !args.found("zeroTime")
+//      && !args.found("time")
+//      && !args.found("latestTime")
 //      && Times.size() > 2
 //     )
 //     {
@@ -202,7 +203,7 @@ int main(int argc, char *argv[])
     else
     {
         // convert fields with or without converting mesh
-        #include "createMesh.H"
+        #include "createNamedMesh.H"
 
         // #include "checkHasMovingMesh.H"
         // #include "checkHasLagrangian.H"
@@ -253,7 +254,7 @@ int main(int argc, char *argv[])
             );
             // writer.setTopologyFile(exportName + ".ccmg");
             Info<< "writing solution:";
-            if (args.optionFound("remap"))
+            if (args.found("remap"))
             {
                 writer.writeSolution(objects, args["remap"]);
             }

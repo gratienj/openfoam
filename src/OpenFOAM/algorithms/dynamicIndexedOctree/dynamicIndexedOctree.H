@@ -50,7 +50,7 @@ SourceFiles
 namespace Foam
 {
 
-typedef DynamicList<autoPtr<DynamicList<label >>> contentListList;
+typedef DynamicList<autoPtr<DynamicList<label>>> contentListList;
 
 // Forward declaration of classes
 template<class Type> class dynamicIndexedOctree;
@@ -128,7 +128,7 @@ private:
 
     // Static data
 
-        //- Relative peturbation tolerance. Determines when point is
+        //- Relative perturbation tolerance. Determines when point is
         //  considered to be close to face/edge of bb of node.
         //  The tolerance is relative to the bounding box of the smallest
         //  node.
@@ -418,10 +418,7 @@ public:
         //- Clone
         autoPtr<dynamicIndexedOctree<Type>> clone() const
         {
-            return autoPtr<dynamicIndexedOctree<Type>>
-            (
-                new dynamicIndexedOctree<Type>(*this)
-            );
+            return autoPtr<dynamicIndexedOctree<Type>>::New(*this);
         }
 
 

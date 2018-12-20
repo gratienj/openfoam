@@ -93,7 +93,7 @@ void Foam::InteractionLists<ParticleType>::buildInteractionLists()
     // Recording which cells are in range of an extended boundBox, as
     // only these cells will need to be tested to determine which
     // referred cells that they interact with.
-    PackedBoolList cellInRangeOfCoupledPatch(mesh_.nCells(), false);
+    bitSet cellInRangeOfCoupledPatch(mesh_.nCells(), false);
 
     // IAndT: index (=local cell index) and transform (from
     // globalIndexAndTransform)
@@ -121,7 +121,7 @@ void Foam::InteractionLists<ParticleType>::buildInteractionLists()
                 // This cell is in range of the Bb of the other
                 // processor Bb, and so needs to be referred to it
 
-                cellInRangeOfCoupledPatch[celli] = true;
+                cellInRangeOfCoupledPatch.set(celli);
 
                 cellIAndTToExchange.append
                 (
@@ -178,7 +178,7 @@ void Foam::InteractionLists<ParticleType>::buildInteractionLists()
 
     ril_.setSize(cellBbsToExchange.size());
 
-    // This needs to be a boolList, not PackedBoolList if
+    // This needs to be a boolList, not bitSet if
     // reverseDistribute is called.
     boolList cellBbRequiredByAnyCell(cellBbsToExchange.size(), false);
 
@@ -324,7 +324,15 @@ void Foam::InteractionLists<ParticleType>::buildInteractionLists()
 
         if (isA<wallPolyPatch>(patch))
         {
-            localWallFaces.append(identity(patch.size()) + patch.start());
+            const scalarField areaFraction(patch.areaFraction());
+
+            forAll(areaFraction, facei)
+            {
+                if (areaFraction[facei] > 0.5)
+                {
+                    localWallFaces.append(facei + patch.start());
+                }
+            }
         }
     }
 
@@ -332,10 +340,12 @@ void Foam::InteractionLists<ParticleType>::buildInteractionLists()
 
     forAll(wallFaceBbs, i)
     {
-        wallFaceBbs[i] = treeBoundBox
-        (
-            mesh_.faces()[localWallFaces[i]].points(mesh_.points())
-        );
+        wallFaceBbs[i] =
+            treeBoundBox
+            (
+                mesh_.points(),
+                mesh_.faces()[localWallFaces[i]]
+            );
     }
 
     // IAndT: index and transform
@@ -397,7 +407,7 @@ void Foam::InteractionLists<ParticleType>::buildInteractionLists()
 
     rwfil_.setSize(wallFaceBbsToExchange.size());
 
-    // This needs to be a boolList, not PackedBoolList if
+    // This needs to be a boolList, not bitSet if
     // reverseDistribute is called.
     boolList wallFaceBbRequiredByAnyCell(wallFaceBbsToExchange.size(), false);
 
@@ -818,9 +828,9 @@ void Foam::InteractionLists<ParticleType>::findExtendedProcBbsInRange
         }
     }
 
-    extendedProcBbsInRange = tmpExtendedProcBbsInRange.xfer();
-    extendedProcBbsTransformIndex = tmpExtendedProcBbsTransformIndex.xfer();
-    extendedProcBbsOrigProc = tmpExtendedProcBbsOrigProc.xfer();
+    extendedProcBbsInRange.transfer(tmpExtendedProcBbsInRange);
+    extendedProcBbsTransformIndex.transfer(tmpExtendedProcBbsTransformIndex);
+    extendedProcBbsOrigProc.transfer(tmpExtendedProcBbsOrigProc);
 }
 
 
@@ -900,8 +910,8 @@ void Foam::InteractionLists<ParticleType>::buildMap
         new mapDistribute
         (
             constructSize,
-            sendMap.xfer(),
-            constructMap.xfer()
+            std::move(sendMap),
+            std::move(constructMap)
         )
     );
 }
@@ -1111,7 +1121,7 @@ Foam::InteractionLists<ParticleType>::InteractionLists
 (
     const polyMesh& mesh,
     scalar maxDistance,
-    Switch writeCloud,
+    bool writeCloud,
     const word& UName
 )
 :

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,9 +55,9 @@ Foam::structuredRenumber::structuredRenumber
     methodDict_(renumberDict.optionalSubDict(typeName + "Coeffs")),
     patches_(methodDict_.lookup("patches")),
     nLayers_(methodDict_.lookupOrDefault<label>("nLayers", labelMax)),
-    depthFirst_(methodDict_.lookup("depthFirst")),
-    method_(renumberMethod::New(methodDict_)),
-    reverse_(methodDict_.lookup("reverse"))
+    depthFirst_(methodDict_.get<bool>("depthFirst")),
+    reverse_(methodDict_.get<bool>("reverse")),
+    method_(renumberMethod::New(methodDict_))
 {}
 
 
@@ -150,21 +150,17 @@ Foam::labelList Foam::structuredRenumber::renumber
     const labelHashSet patchIDs(pbm.patchSet(patches_));
 
     label nFaces = 0;
-    forAllConstIter(labelHashSet, patchIDs, iter)
+    for (const label patchi : patchIDs)
     {
-        nFaces += pbm[iter.key()].size();
+        nFaces += pbm[patchi].size();
     }
 
 
     // Extract a submesh.
     labelHashSet patchCells(2*nFaces);
-    forAllConstIter(labelHashSet, patchIDs, iter)
+    for (const label patchId : patchIDs)
     {
-        const labelUList& fc = pbm[iter.key()].faceCells();
-        forAll(fc, i)
-        {
-            patchCells.insert(fc[i]);
-        }
+        patchCells.insert(pbm[patchId].faceCells());
     }
 
     label nTotalSeeds = returnReduce(patchCells.size(), sumOp<label>());
@@ -183,8 +179,11 @@ Foam::labelList Foam::structuredRenumber::renumber
 
     // Subset the layer of cells next to the patch
     {
-        fvMeshSubset subsetter(dynamic_cast<const fvMesh&>(mesh));
-        subsetter.setLargeCellSubset(patchCells);
+        fvMeshSubset subsetter
+        (
+            dynamic_cast<const fvMesh&>(mesh),
+            patchCells
+        );
         const fvMesh& subMesh = subsetter.subMesh();
 
         pointField subPoints(points, subsetter.cellMap());
@@ -209,9 +208,9 @@ Foam::labelList Foam::structuredRenumber::renumber
     labelList patchFaces(nFaces);
     List<topoDistanceData> patchData(nFaces);
     nFaces = 0;
-    forAllConstIter(labelHashSet, patchIDs, iter)
+    for (const label patchi : patchIDs)
     {
-        const polyPatch& pp = pbm[iter.key()];
+        const polyPatch& pp = pbm[patchi];
         const labelUList& fc = pp.faceCells();
         forAll(fc, i)
         {
@@ -243,7 +242,7 @@ Foam::labelList Foam::structuredRenumber::renumber
     deltaCalc.iterate(nLayers_);
 
     Info<< type() << " : did not visit "
-        << deltaCalc.getUnsetCells()
+        << deltaCalc.nUnvisitedCells()
         << " cells out of " << nTotalCells
         << "; using " << method_().type() << " renumbering for these" << endl;
 

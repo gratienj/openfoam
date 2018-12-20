@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,12 +33,12 @@ namespace Foam
 {
 namespace decompositionConstraints
 {
-    defineTypeName(preservePatchesConstraint);
+    defineTypeName(preservePatches);
 
     addToRunTimeSelectionTable
     (
         decompositionConstraint,
-        preservePatchesConstraint,
+        preservePatches,
         dictionary
     );
 }
@@ -47,15 +47,13 @@ namespace decompositionConstraints
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::decompositionConstraints::preservePatchesConstraint::
-preservePatchesConstraint
+Foam::decompositionConstraints::preservePatches::preservePatches
 (
-    const dictionary& constraintsDict,
-    const word& modelType
+    const dictionary& dict
 )
 :
-    decompositionConstraint(constraintsDict, typeName),
-    patches_(coeffDict_.lookup("patches"))
+    decompositionConstraint(dict, typeName),
+    patches_(coeffDict_.get<wordRes>("patches"))
 {
     if (decompositionConstraint::debug)
     {
@@ -66,10 +64,9 @@ preservePatchesConstraint
 }
 
 
-Foam::decompositionConstraints::preservePatchesConstraint::
-preservePatchesConstraint
+Foam::decompositionConstraints::preservePatches::preservePatches
 (
-    const wordReList& patches
+    const UList<wordRe>& patches
 )
 :
     decompositionConstraint(dictionary(), typeName),
@@ -86,7 +83,7 @@ preservePatchesConstraint
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-void Foam::decompositionConstraints::preservePatchesConstraint::add
+void Foam::decompositionConstraints::preservePatches::add
 (
     const polyMesh& mesh,
     boolList& blockedFace,
@@ -97,22 +94,24 @@ void Foam::decompositionConstraints::preservePatchesConstraint::add
 {
     const polyBoundaryMesh& pbm = mesh.boundaryMesh();
 
-    blockedFace.setSize(mesh.nFaces(), true);
+    blockedFace.resize(mesh.nFaces(), true);
 
     const labelList patchIDs(pbm.patchSet(patches_).sortedToc());
 
     label nUnblocked = 0;
 
-    forAll(patchIDs, i)
+    for (const label patchi : patchIDs)
     {
-        const polyPatch& pp = pbm[patchIDs[i]];
+        const polyPatch& pp = pbm[patchi];
 
         forAll(pp, i)
         {
-            if (blockedFace[pp.start() + i])
+            const label meshFacei = pp.start() + i;
+
+            if (blockedFace[meshFacei])
             {
-                blockedFace[pp.start() + i] = false;
-                nUnblocked++;
+                blockedFace[meshFacei] = false;
+                ++nUnblocked;
             }
         }
     }
@@ -127,7 +126,7 @@ void Foam::decompositionConstraints::preservePatchesConstraint::add
 }
 
 
-void Foam::decompositionConstraints::preservePatchesConstraint::apply
+void Foam::decompositionConstraints::preservePatches::apply
 (
     const polyMesh& mesh,
     const boolList& blockedFace,
@@ -137,20 +136,17 @@ void Foam::decompositionConstraints::preservePatchesConstraint::apply
     labelList& decomposition
 ) const
 {
-    // If the decomposition has not enforced the constraint do it over
-    // here.
+    // If the decomposition has not enforced the constraint, do it over here.
 
     // Synchronise decomposition on patchIDs
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     const polyBoundaryMesh& pbm = mesh.boundaryMesh();
 
-    labelList destProc(mesh.nFaces()-mesh.nInternalFaces(), labelMax);
+    labelList destProc(mesh.nBoundaryFaces(), labelMax);
 
-    forAll(pbm, patchi)
+    for (const polyPatch& pp : pbm)
     {
-        const polyPatch& pp = pbm[patchi];
-
         const labelUList& faceCells = pp.faceCells();
 
         forAll(faceCells, i)
@@ -170,20 +166,20 @@ void Foam::decompositionConstraints::preservePatchesConstraint::apply
 
     label nChanged = 0;
 
-    forAll(patchIDs, i)
+    for (const label patchi : patchIDs)
     {
-        const polyPatch& pp = pbm[patchIDs[i]];
+        const polyPatch& pp = pbm[patchi];
 
         const labelUList& faceCells = pp.faceCells();
 
         forAll(faceCells, i)
         {
-            label bFaceI = pp.start()+i-mesh.nInternalFaces();
+            const label bFaceI = pp.start()+i-mesh.nInternalFaces();
 
             if (decomposition[faceCells[i]] != destProc[bFaceI])
             {
                 decomposition[faceCells[i]] = destProc[bFaceI];
-                nChanged++;
+                ++nChanged;
             }
         }
     }

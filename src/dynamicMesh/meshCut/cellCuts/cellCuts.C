@@ -139,7 +139,7 @@ void Foam::cellCuts::syncProc()
     syncTools::syncEdgeList(mesh(), edgeWeight_, maxEqOp<scalar>(), -GREAT);
 
     {
-        const label nBnd = mesh().nFaces()-mesh().nInternalFaces();
+        const label nBnd = mesh().nBoundaryFaces();
 
         // Convert faceSplitCut into face-local data: vertex and edge w.r.t.
         // vertex 0: (since this is same on both sides)
@@ -513,7 +513,7 @@ void Foam::cellCuts::calcFaceCuts() const
         // string of connected cuts; we don't want to start somewhere in the
         // middle.
 
-        // Pass1: find first point cut not preceeded by a cut.
+        // Pass1: find first point cut not preceded by a cut.
         label startFp = -1;
 
         forAll(f, fp)
@@ -537,7 +537,7 @@ void Foam::cellCuts::calcFaceCuts() const
             }
         }
 
-        // Pass2: first edge cut not preceeded by point cut
+        // Pass2: first edge cut not preceded by point cut
         if (startFp == -1)
         {
             forAll(f, fp)
@@ -1363,28 +1363,26 @@ bool Foam::cellCuts::loopAnchorConsistent
     // Create identity face for ease of calculation of normal etc.
     face f(identity(loopPts.size()));
 
-    vector normal = f.normal(loopPts);
-    point ctr = f.centre(loopPts);
+    const vector areaNorm = f.areaNormal(loopPts);
+    const point ctr = f.centre(loopPts);
 
 
     // Get average position of anchor points.
     vector avg(Zero);
 
-    forAll(anchorPoints, ptI)
+    for (const label pointi : anchorPoints)
     {
-        avg += mesh().points()[anchorPoints[ptI]];
+        avg += mesh().points()[pointi];
     }
     avg /= anchorPoints.size();
 
 
-    if (((avg - ctr) & normal) > 0)
+    if (((avg - ctr) & areaNorm) > 0)
     {
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 
@@ -1616,7 +1614,7 @@ bool Foam::cellCuts::calcAnchors
                 {
                     if (hasSet1)
                     {
-                        // Second occurence of set1.
+                        // Second occurrence of set1.
                         if (verbose_ || debug)
                         {
                             WarningInFunction
@@ -1636,7 +1634,7 @@ bool Foam::cellCuts::calcAnchors
                 {
                     if (hasSet2)
                     {
-                        // Second occurence of set1.
+                        // Second occurrence of set1.
                         if (verbose_ || debug)
                         {
                             WarningInFunction
@@ -1677,7 +1675,7 @@ bool Foam::cellCuts::calcAnchors
                 {
                     if (hasSet1)
                     {
-                        // Second occurence of set1.
+                        // Second occurrence of set1.
                         if (verbose_ || debug)
                         {
                             WarningInFunction
@@ -1698,7 +1696,7 @@ bool Foam::cellCuts::calcAnchors
                 {
                     if (hasSet2)
                     {
-                        // Second occurence of set1.
+                        // Second occurrence of set1.
                         if (verbose_ || debug)
                         {
                             WarningInFunction
@@ -2053,7 +2051,7 @@ bool Foam::cellCuts::validLoop
 
                     if (meshFacei == -1)
                     {
-                        // Can't find face. Ilegal.
+                        // Can't find face. Illegal.
                         return false;
                     }
                 }
@@ -2362,7 +2360,7 @@ void Foam::cellCuts::setFromCellLoops
 
             if (setFromCellLoop(celli, loop, loopWeights))
             {
-                // Valid loop. Call above will have upated all already.
+                // Valid loop. Call above will have updated all already.
             }
             else
             {
@@ -3236,7 +3234,10 @@ void Foam::cellCuts::writeOBJ(Ostream& os) const
 
     forAll(cellLoops_, celli)
     {
-        writeOBJ(os, loopPoints(celli), vertI);
+        if (cellLoops_[celli].size())
+        {
+            writeOBJ(os, loopPoints(celli), vertI);
+        }
     }
 }
 

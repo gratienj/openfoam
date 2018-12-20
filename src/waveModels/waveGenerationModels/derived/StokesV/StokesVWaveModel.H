@@ -155,7 +155,7 @@ private:
 
 protected:
 
-    // Proteced Data
+    // Protected Data
 
         //-
         scalar lambda_;
@@ -195,7 +195,7 @@ public:
     );
 
     //- Destructor
-    virtual ~StokesV();
+    virtual ~StokesV() = default;
 
 
     // Public Member Functions

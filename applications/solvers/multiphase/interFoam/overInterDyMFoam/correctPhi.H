@@ -49,7 +49,7 @@
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionedScalar("pcorr", p_rgh.dimensions(), 0.0),
+        dimensionedScalar(p_rgh.dimensions(), Zero),
         pcorrTypes
     );
 
@@ -110,7 +110,7 @@
             pcorrEqn.setReferences
             (
                 validCells,
-                scalarList(validCells.size(), 0.0),
+                scalar(0),
                 true
             );
         }
@@ -132,10 +132,4 @@
             phi -= pcorrEqn.flux();
         }
     }
-
-    //if (runTime.outputTime())
-    //{
-    //    volScalarField("contPhiPcorr", fvc::div(phi)).write();
-    //    pcorr.write();
-    //}
 }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -60,13 +60,6 @@ Foam::fv::explicitPorositySource::explicitPorositySource
     porosityPtr_(nullptr)
 {
     read(dict);
-
-    if (selectionMode_ != smCellZone)
-    {
-        FatalErrorInFunction
-            << "selection mode is " << selectionModeTypeNames_[selectionMode_]
-            << exit(FatalError);
-    }
 
     porosityPtr_.reset
     (
@@ -126,28 +119,18 @@ bool Foam::fv::explicitPorositySource::read(const dictionary& dict)
 {
     if (cellSetOption::read(dict))
     {
-        if (coeffs_.found("UNames"))
+        if (!coeffs_.readIfPresent("UNames", fieldNames_))
         {
-            coeffs_.lookup("UNames") >> fieldNames_;
-        }
-        else if (coeffs_.found("U"))
-        {
-            word UName(coeffs_.lookup("U"));
-            fieldNames_ = wordList(1, UName);
-        }
-        else
-        {
-            fieldNames_ = wordList(1, "U");
+            fieldNames_.resize(1);
+            fieldNames_.first() = coeffs_.lookupOrDefault<word>("U", "U");
         }
 
         applied_.setSize(fieldNames_.size(), false);
 
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 

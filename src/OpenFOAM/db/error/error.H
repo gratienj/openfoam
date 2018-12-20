@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,7 +55,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 class error;
 Ostream& operator<<(Ostream& os, const error& err);
 
@@ -104,9 +104,10 @@ public:
 
         //- Emit warning on stderr about something being old.
         //  \param what description for the warning
-        //  \param oldVersion is a YYMM version value for determining the
-        //      age in months.
-        static void warnAboutAge(const char* what, const int oldVersion);
+        //  \param version is the old version (YYMM) for determining the
+        //      age in months compared to the current OpenFOAM version
+        //      as conveyed by the \c OPENFOAM compiler define.
+        static void warnAboutAge(const char* what, const int version);
 
 
     // Member functions
@@ -214,7 +215,7 @@ public:
 };
 
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 class IOerror;
 Ostream& operator<<(Ostream& os, const IOerror& err);
 
@@ -320,6 +321,9 @@ public:
         //- Abort : used to stop code for fatal errors
         void abort();
 
+        //- Print error message
+        void write(Ostream& os, const bool includeTitle = true) const;
+
 
     // Ostream operator
 
@@ -330,8 +334,14 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Global error declarations: defined in error.C
 
+//- Error stream (uses stdout - output on all processes),
+//- with additional 'FOAM FATAL ERROR' header text and stack trace.
 extern error   FatalError;
+
+//- Error stream (uses stdout - output on all processes),
+//- with additional 'FOAM FATAL IO ERROR' header text and stack trace.
 extern IOerror FatalIOError;
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

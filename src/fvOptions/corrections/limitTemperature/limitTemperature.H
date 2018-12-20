@@ -71,7 +71,6 @@ class limitTemperature
 :
     public cellSetOption
 {
-
 protected:
 
     // Protected data
@@ -90,11 +89,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        limitTemperature(const limitTemperature&);
+        //- No copy construct
+        limitTemperature(const limitTemperature&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const limitTemperature&);
+        //- No copy assignment
+        void operator=(const limitTemperature&) = delete;
 
 
 public:
@@ -116,8 +115,7 @@ public:
 
 
     //- Destructor
-    virtual ~limitTemperature()
-    {}
+    virtual ~limitTemperature() = default;
 
 
     // Member Functions

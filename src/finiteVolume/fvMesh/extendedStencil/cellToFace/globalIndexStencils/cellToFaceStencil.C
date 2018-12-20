@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,10 +66,8 @@ void Foam::cellToFaceStencil::merge
     // For all in listA see if they are present
     label nInsert = 0;
 
-    forAll(listA, i)
+    for (const label elem : listA)
     {
-        label elem = listA[i];
-
         if (elem != global0 && elem != global1)
         {
             if (findSortedIndex(listB, elem) == -1)
@@ -96,10 +94,8 @@ void Foam::cellToFaceStencil::merge
 
 
     // Insert listB
-    forAll(listB, i)
+    for (const label elem : listB)
     {
-        label elem = listB[i];
-
         if (elem != global0 && elem != global1)
         {
             result[resultI++] = elem;
@@ -108,10 +104,8 @@ void Foam::cellToFaceStencil::merge
 
 
     // Insert listA
-    forAll(listA, i)
+    for (const label elem : listA)
     {
-        label elem = listA[i];
-
         if (elem != global0 && elem != global1)
         {
             if (findSortedIndex(listB, elem) == -1)
@@ -159,9 +153,9 @@ void Foam::cellToFaceStencil::merge
     label n = 0;
     cCells[n++] = globalI;
 
-    forAllConstIter(labelHashSet, set, iter)
+    for (const label seti : set)
     {
-        cCells[n++] = iter.key();
+        cCells[n++] = seti;
     }
 }
 
@@ -170,7 +164,7 @@ void Foam::cellToFaceStencil::validBoundaryFaces(boolList& isValidBFace) const
 {
     const polyBoundaryMesh& patches = mesh().boundaryMesh();
 
-    isValidBFace.setSize(mesh().nFaces()-mesh().nInternalFaces(), true);
+    isValidBFace.setSize(mesh().nBoundaryFaces(), true);
 
     forAll(patches, patchi)
     {
@@ -222,17 +216,14 @@ Foam::cellToFaceStencil::allCoupledFacesPatch() const
         }
     }
 
-    return autoPtr<indirectPrimitivePatch>
+    return autoPtr<indirectPrimitivePatch>::New
     (
-        new indirectPrimitivePatch
+        IndirectList<face>
         (
-            IndirectList<face>
-            (
-                mesh().faces(),
-                coupledFaces
-            ),
-            mesh().points()
-        )
+            mesh().faces(),
+            coupledFaces
+        ),
+        mesh().points()
     );
 }
 
@@ -252,10 +243,7 @@ void Foam::cellToFaceStencil::unionEqOp::operator()
         else
         {
             labelHashSet set(x);
-            forAll(y, i)
-            {
-                set.insert(y[i]);
-            }
+            set.insert(y);
             x = set.toc();
         }
     }
@@ -345,7 +333,7 @@ void Foam::cellToFaceStencil::calcFaceStencil
     // Calculates per face a list of global cell/face indices.
 
     const polyBoundaryMesh& patches = mesh_.boundaryMesh();
-    const label nBnd = mesh_.nFaces()-mesh_.nInternalFaces();
+    const label nBnd = mesh_.nBoundaryFaces();
     const labelList& own = mesh_.faceOwner();
     const labelList& nei = mesh_.faceNeighbour();
 
@@ -394,30 +382,22 @@ void Foam::cellToFaceStencil::calcFaceStencil
 
         const labelList& ownCCells = globalCellCells[own[facei]];
         label globalOwn = ownCCells[0];
-        // Insert cellCells
-        forAll(ownCCells, i)
-        {
-            faceStencilSet.insert(ownCCells[i]);
-        }
+        faceStencilSet.insert(ownCCells);  // Insert cellCells
 
         const labelList& neiCCells = globalCellCells[nei[facei]];
         label globalNei = neiCCells[0];
-        // Insert cellCells
-        forAll(neiCCells, i)
-        {
-            faceStencilSet.insert(neiCCells[i]);
-        }
+        faceStencilSet.insert(neiCCells);  // Insert cellCells
 
         // Guarantee owner first, neighbour second.
         faceStencil[facei].setSize(faceStencilSet.size());
         label n = 0;
         faceStencil[facei][n++] = globalOwn;
         faceStencil[facei][n++] = globalNei;
-        forAllConstIter(labelHashSet, faceStencilSet, iter)
+        for (const label stencili : faceStencilSet)
         {
-            if (iter.key() != globalOwn && iter.key() != globalNei)
+            if (stencili != globalOwn && stencili != globalNei)
             {
-                faceStencil[facei][n++] = iter.key();
+                faceStencil[facei][n++] = stencili;
             }
         }
         //Pout<< "internalface:" << facei << " toc:" << faceStencilSet.toc()
@@ -436,30 +416,24 @@ void Foam::cellToFaceStencil::calcFaceStencil
 
                 const labelList& ownCCells = globalCellCells[own[facei]];
                 label globalOwn = ownCCells[0];
-                forAll(ownCCells, i)
-                {
-                    faceStencilSet.insert(ownCCells[i]);
-                }
+                faceStencilSet.insert(ownCCells);
 
                 // And the neighbours of the coupled cell
                 const labelList& neiCCells =
                     neiGlobalCellCells[facei-mesh_.nInternalFaces()];
                 label globalNei = neiCCells[0];
-                forAll(neiCCells, i)
-                {
-                    faceStencilSet.insert(neiCCells[i]);
-                }
+                faceStencilSet.insert(neiCCells);
 
                 // Guarantee owner first, neighbour second.
                 faceStencil[facei].setSize(faceStencilSet.size());
                 label n = 0;
                 faceStencil[facei][n++] = globalOwn;
                 faceStencil[facei][n++] = globalNei;
-                forAllConstIter(labelHashSet, faceStencilSet, iter)
+                for (const label stencili : faceStencilSet)
                 {
-                    if (iter.key() != globalOwn && iter.key() != globalNei)
+                    if (stencili != globalOwn && stencili != globalNei)
                     {
-                        faceStencil[facei][n++] = iter.key();
+                        faceStencil[facei][n++] = stencili;
                     }
                 }
 
@@ -478,20 +452,17 @@ void Foam::cellToFaceStencil::calcFaceStencil
 
                 const labelList& ownCCells = globalCellCells[own[facei]];
                 label globalOwn = ownCCells[0];
-                forAll(ownCCells, i)
-                {
-                    faceStencilSet.insert(ownCCells[i]);
-                }
+                faceStencilSet.insert(ownCCells);
 
                 // Guarantee owner first
                 faceStencil[facei].setSize(faceStencilSet.size());
                 label n = 0;
                 faceStencil[facei][n++] = globalOwn;
-                forAllConstIter(labelHashSet, faceStencilSet, iter)
+                for (const label stencili : faceStencilSet)
                 {
-                    if (iter.key() != globalOwn)
+                    if (stencili != globalOwn)
                     {
-                        faceStencil[facei][n++] = iter.key();
+                        faceStencil[facei][n++] = stencili;
                     }
                 }
 
@@ -511,7 +482,7 @@ void Foam::cellToFaceStencil::calcFaceStencil
 Foam::cellToFaceStencil::cellToFaceStencil(const polyMesh& mesh)
 :
     mesh_(mesh),
-    globalNumbering_(mesh_.nCells()+mesh_.nFaces()-mesh_.nInternalFaces())
+    globalNumbering_(mesh_.nCells()+mesh_.nBoundaryFaces())
 {}
 
 

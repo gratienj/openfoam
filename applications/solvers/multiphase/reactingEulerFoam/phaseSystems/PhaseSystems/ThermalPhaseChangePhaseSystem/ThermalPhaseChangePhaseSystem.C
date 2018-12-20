@@ -39,17 +39,12 @@ ThermalPhaseChangePhaseSystem
     HeatAndMassTransferPhaseSystem<BasePhaseSystem>(mesh),
     volatile_(this->lookup("volatile")),
     saturationModel_(saturationModel::New(this->subDict("saturationModel"))),
-    massTransfer_(this->lookup("massTransfer"))
+    massTransfer_(this->template get<bool>("massTransfer"))
 {
 
-    forAllConstIter
-    (
-        phaseSystem::phasePairTable,
-        this->phasePairs_,
-        phasePairIter
-    )
+    forAllConstIters(this->phasePairs_, phasePairIter)
     {
-        const phasePair& pair(phasePairIter());
+        const phasePair& pair = *(phasePairIter.object());
 
         if (pair.ordered())
         {
@@ -57,7 +52,7 @@ ThermalPhaseChangePhaseSystem
         }
 
         // Initially assume no mass transfer
-        iDmdt_.insert
+        iDmdt_.set
         (
             pair,
             new volScalarField
@@ -71,7 +66,7 @@ ThermalPhaseChangePhaseSystem
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar("zero", dimDensity/dimTime, 0)
+                dimensionedScalar(dimDensity/dimTime, Zero)
             )
         );
     }
@@ -92,7 +87,7 @@ template<class BasePhaseSystem>
 const Foam::saturationModel&
 Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::saturation() const
 {
-    return saturationModel_();
+    return *saturationModel_;
 }
 
 
@@ -109,14 +104,9 @@ Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::heatTransfer() const
     phaseSystem::heatTransferTable& eqns = eqnsPtr();
 
     // Accumulate mDotL contributions from boundaries
-    forAllConstIter
-    (
-        phaseSystem::phasePairTable,
-        this->phasePairs_,
-        phasePairIter
-    )
+    forAllConstIters(this->phasePairs_, phasePairIter)
     {
-        const phasePair& pair(phasePairIter());
+        const phasePair& pair = *(phasePairIter.object());
 
         if (pair.ordered())
         {
@@ -138,22 +128,18 @@ Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::heatTransfer() const
                 false
             ),
             phase.mesh(),
-            dimensionedScalar("",dimensionSet(1,-1,-3,0,0),0.0)
+            dimensionedScalar(dimensionSet(1,-1,-3,0,0), Zero)
         );
 
-        if
-        (
-            otherPhase.mesh().foundObject<volScalarField>
+        const volScalarField* alphatPtr =
+            otherPhase.mesh().findObject<volScalarField>
             (
                 "alphat." +  otherPhase.name()
-            )
-        )
+            );
+
+        if (alphatPtr)
         {
-            const volScalarField& alphat =
-                otherPhase.mesh().lookupObject<volScalarField>
-                (
-                    "alphat." +  otherPhase.name()
-                );
+            const volScalarField& alphat = *alphatPtr;
 
             const fvPatchList& patches = this->mesh().boundary();
             forAll(patches, patchi)
@@ -196,22 +182,16 @@ Foam::autoPtr<Foam::phaseSystem::massTransferTable>
 Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::massTransfer() const
 {
     // Create a mass transfer matrix for each species of each phase
-    autoPtr<phaseSystem::massTransferTable> eqnsPtr
-    (
-        new phaseSystem::massTransferTable()
-    );
+    auto eqnsPtr = autoPtr<phaseSystem::massTransferTable>::New();
+    auto& eqns = *eqnsPtr;
 
-    phaseSystem::massTransferTable& eqns = eqnsPtr();
-
-    forAll(this->phaseModels_, phasei)
+    for (const phaseModel& phase : this->phaseModels_)
     {
-        const phaseModel& phase = this->phaseModels_[phasei];
-
         const PtrList<volScalarField>& Yi = phase.Y();
 
         forAll(Yi, i)
         {
-            eqns.insert
+            eqns.set
             (
                 Yi[i].name(),
                 new fvScalarMatrix(Yi[i], dimMass/dimTime)
@@ -219,19 +199,15 @@ Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::massTransfer() const
         }
     }
 
-    forAllConstIter
-    (
-        phaseSystem::phasePairTable,
-        this->phasePairs_,
-        phasePairIter
-    )
+    forAllConstIters(this->phasePairs_, phasePairIter)
     {
-        const phasePair& pair(phasePairIter());
+        const phasePair& pair = *(phasePairIter.object());
 
         if (pair.ordered())
         {
             continue;
         }
+
         const phaseModel& phase = pair.phase1();
         const phaseModel& otherPhase = pair.phase2();
 
@@ -288,18 +264,13 @@ Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::iDmdt
                 this->mesh_
             ),
             this->mesh_,
-            dimensionedScalar("zero", dimDensity/dimTime, 0)
+            dimensionedScalar(dimDensity/dimTime, Zero)
         )
     );
 
-    forAllConstIter
-    (
-        phaseSystem::phasePairTable,
-        this->phasePairs_,
-        phasePairIter
-    )
+    forAllConstIters(this->phasePairs_, phasePairIter)
     {
-        const phasePair& pair(phasePairIter());
+        const phasePair& pair = *(phasePairIter.object());
 
         if (pair.ordered())
         {
@@ -332,14 +303,9 @@ void Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::correctThermo()
 
     BasePhaseSystem::correctThermo();
 
-    forAllConstIter
-    (
-        phaseSystem::phasePairTable,
-        this->phasePairs_,
-        phasePairIter
-    )
+    forAllConstIters(this->phasePairs_, phasePairIter)
     {
-        const phasePair& pair(phasePairIter());
+        const phasePair& pair = *(phasePairIter.object());
 
         if (pair.ordered())
         {
@@ -387,7 +353,7 @@ void Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::correctThermo()
 
         volScalarField iDmdtNew(iDmdt);
 
-        if (massTransfer_ )
+        if (massTransfer_)
         {
             volScalarField H1
             (
@@ -407,7 +373,7 @@ void Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::correctThermo()
         }
         else
         {
-            iDmdtNew == dimensionedScalar("0",dmdt.dimensions(), 0);
+            iDmdtNew == dimensionedScalar(dmdt.dimensions(), Zero);
         }
 
         volScalarField H1(this->heatTransferModels_[pair][pair.first()]->K());
@@ -454,22 +420,18 @@ void Foam::ThermalPhaseChangePhaseSystem<BasePhaseSystem>::correctThermo()
                 false
             ),
             this->mesh(),
-            dimensionedScalar("zero", dimDensity/dimTime, 0)
+            dimensionedScalar(dimDensity/dimTime, Zero)
         );
 
-        if
-        (
-            phase2.mesh().foundObject<volScalarField>
+        const volScalarField* alphatPtr =
+            phase2.mesh().findObject<volScalarField>
             (
-                "alphat." +  phase2.name()
-            )
-        )
+                "alphat." + phase2.name()
+            );
+
+        if (alphatPtr)
         {
-            const volScalarField& alphat =
-                phase2.mesh().lookupObject<volScalarField>
-                (
-                    "alphat." +  phase2.name()
-                );
+            const volScalarField& alphat = *alphatPtr;
 
             const fvPatchList& patches = this->mesh().boundary();
             forAll(patches, patchi)

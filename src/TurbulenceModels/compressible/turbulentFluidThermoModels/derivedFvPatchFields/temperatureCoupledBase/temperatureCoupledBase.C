@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,12 +36,12 @@ const Foam::Enum
     Foam::temperatureCoupledBase::KMethodType
 >
 Foam::temperatureCoupledBase::KMethodTypeNames_
-{
+({
     { KMethodType::mtFluidThermo, "fluidThermo" },
     { KMethodType::mtSolidThermo, "solidThermo" },
     { KMethodType::mtDirectionalSolidThermo, "directionalSolidThermo" },
     { KMethodType::mtLookup, "lookup" },
-};
+});
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -68,10 +68,48 @@ Foam::temperatureCoupledBase::temperatureCoupledBase
 )
 :
     patch_(patch),
-    method_(KMethodTypeNames_.lookup("kappaMethod", dict)),
+    method_(KMethodTypeNames_.get("kappaMethod", dict)),
     kappaName_(dict.lookupOrDefault<word>("kappa", "none")),
     alphaAniName_(dict.lookupOrDefault<word>("alphaAni","none"))
-{}
+{
+    switch (method_)
+    {
+        case mtDirectionalSolidThermo:
+        {
+            if (!dict.found("alphaAni"))
+            {
+                FatalIOErrorInFunction(dict)
+                    << "Did not find entry 'alphaAni'"
+                       " required for 'kappaMethod' "
+                    << KMethodTypeNames_[method_]
+                    << exit(FatalIOError);
+            }
+
+            break;
+        }
+
+        case mtLookup:
+        {
+            if (!dict.found("kappa"))
+            {
+                FatalIOErrorInFunction(dict)
+                    << "Did not find entry 'kappa'"
+                       " required for 'kappaMethod' "
+                    <<  KMethodTypeNames_[method_] << nl
+                    << "    Please set 'kappa' to the name of a volScalarField"
+                       " or volSymmTensorField"
+                    << exit(FatalIOError);
+            }
+
+            break;
+        }
+
+        default:
+        {
+            break;
+        }
+    }
+}
 
 
 Foam::temperatureCoupledBase::temperatureCoupledBase
@@ -129,10 +167,18 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::kappa
 
                 return thermo.kappa(patchi);
             }
+            else if (mesh.foundObject<basicThermo>("phaseProperties"))
+            {
+                const basicThermo& thermo =
+                    mesh.lookupObject<basicThermo>("phaseProperties");
+
+                return thermo.kappa(patchi);
+            }
             else
             {
                 FatalErrorInFunction
-                    << "Kappa defined to employ " << KMethodTypeNames_[method_]
+                    << "kappaMethod defined to employ "
+                    << KMethodTypeNames_[method_]
                     << " method, but thermo package not available"
                     << exit(FatalError);
             }
@@ -144,6 +190,26 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::kappa
         {
             const solidThermo& thermo =
                 mesh.lookupObject<solidThermo>(basicThermo::dictName);
+
+            if (!thermo.isotropic())
+            {
+                word regionName = "";
+                if (mesh.name() != polyMesh::defaultRegion)
+                {
+                    regionName = " for region " + mesh.name();
+                }
+
+                const word& patchName = mesh.boundaryMesh()[patchi].name();
+
+                WarningInFunction
+                    << "Applying isotropic thermal conductivity assumption to "
+                    << "anisotropic model" << regionName << " at patch "
+                    << patchName << nl
+                    << "Consider using an isotropic conductivity model or "
+                    << "set 'kappaMethod' to "
+                    << KMethodTypeNames_[mtDirectionalSolidThermo]
+                    << nl << endl;
+            }
 
             return thermo.kappa(patchi);
             break;
@@ -196,10 +262,8 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::kappa
                     << "Did not find field " << kappaName_
                     << " on mesh " << mesh.name() << " patch " << patch_.name()
                     << nl
-                    << "Please set 'kappaMethod' to one of "
-                    << flatOutput(KMethodTypeNames_.sortedToc()) << nl
-                    << "and 'kappa' to the name of the volScalar"
-                    << " or volSymmTensor field (if kappaMethod=lookup)"
+                    << "    Please set 'kappa' to the name of a volScalarField"
+                    << " or volSymmTensorField."
                     << exit(FatalError);
             }
 

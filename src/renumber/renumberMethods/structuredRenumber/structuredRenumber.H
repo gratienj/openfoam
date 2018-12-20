@@ -42,7 +42,6 @@ SourceFiles
 
 #include "renumberMethod.H"
 #include "topoDistanceData.H"
-#include "Switch.H"
 
 namespace Foam
 {
@@ -63,7 +62,7 @@ public:
         //  column and layer
         class layerLess
         {
-            const Switch depthFirst_;
+            const bool depthFirst_;
             const labelList& order_;
             const List<topoDistanceData>& distance_;
 
@@ -71,7 +70,7 @@ public:
 
             layerLess
             (
-                const Switch depthFirst,
+                const bool depthFirst,
                 const labelList& order,
                 const List<topoDistanceData>& distance
             )
@@ -89,22 +88,24 @@ public:
 
         const dictionary methodDict_;
 
-        const wordReList patches_;
+        const wordRes patches_;
 
         const label nLayers_;
 
-        const Switch depthFirst_;
+        const bool depthFirst_;
+
+        const bool reverse_;
 
         const autoPtr<renumberMethod> method_;
-
-        const Switch reverse_;
 
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct and assignment
-        void operator=(const structuredRenumber&);
-        structuredRenumber(const structuredRenumber&);
+        //- No copy construct
+        structuredRenumber(const structuredRenumber&) = delete;
+
+        //- No copy assignment
+        void operator=(const structuredRenumber&) = delete;
 
 
 public:
@@ -120,8 +121,7 @@ public:
 
 
     //- Destructor
-    virtual ~structuredRenumber()
-    {}
+    virtual ~structuredRenumber() = default;
 
 
     // Member Functions

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,42 +23,24 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
-inline Foam::wordRes::wordRes
-(
-    const UList<wordRe>& list
-)
-:
-    list_(list)
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-inline Foam::label Foam::wordRes::size() const
+inline const Foam::wordRes& Foam::wordRes::null()
 {
-    return list_.size();
+    return NullObjectRef<wordRes>();
 }
 
 
-inline bool Foam::wordRes::empty() const
-{
-    return list_.empty();
-}
-
-
-inline bool Foam::wordRes::match
+inline bool Foam::wordRes::found_match
 (
+    const UList<wordRe>& patterns,
     const std::string& text,
-    const bool literal
-) const
+    bool literal
+)
 {
-    const label n = list_.size();
-
-    for (label i = 0; i < n; ++i)
+    for (const wordRe& select : patterns)
     {
-        if (list_[i].match(text, literal))
+        if (select.match(text, literal))
         {
             return true;
         }
@@ -68,23 +50,82 @@ inline bool Foam::wordRes::match
 }
 
 
-// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
-
-inline const Foam::UList<Foam::wordRe>& Foam::wordRes::operator()() const
+inline Foam::wordRe::compOption Foam::wordRes::found_matched
+(
+    const UList<wordRe>& patterns,
+    const std::string& text
+)
 {
-    return list_;
+    auto retval(wordRe::compOption::UNKNOWN);
+
+    for (const wordRe& select : patterns)
+    {
+        if (select.isLiteral())
+        {
+            if (select.match(text, true))
+            {
+                return wordRe::compOption::LITERAL;
+            }
+        }
+        else if (wordRe::compOption::UNKNOWN == retval)
+        {
+            if (select.match(text, false))
+            {
+                retval = wordRe::compOption::REGEX;
+            }
+        }
+    }
+
+    return retval;
 }
 
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+inline bool Foam::wordRes::match(const std::string& text, bool literal) const
+{
+    return found_match(*this, text, literal);
+}
+
+
+inline Foam::wordRe::compOption
+Foam::wordRes::matched(const std::string& text) const
+{
+    return found_matched(*this, text);
+}
+
+
+template<class StringType>
+inline Foam::labelList Foam::wordRes::matching
+(
+    const UList<StringType>& input,
+    const bool invert
+) const
+{
+    const label len = input.size();
+
+    labelList indices(len);
+
+    label count = 0;
+    for (label i=0; i < len; ++i)
+    {
+        if (match(input[i]) ? !invert : invert)
+        {
+            indices[count] = i;
+            ++count;
+        }
+    }
+    indices.resize(count);
+
+    return indices;
+}
+
+
+// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
 inline bool Foam::wordRes::operator()(const std::string& text) const
 {
-    return match(text);
-}
-
-
-inline const Foam::wordRe& Foam::wordRes::operator[](const label i) const
-{
-    return list_[i];
+    return found_match(*this, text);
 }
 
 

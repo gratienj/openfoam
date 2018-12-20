@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,9 +60,9 @@ void Foam::patchSeedSet::calcSamples
 
     // Construct search tree for all patch faces.
     label sz = 0;
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        const polyPatch& pp = mesh().boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh().boundaryMesh()[patchi];
 
         sz += pp.size();
 
@@ -74,9 +74,9 @@ void Foam::patchSeedSet::calcSamples
 
     labelList patchFaces(sz);
     sz = 0;
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        const polyPatch& pp = mesh().boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh().boundaryMesh()[patchi];
         forAll(pp, i)
         {
             patchFaces[sz++] = pp.start()+i;
@@ -223,7 +223,7 @@ void Foam::patchSeedSet::calcSamples
             label(scalar(patchFaces.size())/totalSize*maxPoints_);
 
         labelList subset = identity(patchFaces.size());
-        for (label iter = 0; iter < 4; iter++)
+        for (label iter = 0; iter < 4; ++iter)
         {
             forAll(subset, i)
             {
@@ -316,14 +316,20 @@ void Foam::patchSeedSet::genSamples()
     samplingSegments.shrink();
     samplingCurveDist.shrink();
 
+    // Move into *this
     setSamples
     (
-        samplingPts,
-        samplingCells,
-        samplingFaces,
-        samplingSegments,
-        samplingCurveDist
+        std::move(samplingPts),
+        std::move(samplingCells),
+        std::move(samplingFaces),
+        std::move(samplingSegments),
+        std::move(samplingCurveDist)
     );
+
+    if (debug)
+    {
+        write(Info);
+    }
 }
 
 
@@ -340,12 +346,9 @@ Foam::patchSeedSet::patchSeedSet
     sampledSet(name, mesh, searchEngine, dict),
     patchSet_
     (
-        mesh.boundaryMesh().patchSet
-        (
-            wordReList(dict.lookup("patches"))
-        )
+        mesh.boundaryMesh().patchSet(dict.get<wordRes>("patches"))
     ),
-    maxPoints_(readLabel(dict.lookup("maxPoints"))),
+    maxPoints_(dict.get<label>("maxPoints")),
     selectedLocations_
     (
         dict.lookupOrDefault<pointField>
@@ -356,18 +359,7 @@ Foam::patchSeedSet::patchSeedSet
     )
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::patchSeedSet::~patchSeedSet()
-{}
 
 
 // ************************************************************************* //

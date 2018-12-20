@@ -111,9 +111,17 @@ Foam::points0MotionSolver::points0MotionSolver
 )
 :
     motionSolver(mesh, dict, type),
-    points0_(pointIOField(points0IO(mesh)))
+    points0_(points0IO(mesh))
 {
-    if (points0_.size() != mesh.nPoints())
+    if
+    (
+        FieldBase::allowConstructFromLargerSize
+     && (points0_.size() > mesh.nPoints())
+    )
+    {
+        // Allowed
+    }
+    else if (points0_.size() != mesh.nPoints())
     {
         FatalErrorInFunction
             << "Number of points in mesh " << mesh.nPoints()
@@ -222,8 +230,8 @@ void Foam::points0MotionSolver::updateMesh(const mapPolyMesh& mpm)
         else
         {
             FatalErrorInFunction
-                << "Cannot determine co-ordinates of introduced vertices."
-                << " New vertex " << pointi << " at co-ordinate "
+                << "Cannot determine coordinates of introduced vertices."
+                << " New vertex " << pointi << " at coordinate "
                 << points[pointi] << exit(FatalError);
         }
     }

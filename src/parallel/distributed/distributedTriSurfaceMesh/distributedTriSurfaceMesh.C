@@ -36,7 +36,7 @@ License
 #include "decompositionMethod.H"
 #include "geomDecomp.H"
 #include "vectorList.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "PatchTools.H"
 #include "OBJstream.H"
 
@@ -59,11 +59,11 @@ const Foam::Enum
     Foam::distributedTriSurfaceMesh::distributionType
 >
 Foam::distributedTriSurfaceMesh::distributionTypeNames_
-{
+({
     { distributionType::FOLLOW, "follow" },
     { distributionType::INDEPENDENT, "independent" },
     { distributionType::FROZEN, "frozen" },
-};
+});
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -79,10 +79,10 @@ bool Foam::distributedTriSurfaceMesh::read()
     Pstream::scatterList(procBb_);
 
     // Distribution type
-    distType_ = distributionTypeNames_.lookup("distributionType", dict_);
+    distType_ = distributionTypeNames_.get("distributionType", dict_);
 
     // Merge distance
-    mergeDist_ = readScalar(dict_.lookup("mergeDistance"));
+    dict_.readEntry("mergeDistance", mergeDist_);
 
     return true;
 }
@@ -298,8 +298,8 @@ Foam::distributedTriSurfaceMesh::distributeSegments
             sendMap[proci].transfer(dynSendMap[proci]);
         }
 
-        allSegments.transfer(dynAllSegments.shrink());
-        allSegmentMap.transfer(dynAllSegmentMap.shrink());
+        allSegments.transfer(dynAllSegments);
+        allSegmentMap.transfer(dynAllSegmentMap);
     }
 
 
@@ -339,14 +339,11 @@ Foam::distributedTriSurfaceMesh::distributeSegments
         }
     }
 
-    return autoPtr<mapDistribute>
+    return autoPtr<mapDistribute>::New
     (
-        new mapDistribute
-        (
-            segmenti,       // size after construction
-            sendMap.xfer(),
-            constructMap.xfer()
-        )
+        segmenti, // size after construction
+        std::move(sendMap),
+        std::move(constructMap)
     );
 }
 
@@ -636,9 +633,9 @@ Foam::distributedTriSurfaceMesh::calcLocalQueries
     (
         new mapDistribute
         (
-            segmenti,       // size after construction
-            sendMap.xfer(),
-            constructMap.xfer()
+            segmenti, // size after construction
+            std::move(sendMap),
+            std::move(constructMap)
         )
     );
     const mapDistribute& map = mapPtr();
@@ -648,7 +645,6 @@ Foam::distributedTriSurfaceMesh::calcLocalQueries
     // ~~~~~~~~~~~~~~~~~
 
     map.distribute(triangleIndex);
-
 
     return mapPtr;
 }
@@ -743,9 +739,9 @@ Foam::distributedTriSurfaceMesh::calcLocalQueries
             sendMap[proci].transfer(dynSendMap[proci]);
         }
 
-        allCentres.transfer(dynAllCentres.shrink());
-        allRadiusSqr.transfer(dynAllRadiusSqr.shrink());
-        allSegmentMap.transfer(dynAllSegmentMap.shrink());
+        allCentres.transfer(dynAllCentres);
+        allRadiusSqr.transfer(dynAllRadiusSqr);
+        allSegmentMap.transfer(dynAllSegmentMap);
     }
 
 
@@ -785,16 +781,12 @@ Foam::distributedTriSurfaceMesh::calcLocalQueries
         }
     }
 
-    autoPtr<mapDistribute> mapPtr
+    return autoPtr<mapDistribute>::New
     (
-        new mapDistribute
-        (
-            segmenti,       // size after construction
-            sendMap.xfer(),
-            constructMap.xfer()
-        )
+        segmenti, // size after construction
+        std::move(sendMap),
+        std::move(constructMap)
     );
-    return mapPtr;
 }
 
 
@@ -814,21 +806,17 @@ Foam::distributedTriSurfaceMesh::independentlyDistributedBbs
     {
         // Use singleton decomposeParDict. Cannot use decompositionModel
         // here since we've only got Time and not a mesh.
-        if
-        (
-            searchableSurface::time().foundObject<IOdictionary>
+
+        const auto* dictPtr =
+            searchableSurface::time().findObject<IOdictionary>
             (
+                // == decompositionModel::canonicalName
                 "decomposeParDict"
-            )
-        )
-        {
-            decomposer_ = decompositionMethod::New
-            (
-                searchableSurface::time().lookupObject<IOdictionary>
-                (
-                    "decomposeParDict"
-                )
             );
+
+        if (dictPtr)
+        {
+            decomposer_ = decompositionMethod::New(*dictPtr);
         }
         else
         {
@@ -840,6 +828,7 @@ Foam::distributedTriSurfaceMesh::independentlyDistributedBbs
                     (
                         IOobject
                         (
+                            // == decompositionModel::canonicalName
                             "decomposeParDict",
                             searchableSurface::time().system(),
                             searchableSurface::time(),
@@ -1084,13 +1073,7 @@ Foam::triSurface Foam::distributedTriSurfaceMesh::subsetMesh
 {
     const boolList include
     (
-        createWithValues<boolList>
-        (
-            s.size(),
-            false,
-            newToOldFaces,
-            true
-        )
+        ListOps::createWithValue<bool>(s.size(), newToOldFaces, true, false)
     );
 
     newToOldPoints.setSize(s.points().size());
@@ -1479,7 +1462,7 @@ const Foam::globalIndex& Foam::distributedTriSurfaceMesh::globalTris() const
     {
         globalTris_.reset(new globalIndex(triSurface::size()));
     }
-    return globalTris_;
+    return *globalTris_;
 }
 
 
@@ -1908,8 +1891,7 @@ void Foam::distributedTriSurfaceMesh::getNormal
     forAll(triangleIndex, i)
     {
         label trii = triangleIndex[i];
-        normal[i] = s[trii].normal(s.points());
-        normal[i] /= mag(normal[i]) + VSMALL;
+        normal[i] = s[trii].unitNormal(s.points());
     }
 
 
@@ -1932,13 +1914,11 @@ void Foam::distributedTriSurfaceMesh::getField
         return;
     }
 
-    if (foundObject<triSurfaceLabelField>("values"))
-    {
-        const triSurfaceLabelField& fld = lookupObject<triSurfaceLabelField>
-        (
-            "values"
-        );
+    const auto* fldPtr = findObject<triSurfaceLabelField>("values");
 
+    if (fldPtr)
+    {
+        const triSurfaceLabelField& fld = *fldPtr;
 
         // Get query data (= local index of triangle)
         // ~~~~~~~~~~~~~~
@@ -2307,8 +2287,8 @@ void Foam::distributedTriSurfaceMesh::distribute
         new mapDistribute
         (
             allTris.size(),
-            faceSendMap.xfer(),
-            faceConstructMap.xfer()
+            std::move(faceSendMap),
+            std::move(faceConstructMap)
         )
     );
     pointMap.reset
@@ -2316,8 +2296,8 @@ void Foam::distributedTriSurfaceMesh::distribute
         new mapDistribute
         (
             allPoints.size(),
-            pointSendMap.xfer(),
-            pointConstructMap.xfer()
+            std::move(pointSendMap),
+            std::move(pointConstructMap)
         )
     );
 

@@ -114,7 +114,7 @@ private:
 
         //- Couple-decouple operation.
         //  If the interface is coupled, decouple it and vice versa.
-        //  Used in conjuction with automatic mesh motion
+        //  Used in conjunction with automatic mesh motion
         mutable Switch coupleDecouple_;
 
         //- State of the modifier
@@ -209,11 +209,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        slidingInterface(const slidingInterface&);
+        //- No copy construct
+        slidingInterface(const slidingInterface&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const slidingInterface&);
+        //- No copy assignment
+        void operator=(const slidingInterface&) = delete;
 
         //- Clear out
         void clearOut() const;

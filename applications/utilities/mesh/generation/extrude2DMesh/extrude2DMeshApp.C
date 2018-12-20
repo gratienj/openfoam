@@ -28,8 +28,8 @@ Group
     grpMeshGenerationUtilities
 
 Description
-    Takes 2D mesh (all faces 2 points only, no front and back faces) and
-    creates a 3D mesh by extruding with specified thickness.
+    Create a 3D mesh by extruding a 2D mesh with specified thickness.
+    For the 2D mesh, all faces are 2 points only, no front and back faces.
 
 Note
     Not sure about the walking of the faces to create the front and back faces.
@@ -110,9 +110,16 @@ static const Enum<ExtrudeMode> ExtrudeModeNames
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Create a 3D mesh from a 2D mesh by extruding with specified thickness"
+    );
+
     argList::addArgument("surfaceFormat");
 
     #include "addOverwriteOption.H"
+
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
 
@@ -125,10 +132,11 @@ int main(int argc, char *argv[])
         args.caseName()
     );
 
+    // For safety
     runTimeExtruded.functionObjects().off();
 
     const ExtrudeMode surfaceFormat = ExtrudeModeNames[args[1]];
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
     Info<< "Extruding from " << ExtrudeModeNames[surfaceFormat]
         << " at time " << runTimeExtruded.timeName() << endl;
@@ -184,24 +192,21 @@ int main(int argc, char *argv[])
 
         poly2DMesh.createMesh();
 
-        mesh.reset
+        mesh = autoPtr<polyMesh>::New
         (
-            new polyMesh
+            IOobject
             (
-                IOobject
-                (
-                    polyMesh::defaultRegion,
-                    runTimeExtruded.constant(),
-                    runTimeExtruded,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE,
-                    false
-                ),
-                xferMove(poly2DMesh.points()),
-                xferMove(poly2DMesh.faces()),
-                xferMove(poly2DMesh.owner()),
-                xferMove(poly2DMesh.neighbour())
-            )
+                polyMesh::defaultRegion,
+                runTimeExtruded.constant(),
+                runTimeExtruded,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                false
+            ),
+            std::move(poly2DMesh.points()),
+            std::move(poly2DMesh.faces()),
+            std::move(poly2DMesh.owner()),
+            std::move(poly2DMesh.neighbour())
         );
 
         Info<< "Constructing patches." << endl;
@@ -224,17 +229,14 @@ int main(int argc, char *argv[])
     }
     else if (surfaceFormat == POLYMESH2D)
     {
-        mesh.reset
+        mesh = autoPtr<polyMesh>::New
         (
-            new polyMesh
+            Foam::IOobject
             (
-                Foam::IOobject
-                (
-                    Foam::polyMesh::defaultRegion,
-                    runTimeExtruded.timeName(),
-                    runTimeExtruded,
-                    Foam::IOobject::MUST_READ
-                )
+                Foam::polyMesh::defaultRegion,
+                runTimeExtruded.timeName(),
+                runTimeExtruded,
+                Foam::IOobject::MUST_READ
             )
         );
     }
@@ -251,7 +253,7 @@ int main(int argc, char *argv[])
     // Create a mesh from topo changes.
     autoPtr<mapPolyMesh> morphMap = meshMod().changeMesh(mesh(), false);
 
-    mesh().updateMesh(morphMap);
+    mesh().updateMesh(morphMap());
 
     {
         edgeCollapser collapser(mesh());
@@ -262,7 +264,7 @@ int main(int argc, char *argv[])
         const boundBox& bb = mesh().bounds();
         const scalar mergeDim = 1e-4 * bb.minDim();
 
-        PackedBoolList collapseEdge(mesh().nEdges());
+        bitSet collapseEdge(mesh().nEdges());
         Map<point> collapsePointToLocation(mesh().nPoints());
 
         forAll(edges, edgeI)
@@ -276,7 +278,7 @@ int main(int argc, char *argv[])
                 Info<< "Merging edge " << e << " since length " << d
                     << " << " << mergeDim << nl;
 
-                collapseEdge[edgeI] = true;
+                collapseEdge.set(edgeI);
                 collapsePointToLocation.set(e[1], points[e[0]]);
             }
         }
@@ -302,12 +304,12 @@ int main(int argc, char *argv[])
         autoPtr<mapPolyMesh> morphMap
             = meshModCollapse.changeMesh(mesh(), false);
 
-        mesh().updateMesh(morphMap);
+        mesh().updateMesh(morphMap());
     }
 
     if (!overwrite)
     {
-        runTimeExtruded++;
+        ++runTimeExtruded;
     }
     else
     {

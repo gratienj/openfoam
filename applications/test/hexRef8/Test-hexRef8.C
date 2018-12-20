@@ -42,17 +42,11 @@ Description
 #include "zeroGradientFvPatchFields.H"
 #include "calculatedPointPatchFields.H"
 #include "pointConstraints.H"
-#include "fvcDiv.H"
+#include "fvCFD.H"
 
 using namespace Foam;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-bool notEqual(const scalar s1, const scalar s2, const scalar tol)
-{
-    return mag(s1-s2) > tol;
-}
-
 
 // Main program:
 int main(int argc, char *argv[])
@@ -180,6 +174,8 @@ int main(int argc, char *argv[])
     // Construct refiner. Read initial cell and point levels.
     hexRef8 meshCutter(mesh);
 
+    // Comparison for inequality
+    const auto isNotEqual = notEqualOp<scalar>(1e-10);
 
     while (runTime.loop())
     {
@@ -194,9 +190,7 @@ int main(int argc, char *argv[])
         mesh.moving(false);
         mesh.topoChanging(false);
 
-
-        label action = rndGen.integer(0, 5);
-
+        label action = rndGen.position<label>(0, 5);
 
         if (action == 0)
         {
@@ -216,7 +210,10 @@ int main(int argc, char *argv[])
 
                 for (label i=0; i<nRefine; i++)
                 {
-                    refineCandidates.append(rndGen.integer(0, mesh.nCells()-1));
+                    refineCandidates.append
+                    (
+                        rndGen.position<label>(0, mesh.nCells()-1)
+                    );
                 }
 
                 labelList cellsToRefine
@@ -245,7 +242,9 @@ int main(int argc, char *argv[])
 
                 for (label i=0; i<nUnrefine; i++)
                 {
-                    label index = rndGen.integer(0, allSplitPoints.size()-1);
+                    const label index =
+                        rndGen.position<label>(0, allSplitPoints.size()-1);
+
                     candidates.insert(allSplitPoints[index]);
                 }
 
@@ -273,7 +272,7 @@ int main(int argc, char *argv[])
 
             // Update fields
             Info<< nl << "-- mapping mesh data" << endl;
-            mesh.updateMesh(map);
+            mesh.updateMesh(map());
 
             // Inflate mesh
             if (map().hasMotionPoints())
@@ -284,7 +283,7 @@ int main(int argc, char *argv[])
 
             // Update numbering of cells/vertices.
             Info<< nl << "-- mapping hexRef8 data" << endl;
-            meshCutter.updateMesh(map);
+            meshCutter.updateMesh(map());
         }
 
 
@@ -342,7 +341,7 @@ int main(int argc, char *argv[])
             Info<< "Uniform one field min = " << min
                 << "  max = " << max << endl;
 
-            if (notEqual(max, 1.0, 1e-10) || notEqual(min, 1.0, 1e-10))
+            if (isNotEqual(min, 1) || isNotEqual(max, 1))
             {
                 FatalErrorInFunction
                     << "Uniform volVectorField not preserved."
@@ -366,7 +365,7 @@ int main(int argc, char *argv[])
             Info<< "Linear profile field min = " << min
                 << "  max = " << max << endl;
 
-            if (notEqual(max, 0.0, 1e-10) || notEqual(min, 0.0, 1e-10))
+            if (isNotEqual(min, 0) || isNotEqual(max, 0))
             {
                 Info<< "Linear profile not preserved."
                     << " Min and max should both be 0.0. min:" << min
@@ -387,7 +386,7 @@ int main(int argc, char *argv[])
             Info<< "Uniform surface field min = " << min
                 << "  max = " << max << endl;
 
-            if (notEqual(max, 1.0, 1e-10) || notEqual(min, 1.0, 1e-10))
+            if (isNotEqual(min, 1) || isNotEqual(max, 1))
             {
                 FatalErrorInFunction
                     << "Uniform surfaceScalarField not preserved."
@@ -402,10 +401,7 @@ int main(int argc, char *argv[])
             }
         }
 
-
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "pc:" << pc.patchPatchPointConstraintPoints().size() << endl;

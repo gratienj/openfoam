@@ -66,7 +66,7 @@ void Foam::helpTypes::helpSolver::init()
     argList::addBoolOption
     (
         "read",
-        "read solver type from the system/controlDict"
+        "Read solver type from the system/controlDict"
     );
 }
 
@@ -79,13 +79,13 @@ void Foam::helpTypes::helpSolver::execute
 {
     word solver(word::null);
 
-    if (args.optionReadIfPresent("browse", solver))
+    if (args.readIfPresent("browse", solver))
     {
         displayDoc(solver, ".*solvers/.*Foam/", true, "C");
     }
-    else if (args.optionFound("read"))
+    else if (args.found("read"))
     {
-        mesh.time().controlDict().lookup("application") >> solver;
+        mesh.time().controlDict().readEntry("application", solver);
         displayDoc(solver, ".*solvers/.*Foam/", true, "C");
     }
     else

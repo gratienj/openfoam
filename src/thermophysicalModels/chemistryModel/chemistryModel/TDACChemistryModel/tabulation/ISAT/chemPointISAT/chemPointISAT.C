@@ -28,7 +28,7 @@ License
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-// Defined as static to be able to dynamicly change it during simulations
+// Defined as static to be able to dynamically change it during simulations
 // (all chemPoints refer to the same object)
 template<class CompType, class ThermoType>
 Foam::scalar Foam::chemPointISAT<CompType, ThermoType>::tolerance_;
@@ -512,7 +512,7 @@ bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField& phiq)
             }
             else
             {
-                propName = chemistry_.Y()[maxIndex].name();
+                propName = chemistry_.Y()[maxIndex].member();
             }
 
             Info<< "Direction maximum impact to error in ellipsoid: "

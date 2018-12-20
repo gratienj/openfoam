@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -18,25 +18,22 @@ functions
 {
     processorField
     {
-        // Type of functionObject
         type            processorField;
 
-        // Where to load it from (if not already in solver)
         libs            ("libfieldFunctionObjects.so");
 
-        // Function object enabled flag
         enabled         true;
 
-        // When to output the average fields
         writeControl    writeTime;
     }
     cellID
     {
-        // Load the library containing the 'coded' functionObject
-        functionObjectLibs ("libutilityFunctionObjects.so");
         type coded;
-        // Name of on-the-fly generated functionObject
-        redirectType cellID;
+
+        libs ("libutilityFunctionObjects.so");
+
+        name cellID;
+
         codeExecute
         #{
             volScalarField cellID
@@ -49,7 +46,7 @@ functions
                     IOobject::NO_READ
                 ),
                 mesh(),
-                dimensionedScalar("cellID", dimless, 0)
+                dimensionedScalar(dimless, Zero)
             );
             forAll(cellID, celli)
             {

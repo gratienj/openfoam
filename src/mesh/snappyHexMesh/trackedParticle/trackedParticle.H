@@ -36,6 +36,7 @@ SourceFiles
 #ifndef trackedParticle_H
 #define trackedParticle_H
 
+#include "bitSet.H"
 #include "particle.H"
 #include "autoPtr.H"
 
@@ -44,11 +45,9 @@ SourceFiles
 namespace Foam
 {
 
+// Forward declarations
+
 class trackedParticleCloud;
-
-
-// Forward declaration of friend functions and operators
-
 class trackedParticle;
 
 Ostream& operator<<(Ostream&, const trackedParticle&);
@@ -96,7 +95,7 @@ public:
 
         labelList& maxLevel_;
 
-        List<PackedBoolList>& featureEdgeVisited_;
+        List<bitSet>& featureEdgeVisited_;
 
 
         // Constructors
@@ -105,7 +104,7 @@ public:
             (
                 Cloud<trackedParticle>& cloud,
                 labelList& maxLevel,
-                List<PackedBoolList>& featureEdgeVisited
+                List<bitSet>& featureEdgeVisited
             )
             :
                 particle::trackingData(cloud),
@@ -160,7 +159,7 @@ public:
         //- Construct and return a clone
         autoPtr<particle> clone() const
         {
-            return autoPtr<particle>(new trackedParticle(*this));
+            return autoPtr<particle>::NewFrom<trackedParticle>(*this);
         }
 
         //- Factory class to read-construct particles used for
@@ -178,10 +177,7 @@ public:
 
             autoPtr<trackedParticle> operator()(Istream& is) const
             {
-                return autoPtr<trackedParticle>
-                (
-                    new trackedParticle(mesh_, is, true)
-                );
+                return autoPtr<trackedParticle>::New(mesh_, is, true);
             }
         };
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2013 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,6 +23,22 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+
+inline const Foam::coordinateSystem& Foam::porosityModel::csys() const
+{
+    return *csysPtr_;
+}
+
+
+inline Foam::label Foam::porosityModel::fieldIndex(const label i) const
+{
+    return (csysPtr_->uniform() ? 0 : i);
+}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
 inline const Foam::word& Foam::porosityModel::name() const
 {
     return name_;
@@ -32,6 +48,12 @@ inline const Foam::word& Foam::porosityModel::name() const
 inline bool Foam::porosityModel::active() const
 {
     return active_;
+}
+
+
+inline const Foam::dictionary& Foam::porosityModel::dict() const
+{
+    return dict_;
 }
 
 

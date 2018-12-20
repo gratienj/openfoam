@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,17 +57,16 @@ patchInjection::patchInjection
         pbm.size() - film.regionMesh().globalData().processorPatches().size()
     );
 
-    if (coeffDict_.found("patches"))
+    wordRes patchNames;
+    if (coeffDict_.readIfPresent("patches", patchNames))
     {
-        wordReList patchNames(coeffDict_.lookup("patches"));
         const labelHashSet patchSet = pbm.patchSet(patchNames);
 
         Info<< "        applying to patches:" << nl;
 
         label pidi = 0;
-        forAllConstIter(labelHashSet, patchSet, iter)
+        for (const label patchi : patchSet)
         {
-            label patchi = iter.key();
             patchIDs_[pidi++] = patchi;
             Info<< "            " << pbm[patchi].name() << endl;
         }

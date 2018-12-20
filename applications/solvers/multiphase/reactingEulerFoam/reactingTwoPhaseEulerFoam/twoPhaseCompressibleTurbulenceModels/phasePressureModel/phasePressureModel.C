@@ -57,9 +57,9 @@ Foam::RASModels::phasePressureModel::phasePressureModel
 
     phase_(phase),
 
-    alphaMax_(readScalar(coeffDict_.lookup("alphaMax"))),
-    preAlphaExp_(readScalar(coeffDict_.lookup("preAlphaExp"))),
-    expMax_(readScalar(coeffDict_.lookup("expMax"))),
+    alphaMax_(coeffDict_.get<scalar>("alphaMax")),
+    preAlphaExp_(coeffDict_.get<scalar>("preAlphaExp")),
+    expMax_(coeffDict_.get<scalar>("expMax")),
     g0_
     (
         "g0",
@@ -67,7 +67,7 @@ Foam::RASModels::phasePressureModel::phasePressureModel
         coeffDict_.lookup("g0")
     )
 {
-    nut_ == dimensionedScalar("zero", nut_.dimensions(), 0.0);
+    nut_ == dimensionedScalar(nut_.dimensions(), Zero);
 
     if (type == typeName)
     {
@@ -94,9 +94,9 @@ bool Foam::RASModels::phasePressureModel::read()
         >::read()
     )
     {
-        coeffDict().lookup("alphaMax") >> alphaMax_;
-        coeffDict().lookup("preAlphaExp") >> preAlphaExp_;
-        coeffDict().lookup("expMax") >> expMax_;
+        coeffDict().readEntry("alphaMax", alphaMax_);
+        coeffDict().readEntry("preAlphaExp", preAlphaExp_);
+        coeffDict().readEntry("expMax", expMax_);
         g0_.readIfPresent(coeffDict());
 
         return true;
@@ -127,26 +127,18 @@ Foam::RASModels::phasePressureModel::epsilon() const
 Foam::tmp<Foam::volSymmTensorField>
 Foam::RASModels::phasePressureModel::R() const
 {
-    return tmp<volSymmTensorField>
+    return tmp<volSymmTensorField>::New
     (
-        new volSymmTensorField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("R", U_.group()),
-                runTime_.timeName(),
-                mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
+            IOobject::groupName("R", U_.group()),
+            runTime_.timeName(),
             mesh_,
-            dimensioned<symmTensor>
-            (
-                "R",
-                dimensionSet(0, 2, -2, 0, 0),
-                Zero
-            )
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh_,
+        dimensioned<symmTensor>(dimensionSet(0, 2, -2, 0, 0)) //Zero
     );
 }
 
@@ -210,25 +202,20 @@ Foam::RASModels::phasePressureModel::pPrimef() const
 Foam::tmp<Foam::volSymmTensorField>
 Foam::RASModels::phasePressureModel::devRhoReff() const
 {
-    return tmp<volSymmTensorField>
+    return tmp<volSymmTensorField>::New
     (
-        new volSymmTensorField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("devRhoReff", U_.group()),
-                runTime_.timeName(),
-                mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
+            IOobject::groupName("devRhoReff", U_.group()),
+            runTime_.timeName(),
             mesh_,
-            dimensioned<symmTensor>
-            (
-                "R",
-                rho_.dimensions()*dimensionSet(0, 2, -2, 0, 0),
-                Zero
-            )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh_,
+        dimensioned<symmTensor>
+        (
+            rho_.dimensions()*dimensionSet(0, 2, -2, 0, 0), Zero
         )
     );
 }

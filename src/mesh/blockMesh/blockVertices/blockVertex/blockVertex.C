@@ -45,7 +45,7 @@ Foam::blockVertex::blockVertex()
 Foam::autoPtr<Foam::blockVertex> Foam::blockVertex::clone() const
 {
     NotImplemented;
-    return autoPtr<blockVertex>(nullptr);
+    return nullptr;
 }
 
 
@@ -92,21 +92,19 @@ Foam::autoPtr<Foam::blockVertex> Foam::blockVertex::New
 
         return autoPtr<blockVertex>(cstrIter()(dict, index, geometry, is));
     }
-    else
-    {
-        FatalIOErrorInFunction(is)
-            << "incorrect first token, expected <word> or '(', found "
-            << firstToken.info()
-            << exit(FatalIOError);
 
-        return autoPtr<blockVertex>(nullptr);
-    }
+    FatalIOErrorInFunction(is)
+        << "incorrect first token, expected <word> or '(', found "
+        << firstToken.info()
+        << exit(FatalIOError);
+
+    return nullptr;
 }
 
 
 Foam::label Foam::blockVertex::read(Istream& is, const dictionary& dict)
 {
-    const dictionary* varDictPtr = dict.subDictPtr("namedVertices");
+    const dictionary* varDictPtr = dict.findDict("namedVertices");
     if (varDictPtr)
     {
         return blockMeshTools::read(is, *varDictPtr);
@@ -122,7 +120,7 @@ void Foam::blockVertex::write
     const dictionary& d
 )
 {
-    const dictionary* varDictPtr = d.subDictPtr("namedVertices");
+    const dictionary* varDictPtr = d.findDict("namedVertices");
     if (varDictPtr)
     {
         blockMeshTools::write(os, val, *varDictPtr);

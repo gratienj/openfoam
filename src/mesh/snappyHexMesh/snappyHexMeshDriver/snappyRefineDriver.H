@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,19 +36,23 @@ SourceFiles
 
 #include "wordPairHashTable.H"
 #include "labelList.H"
+#include "scalarField.H"
+#include "Tuple2.H"
+#include "writer.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class refinementParameters;
 class snapParameters;
 
 class meshRefinement;
 class decompositionMethod;
 class fvMeshDistribute;
+class fvMesh;
 
 /*---------------------------------------------------------------------------*\
                            Class snappyRefineDriver Declaration
@@ -72,6 +76,9 @@ class snappyRefineDriver
 
         //- From surface region to patch
         const labelList globalToSlavePatch_;
+
+        //- How to write lines. Used e.g. when writing leak-paths
+        const writer<scalar>& setFormatter_;
 
 
     // Private Member Functions
@@ -135,12 +142,33 @@ class snappyRefineDriver
             const label nBufferLayers
         );
 
-        //- Remove all cells inside/outside shell
+        //- Refine all cells inside/outside shell
         label shellRefine
         (
             const refinementParameters& refineParams,
             const label maxIter
         );
+
+        // Directional refinement and smoothing
+
+            //- Refine (directional) all cells inside/outside shell
+            label directionalShellRefine
+            (
+                const refinementParameters& refineParams,
+                const label maxIter
+            );
+
+            //- Calculate local edge length from cell volumes
+            void mergeAndSmoothRatio
+            (
+                const scalarList& allSeedPointDist,
+                const label nSmoothExpansion,
+                List<Tuple2<scalar, scalar>>&  keyAndValue
+            );
+
+            //- Smooth the directional expansion ratio
+            label directionalSmooth(const refinementParameters& refineParams);
+
 
         //- Add baffles and remove unreachable cells
         void baffleAndSplitMesh
@@ -174,11 +202,11 @@ class snappyRefineDriver
             const dictionary& motionDict
         );
 
-        //- Disallow default bitwise copy construct
-        snappyRefineDriver(const snappyRefineDriver&);
+        //- No copy construct
+        snappyRefineDriver(const snappyRefineDriver&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const snappyRefineDriver&);
+        //- No copy assignment
+        void operator=(const snappyRefineDriver&) = delete;
 
 
 public:
@@ -195,8 +223,9 @@ public:
             meshRefinement& meshRefiner,
             decompositionMethod& decomposer,
             fvMeshDistribute& distributor,
-            const labelList& globalToMasterPatch,
-            const labelList& globalToSlavePatch
+            const labelUList& globalToMasterPatch,
+            const labelUList& globalToSlavePatch,
+            const writer<scalar>& setFormatter
         );
 
 
@@ -220,7 +249,6 @@ public:
             const refinementParameters& refineParams,
             const HashTable<Pair<word>>& faceZoneToPatches
         );
-
 };
 
 

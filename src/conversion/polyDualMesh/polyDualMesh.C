@@ -32,6 +32,7 @@ InClass
 #include "Time.H"
 #include "SortableList.H"
 #include "pointSet.H"
+#include "bitSet.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -545,8 +546,6 @@ void Foam::polyDualMesh::splitFace
                 if (subFace.size() > 2)
                 {
                     // Enough vertices to create a face from.
-                    subFace.shrink();
-
                     dualFaces.append(face(subFace));
                     dualOwner.append(meshPointi);
                     dualNeighbour.append(-1);
@@ -559,8 +558,6 @@ void Foam::polyDualMesh::splitFace
             if (subFace.size() > 2)
             {
                 // Enough vertices to create a face from.
-                subFace.shrink();
-
                 dualFaces.append(face(subFace));
                 dualOwner.append(meshPointi);
                 dualNeighbour.append(-1);
@@ -598,7 +595,7 @@ void Foam::polyDualMesh::dualPatch
     // 3 : done both
     labelList doneEdgeSide(meshEdges.size(), 0);
 
-    boolList donePoint(patch.nPoints(), false);
+    bitSet donePoint(patch.nPoints(), false);
 
 
     // Do points on edge of patch
@@ -654,7 +651,7 @@ void Foam::polyDualMesh::dualPatch
                     dualRegion.append(patch.index());
 
                     doneEdgeSide[patchEdgeI] |= bitMask;
-                    donePoint[pointi] = true;
+                    donePoint.set(pointi);
                 }
             }
         }
@@ -667,7 +664,7 @@ void Foam::polyDualMesh::dualPatch
 
     forAll(donePoint, pointi)
     {
-        if (!donePoint[pointi])
+        if (!donePoint.test(pointi))
         {
             labelList dualFace, featEdgeIndices;
 
@@ -1009,8 +1006,9 @@ void Foam::polyDualMesh::calcDual
         {
             // Check orientation.
             const face& f = dynDualFaces.last();
-            vector n = f.normal(dualPoints);
-            if (((mesh.points()[owner] - dualPoints[f[0]]) & n) > 0)
+            const vector areaNorm = f.areaNormal(dualPoints);
+
+            if (((mesh.points()[owner] - dualPoints[f[0]]) & areaNorm) > 0)
             {
                 WarningInFunction
                     << " on boundary edge:" << edgeI
@@ -1124,8 +1122,9 @@ void Foam::polyDualMesh::calcDual
             {
                 // Check orientation.
                 const face& f = dynDualFaces.last();
-                vector n = f.normal(dualPoints);
-                if (((mesh.points()[owner] - dualPoints[f[0]]) & n) > 0)
+                const vector areaNorm = f.areaNormal(dualPoints);
+
+                if (((mesh.points()[owner] - dualPoints[f[0]]) & areaNorm) > 0)
                 {
                     WarningInFunction
                         << " on internal edge:" << edgeI
@@ -1194,18 +1193,10 @@ void Foam::polyDualMesh::calcDual
 
     // Transfer face info to straight lists
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    faceList dualFaces(dynDualFaces.shrink(), true);
-    dynDualFaces.clear();
-
-    labelList dualOwner(dynDualOwner.shrink(), true);
-    dynDualOwner.clear();
-
-    labelList dualNeighbour(dynDualNeighbour.shrink(), true);
-    dynDualNeighbour.clear();
-
-    labelList dualRegion(dynDualRegion.shrink(), true);
-    dynDualRegion.clear();
-
+    faceList dualFaces(std::move(dynDualFaces));
+    labelList dualOwner(std::move(dynDualOwner));
+    labelList dualNeighbour(std::move(dynDualNeighbour));
+    labelList dualRegion(std::move(dynDualRegion));
 
 
     // Dump faces.
@@ -1340,10 +1331,10 @@ void Foam::polyDualMesh::calcDual
     // Assign to mesh.
     resetPrimitives
     (
-        xferMove(dualPoints),
-        xferMove(dualFaces),
-        xferMove(dualOwner),
-        xferMove(dualNeighbour),
+        autoPtr<pointField>::New(std::move(dualPoints)),
+        autoPtr<faceList>::New(std::move(dualFaces)),
+        autoPtr<labelList>::New(std::move(dualOwner)),
+        autoPtr<labelList>::New(std::move(dualNeighbour)),
         patchSizes,
         patchStarts
     );
@@ -1391,13 +1382,7 @@ Foam::polyDualMesh::polyDualMesh
     const labelList& featurePoints
 )
 :
-    polyMesh
-    (
-        mesh,
-        xferCopy(pointField()),// to prevent any warnings "points not allocated"
-        xferCopy(faceList()),  // to prevent any warnings "faces  not allocated"
-        xferCopy(cellList())
-    ),
+    polyMesh(mesh, Zero),
     cellPoint_
     (
         IOobject
@@ -1422,7 +1407,7 @@ Foam::polyDualMesh::polyDualMesh
             IOobject::NO_READ,
             IOobject::AUTO_WRITE
         ),
-        labelList(mesh.nFaces() - mesh.nInternalFaces())
+        labelList(mesh.nBoundaryFaces(), -1)
     )
 {
     calcDual(mesh, featureEdges, featurePoints);
@@ -1436,13 +1421,7 @@ Foam::polyDualMesh::polyDualMesh
     const scalar featureCos
 )
 :
-    polyMesh
-    (
-        mesh,
-        xferCopy(pointField()),// to prevent any warnings "points not allocated"
-        xferCopy(faceList()),  // to prevent any warnings "faces  not allocated"
-        xferCopy(cellList())
-    ),
+    polyMesh(mesh, Zero),
     cellPoint_
     (
         IOobject
@@ -1467,7 +1446,7 @@ Foam::polyDualMesh::polyDualMesh
             IOobject::NO_READ,
             IOobject::AUTO_WRITE
         ),
-        labelList(mesh.nFaces() - mesh.nInternalFaces(), -1)
+        labelList(mesh.nBoundaryFaces(), -1)
     )
 {
     labelList featureEdges, featurePoints;
@@ -1491,7 +1470,7 @@ void Foam::polyDualMesh::calcFeatures
         SubList<face>
         (
             mesh.faces(),
-            mesh.nFaces() - mesh.nInternalFaces(),
+            mesh.nBoundaryFaces(),
             mesh.nInternalFaces()
         ),
         mesh.points()
@@ -1520,7 +1499,7 @@ void Foam::polyDualMesh::calcFeatures
     const vectorField& faceNormals = allBoundary.faceNormals();
     const labelList& meshPoints = allBoundary.meshPoints();
 
-    boolList isFeatureEdge(edgeFaces.size(), false);
+    bitSet isFeatureEdge(edgeFaces.size(), false);
 
     forAll(edgeFaces, edgeI)
     {
@@ -1538,11 +1517,11 @@ void Foam::polyDualMesh::calcFeatures
                 << " has more than 2 faces connected to it:"
                 << eFaces.size() << endl;
 
-            isFeatureEdge[edgeI] = true;
+            isFeatureEdge.set(edgeI);
         }
         else if (allRegion[eFaces[0]] != allRegion[eFaces[1]])
         {
-            isFeatureEdge[edgeI] = true;
+            isFeatureEdge.set(edgeI);
         }
         else if
         (
@@ -1550,7 +1529,7 @@ void Foam::polyDualMesh::calcFeatures
           < featureCos
         )
         {
-            isFeatureEdge[edgeI] = true;
+            isFeatureEdge.set(edgeI);
         }
     }
 
@@ -1570,9 +1549,9 @@ void Foam::polyDualMesh::calcFeatures
 
         forAll(pEdges, i)
         {
-            if (isFeatureEdge[pEdges[i]])
+            if (isFeatureEdge.test(pEdges[i]))
             {
-                nFeatEdges++;
+                ++nFeatEdges;
             }
         }
         if (nFeatEdges > 2)
@@ -1617,7 +1596,7 @@ void Foam::polyDualMesh::calcFeatures
     DynamicList<label> allFeatureEdges(isFeatureEdge.size());
     forAll(isFeatureEdge, edgeI)
     {
-        if (isFeatureEdge[edgeI])
+        if (isFeatureEdge.test(edgeI))
         {
             // Store in mesh edge label.
             allFeatureEdges.append(meshEdges[edgeI]);

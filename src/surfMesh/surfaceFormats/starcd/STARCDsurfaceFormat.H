@@ -73,12 +73,6 @@ class STARCDsurfaceFormat
             const label cellTableId
         );
 
-        //- Disallow default bitwise copy construct
-        STARCDsurfaceFormat(const STARCDsurfaceFormat<Face>&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const STARCDsurfaceFormat<Face>&) = delete;
-
 
 public:
 
@@ -108,7 +102,7 @@ public:
         //- Read from file
         virtual bool read(const fileName& filename);
 
-        //- Write object
+        //- Write surface mesh to file
         virtual void write
         (
             const fileName& name,

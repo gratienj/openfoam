@@ -27,7 +27,7 @@ License
 #include "Fstream.H"
 #include "Time.H"
 #include "boundBox.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "surfZoneList.H"
 #include "surfaceFormatsCore.H"
 #include "MeshedSurfaceProxy.H"
@@ -171,7 +171,7 @@ bool Foam::triSurface::read
         using proxyType = UnsortedMeshedSurface<labelledTri>;
         if (proxyType::readTypes().found(ext))
         {
-            reset(proxyType::New(name, ext)());
+            transfer(*(proxyType::New(name, ext)));
             return true;
         }
     }
@@ -181,7 +181,7 @@ bool Foam::triSurface::read
         using proxyType = MeshedSurface<labelledTri>;
         if (proxyType::readTypes().found(ext))
         {
-            reset(proxyType::New(name, ext)());
+            transfer(*(proxyType::New(name, ext)));
             return true;
         }
     }
@@ -326,7 +326,7 @@ void Foam::triSurface::writeStats(Ostream& os) const
 {
     // Unfortunately nPoints constructs meshPoints() so do compact version
     // ourselves.
-    PackedBoolList pointIsUsed(points().size());
+    bitSet pointIsUsed(points().size());
 
     label nPoints = 0;
     boundBox bb(boundBox::invertedBox);
@@ -339,7 +339,7 @@ void Foam::triSurface::writeStats(Ostream& os) const
         forAll(f, fp)
         {
             const label pointi = f[fp];
-            if (pointIsUsed.set(pointi, 1))
+            if (pointIsUsed.set(pointi))
             {
                 bb.add(points()[pointi]);
                 ++nPoints;

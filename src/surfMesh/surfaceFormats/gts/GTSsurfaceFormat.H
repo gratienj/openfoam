@@ -61,14 +61,8 @@ class GTSsurfaceFormat
     // Private Member Functions
 
         //- Check and raise FatalError if output is not triangulated
-        //  Triangulatinng on-the-fly is otherwise too annoying
+        //  Triangulating on-the-fly is otherwise too annoying
         static bool checkIfTriangulated(const UList<Face>& faceLst);
-
-        //- Disallow default bitwise copy construct
-        GTSsurfaceFormat(const GTSsurfaceFormat<Face>&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const GTSsurfaceFormat<Face>&) = delete;
 
 
 public:
@@ -107,7 +101,7 @@ public:
         //- Read from file
         virtual bool read(const fileName& filename);
 
-        //- Write object
+        //- Write surface mesh to file
         virtual void write
         (
             const fileName& name,

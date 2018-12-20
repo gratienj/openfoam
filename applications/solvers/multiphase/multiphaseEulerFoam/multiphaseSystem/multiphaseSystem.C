@@ -146,7 +146,7 @@ void Foam::multiphaseSystem::solveAlphas()
             mesh_
         ),
         mesh_,
-        dimensionedScalar("sumAlpha", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     );
 
     phasei = 0;
@@ -398,7 +398,7 @@ Foam::multiphaseSystem::multiphaseSystem
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("alphas", dimless, 0.0)
+        dimensionedScalar(dimless, Zero)
     ),
 
     sigmas_(lookup("sigmas")),
@@ -426,7 +426,7 @@ Foam::multiphaseSystem::multiphaseSystem
                 iter(),
                 *phases_.lookup(iter.key().first()),
                 *phases_.lookup(iter.key().second())
-            ).ptr()
+            )
         );
     }
 
@@ -557,12 +557,7 @@ Foam::tmp<Foam::volScalarField> Foam::multiphaseSystem::Cvm
                 mesh_
             ),
             mesh_,
-            dimensionedScalar
-            (
-                "Cvm",
-                dimensionSet(1, -3, 0, 0, 0),
-                0
-            )
+            dimensionedScalar(dimensionSet(1, -3, 0, 0, 0), Zero)
         )
     );
 
@@ -613,12 +608,7 @@ Foam::tmp<Foam::volVectorField> Foam::multiphaseSystem::Svm
                 mesh_
             ),
             mesh_,
-            dimensionedVector
-            (
-                "Svm",
-                dimensionSet(1, -2, -2, 0, 0),
-                Zero
-            )
+            dimensionedVector(dimensionSet(1, -2, -2, 0, 0), Zero)
         )
     );
 
@@ -674,7 +664,7 @@ Foam::tmp<Foam::volVectorField> Foam::multiphaseSystem::Svm
 Foam::autoPtr<Foam::multiphaseSystem::dragCoeffFields>
 Foam::multiphaseSystem::dragCoeffs() const
 {
-    autoPtr<dragCoeffFields> dragCoeffsPtr(new dragCoeffFields);
+    auto dragCoeffsPtr = autoPtr<dragCoeffFields>::New();
 
     forAllConstIter(dragModelTable, dragModels_, iter)
     {
@@ -716,7 +706,7 @@ Foam::multiphaseSystem::dragCoeffs() const
             }
         }
 
-        dragCoeffsPtr().insert(iter.key(), Kptr);
+        dragCoeffsPtr().set(iter.key(), Kptr);
     }
 
     return dragCoeffsPtr;
@@ -740,12 +730,7 @@ Foam::tmp<Foam::volScalarField> Foam::multiphaseSystem::dragCoeff
                 mesh_
             ),
             mesh_,
-            dimensionedScalar
-            (
-                "dragCoeff",
-                dimensionSet(1, -3, -1, 0, 0),
-                0
-            )
+            dimensionedScalar(dimensionSet(1, -3, -1, 0, 0), Zero)
         )
     );
 
@@ -788,12 +773,7 @@ Foam::tmp<Foam::surfaceScalarField> Foam::multiphaseSystem::surfaceTension
                 mesh_
             ),
             mesh_,
-            dimensionedScalar
-            (
-                "surfaceTension",
-                dimensionSet(1, -2, -2, 0, 0),
-                0
-            )
+            dimensionedScalar(dimensionSet(1, -2, -2, 0, 0), Zero)
         )
     );
     tSurfaceTension.ref().setOriented();
@@ -840,7 +820,7 @@ Foam::multiphaseSystem::nearInterface() const
                 mesh_
             ),
             mesh_,
-            dimensionedScalar("nearInterface", dimless, 0.0)
+            dimensionedScalar(dimless, Zero)
         )
     );
 
@@ -864,7 +844,7 @@ void Foam::multiphaseSystem::solve()
     const Time& runTime = mesh_.time();
 
     const dictionary& alphaControls = mesh_.solverDict("alpha");
-    label nAlphaSubCycles(readLabel(alphaControls.lookup("nAlphaSubCycles")));
+    label nAlphaSubCycles(alphaControls.get<label>("nAlphaSubCycles"));
 
     if (nAlphaSubCycles > 1)
     {
@@ -897,7 +877,7 @@ void Foam::multiphaseSystem::solve()
                         mesh_
                     ),
                     mesh_,
-                    dimensionedScalar("0", dimensionSet(0, 3, -1, 0, 0), 0)
+                    dimensionedScalar(dimensionSet(0, 3, -1, 0, 0), Zero)
                 )
             );
 
@@ -964,16 +944,14 @@ bool Foam::multiphaseSystem::read()
             readOK &= iter().read(phaseData[phasei++].dict());
         }
 
-        lookup("sigmas") >> sigmas_;
-        lookup("interfaceCompression") >> cAlphas_;
-        lookup("virtualMass") >> Cvms_;
+        readEntry("sigmas", sigmas_);
+        readEntry("interfaceCompression", cAlphas_);
+        readEntry("virtualMass", Cvms_);
 
         return readOK;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 

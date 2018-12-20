@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,7 +38,7 @@ Note
     The HashSet iterator dereferences to the key, so the following
     range-for works as expected:
     \code
-        HashSet<label> someLabels{10, 20, 30, 40, ...};
+        labelHashSet someLabels{10, 20, 30, 40, ...};
         for (const label i : someLabels)
         {
             Info<< "val:" << i << nl;
@@ -55,7 +55,7 @@ Typedef
     Foam::labelHashSet
 
 Description
-    A HashSet with label keys.
+    A HashSet with label keys and label hasher.
 
 \*---------------------------------------------------------------------------*/
 
@@ -63,13 +63,14 @@ Description
 #define HashSet_H
 
 #include "HashTable.H"
+#include "UIndirectList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 template<class Key, class Hash> class HashSet;
 
 template<class Key, class Hash>
@@ -87,21 +88,13 @@ class HashSet
 {
     // Private Member Functions
 
-        //- Insert values, using begin/end iterators.
+        //- Assign from the input iterator range
         template<class InputIter>
-        inline label insertMultiple
+        inline label assignMany
         (
-            const InputIter begIter,
-            const InputIter endIter
-        );
-
-        //- Assign using begin/end iterators.
-        template<class InputIter>
-        inline label assignMultiple
-        (
-            const InputIter begIter,
-            const InputIter endIter,
-            const label sz
+            const label nItems,
+            InputIter first,
+            InputIter last
         );
 
 
@@ -140,15 +133,18 @@ public:
             parent_type(is)
         {}
 
-        //- Construct from UList of Key
-        explicit HashSet(const UList<Key>& lst);
-
         //- Construct from FixedList of Key
         template<unsigned Size>
-        explicit HashSet(const FixedList<Key, Size>& lst);
+        explicit HashSet(const FixedList<Key, Size>& list);
+
+        //- Construct from UList of Key
+        explicit HashSet(const UList<Key>& list);
+
+        //- Construct from an indirect list
+        explicit HashSet(const UIndirectList<Key>& list);
 
         //- Construct from an initializer list of Key
-        HashSet(std::initializer_list<Key> lst);
+        HashSet(std::initializer_list<Key> list);
 
         //- Copy construct
         HashSet(const this_type& hs)
@@ -162,27 +158,15 @@ public:
             parent_type(std::move(hs))
         {}
 
-        //- Construct by transferring the parameter contents
-        HashSet(const Xfer<this_type>& hs)
-        :
-            parent_type(hs)
-        {}
-
-        //- Construct by transferring the parameter contents
-        HashSet(const Xfer<parent_type>& hs)
-        :
-            parent_type(hs)
-        {}
-
         //- Construct from the keys of another HashTable,
-        //  the type of values held is arbitrary.
+        //- the type of values held is arbitrary.
         template<class AnyType, class AnyHash>
         explicit HashSet(const HashTable<AnyType, Key, AnyHash>& tbl);
 
 
     // Member Functions
 
-      // Edit
+    // Edit
 
         //- Insert a new entry, not overwriting existing entries.
         //  \return True if the entry inserted, which means that it did
@@ -192,42 +176,10 @@ public:
             return this->parent_type::insert(key, zero::null());
         }
 
-        //- Insert keys from the list of Key
-        //  \return The number of new elements inserted
-        label insert(const UList<Key>& lst);
-
-        //- Insert keys from the list of Key
-        //  \return The number of new elements inserted
-        template<unsigned Size>
-        label insert(const FixedList<Key, Size>& lst);
-
-        //- Insert keys from a initializer list of Key
-        //  \return The number of new elements inserted
-        label insert(std::initializer_list<Key> lst);
-
         //- Same as insert (no value to overwrite)
         bool set(const Key& key)
         {
             return insert(key);
-        }
-
-        //- Same as insert (no value to overwrite)
-        label set(const UList<Key>& lst)
-        {
-            return insert(lst);
-        }
-
-        //- Same as insert (no value to overwrite)
-        template<unsigned Size>
-        label set(const FixedList<Key, Size>& lst)
-        {
-            return insert(lst);
-        }
-
-        //- Same as insert (no value to overwrite)
-        label set(std::initializer_list<Key> lst)
-        {
-            return insert(lst);
         }
 
         //- Unset the specified key - same as erase
@@ -237,51 +189,92 @@ public:
             return this->parent_type::erase(key);
         }
 
+
+    // Convenience
+
+        //- Insert keys from the input iterator range
+        //  \return The number of new elements inserted
+        template<class InputIter>
+        inline label insert(InputIter first, InputIter last);
+
+        //- Insert keys from a initializer list of Key
+        //  \return The number of new elements inserted
+        inline label insert(std::initializer_list<Key> list);
+
+        //- Insert keys from the list of Key
+        //  \return The number of new elements inserted
+        template<unsigned Size>
+        inline label insert(const FixedList<Key, Size>& list);
+
+        //- Insert keys from the list of Key
+        //  \return The number of new elements inserted
+        inline label insert(const UList<Key>& list);
+
+        //- Insert keys from the list of Key
+        //  \return The number of new elements inserted
+        inline label insert(const UIndirectList<Key>& list);
+
+        //- Same as insert (no value to overwrite)
+        template<class InputIter>
+        inline label set(InputIter first, InputIter last)
+        {
+            return insert(first, last);
+        }
+
+        //- Same as insert (no value to overwrite)
+        inline label set(std::initializer_list<Key> list)
+        {
+            return insert(list);
+        }
+
+        //- Same as insert (no value to overwrite)
+        template<unsigned Size>
+        inline label set(const FixedList<Key, Size>& list)
+        {
+            return insert(list);
+        }
+
+        //- Same as insert (no value to overwrite)
+        inline label set(const UList<Key>& list)
+        {
+            return insert(list);
+        }
+
+        //- Same as insert (no value to overwrite)
+        inline label set(const UIndirectList<Key>& list)
+        {
+            return insert(list);
+        }
+
+        //- Same as insert (no value to overwrite)
+        //  \note Method name compatibility with bitSet
+        template<class InputIter>
+        inline label setMany(InputIter first, InputIter last)
+        {
+            return insert(first, last);
+        }
+
+        //- Unset the keys listed in the input iterator range
+        //  \return The number of items removed
+        template<class InputIter>
+        inline label unset(InputIter first, InputIter last);
+
         //- Unset the listed keys - same as erase
         //  \return The number of items removed
-        label unset(const UList<Key>& lst)
-        {
-            return this->parent_type::erase(lst);
-        }
+        inline label unset(std::initializer_list<Key> list);
 
         //- Unset the listed keys - same as erase
         //  \return The number of items removed
         template<unsigned Size>
-        label unset(const FixedList<Key, Size>& lst)
-        {
-            return this->parent_type::erase(lst);
-        }
+        inline label unset(const FixedList<Key, Size>& list);
 
         //- Unset the listed keys - same as erase
         //  \return The number of items removed
-        label unset(std::initializer_list<Key> lst)
-        {
-            return this->parent_type::erase(lst);
-        }
+        inline label unset(const UList<Key>& list);
 
-        //- Not applicable for HashSet
-        template<class UnaryPredicate>
-        List<Key> tocValues(const UnaryPredicate&, const bool) = delete;
-
-        //- Not applicable for HashSet
-        template<class BinaryPredicate>
-        List<Key> tocEntries(const BinaryPredicate&, const bool) = delete;
-
-        //- Not applicable for HashSet
-        template<class UnaryPredicate>
-        label countValues(const UnaryPredicate&, const bool) = delete;
-
-        //- Not applicable for HashSet
-        template<class BinaryPredicate>
-        label countEntries(const BinaryPredicate&, const bool) = delete;
-
-        //- Not applicable for HashSet
-        template<class UnaryPredicate>
-        label filterValues(const UnaryPredicate&, const bool) = delete;
-
-        //- Not applicable for HashSet
-        template<class BinaryPredicate>
-        label filterEntries(const BinaryPredicate&, const bool) = delete;
+        //- Unset the listed keys - same as erase
+        //  \return The number of items removed
+        inline label unset(const UIndirectList<Key>& list);
 
 
     // STL iterators
@@ -329,7 +322,7 @@ public:
         }
 
 
-      // Comparison
+    // Comparison
 
         //- Sets are equal if all keys are equal,
         //- independent of order or underlying storage size.
@@ -339,38 +332,38 @@ public:
         bool operator!=(const this_type& rhs) const;
 
 
-      // Assignment
+    // Assignment
 
         //- Assignment from a UList of keys
-        void operator=(const UList<Key>& lst);
+        void operator=(const UList<Key>& rhs);
 
         //- Assignment from a FixedList of keys
         template<unsigned Size>
-        void operator=(const FixedList<Key, Size>& lst);
+        void operator=(const FixedList<Key, Size>& rhs);
 
         //- Assignment from an initializer list of keys
-        void operator=(std::initializer_list<Key> lst);
+        void operator=(std::initializer_list<Key> rhs);
 
 
-      // Logical operations
+    // Logical and set operations
 
-        //- Combine entries from HashSets
-        void operator|=(const this_type& rhs);
+        //- Add entries to this HashSet
+        this_type& operator|=(const this_type& rhs);
 
         //- Only retain entries found in both HashSets
-        inline void operator&=(const this_type& rhs);
+        inline this_type& operator&=(const this_type& rhs);
 
         //- Only retain unique entries (xor)
-        void operator^=(const this_type& rhs);
+        this_type& operator^=(const this_type& rhs);
 
-        //- Add entries listed in the given HashSet to this HashSet
-        inline void operator+=(const this_type& rhs)
+        //- Add entries to this HashSet
+        inline this_type& operator+=(const this_type& rhs)
         {
-            this->operator|=(rhs);
+            return this->operator|=(rhs);
         }
 
-        //- Remove entries listed in the given HashSet from this HashSet
-        inline void operator-=(const this_type& rhs);
+        //- Remove entries from this HashSet
+        inline this_type& operator-=(const this_type& rhs);
 
 
     // IOstream Operator
@@ -381,18 +374,34 @@ public:
             const HashSet<Key, Hash>& tbl
         );
 
+
+    // Housekeeping
+
+        //- Not applicable for HashSet
+        template<class UnaryPredicate>
+        List<Key> tocValues(const UnaryPredicate&, const bool) = delete;
+
+        //- Not applicable for HashSet
+        template<class BinaryPredicate>
+        List<Key> tocEntries(const BinaryPredicate&, const bool) = delete;
+
+        //- Not applicable for HashSet
+        template<class UnaryPredicate>
+        label countValues(const UnaryPredicate&, const bool) = delete;
+
+        //- Not applicable for HashSet
+        template<class BinaryPredicate>
+        label countEntries(const BinaryPredicate&, const bool) = delete;
+
+        //- Not applicable for HashSet
+        template<class UnaryPredicate>
+        label filterValues(const UnaryPredicate&, const bool) = delete;
+
+        //- Not applicable for HashSet
+        template<class BinaryPredicate>
+        label filterEntries(const BinaryPredicate&, const bool) = delete;
+
 };
-
-
-// Global Functions
-
-// Exchange contents of HashSets - see HashSet::swap().
-template<class Key, class Hash>
-inline void Swap
-(
-    HashSet<Key, Hash>& a,
-    HashSet<Key, Hash>& b
-);
 
 
 // Global Operators
@@ -425,9 +434,9 @@ HashSet<Key,Hash> operator^
 
 
 //- A HashSet with word keys.
-typedef HashSet<> wordHashSet;
+typedef HashSet<word> wordHashSet;
 
-//- A HashSet with label keys.
+//- A HashSet with label keys and label hasher.
 typedef HashSet<label, Hash<label>> labelHashSet;
 
 

@@ -98,11 +98,12 @@ int main()
     }
 
 
-    HashTable<scalar> table2(table1);
-    HashTable<scalar> table3(table1.xfer());
+    HashTable<scalar> table2(table1); // Copy
+    HashTable<scalar> table3(std::move(table1)); // Move
 
-    Info<< "\ncopy table1 -> table2" << nl
-        << "transfer table1 -> table3 via the xfer() method" << nl;
+    Info<< nl
+        << "copy table1 -> table2" << nl
+        << "move table1 -> table3" << nl;
 
     Info<< "\ntable1" << table1 << nl
         << "\ntable2" << table2 << nl
@@ -351,6 +352,16 @@ int main()
     Info<<"move construct" << nl;
     HashTable<scalar> table1b(std::move(table2));
     Info<<"table1 =  " << table1b << nl <<"table2 =  " << table2 << nl;
+
+    table1b.set("more", 14.0);
+    table1b.set("less", 15.0);
+    table1b.set("other", 16.0);
+
+    Info<<"Test a += b " << nl;
+    Info<<"a = " << flatOutput(table1b.sortedToc()) << nl
+        <<"b = " << flatOutput(table3.sortedToc()) << nl;
+
+    Info<<"=> " << (table1b += table3) << nl;
 
     Info<< "\nDone\n";
 

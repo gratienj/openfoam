@@ -47,7 +47,7 @@ Foam::autoPtr<Foam::lduMatrix::solver> Foam::lduMatrix::solver::New
     const dictionary& solverControls
 )
 {
-    const word name(solverControls.lookup("solver"));
+    const word name(solverControls.get<word>("solver"));
 
     if (matrix.diagonal())
     {
@@ -116,15 +116,13 @@ Foam::autoPtr<Foam::lduMatrix::solver> Foam::lduMatrix::solver::New
             )
         );
     }
-    else
-    {
-        FatalIOErrorInFunction(solverControls)
-            << "cannot solve incomplete matrix, "
-               "no diagonal or off-diagonal coefficient"
-            << exit(FatalIOError);
 
-        return autoPtr<lduMatrix::solver>(nullptr);
-    }
+    FatalIOErrorInFunction(solverControls)
+        << "cannot solve incomplete matrix, "
+        "no diagonal or off-diagonal coefficient"
+        << exit(FatalIOError);
+
+    return nullptr;
 }
 
 

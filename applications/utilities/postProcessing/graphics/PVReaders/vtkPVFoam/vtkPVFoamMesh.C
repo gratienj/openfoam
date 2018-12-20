@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -81,14 +81,14 @@ void Foam::vtkPVFoam::convertMeshVolume()
                     Info<< "move points " << longName << nl;
                 }
                 vtkgeom = vtuData.getCopy();
-                vtkgeom->SetPoints(movePoints(mesh, vtuData));
+                vtkgeom->SetPoints(vtuData.points(mesh));
             }
         }
 
         if (!vtkgeom)
         {
             // Nothing usable from cache - create new geometry
-            vtkgeom = volumeVTKMesh(mesh, vtuData);
+            vtkgeom = vtuData.internal(mesh, this->decomposePoly_);
         }
 
         vtuData.set(vtkgeom);
@@ -172,11 +172,14 @@ void Foam::vtkPVFoam::convertMeshPatches()
             {
                 // Point movement on single patch is OK
 
-                const labelList& patchIds = vtpData.additionalIds();
+                const labelUList& patchIds = vtpData.additionalIds();
                 if (patchIds.size() == 1)
                 {
                     vtkgeom = vtpData.getCopy();
-                    vtkgeom->SetPoints(movePatchPoints(patches[patchIds[0]]));
+                    vtkgeom->SetPoints
+                    (
+                        vtk::Tools::Patch::points(patches[patchIds[0]])
+                    );
                     continue;
                 }
             }
@@ -234,7 +237,7 @@ void Foam::vtkPVFoam::convertMeshPatches()
                     mesh.points()
                 );
 
-                vtkgeom = patchVTKMesh(pp);
+                vtkgeom = vtk::Tools::Patch::mesh(pp);
             }
 
             faceLabels.clear();  // Unneeded
@@ -256,7 +259,7 @@ void Foam::vtkPVFoam::convertMeshPatches()
                 // Store good patch id as additionalIds
                 vtpData.additionalIds() = {patchId};
 
-                vtkgeom = patchVTKMesh(patches[patchId]);
+                vtkgeom = vtk::Tools::Patch::mesh(patches[patchId]);
             }
         }
 
@@ -343,7 +346,7 @@ void Foam::vtkPVFoam::convertMeshArea()
             vtpData.clear(); // Remove any old mappings
 
             // Nothing usable from cache - create new geometry
-            vtkgeom = patchVTKMesh(mesh.patch());
+            vtkgeom = vtk::Tools::Patch::mesh(mesh.patch());
         }
 
         vtpData.set(vtkgeom);
@@ -414,19 +417,15 @@ void Foam::vtkPVFoam::convertMeshCellZones()
                     Info<< "move points " << longName << nl;
                 }
                 vtkgeom = vtuData.getCopy();
-                vtkgeom->SetPoints
-                (
-                    movePoints(mesh, vtuData, vtuData.pointMap())
-                );
+                vtkgeom->SetPoints(vtuData.points(mesh, vtuData.pointMap()));
             }
         }
 
         if (!vtkgeom)
         {
-            fvMeshSubset subsetter(mesh);
-            subsetter.setLargeCellSubset(zMesh[zoneId]);
+            fvMeshSubset subsetter(mesh, zMesh[zoneId]);
 
-            vtkgeom = volumeVTKSubsetMesh(subsetter, vtuData);
+            vtkgeom = vtuData.subset(subsetter, this->decomposePoly_);
         }
 
         vtuData.set(vtkgeom);
@@ -484,19 +483,15 @@ void Foam::vtkPVFoam::convertMeshCellSets()
                     Info<< "move points " << longName << nl;
                 }
                 vtkgeom = vtuData.getCopy();
-                vtkgeom->SetPoints
-                (
-                    movePoints(mesh, vtuData, vtuData.pointMap())
-                );
+                vtkgeom->SetPoints(vtuData.points(mesh, vtuData.pointMap()));
             }
         }
 
         if (!vtkgeom)
         {
-            fvMeshSubset subsetter(mesh);
-            subsetter.setLargeCellSubset(cellSet(mesh, partName));
+            fvMeshSubset subsetter(mesh, cellSet(mesh, partName));
 
-            vtkgeom = volumeVTKSubsetMesh(subsetter, vtuData);
+            vtkgeom = vtuData.subset(subsetter, this->decomposePoly_);
         }
 
         vtuData.set(vtkgeom);
@@ -571,7 +566,7 @@ void Foam::vtkPVFoam::convertMeshFaceZones()
             vtpData.clear();  // No additional ids, maps
 
             const primitiveFacePatch& pp = zMesh[zoneId]();
-            vtkgeom = patchVTKMesh(pp);
+            vtkgeom = vtk::Tools::Patch::mesh(pp);
         }
 
         vtpData.set(vtkgeom);
@@ -644,7 +639,7 @@ void Foam::vtkPVFoam::convertMeshFaceSets()
                     mesh.points()
                 );
 
-                vtkgeom = patchVTKMesh(pp);
+                vtkgeom = vtk::Tools::Patch::mesh(pp);
             }
         }
 

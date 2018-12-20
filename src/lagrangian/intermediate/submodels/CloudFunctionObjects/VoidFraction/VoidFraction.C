@@ -25,7 +25,7 @@ License
 
 #include "VoidFraction.H"
 
-// * * * * * * * * * * * * * Protectd Member Functions * * * * * * * * * * * //
+// * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
 template<class CloudType>
 void Foam::VoidFraction<CloudType>::write()
@@ -101,7 +101,7 @@ void Foam::VoidFraction<CloudType>::preEvolve()
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                dimensionedScalar("zero", dimless, 0.0)
+                dimensionedScalar(dimless, Zero)
             )
         );
     }

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -123,10 +123,10 @@ typename Table::iterator Foam::basicThermo::lookupThermo
             // Construct the name of the thermo package from the components
             const word thermoTypeName
             (
-                word(thermoTypeDict.lookup("type")) + '<'
-              + word(thermoTypeDict.lookup("mixture")) + '<'
-              + word(thermoTypeDict.lookup("properties")) + ','
-              + word(thermoTypeDict.lookup("energy")) + ">>"
+                thermoTypeDict.get<word>("type") + '<'
+              + thermoTypeDict.get<word>("mixture") + '<'
+              + thermoTypeDict.get<word>("properties") + ','
+              + thermoTypeDict.get<word>("energy") + ">>"
             );
 
             return lookupThermo<Thermo, Table>
@@ -155,13 +155,13 @@ typename Table::iterator Foam::basicThermo::lookupThermo
             // Construct the name of the thermo package from the components
             const word thermoTypeName
             (
-                word(thermoTypeDict.lookup("type")) + '<'
-              + word(thermoTypeDict.lookup("mixture")) + '<'
-              + word(thermoTypeDict.lookup("transport")) + '<'
-              + word(thermoTypeDict.lookup("thermo")) + '<'
-              + word(thermoTypeDict.lookup("equationOfState")) + '<'
-              + word(thermoTypeDict.lookup("specie")) + ">>,"
-              + word(thermoTypeDict.lookup("energy")) + ">>>"
+                thermoTypeDict.get<word>("type") + '<'
+              + thermoTypeDict.get<word>("mixture") + '<'
+              + thermoTypeDict.get<word>("transport") + '<'
+              + thermoTypeDict.get<word>("thermo") + '<'
+              + thermoTypeDict.get<word>("equationOfState") + '<'
+              + thermoTypeDict.get<word>("specie") + ">>,"
+              + thermoTypeDict.get<word>("energy") + ">>>"
             );
 
             return lookupThermo<Thermo, Table>
@@ -176,7 +176,7 @@ typename Table::iterator Foam::basicThermo::lookupThermo
     }
     else
     {
-        const word thermoTypeName(thermoDict.lookup("thermoType"));
+        const word thermoTypeName(thermoDict.get<word>("thermoType"));
 
         Info<< "Selecting thermodynamics package " << thermoTypeName << endl;
 
@@ -245,6 +245,39 @@ Foam::autoPtr<Thermo> Foam::basicThermo::New
 
     return autoPtr<Thermo>(cstrIter()(mesh, dict, phaseName));
 }
+
+
+template<class Thermo>
+Foam::autoPtr<Thermo> Foam::basicThermo::New
+(
+    const fvMesh& mesh,
+    const word& phaseName,
+    const word& dictName
+)
+{
+    IOdictionary thermoDict
+    (
+        IOobject
+        (
+            dictName,
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE,
+            false
+        )
+    );
+
+    typename Thermo::fvMeshDictPhaseConstructorTable::iterator cstrIter =
+        lookupThermo<Thermo, typename Thermo::fvMeshDictPhaseConstructorTable>
+        (
+            thermoDict,
+            Thermo::fvMeshDictPhaseConstructorTablePtr_
+        );
+
+    return autoPtr<Thermo>(cstrIter()(mesh, phaseName, dictName));
+}
+
 
 
 // ************************************************************************* //

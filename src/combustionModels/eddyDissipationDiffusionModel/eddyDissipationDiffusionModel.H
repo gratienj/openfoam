@@ -55,24 +55,27 @@ namespace combustionModels
                 Class eddyDissipationDiffusionModel Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 class eddyDissipationDiffusionModel
 :
-    public eddyDissipationModelBase<CombThermoType, ThermoType>
+    public eddyDissipationModelBase<ReactionThermo, ThermoType>
 {
     // Private data
 
-        //- Diffussivity constant
+        //- Diffusivity constant
         scalar Cd_;
 
 
-    // Private memeber functions
+    // Private member functions
 
-        //- Disallow copy construct
-        eddyDissipationDiffusionModel(const eddyDissipationDiffusionModel&);
+        //- No copy construct
+        eddyDissipationDiffusionModel
+        (
+            const eddyDissipationDiffusionModel&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const eddyDissipationDiffusionModel&);
+        //- No copy assignment
+        void operator=(const eddyDissipationDiffusionModel&) = delete;
 
 
 public:
@@ -87,9 +90,9 @@ public:
         eddyDissipationDiffusionModel
         (
             const word& modelType,
-            const fvMesh& mesh,
-            const word& combustionProperties,
-            const word& phaseName
+            ReactionThermo& thermo,
+            const compressibleTurbulenceModel& turb,
+            const word& combustionProperties
         );
 
 

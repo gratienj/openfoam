@@ -110,7 +110,7 @@ private:
         //- Plane for 2D wedge case or -1.
         const label wedgePlane_;
 
-        //- pointZone with frozen points
+        //- Name of pointZone with frozen points
         const word frozenPointsZone_;
 
         //- Demand driven: surface to project
@@ -122,9 +122,12 @@ private:
         //- Calculate displacement (w.r.t. points0()) to project onto surface
         void calcProjection(vectorField& displacement) const;
 
+        //- No copy assignment
+        void operator=
+        (
+            const surfaceDisplacementPointPatchVectorField&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const surfaceDisplacementPointPatchVectorField&);
 
 public:
 

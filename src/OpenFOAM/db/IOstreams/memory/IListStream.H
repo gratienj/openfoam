@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -47,11 +47,14 @@ See Also
 namespace Foam
 {
 
+namespace Detail
+{
+
 /*---------------------------------------------------------------------------*\
-                    Class IListStreamAllocator Declaration
+                Class Detail::IListStreamAllocator Declaration
 \*---------------------------------------------------------------------------*/
 
-//- An stream/stream-buffer input allocator for with List storage
+//- An stream/stream-buffer input allocator with List storage
 class IListStreamAllocator
 :
     private List<char>,
@@ -61,43 +64,39 @@ protected:
 
     // Constructors
 
-        //- Construct with an empty list
+        //- Construct empty
         IListStreamAllocator()
         :
             List<char>(),
-            UIListStreamAllocator(list_storage())
+            UIListStreamAllocator(List<char>::data(), List<char>::size())
         {}
 
-        //- Move construct from an existing List
+        //- Move construct from List
         IListStreamAllocator(List<char>&& buffer)
         :
             List<char>(std::move(buffer)),
-            UIListStreamAllocator(list_storage())
+            UIListStreamAllocator(List<char>::data(), List<char>::size())
         {}
 
-
-        //- Move construct from an existing DynamicList
+        //- Move construct from DynamicList
         template<int SizeMin>
         IListStreamAllocator(DynamicList<char,SizeMin>&& buffer)
         :
             List<char>(std::move(buffer)),
-            UIListStreamAllocator(list_storage())
-        {}
-
-        //- Transfer (move) construct
-        IListStreamAllocator(const Xfer<List<char>>& buffer)
-        :
-            List<char>(buffer),
-            UIListStreamAllocator(list_storage())
+            UIListStreamAllocator(List<char>::data(), List<char>::size())
         {}
 
 
     // Protected Member Functions
 
         //- Convenience method to address the underlying List storage
-        inline List<char>& list_storage()
+        inline void reset_gbuffer()
         {
-            return static_cast<List<char>&>(*this);
+            UIListStreamAllocator::reset
+            (
+                List<char>::data(),
+                List<char>::size()
+            );
         }
 
 public:
@@ -110,21 +109,19 @@ public:
         //- Clear storage
         inline void clearStorage()
         {
-            list_storage().clear();
-            sync_gbuffer_to_list();
+            List<char>::clear();
+            reset_gbuffer();
         }
 
-        //- Transfer contents to the Xfer container as a plain List
-        inline Xfer<List<char>> xfer()
+        //- Transfer contents to other list
+        inline void swap(List<char>& list)
         {
-            Xfer<List<char>> moved = list_storage().xfer();
-
-            // Update buffer pointers for remaining (zero) size list
-            sync_gbuffer_to_list(); // or rewind
-
-            return moved;
+            List<char>::swap(list);
+            reset_gbuffer();
         }
 };
+
+} // End namespace Detail
 
 
 /*---------------------------------------------------------------------------*\
@@ -134,10 +131,10 @@ public:
 //- An ISstream with internal List storage
 class IListStream
 :
-    public IListStreamAllocator,
+    public Detail::IListStreamAllocator,
     public ISstream
 {
-    typedef IListStreamAllocator allocator_type;
+    typedef Detail::IListStreamAllocator allocator_type;
 
 public:
 
@@ -156,7 +153,7 @@ public:
         {}
 
 
-        //- Move construct from an existing List
+        //- Move construct from List
         IListStream
         (
             List<char>&& buffer,
@@ -170,7 +167,7 @@ public:
         {}
 
 
-        //- Move construct from an existing DynamicList
+        //- Move construct from DynamicList
         template<int SizeMin>
         IListStream
         (
@@ -181,20 +178,6 @@ public:
         )
         :
             allocator_type(std::move(buffer)),
-            ISstream(stream_, name, format, version)
-        {}
-
-
-        //- Transfer (move) construct
-        IListStream
-        (
-            const Xfer<List<char>>& buffer,
-            streamFormat format=ASCII,
-            versionNumber version=currentVersion,
-            const Foam::string& name="input"
-        )
-        :
-            allocator_type(buffer),
             ISstream(stream_, name, format, version)
         {}
 

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,16 +57,16 @@ void Foam::meshRefinement::markBoundaryFace
 
     const labelList& fEdges = mesh_.faceEdges(facei);
 
-    forAll(fEdges, fp)
+    for (const label edgei : fEdges)
     {
-        isBoundaryEdge[fEdges[fp]] = true;
+        isBoundaryEdge[edgei] = true;
     }
 
     const face& f = mesh_.faces()[facei];
 
-    forAll(f, fp)
+    for (const label pointi : f)
     {
-        isBoundaryPoint[f[fp]] = true;
+        isBoundaryPoint[pointi] = true;
     }
 }
 
@@ -243,8 +243,7 @@ Foam::Map<Foam::label> Foam::meshRefinement::findEdgeConnectedProblemCells
     {
         label facei = candidateFaces[i];
 
-        vector n = mesh_.faceAreas()[facei];
-        n /= mag(n);
+        const vector n = normalised(mesh_.faceAreas()[facei]);
 
         label region = surfaces_.globalRegion
         (
@@ -296,7 +295,7 @@ bool Foam::meshRefinement::isCollapsedFace
     const scalar severeNonorthogonalityThreshold =
         ::cos(degToRad(maxNonOrtho));
 
-    vector s = mesh_.faces()[facei].normal(points);
+    vector s = mesh_.faces()[facei].areaNormal(points);
     scalar magS = mag(s);
 
     // Check face area
@@ -521,14 +520,14 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
     labelList facePatch(mesh_.nFaces(), -1);
 
     // Swap neighbouring cell centres and cell level
-    labelList neiLevel(mesh_.nFaces()-mesh_.nInternalFaces());
-    pointField neiCc(mesh_.nFaces()-mesh_.nInternalFaces());
+    labelList neiLevel(mesh_.nBoundaryFaces());
+    pointField neiCc(mesh_.nBoundaryFaces());
     calcNeighbourData(neiLevel, neiCc);
 
 
     // Count of faces marked for baffling
     label nBaffleFaces = 0;
-    PackedBoolList isMasterFace(syncTools::getMasterFaces(mesh_));
+    bitSet isMasterFace(syncTools::getMasterFaces(mesh_));
 
     // Count of faces not baffled since would not cause a collapse
     label nPrevented = 0;
@@ -551,7 +550,7 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
         );
 
         // Baffle all faces of cells that need to be removed
-        forAllConstIter(Map<label>, problemCells, iter)
+        forAllConstIters(problemCells, iter)
         {
             const cell& cFaces = mesh_.cells()[iter.key()];
 
@@ -634,8 +633,8 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
 
     if (checkCollapse)
     {
-        minArea = readScalar(motionDict.lookup("minArea"));
-        maxNonOrtho = readScalar(motionDict.lookup("maxNonOrtho"));
+        motionDict.readEntry("minArea", minArea);
+        motionDict.readEntry("maxNonOrtho", maxNonOrtho);
 
         Info<< "markFacesOnProblemCells :"
             << " Deleting all-anchor surface cells only if"
@@ -711,17 +710,18 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
 
 
     // Does cell have exactly 7 of its 8 anchor points on the boundary?
-    PackedBoolList hasSevenBoundaryAnchorPoints(mesh_.nCells());
+    bitSet hasSevenBoundaryAnchorPoints(mesh_.nCells());
     // If so what is the remaining non-boundary anchor point?
     labelHashSet nonBoundaryAnchors(mesh_.nCells()/10000);
 
     // On-the-fly addressing storage.
     DynamicList<label> dynFEdges;
     DynamicList<label> dynCPoints;
+    labelHashSet pSet;
 
     forAll(cellLevel, celli)
     {
-        const labelList& cPoints = mesh_.cellPoints(celli, dynCPoints);
+        const labelList& cPoints = mesh_.cellPoints(celli, pSet, dynCPoints);
 
         // Get number of anchor points (pointLevel <= cellLevel)
 
@@ -729,10 +729,8 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
         label nNonAnchorBoundary = 0;
         label nonBoundaryAnchor = -1;
 
-        forAll(cPoints, i)
+        for (const label pointi : cPoints)
         {
-            label pointi = cPoints[i];
-
             if (pointLevel[pointi] <= cellLevel[celli])
             {
                 // Anchor point
@@ -818,10 +816,10 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
                 }
             }
         }
-        else if (nBoundaryAnchors == 7)
+        else if (nBoundaryAnchors == 7 && nonBoundaryAnchor != -1)
         {
             // Mark the cell. Store the (single!) non-boundary anchor point.
-            hasSevenBoundaryAnchorPoints.set(celli, 1u);
+            hasSevenBoundaryAnchorPoints.set(celli);
             nonBoundaryAnchors.insert(nonBoundaryAnchor);
         }
     }
@@ -833,31 +831,27 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
 
     DynamicList<label> dynPCells;
 
-    forAllConstIter(labelHashSet, nonBoundaryAnchors, iter)
+    for (const label pointi : nonBoundaryAnchors)
     {
-        label pointi = iter.key();
-
         const labelList& pCells = mesh_.pointCells(pointi, dynPCells);
 
         // Count number of 'hasSevenBoundaryAnchorPoints' cells.
         label n = 0;
 
-        forAll(pCells, i)
+        for (const label celli : pCells)
         {
-            if (hasSevenBoundaryAnchorPoints.get(pCells[i]) == 1u)
+            if (hasSevenBoundaryAnchorPoints.test(celli))
             {
-                n++;
+                ++n;
             }
         }
 
         if (n > 3)
         {
             // Point in danger of being what? Remove all 7-cells.
-            forAll(pCells, i)
+            for (const label celli : pCells)
             {
-                label celli = pCells[i];
-
-                if (hasSevenBoundaryAnchorPoints.get(celli) == 1u)
+                if (hasSevenBoundaryAnchorPoints.test(celli))
                 {
                     if
                     (
@@ -879,10 +873,8 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
                     {
                         const cell& cFaces = mesh_.cells()[celli];
 
-                        forAll(cFaces, cf)
+                        for (const label facei : cFaces)
                         {
-                            label facei = cFaces[cf];
-
                             if
                             (
                                 facePatch[facei] == -1
@@ -944,11 +936,11 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
             const labelList& fEdges = mesh_.faceEdges(facei, dynFEdges);
             label nFaceBoundaryEdges = 0;
 
-            forAll(fEdges, fe)
+            for (const label edgei : fEdges)
             {
-                if (isBoundaryEdge[fEdges[fe]])
+                if (isBoundaryEdge[edgei])
                 {
-                    nFaceBoundaryEdges++;
+                    ++nFaceBoundaryEdges;
                 }
             }
 
@@ -986,10 +978,8 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
         }
     }
 
-    forAll(patches, patchi)
+    for (const polyPatch& pp : patches)
     {
-        const polyPatch& pp = patches[patchi];
-
         if (pp.coupled())
         {
             label facei = pp.start();
@@ -1001,11 +991,11 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
                     const labelList& fEdges = mesh_.faceEdges(facei, dynFEdges);
                     label nFaceBoundaryEdges = 0;
 
-                    forAll(fEdges, fe)
+                    for (const label edgei : fEdges)
                     {
-                        if (isBoundaryEdge[fEdges[fe]])
+                        if (isBoundaryEdge[edgei])
                         {
-                            nFaceBoundaryEdges++;
+                            ++nFaceBoundaryEdges;
                         }
                     }
 
@@ -1034,9 +1024,9 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCells
                         else
                         {
                             facePatch[facei] = nearestAdaptPatch[facei];
-                            if (isMasterFace[facei])
+                            if (isMasterFace.test(facei))
                             {
-                                nBaffleFaces++;
+                                ++nBaffleFaces;
                             }
 
                             // Do NOT update boundary data since this would grow
@@ -1215,7 +1205,8 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCellsGeometric
             const labelList allFaces(identity(mesh_.nFaces()));
             label nWrongFaces = 0;
 
-            //const scalar minV(readScalar(motionDict.lookup("minVol", true)));
+            //const scalar minV
+            //(motionDict.get<scalar>("minVol", keyType::REGEX_RECURSIVE));
             //if (minV > -GREAT)
             //{
             //    polyMeshGeometry::checkFacePyramids
@@ -1244,7 +1235,7 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCellsGeometric
             //    nWrongFaces = nNewWrongFaces;
             //}
 
-            scalar minArea(readScalar(motionDict.lookup("minArea")));
+            scalar minArea(motionDict.get<scalar>("minArea"));
             if (minArea > -SMALL)
             {
                 polyMeshGeometry::checkFaceArea
@@ -1271,7 +1262,7 @@ Foam::labelList Foam::meshRefinement::markFacesOnProblemCellsGeometric
                 nWrongFaces = nNewWrongFaces;
             }
 
-            scalar minDet(readScalar(motionDict.lookup("minDeterminant")));
+            scalar minDet(motionDict.get<scalar>("minDeterminant"));
             if (minDet > -1)
             {
                 polyMeshGeometry::checkCellDeterminant

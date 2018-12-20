@@ -30,7 +30,7 @@ Group
 Description
     Faster version of the DICPreconditioner diagonal-based incomplete
     Cholesky preconditioner for symmetric matrices
-    (symmetric equivalent of DILU) in which the the reciprocal of the
+    (symmetric equivalent of DILU) in which the reciprocal of the
     preconditioned diagonal and the upper coefficients divided by the diagonal
     are calculated and stored.
 
@@ -67,11 +67,11 @@ class FDICPreconditioner
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        FDICPreconditioner(const FDICPreconditioner&);
+        //- No copy construct
+        FDICPreconditioner(const FDICPreconditioner&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const FDICPreconditioner&);
+        //- No copy assignment
+        void operator=(const FDICPreconditioner&) = delete;
 
 
 public:

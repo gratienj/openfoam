@@ -44,12 +44,12 @@ Foam::ReitzKHRT<CloudType>::ReitzKHRT
 {
     if (!this->defaultCoeffs(true))
     {
-        this->coeffDict().lookup("B0") >> b0_;
-        this->coeffDict().lookup("B1") >> b1_;
-        this->coeffDict().lookup("Ctau") >> cTau_;
-        this->coeffDict().lookup("CRT") >> cRT_;
-        this->coeffDict().lookup("msLimit") >> msLimit_;
-        this->coeffDict().lookup("WeberLimit") >> weberLimit_;
+        this->coeffDict().readEntry("B0", b0_);
+        this->coeffDict().readEntry("B1", b1_);
+        this->coeffDict().readEntry("Ctau", cTau_);
+        this->coeffDict().readEntry("CRT", cRT_);
+        this->coeffDict().readEntry("msLimit", msLimit_);
+        this->coeffDict().readEntry("WeberLimit", weberLimit_);
     }
 }
 
@@ -196,7 +196,7 @@ bool Foam::ReitzKHRT<CloudType>::update
             if (ms/averageParcelMass > msLimit_)
             {
                 // Correct evaluation of the number of child droplets and the
-                // diameter of parcel droplets after breaukp
+                // diameter of parcel droplets after breakup
                 // Solution of cubic equation for the diameter of the parent
                 // drops after breakup, see Eq. 18 in
                 // Patterson & Reitz, SAE 980131

@@ -74,11 +74,14 @@ class fvMeshPrimitiveLduAddressing
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        fvMeshPrimitiveLduAddressing(const fvMeshPrimitiveLduAddressing&);
+        //- No copy construct
+        fvMeshPrimitiveLduAddressing
+        (
+            const fvMeshPrimitiveLduAddressing&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const fvMeshPrimitiveLduAddressing&);
+        //- No copy assignment
+        void operator=(const fvMeshPrimitiveLduAddressing&) = delete;
 
 
 public:
@@ -92,16 +95,15 @@ public:
         fvMeshPrimitiveLduAddressing
         (
             const label nCells,
-            const Xfer<labelList>& lowerAddr,
-            const Xfer<labelList>& upperAddr,
+            labelList&& lowerAddr,
+            labelList&& upperAddr,
             const List<const labelUList*>& interfaces,
             const lduSchedule& ps
         );
 
 
     //- Destructor
-    virtual ~fvMeshPrimitiveLduAddressing()
-    {}
+    virtual ~fvMeshPrimitiveLduAddressing() = default;
 
 
     // Member Functions

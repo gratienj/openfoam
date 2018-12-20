@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,9 +36,9 @@ namespace Foam
 {
     defineTypeNameAndDebug(faceOnlySet, 0);
     addToRunTimeSelectionTable(sampledSet, faceOnlySet, word);
-
-    const scalar faceOnlySet::tol = 1e-6;
 }
+
+const Foam::scalar Foam::faceOnlySet::tol = ROOTSMALL;
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -54,11 +54,13 @@ bool Foam::faceOnlySet::trackToBoundary
     DynamicList<scalar>& samplingCurveDist
 ) const
 {
+    const vector offset = (end_ - start_);
+
     particle::trackingData td(particleCloud);
 
     point trackPt = singleParticle.position();
 
-    while(true)
+    while (true)
     {
         point oldPoint = trackPt;
 
@@ -75,9 +77,10 @@ bool Foam::faceOnlySet::trackToBoundary
             samplingCurveDist.append(mag(trackPt - start_));
         }
 
-        if (mag(trackPt - end_) < smallDist)
+        if (-smallDist < ((trackPt - end_) & offset))
         {
-            // End reached
+            // Projected onto sampling vector
+            // - done when we are near or past the end of the sampling vector
             return false;
         }
         else if (singleParticle.onBoundaryFace())
@@ -166,7 +169,6 @@ void Foam::faceOnlySet::calcSamples
         // Set points and cell/face labels to empty lists
         //Info<< "calcSamples : Both start_ and end_ outside domain"
         //    << endl;
-        const_cast<polyMesh&>(mesh()).moving(oldMoving);
 
         const_cast<polyMesh&>(mesh()).moving(oldMoving);
         return;
@@ -263,7 +265,7 @@ void Foam::faceOnlySet::calcSamples
             }
             else
             {
-                bHitI++;
+                ++bHitI;
             }
         }
 
@@ -278,7 +280,7 @@ void Foam::faceOnlySet::calcSamples
         trackPt = pushIn(bHits[bHitI].hitPoint(), trackFacei);
         trackCelli = getBoundaryCell(trackFacei);
 
-        segmentI++;
+        ++segmentI;
 
         startSegmentI = samplingPts.size();
     }
@@ -311,15 +313,20 @@ void Foam::faceOnlySet::genSamples()
     samplingSegments.shrink();
     samplingCurveDist.shrink();
 
-    // Copy into *this
+    // Move into *this
     setSamples
     (
-        samplingPts,
-        samplingCells,
-        samplingFaces,
-        samplingSegments,
-        samplingCurveDist
+        std::move(samplingPts),
+        std::move(samplingCells),
+        std::move(samplingFaces),
+        std::move(samplingSegments),
+        std::move(samplingCurveDist)
     );
+
+    if (debug)
+    {
+        write(Info);
+    }
 }
 
 
@@ -340,11 +347,6 @@ Foam::faceOnlySet::faceOnlySet
     end_(end)
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
 
 
@@ -357,22 +359,11 @@ Foam::faceOnlySet::faceOnlySet
 )
 :
     sampledSet(name, mesh, searchEngine, dict),
-    start_(dict.lookup("start")),
-    end_(dict.lookup("end"))
+    start_(dict.get<point>("start")),
+    end_(dict.get<point>("end"))
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::faceOnlySet::~faceOnlySet()
-{}
 
 
 // ************************************************************************* //

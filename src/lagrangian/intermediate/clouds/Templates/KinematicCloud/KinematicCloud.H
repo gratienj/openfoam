@@ -63,7 +63,6 @@ SourceFiles
 #include "fvMesh.H"
 #include "volFields.H"
 #include "fvMatrices.H"
-#include "IntegrationSchemesFwd.H"
 #include "cloudSolution.H"
 
 #include "ParticleForceList.H"
@@ -75,6 +74,8 @@ namespace Foam
 {
 
 // Forward declaration of classes
+
+class integrationScheme;
 
 template<class CloudType>
 class InjectionModelList;
@@ -133,11 +134,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        KinematicCloud(const KinematicCloud&);
+        //- No copy construct
+        KinematicCloud(const KinematicCloud&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const KinematicCloud&);
+        //- No copy assignment
+        void operator=(const KinematicCloud&) = delete;
 
 
 protected:
@@ -225,7 +226,7 @@ protected:
         // Reference to the particle integration schemes
 
             //- Velocity integration
-            autoPtr<vectorIntegrationScheme> UIntegrator_;
+            autoPtr<integrationScheme> UIntegrator_;
 
 
         // Sources
@@ -325,7 +326,7 @@ public:
 
 
     //- Destructor
-    virtual ~KinematicCloud();
+    virtual ~KinematicCloud() = default;
 
 
     // Member Functions
@@ -463,7 +464,7 @@ public:
             // Integration schemes
 
                 //-Return reference to velocity integration
-                inline const vectorIntegrationScheme& UIntegrator() const;
+                inline const integrationScheme& UIntegrator() const;
 
 
             // Sources

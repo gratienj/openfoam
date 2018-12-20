@@ -67,11 +67,11 @@ class transport
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        transport(const transport&);
+        //- No copy construct
+        transport(const transport&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const transport&);
+        //- No copy assignment
+        void operator=(const transport&) = delete;
 
 
 public:
@@ -113,13 +113,13 @@ public:
             fields.add(Xi_);
         }
 
-        //- Correct the flame-wrinking Xi
+        //- Correct the flame-wrinkling Xi
         virtual void correct()
         {
             NotImplemented;
         }
 
-        //- Correct the flame-wrinking Xi using the given convection scheme
+        //- Correct the flame-wrinkling Xi using the given convection scheme
         virtual void correct(const fv::convectionScheme<scalar>& mvConvection);
 
         //- Update properties from given dictionary

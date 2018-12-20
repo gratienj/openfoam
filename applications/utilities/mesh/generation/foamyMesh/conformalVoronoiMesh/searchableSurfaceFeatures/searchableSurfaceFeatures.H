@@ -60,11 +60,11 @@ class searchableSurfaceFeatures
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        searchableSurfaceFeatures(const searchableSurfaceFeatures&);
+        //- No copy construct
+        searchableSurfaceFeatures(const searchableSurfaceFeatures&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const searchableSurfaceFeatures&);
+        //- No copy assignment
+        void operator=(const searchableSurfaceFeatures&) = delete;
 
 
 public:
@@ -101,7 +101,7 @@ public:
         virtual autoPtr<searchableSurfaceFeatures> clone() const
         {
             NotImplemented;
-            return autoPtr<searchableSurfaceFeatures>(nullptr);
+            return nullptr;
         }
 
 
@@ -139,7 +139,7 @@ public:
         //- Return an extendedFeatureEdgeMesh containing the features
         virtual autoPtr<extendedFeatureEdgeMesh> features() const
         {
-            return autoPtr<extendedFeatureEdgeMesh>();
+            return nullptr;
         }
 };
 

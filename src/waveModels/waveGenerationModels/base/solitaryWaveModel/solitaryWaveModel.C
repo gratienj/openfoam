@@ -26,6 +26,7 @@ License
 #include "solitaryWaveModel.H"
 #include "polyPatch.H"
 #include "SubField.H"
+#include "unitConversion.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -61,6 +62,8 @@ Foam::waveModels::solitaryWaveModel::solitaryWaveModel
 )
 :
     waveGenerationModel(dict, mesh, patch, false),
+    waveHeight_(0),
+    waveAngle_(0),
     x_
     (
         patch.faceCentres().component(0)*cos(waveAngle_)
@@ -75,12 +78,6 @@ Foam::waveModels::solitaryWaveModel::solitaryWaveModel
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::waveModels::solitaryWaveModel::~solitaryWaveModel()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::waveModels::solitaryWaveModel::readDict
@@ -90,6 +87,9 @@ bool Foam::waveModels::solitaryWaveModel::readDict
 {
     if (waveGenerationModel::readDict(overrideDict))
     {
+        waveHeight_ = readWaveHeight();
+        waveAngle_ = readWaveAngle();
+
         return true;
     }
 
@@ -101,7 +101,9 @@ void Foam::waveModels::solitaryWaveModel::info(Ostream& os) const
 {
     waveGenerationModel::info(os);
 
-    os << "    x0: " << x0_ << nl;
+    os  << "    Wave height : " << waveHeight_ << nl
+        << "    Wave angle  : " << radToDeg(waveAngle_) << nl
+        << "    x0: " << x0_ << nl;
 }
 
 

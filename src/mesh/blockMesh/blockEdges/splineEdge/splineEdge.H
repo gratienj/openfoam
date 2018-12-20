@@ -56,11 +56,11 @@ class splineEdge
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        splineEdge(const splineEdge&);
+        //- No copy construct
+        splineEdge(const splineEdge&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const splineEdge&);
+        //- No copy assignment
+        void operator=(const splineEdge&) = delete;
 
 
 public:
@@ -108,7 +108,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End of namespace blockEdges
+} // End namespace blockEdges
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

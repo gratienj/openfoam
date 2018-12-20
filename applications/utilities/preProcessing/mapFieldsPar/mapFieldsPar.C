@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,15 +46,23 @@ void mapConsistentMesh
     const fvMesh& meshTarget,
     const word& mapMethod,
     const word& AMIMapMethod,
+    const word& procMapMethod,
     const bool subtract,
-    const HashSet<word>& selectedFields,
+    const wordRes& selectedFields,
     const bool noLagrangian
 )
 {
     Info<< nl << "Consistently creating and mapping fields for time "
         << meshSource.time().timeName() << nl << endl;
 
-    meshToMesh interp(meshSource, meshTarget, mapMethod, AMIMapMethod);
+    meshToMesh interp
+    (
+        meshSource,
+        meshTarget,
+        mapMethod,
+        AMIMapMethod,
+        meshToMesh::procMapMethodNames_[procMapMethod]
+    );
 
     if (subtract)
     {
@@ -85,8 +93,9 @@ void mapSubMesh
     const wordList& cuttingPatches,
     const word& mapMethod,
     const word& AMIMapMethod,
+    const word& procMapMethod,
     const bool subtract,
-    const HashSet<word>& selectedFields,
+    const wordRes& selectedFields,
     const bool noLagrangian
 )
 {
@@ -100,7 +109,8 @@ void mapSubMesh
         mapMethod,
         AMIMapMethod,
         patchMap,
-        cuttingPatches
+        cuttingPatches,
+        meshToMesh::procMapMethodNames_[procMapMethod]
     );
 
     if (subtract)
@@ -130,7 +140,7 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "map volume fields from one mesh to another"
+        "Map volume fields from one mesh to another"
     );
 
     argList::addArgument("sourceCase");
@@ -139,54 +149,60 @@ int main(int argc, char *argv[])
     (
         "sourceTime",
         "scalar|'latestTime'",
-        "specify the source time"
+        "Specify the source time"
     );
     argList::addOption
     (
         "sourceRegion",
         "word",
-        "specify the source region"
+        "Specify the source region"
     );
     argList::addOption
     (
         "targetRegion",
         "word",
-        "specify the target region"
+        "Specify the target region"
     );
     argList::addBoolOption
     (
         "consistent",
-        "source and target geometry and boundary conditions identical"
+        "Source and target geometry and boundary conditions identical"
     );
     argList::addOption
     (
         "mapMethod",
         "word",
-        "specify the mapping method "
+        "Specify the mapping method "
         "(direct|mapNearest|cellVolumeWeight|correctedCellVolumeWeight)"
     );
     argList::addOption
     (
         "patchMapMethod",
         "word",
-        "specify the patch mapping method (direct|mapNearest|faceAreaWeight)"
+        "Specify the patch mapping method (direct|mapNearest|faceAreaWeight)"
+    );
+    argList::addOption
+    (
+        "procMapMethod",
+        "word",
+        "Specify the processor distribution map method (AABB|LOD)"
     );
     argList::addBoolOption
     (
         "subtract",
-        "subtract mapped source from target"
+        "Subtract mapped source from target"
     );
     argList::addOption
     (
         "fields",
-        "list",
-        "specify a list of fields to be mapped. Eg, '(U T p)' - "
-        "regular expressions not currently supported"
+        "wordRes",
+        "Specify single or multiple fields to reconstruct (all by default)."
+        " Eg, 'T' or '(p T U \"alpha.*\")'"
     );
     argList::addBoolOption
     (
         "noLagrangian",
-        "skip mapping lagrangian positions and fields"
+        "Skip mapping lagrangian positions and fields"
     );
 
     argList args(argc, argv);
@@ -200,33 +216,30 @@ int main(int argc, char *argv[])
 
     Info<< "Source: " << rootDirSource << " " << caseDirSource << endl;
     word sourceRegion = fvMesh::defaultRegion;
-    if (args.optionFound("sourceRegion"))
+    if (args.readIfPresent("sourceRegion", sourceRegion))
     {
-        sourceRegion = args["sourceRegion"];
         Info<< "Source region: " << sourceRegion << endl;
     }
 
     Info<< "Target: " << rootDirTarget << " " << caseDirTarget << endl;
     word targetRegion = fvMesh::defaultRegion;
-    if (args.optionFound("targetRegion"))
+    if (args.readIfPresent("targetRegion", targetRegion))
     {
-        targetRegion = args["targetRegion"];
         Info<< "Target region: " << targetRegion << endl;
     }
 
-    const bool consistent = args.optionFound("consistent");
+    const bool consistent = args.found("consistent");
 
 
     word mapMethod = meshToMesh::interpolationMethodNames_
     [
-        meshToMesh::imCellVolumeWeight
+        meshToMesh::interpolationMethod::imCellVolumeWeight
     ];
 
-    if  (args.optionReadIfPresent("mapMethod", mapMethod))
+    if  (args.readIfPresent("mapMethod", mapMethod))
     {
         Info<< "Mapping method: " << mapMethod << endl;
     }
-
 
     word patchMapMethod;
     if (meshToMesh::interpolationMethodNames_.found(mapMethod))
@@ -235,17 +248,28 @@ int main(int argc, char *argv[])
         meshToMesh::interpolationMethod method =
             meshToMesh::interpolationMethodNames_[mapMethod];
 
-        patchMapMethod = AMIPatchToPatchInterpolation::interpolationMethodToWord
-        (
-            meshToMesh::interpolationMethodAMI(method)
-        );
+        patchMapMethod =
+            AMIPatchToPatchInterpolation::interpolationMethodNames_
+            [
+                meshToMesh::interpolationMethodAMI(method)
+            ];
     }
 
-    // Optionally override
-    if (args.optionFound("patchMapMethod"))
-    {
-        patchMapMethod = args["patchMapMethod"];
+    word procMapMethod =
+        meshToMesh::procMapMethodNames_
+        [
+            meshToMesh::procMapMethod::pmAABB
+        ];
 
+    if (args.readIfPresent("procMapMethod", procMapMethod))
+    {
+        Info<< "Processor map method: " << procMapMethod << endl;
+    }
+
+
+    // Optionally override
+    if (args.readIfPresent("patchMapMethod", patchMapMethod))
+    {
         Info<< "Patch mapping method: " << patchMapMethod << endl;
     }
 
@@ -258,19 +282,16 @@ int main(int argc, char *argv[])
             << exit(FatalError);
     }
 
-    const bool subtract = args.optionFound("subtract");
+    const bool subtract = args.found("subtract");
     if (subtract)
     {
         Info<< "Subtracting mapped source field from target" << endl;
     }
 
-    HashSet<word> selectedFields;
-    if (args.optionFound("fields"))
-    {
-        args.optionLookup("fields")() >> selectedFields;
-    }
+    // Non-mandatory
+    const wordRes selectedFields(args.getList<wordRe>("fields", false));
 
-    const bool noLagrangian = args.optionFound("noLagrangian");
+    const bool noLagrangian = args.found("noLagrangian");
 
     #include "createTimes.H"
 
@@ -292,8 +313,8 @@ int main(int argc, char *argv[])
             )
         );
 
-        mapFieldsDict.lookup("patchMap") >> patchMap;
-        mapFieldsDict.lookup("cuttingPatches") >>  cuttingPatches;
+        mapFieldsDict.readEntry("patchMap", patchMap);
+        mapFieldsDict.readEntry("cuttingPatches", cuttingPatches);
     }
 
     #include "setTimeIndex.H"
@@ -332,6 +353,7 @@ int main(int argc, char *argv[])
             meshTarget,
             mapMethod,
             patchMapMethod,
+            procMapMethod,
             subtract,
             selectedFields,
             noLagrangian
@@ -347,11 +369,14 @@ int main(int argc, char *argv[])
             cuttingPatches,
             mapMethod,
             patchMapMethod,
+            procMapMethod,
             subtract,
             selectedFields,
             noLagrangian
         );
     }
+
+    runTimeSource.printExecutionTime(Info);
 
     Info<< "\nEnd\n" << endl;
 

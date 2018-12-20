@@ -164,6 +164,9 @@ void Foam::decompositionInformation::printSummary(Ostream& os) const
 
 void Foam::decompositionInformation::printDetails(Ostream& os) const
 {
+    os  << "Decomposition details with (proc faces) "
+        "for each processor connection"<< nl << nl;
+
     forAll(distrib_, ownProc)
     {
         const labelList& subdist = distrib_[ownProc];
@@ -217,11 +220,11 @@ void Foam::decompositionInformation::printAll(Ostream& os) const
 
 // * * * * * * * * * * * * * * * Ostream Operator  * * * * * * * * * * * * * //
 
-
 Foam::Ostream& Foam::decompositionInformation::stats::print(Ostream& os) const
 {
-    os  << "max/median/min: "
-        << this->max << " / " << this->median << " / " << this->min;
+    os  << "min:" << this->min
+        << " max:" << this->max
+        << " median:" << this->median;
 
     if (this->median)
     {
@@ -232,5 +235,6 @@ Foam::Ostream& Foam::decompositionInformation::stats::print(Ostream& os) const
 
     return os;
 }
+
 
 // ************************************************************************* //

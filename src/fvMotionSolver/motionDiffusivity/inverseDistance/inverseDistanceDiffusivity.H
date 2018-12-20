@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,7 @@ SourceFiles
 #define inverseDistanceDiffusivity_H
 
 #include "uniformDiffusivity.H"
-#include "wordReList.H"
+#include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -55,17 +55,17 @@ class inverseDistanceDiffusivity
 
         //- Patches selected to base the distance on
         //  These can contain patch names or regular expressions to search for.
-        wordReList patchNames_;
+        wordRes patchNames_;
 
 
     // Private Member Functions
 
 
-        //- Disallow default bitwise copy construct
-        inverseDistanceDiffusivity(const inverseDistanceDiffusivity&);
+        //- No copy construct
+        inverseDistanceDiffusivity(const inverseDistanceDiffusivity&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const inverseDistanceDiffusivity&);
+        //- No copy assignment
+        void operator=(const inverseDistanceDiffusivity&) = delete;
 
 
 public:
@@ -81,7 +81,7 @@ public:
 
 
     //- Destructor
-    virtual ~inverseDistanceDiffusivity();
+    virtual ~inverseDistanceDiffusivity() = default;
 
 
     // Member Functions

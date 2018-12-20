@@ -64,9 +64,9 @@ class ensightSerialOutput
         ensightFile& os
     );
 
-
-    //- Disallow null constructor
+    //- No null constructor
     ensightSerialOutput() = delete;
+
 
 public:
 
@@ -112,7 +112,7 @@ public:
         autoPtr<ensightFile>& output
     )
     {
-        return writeField(vf, part, output.rawRef());
+        return writeField(vf, part, output.ref());
     }
 
 
@@ -125,7 +125,7 @@ public:
         autoPtr<ensightFile>& output
     )
     {
-        return writeField(vf, list, output.rawRef());
+        return writeField(vf, list, output.ref());
     }
 
 };

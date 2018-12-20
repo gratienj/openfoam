@@ -47,11 +47,8 @@ IOdictionary transportProperties
 
 Info<< "Reading diffusivity DT\n" << endl;
 
-dimensionedScalar DT
-(
-    "DT",
-    dimArea/dimTime,
-    transportProperties
-);
+dimensionedScalar DT("DT", dimViscosity, transportProperties);
 
 #include "createPhi.H"
+
+#include "createFvOptions.H"

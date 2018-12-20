@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +29,36 @@ Description
     To be used in sampleSurfaces / functionObjects. Recalculates iso surface
     only if time changes.
 
+    This is often embedded as part of a sampled surfaces function object.
+
+Usage
+    Example of function object partial specification:
+    \verbatim
+    surfaces
+    (
+        surface1
+        {
+            type    sampledIsoSurface;
+            cell    false;
+        }
+    );
+    \endverbatim
+
+    Where the sub-entries comprise:
+    \table
+        Property | Description                             | Required | Default
+        type     | sampledIsoSurface                       | yes      |
+        isoField | field name for obtaining iso-surface    | yes      |
+        isoValue | value of iso-surface                    | yes      |
+        mergeTol | tolerance for merging points            | no       | 1e-6
+        regularise | point snapping                        | yes      |
+        average  | cell values from averaged point values  | no       | false
+        bounds   | limit with bounding box                 | no       |
+        zone     | limit to cell zone (name or regex)      | no       |
+        zones    | limit to cell zones (names, regexs)     | no       |
+        exposedPatchName | name for zone subset            | partly   |
+    \endtable
+
 SourceFiles
     sampledIsoSurface.C
 
@@ -39,7 +69,6 @@ SourceFiles
 
 #include "isoSurface.H"
 #include "sampledSurface.H"
-#include "ZoneIDs.H"
 #include "fvMeshSubset.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -69,14 +98,14 @@ class sampledIsoSurface
         //- Merge tolerance
         const scalar mergeTol_;
 
-        //- Whether to coarse
-        const Switch regularise_;
+        //- Whether to coarsen
+        const bool regularise_;
 
         //- Whether to recalculate cell values as average of point values
-        const Switch average_;
+        const bool average_;
 
-        //- Zone name/index (if restricted to zones)
-        mutable cellZoneID zoneID_;
+        //- The zone or zones for the iso-surface
+        wordRes zoneNames_;
 
         //- For zones: patch to put exposed faces into
         mutable word exposedPatchName_;
@@ -84,30 +113,29 @@ class sampledIsoSurface
         mutable autoPtr<isoSurface> surfPtr_;
 
 
-        // Recreated for every isoSurface
+    // Recreated for every isoSurface
 
-            //- Time at last call, also track if surface needs an update
-            mutable label prevTimeIndex_;
+        //- Time at last call, also track if surface needs an update
+        mutable label prevTimeIndex_;
 
-            //- Cached volfield
-            mutable autoPtr<volScalarField> storedVolFieldPtr_;
-            mutable const volScalarField* volFieldPtr_;
+        //- Cached volfield
+        mutable autoPtr<volScalarField> storedVolFieldPtr_;
+        mutable const volScalarField* volFieldPtr_;
 
-            //- Cached pointfield
-            mutable const pointScalarField* pointFieldPtr_;
+        //- Cached pointfield
+        mutable const pointScalarField* pointFieldPtr_;
 
-            // And on subsetted mesh
+    // And on subsetted mesh
 
-                //- Cached submesh
-                mutable autoPtr<fvMeshSubset> subMeshPtr_;
+        //- Cached submesh
+        mutable autoPtr<fvMeshSubset> subMeshPtr_;
 
-                //- Cached volfield
-                mutable autoPtr<volScalarField> storedVolSubFieldPtr_;
-                mutable const volScalarField* volSubFieldPtr_;
+        //- Cached volfield
+        mutable autoPtr<volScalarField> storedVolSubFieldPtr_;
+        mutable const volScalarField* volSubFieldPtr_;
 
-                //- Cached pointfield
-                mutable const pointScalarField* pointSubFieldPtr_;
-
+        //- Cached pointfield
+        mutable const pointScalarField* pointSubFieldPtr_;
 
 
     // Private Member Functions
@@ -119,17 +147,19 @@ class sampledIsoSurface
         //  Do nothing (and return false) if no update was needed
         bool updateGeometry() const;
 
-        //- Sample field on faces
+        //- Sample volume field onto surface faces
         template<class Type>
-        tmp<Field<Type>> sampleField
+        tmp<Field<Type>> sampleOnFaces
         (
-            const GeometricField<Type, fvPatchField, volMesh>& vField
+            const interpolation<Type>& sampler
         ) const;
 
-
+        //- Interpolate volume field onto surface points
         template<class Type>
-        tmp<Field<Type>>
-        interpolateField(const interpolation<Type>&) const;
+        tmp<Field<Type>> sampleOnPoints
+        (
+            const interpolation<Type>& interpolator
+        ) const;
 
 
 public:
@@ -157,7 +187,7 @@ public:
 
         const isoSurface& surface() const
         {
-            return surfPtr_();
+            return *surfPtr_;
         }
 
         //- Does the surface need an update?
@@ -217,67 +247,67 @@ public:
 
     // Sample
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<scalarField> sample
         (
-            const volScalarField&
+            const interpolation<scalar>& sampler
         ) const;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<vectorField> sample
         (
-            const volVectorField&
+            const interpolation<vector>& sampler
         ) const;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<sphericalTensorField> sample
         (
-            const volSphericalTensorField&
+            const interpolation<sphericalTensor>& sampler
         ) const;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<symmTensorField> sample
         (
-            const volSymmTensorField&
+            const interpolation<symmTensor>& sampler
         ) const;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<tensorField> sample
         (
-            const volTensorField&
+            const interpolation<tensor>& sampler
         ) const;
 
 
     // Interpolate
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<scalarField> interpolate
         (
-            const interpolation<scalar>&
+            const interpolation<scalar>& interpolator
         ) const;
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<vectorField> interpolate
         (
-            const interpolation<vector>&
+            const interpolation<vector>& interpolator
         ) const;
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<sphericalTensorField> interpolate
         (
-            const interpolation<sphericalTensor>&
+            const interpolation<sphericalTensor>& interpolator
         ) const;
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<symmTensorField> interpolate
         (
-            const interpolation<symmTensor>&
+            const interpolation<symmTensor>& interpolator
         ) const;
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<tensorField> interpolate
         (
-            const interpolation<tensor>&
+            const interpolation<tensor>& interpolator
         ) const;
 
 

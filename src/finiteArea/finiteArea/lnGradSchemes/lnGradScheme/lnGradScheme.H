@@ -72,7 +72,7 @@ class lnGradScheme
 
     // Private Member Functions
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const lnGradScheme&) = delete;
 
 
@@ -122,7 +122,7 @@ public:
         }
 
         //- Return the lnGrad of the given cell field
-        //  with the given weigting factors
+        //  with the given weighting factors
         static tmp<GeometricField<Type, faePatchField, edgeMesh>>
         lnGrad
         (
@@ -148,7 +148,7 @@ public:
         virtual tmp<GeometricField<Type, faePatchField, edgeMesh>>
         correction(const GeometricField<Type, faPatchField, areaMesh>&) const
         {
-            return tmp<GeometricField<Type, faePatchField, edgeMesh>>(nullptr);
+            return nullptr;
         }
 
         //- Return the lnGrad of the given cell field

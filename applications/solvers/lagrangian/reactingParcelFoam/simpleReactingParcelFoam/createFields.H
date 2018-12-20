@@ -1,13 +1,8 @@
 #include "readGravitationalAcceleration.H"
 
-Info<< "Creating combustion model\n" << endl;
-
-autoPtr<combustionModels::rhoCombustionModel> combustion
-(
-    combustionModels::rhoCombustionModel::New(mesh)
-);
-
-rhoReactionThermo& thermo = combustion->thermo();
+Info<< "Reading thermophysical properties\n" << endl;
+autoPtr<rhoReactionThermo> pThermo(rhoReactionThermo::New(mesh));
+rhoReactionThermo& thermo = pThermo();
 thermo.validate(args.executable(), "h", "e");
 
 SLGThermo slgThermo(mesh, thermo);
@@ -15,7 +10,7 @@ SLGThermo slgThermo(mesh, thermo);
 basicSpecieMixture& composition = thermo.composition();
 PtrList<volScalarField>& Y = composition.Y();
 
-const word inertSpecie(thermo.lookup("inertSpecie"));
+const word inertSpecie(thermo.get<word>("inertSpecie"));
 if (!composition.species().found(inertSpecie))
 {
     FatalIOErrorIn(args.executable().c_str(), thermo)
@@ -91,8 +86,11 @@ autoPtr<compressible::turbulenceModel> turbulence
     )
 );
 
-// Set the turbulence into the combustion model
-combustion->setTurbulence(turbulence());
+Info<< "Creating combustion model\n" << endl;
+autoPtr<CombustionModel<rhoReactionThermo>> combustion
+(
+    CombustionModel<rhoReactionThermo>::New(thermo, turbulence())
+);
 
 Info<< "Creating multi-variate interpolation scheme\n" << endl;
 multivariateSurfaceInterpolationScheme<scalar>::fieldTable fields;
@@ -114,9 +112,10 @@ volScalarField Qdot
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Qdot", dimEnergy/dimVolume/dimTime, 0.0)
+    dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
 );
 
 #include "createMRF.H"
 #include "createRadiationModel.H"
 #include "createClouds.H"
+#include "createFvOptions.H"

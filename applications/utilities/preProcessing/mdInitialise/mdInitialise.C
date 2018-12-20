@@ -39,9 +39,13 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Initialises fields for a molecular dynamics (MD) simulation"
+    );
     #include "setRootCase.H"
     #include "createTime.H"
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     IOdictionary mdInitialiseDict
     (
@@ -91,8 +95,8 @@ int main(int argc, char *argv[])
             << nl << exit(FatalError);
     }
 
-    Info<< nl << "ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
+    Info<< nl;
+    runTime.printExecutionTime(Info);
 
     Info<< "\nEnd\n" << endl;
 

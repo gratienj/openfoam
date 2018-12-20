@@ -57,15 +57,6 @@ class OBJsurfaceFormat
 :
     public MeshedSurface<Face>
 {
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        OBJsurfaceFormat(const OBJsurfaceFormat<Face>&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const OBJsurfaceFormat<Face>&) = delete;
-
-
 public:
 
     // Constructors
@@ -94,7 +85,7 @@ public:
         //- Read from file
         virtual bool read(const fileName& filename);
 
-        //- Write object file
+        //- Write surface mesh to file
         virtual void write
         (
             const fileName& name,

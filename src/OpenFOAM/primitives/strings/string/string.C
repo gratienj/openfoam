@@ -39,36 +39,43 @@ const Foam::string Foam::string::null;
 
 Foam::word Foam::string::ext() const
 {
-    const size_type i = find_ext();
+    const auto i = find_ext();
 
     if (i == npos)
     {
         return word::null;
     }
-    else
-    {
-        return substr(i+1, npos);
-    }
+
+    return substr(i+1);
 }
 
 
-bool Foam::string::ext(const Foam::word& ending)
+bool Foam::string::ext(const word& ending)
 {
-    if (!ending.empty() && !empty() && operator[](size()-1) != '/')
+    if (ending.empty() || empty() || back() == '/')
+    {
+        return false;
+    }
+    else if (ending[0] == '.')
+    {
+        if (ending.size() == 1)
+        {
+            return false;
+        }
+    }
+    else
     {
         append(1u, '.');
-        append(ending);
-
-        return true;
     }
+    append(ending);
 
-    return false;
+    return true;
 }
 
 
 bool Foam::string::hasExt(const word& ending) const
 {
-    size_type i = find_ext();
+    auto i = find_ext();
     if (i == npos)
     {
         return false;
@@ -86,13 +93,13 @@ bool Foam::string::hasExt(const word& ending) const
 
 bool Foam::string::hasExt(const wordRe& ending) const
 {
-    const size_type i = find_ext();
+    const auto i = find_ext();
     if (i == npos)
     {
         return false;
     }
 
-    const std::string end = substr(i+1, npos);  // Compare *after* the dot
+    const std::string end = substr(i+1);  // Compare *after* the dot
     return ending.match(end);
 }
 

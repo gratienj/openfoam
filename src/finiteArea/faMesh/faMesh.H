@@ -198,11 +198,11 @@ class faMesh
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        faMesh(const faMesh&);
+        //- No copy construct
+        faMesh(const faMesh&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faMesh&);
+        //- No copy assignment
+        void operator=(const faMesh&) = delete;
 
 
         //- Set primitive mesh data
@@ -339,7 +339,7 @@ public:
             const Time& time() const;
 
             //- Return the current instance directory for points
-            //  Used in the consruction of gemometric mesh data dependent
+            //  Used in the construction of geometric mesh data dependent
             //  on points
             const fileName& pointsInstance() const;
 
@@ -381,7 +381,7 @@ public:
                 //- Return faces
                 const faceList& faces() const;
 
-                //- Edge owner addresing
+                //- Edge owner addressing
                 inline const labelList& edgeOwner() const
                 {
                     return edgeOwner_;
@@ -404,6 +404,9 @@ public:
 
 
         // Access
+
+            //- Return true if thisDb() is a valid DB
+            virtual bool hasDb() const;
 
             //- Return reference to the mesh database
             virtual const objectRegistry& thisDb() const;
@@ -457,7 +460,7 @@ public:
             }
 
 
-        // Mesh motion and mophing
+        // Mesh motion and morphing
 
             //- Is mesh moving
             bool moving() const

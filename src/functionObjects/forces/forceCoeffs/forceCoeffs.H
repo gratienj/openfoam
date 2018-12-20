@@ -75,7 +75,7 @@ Usage
     Where the entries comprise:
     \table
         Property     | Description             | Required    | Default value
-        type         | Type name: forces       | yes         |
+        type         | Type name: forceCoeffs  | yes         |
         log          | Write force data to standard output | no | no
         writeFields  | Write the force and moment coefficient fields | no | no
         patches      | Patches included in the forces calculation | yes |
@@ -172,11 +172,11 @@ class forceCoeffs
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        forceCoeffs(const forceCoeffs&);
+        //- No copy construct
+        forceCoeffs(const forceCoeffs&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const forceCoeffs&);
+        //- No copy assignment
+        void operator=(const forceCoeffs&) = delete;
 
 
 protected:

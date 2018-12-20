@@ -54,12 +54,12 @@ Foam::laminarFlameSpeedModels::GuldersEGR::GuldersEGR
     laminarFlameSpeed(dict, ct),
 
     coeffsDict_(dict.optionalSubDict(typeName + "Coeffs").subDict(fuel_)),
-    W_(readScalar(coeffsDict_.lookup("W"))),
-    eta_(readScalar(coeffsDict_.lookup("eta"))),
-    xi_(readScalar(coeffsDict_.lookup("xi"))),
-    f_(readScalar(coeffsDict_.lookup("f"))),
-    alpha_(readScalar(coeffsDict_.lookup("alpha"))),
-    beta_(readScalar(coeffsDict_.lookup("beta")))
+    W_(coeffsDict_.get<scalar>("W")),
+    eta_(coeffsDict_.get<scalar>("eta")),
+    xi_(coeffsDict_.get<scalar>("xi")),
+    f_(coeffsDict_.get<scalar>("f")),
+    alpha_(coeffsDict_.get<scalar>("alpha")),
+    beta_(coeffsDict_.get<scalar>("beta"))
 {}
 
 
@@ -124,7 +124,7 @@ Foam::laminarFlameSpeedModels::GuldersEGR::Su0pTphi
                 false
             ),
             p.mesh(),
-            dimensionedScalar("Su0", dimVelocity, 0.0)
+            dimensionedScalar(dimVelocity, Zero)
         )
     );
 
@@ -179,7 +179,7 @@ Foam::laminarFlameSpeedModels::GuldersEGR::Su0pTphi
                 false
             ),
             p.mesh(),
-            dimensionedScalar("Su0", dimVelocity, 0.0)
+            dimensionedScalar(dimVelocity, Zero)
         )
     );
 
@@ -226,7 +226,7 @@ Foam::laminarFlameSpeedModels::GuldersEGR::operator()() const
             psiuReactionThermo_.Tu(),
             dimensionedScalar
             (
-                psiuReactionThermo_.lookup("stoichiometricAirFuelMassRatio")
+                "stoichiometricAirFuelMassRatio", dimless, psiuReactionThermo_
             )/
             (
                 scalar(1)/psiuReactionThermo_.composition().Y("ft")

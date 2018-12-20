@@ -118,8 +118,8 @@ protected:
         //- Mode type names
         static const Enum<modeType> modeTypeNames_;
 
-        //- Switch to write location of min/max values
-        Switch location_;
+        //- Write location of min/max values?
+        bool location_;
 
         //- Mode for min/max - only applicable for ranks > 0
         modeType mode_;
@@ -150,11 +150,19 @@ protected:
         //- Output file header information
         virtual void writeFileHeader(Ostream& os);
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         fieldMinMax(const fieldMinMax&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const fieldMinMax&) = delete;
+
+        //- Calculate the field min/max for a given field type
+        template<class Type>
+        void calcMinMaxFieldType
+        (
+            const GeometricField<Type, fvPatchField, volMesh>& field,
+            const word& outputFieldName
+        );
 
         //- Calculate the field min/max
         template<class Type>
@@ -183,7 +191,7 @@ public:
 
 
     //- Destructor
-    virtual ~fieldMinMax();
+    virtual ~fieldMinMax() = default;
 
 
     // Member Functions

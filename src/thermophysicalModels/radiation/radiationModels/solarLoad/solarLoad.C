@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,7 @@ License
 #include "vectorList.H"
 #include "addToRunTimeSelectionTable.H"
 #include "boundaryRadiationProperties.H"
-#include "uniformDimensionedFields.H"
+#include "gravityMeshObject.H"
 #include "cyclicAMIPolyPatch.H"
 #include "mappedPatchBase.H"
 #include "wallPolyPatch.H"
@@ -98,9 +98,8 @@ void Foam::radiation::solarLoad::updateAbsorptivity
     const boundaryRadiationProperties& boundaryRadiation =
         boundaryRadiationProperties::New(mesh_);
 
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchID : includePatches)
     {
-        const label patchID = iter.key();
         absorptivity_[patchID].setSize(nBands_);
         for (label bandI = 0; bandI < nBands_; bandI++)
         {
@@ -174,9 +173,8 @@ void Foam::radiation::solarLoad::updateSkyDiffusiveRadiation
         case solarCalculator::mSunLoadFairWeatherConditions:
         case solarCalculator::mSunLoadTheoreticalMaximum:
         {
-            forAllConstIter(labelHashSet, includePatches, iter)
+            for (const label patchID : includePatches)
             {
-                const label patchID = iter.key();
                 const polyPatch& pp = patches[patchID];
                 const scalarField& sf = mesh_.magSf().boundaryField()[patchID];
 
@@ -255,9 +253,8 @@ void Foam::radiation::solarLoad::updateSkyDiffusiveRadiation
 
         case solarCalculator::mSunLoadConstant:
         {
-            forAllConstIter(labelHashSet, includePatches, iter)
+            for (const label patchID : includePatches)
             {
-                const label patchID = iter.key();
                 const polyPatch& pp = patches[patchID];
                 const scalarField& sf = mesh_.magSf().boundaryField()[patchID];
 
@@ -297,23 +294,23 @@ void Foam::radiation::solarLoad::updateSkyDiffusiveRadiation
 
 void Foam::radiation::solarLoad::initialise(const dictionary& coeffs)
 {
-    if (coeffs.found("gridUp"))
+    if (coeffs.readIfPresent("gridUp", verticalDir_))
     {
-         coeffs.lookup("gridUp") >> verticalDir_;
-         verticalDir_ /= mag(verticalDir_);
+         verticalDir_.normalise();
     }
-    else if (mesh_.foundObject<uniformDimensionedVectorField>("g"))
+    else
     {
         const uniformDimensionedVectorField& g =
-            mesh_.lookupObject<uniformDimensionedVectorField>("g");
+            meshObjects::gravity::New(mesh_.time());
         verticalDir_ = (-g/mag(g)).value();
     }
 
-    includePatches_ = mesh_.boundaryMesh().findIndices(viewFactorWalls);
+    includePatches_ = mesh_.boundaryMesh().indices(viewFactorWalls);
 
-    coeffs.lookup("useVFbeamToDiffuse") >> useVFbeamToDiffuse_;
+    coeffs.readEntry("useVFbeamToDiffuse", useVFbeamToDiffuse_);
 
-    coeffs.lookup("spectralDistribution") >> spectralDistribution_;
+    coeffs.readEntry("spectralDistribution", spectralDistribution_);
+
     spectralDistribution_ =
         spectralDistribution_/sum(spectralDistribution_);
 
@@ -589,9 +586,8 @@ void Foam::radiation::solarLoad::calculateQdiff
     const polyBoundaryMesh& patches = mesh_.boundaryMesh();
     volScalarField::Boundary& qrBf = qr_.boundaryFieldRef();
 
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchID : includePatches)
     {
-        const label patchID = iter.key();
         const scalarField& qSecond = qsecondRad_.boundaryField()[patchID];
         if (includeMappedPatchBasePatches[patchID])
         {
@@ -641,7 +637,7 @@ Foam::radiation::solarLoad::solarLoad(const volScalarField& T)
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("qr", dimMass/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/pow3(dimTime), Zero)
     ),
     qsecondRad_
     (
@@ -654,7 +650,7 @@ Foam::radiation::solarLoad::solarLoad(const volScalarField& T)
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("qsecondRad", dimMass/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/pow3(dimTime), Zero)
     ),
     hitFaces_(),
     Ru_
@@ -668,7 +664,7 @@ Foam::radiation::solarLoad::solarLoad(const volScalarField& T)
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar("Ru", dimMass/dimLength/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/dimLength/pow3(dimTime), Zero)
     ),
     solarCalc_(this->subDict(typeName + "Coeffs"), mesh_),
     verticalDir_(Zero),
@@ -731,7 +727,7 @@ Foam::radiation::solarLoad::solarLoad
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("qr", dimMass/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/pow3(dimTime), Zero)
     ),
     qsecondRad_
     (
@@ -744,7 +740,7 @@ Foam::radiation::solarLoad::solarLoad
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("qsecondRad", dimMass/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/pow3(dimTime), Zero)
     ),
     hitFaces_(),
     Ru_
@@ -758,7 +754,7 @@ Foam::radiation::solarLoad::solarLoad
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar("Ru", dimMass/dimLength/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/dimLength/pow3(dimTime), Zero)
     ),
     solarCalc_(coeffs_, mesh_),
     verticalDir_(Zero),
@@ -823,7 +819,7 @@ Foam::radiation::solarLoad::solarLoad
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("qr", dimMass/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/pow3(dimTime), Zero)
     ),
     qsecondRad_
     (
@@ -836,7 +832,7 @@ Foam::radiation::solarLoad::solarLoad
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("qsecondRad", dimMass/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/pow3(dimTime), Zero)
     ),
     hitFaces_(),
     Ru_
@@ -850,7 +846,7 @@ Foam::radiation::solarLoad::solarLoad
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar("Ru", dimMass/dimLength/pow3(dimTime), 0.0)
+        dimensionedScalar(dimMass/dimLength/pow3(dimTime), Zero)
     ),
     solarCalc_(dict, mesh_),
     verticalDir_(Zero),
@@ -950,7 +946,7 @@ void Foam::radiation::solarLoad::calculate()
         Ru_ = dimensionedScalar("Ru", dimMass/dimLength/pow3(dimTime), 0.0);
         qrBf = 0.0;
 
-        // Add direct hit radation
+        // Add direct hit radiation
         const labelList& hitFacesId = hitFaces_->rayStartFaces();
         updateDirectHitRadiation(hitFacesId, includeMappedPatchBasePatches);
 
@@ -972,7 +968,7 @@ void Foam::radiation::solarLoad::calculate()
 
     if (debug)
     {
-        if (mesh_.time().outputTime())
+        if (mesh_.time().writeTime())
         {
             Ru_.write();
         }
@@ -982,26 +978,22 @@ void Foam::radiation::solarLoad::calculate()
 
 Foam::tmp<Foam::volScalarField> Foam::radiation::solarLoad::Rp() const
 {
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                "Rp",
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            "Rp",
+            mesh_.time().timeName(),
             mesh_,
-            dimensionedScalar
-            (
-                "zero",
-                dimMass/pow3(dimTime)/dimLength/pow4(dimTemperature),
-                0.0
-            )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh_,
+        dimensionedScalar
+        (
+            dimMass/pow3(dimTime)/dimLength/pow4(dimTemperature),
+            Zero
         )
     );
 }

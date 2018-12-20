@@ -52,8 +52,8 @@ Foam::boundaryPatch::boundaryPatch
 )
 :
     patchIdentifier(name, dict, index),
-    size_(readLabel(dict.lookup("nFaces"))),
-    start_(readLabel(dict.lookup("startFace")))
+    size_(dict.get<label>("nFaces")),
+    start_(dict.get<label>("startFace"))
 {}
 
 
@@ -75,7 +75,7 @@ Foam::boundaryPatch::boundaryPatch(const boundaryPatch& p, const label index)
 
 Foam::autoPtr<Foam::boundaryPatch> Foam::boundaryPatch::clone() const
 {
-    return autoPtr<boundaryPatch>(new boundaryPatch(*this));
+    return autoPtr<boundaryPatch>::New(*this);
 }
 
 

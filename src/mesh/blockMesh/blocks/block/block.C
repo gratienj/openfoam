@@ -37,6 +37,24 @@ namespace Foam
 
 Foam::block::block
 (
+    const cellShape& bshape,
+    const pointField& vertices,
+    const blockEdgeList& edges,
+    const blockFaceList& faces,
+    const Vector<label>& density,
+    const UList<gradingDescriptors>& expand,
+    const word& zoneName
+)
+:
+    blockDescriptor(bshape, vertices, edges, faces, density, expand, zoneName)
+{
+    createPoints();
+    createBoundary();
+}
+
+
+Foam::block::block
+(
     const dictionary& dict,
     const label index,
     const pointField& vertices,
@@ -78,28 +96,15 @@ Foam::autoPtr<Foam::block> Foam::block::New
 
     const word blockOrCellShapeType(is);
 
-    auto cstrIter = IstreamConstructorTablePtr_->cfind(blockOrCellShapeType);
+    auto cstr = IstreamConstructorTablePtr_->cfind(blockOrCellShapeType);
 
-    if (!cstrIter.found())
+    if (!cstr.found())
     {
         is.putBack(token(blockOrCellShapeType));
-        return autoPtr<block>(new block(dict, index, points, edges, faces, is));
+        return autoPtr<block>::New(dict, index, points, edges, faces, is);
     }
-    else
-    {
-        return autoPtr<block>
-        (
-            cstrIter()
-            (
-                dict,
-                index,
-                points,
-                edges,
-                faces,
-                is
-            )
-        );
-    }
+
+    return autoPtr<block>(cstr()(dict, index, points, edges, faces, is));
 }
 
 

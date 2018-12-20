@@ -149,8 +149,8 @@ private:
         //- Construct reaction thermo
         void setThermo(const HashPtrTable<ReactionThermo>& thermoDatabase);
 
-        //- Disallow default bitwise assignment
-        void operator=(const Reaction<ReactionThermo>&);
+        //- No copy assignment
+        void operator=(const Reaction<ReactionThermo>&) = delete;
 
         //- Return new reaction ID for un-named reactions
         label getNewReactionID();
@@ -212,10 +212,7 @@ public:
         //- Construct and return a clone
         virtual autoPtr<Reaction<ReactionThermo>> clone() const //
         {
-            return autoPtr<Reaction<ReactionThermo>>
-            (
-                new Reaction<ReactionThermo>(*this)
-            );
+            return autoPtr<Reaction<ReactionThermo>>::New(*this);
         }
 
         //- Construct and return a clone with new speciesTable
@@ -224,10 +221,7 @@ public:
             const speciesTable& species
         ) const
         {
-            return autoPtr<Reaction<ReactionThermo>>
-            (
-                new Reaction<ReactionThermo>(*this, species)
-            );
+            return autoPtr<Reaction<ReactionThermo>>::New(*this, species);
         }
 
 
@@ -243,15 +237,13 @@ public:
 
 
     //- Destructor
-    virtual ~Reaction()
-    {}
+    virtual ~Reaction() = default;
 
 
     // Member Functions
 
         // Access
 
-            inline word& name();
             inline const word& name() const;
 
             // - Access to basic components of the reaction

@@ -121,7 +121,7 @@ inline bool Foam::HashTable<T, Key, Hash>::insert
     const T& obj
 )
 {
-    return this->set(key, obj, false);  // No overwrite
+    return this->setEntry(key, obj, false);  // No overwrite
 }
 
 
@@ -132,15 +132,7 @@ inline bool Foam::HashTable<T, Key, Hash>::set
     const T& obj
 )
 {
-    return this->set(key, obj, true);   // Overwrite
-}
-
-
-template<class T, class Key, class Hash>
-inline Foam::Xfer<Foam::HashTable<T, Key, Hash>>
-Foam::HashTable<T, Key, Hash>::xfer()
-{
-    return xferMove(*this);
+    return this->setEntry(key, obj, true);   // Overwrite
 }
 
 
@@ -223,30 +215,6 @@ inline T& Foam::HashTable<T, Key, Hash>::operator()
 
     this->insert(key, deflt);
     return find(key).object();
-}
-
-
-template<class T, class Key, class Hash>
-inline const T& Foam::HashTable<T, Key, Hash>::operator()
-(
-    const Key& key,
-    const T& deflt
-) const
-{
-    return this->lookup(key, deflt);
-}
-
-
-// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
-
-template<class T, class Key, class Hash>
-inline void Foam::Swap
-(
-    HashTable<T, Key, Hash>& a,
-    HashTable<T, Key, Hash>& b
-)
-{
-    a.swap(b);
 }
 
 

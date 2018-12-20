@@ -89,7 +89,7 @@ class InteractionLists
 
         //- Switch controlling whether or not the cloud gets populated
         //  with the referred particles, hence gets written out
-        const Switch writeCloud_;
+        const bool writeCloud_;
 
         //- mapDistribute to exchange referred particles into referred cells
         autoPtr<mapDistribute> cellMapPtr_;
@@ -198,11 +198,11 @@ class InteractionLists
         //- Write the referred wall faces out for debug
         void writeReferredWallFaces() const;
 
-        //- Disallow default bitwise copy construct
-        InteractionLists(const InteractionLists&);
+        //- No copy construct
+        InteractionLists(const InteractionLists&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const InteractionLists&);
+        //- No copy assignment
+        void operator=(const InteractionLists&) = delete;
 
 
 public:
@@ -218,7 +218,7 @@ public:
         (
             const polyMesh& mesh,
             scalar maxDistance,
-            Switch writeCloud = false,
+            bool writeCloud = false,
             const word& UName = "U"
         );
 

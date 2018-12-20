@@ -49,13 +49,13 @@ const Foam::Enum
     Foam::conformalVoronoiMesh::dualMeshPointType
 >
 Foam::conformalVoronoiMesh::dualMeshPointTypeNames_
-{
+({
     { dualMeshPointType::internal, "internal" },
     { dualMeshPointType::surface, "surface" },
     { dualMeshPointType::featureEdge, "featureEdge" },
     { dualMeshPointType::featurePoint, "featurePoint" },
     { dualMeshPointType::constrained, "constrained" },
-};
+});
 
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
@@ -509,17 +509,15 @@ void Foam::conformalVoronoiMesh::buildCellSizeAndAlignmentMesh()
         if (!distributeBackground(cellSizeMesh))
         {
             // Synchronise the cell size mesh if it has not been distributed
-            cellSizeMesh.distribute(decomposition_);
+            cellSizeMesh.distribute(decomposition_());
         }
     }
 
     const dictionary& motionControlDict
         = foamyHexMeshControls().foamyHexMeshDict().subDict("motionControl");
 
-    label nMaxIter = readLabel
-    (
-        motionControlDict.lookup("maxRefinementIterations")
-    );
+    const label nMaxIter =
+        motionControlDict.get<label>("maxRefinementIterations");
 
     Info<< "Maximum number of refinement iterations : " << nMaxIter << endl;
 
@@ -531,7 +529,7 @@ void Foam::conformalVoronoiMesh::buildCellSizeAndAlignmentMesh()
 
         if (Pstream::parRun())
         {
-            cellSizeMesh.distribute(decomposition_);
+            cellSizeMesh.distribute(decomposition_());
         }
 
         Info<< "    Iteration " << i
@@ -549,15 +547,14 @@ void Foam::conformalVoronoiMesh::buildCellSizeAndAlignmentMesh()
         // Need to distribute the cell size mesh to cover the background mesh
         if (!distributeBackground(cellSizeMesh))
         {
-            cellSizeMesh.distribute(decomposition_);
+            cellSizeMesh.distribute(decomposition_());
         }
     }
 
-    label maxSmoothingIterations = readLabel
+    meshAlignmentSmoother.smoothAlignments
     (
-        motionControlDict.lookup("maxSmoothingIterations")
+        motionControlDict.get<label>("maxSmoothingIterations")
     );
-    meshAlignmentSmoother.smoothAlignments(maxSmoothingIterations);
 
     Info<< "Background cell size and alignment mesh:" << endl;
     cellSizeMesh.printInfo(Info);
@@ -1081,11 +1078,7 @@ void Foam::conformalVoronoiMesh::move()
         Zero
     );
 
-    PackedBoolList pointToBeRetained
-    (
-        number_of_vertices(),
-        true
-    );
+    bitSet pointToBeRetained(number_of_vertices(), true);
 
     DynamicList<Point> pointsToInsert(number_of_vertices());
 
@@ -1144,7 +1137,7 @@ void Foam::conformalVoronoiMesh::move()
 
                         alignmentDirs[aA] = a + sign(dotProduct)*b;
 
-                        alignmentDirs[aA] /= mag(alignmentDirs[aA]);
+                        alignmentDirs[aA].normalise();
                     }
                 }
             }
@@ -1170,8 +1163,8 @@ void Foam::conformalVoronoiMesh::move()
 
                     if
                     (
-                        pointToBeRetained[vA->index()] == true
-                     && pointToBeRetained[vB->index()] == true
+                        pointToBeRetained.test(vA->index())
+                     && pointToBeRetained.test(vB->index())
                     )
                     {
                         const Foam::point pt(0.5*(dVA + dVB));
@@ -1185,12 +1178,12 @@ void Foam::conformalVoronoiMesh::move()
 
                 if (vA->internalPoint() && !vA->referred() && !vA->fixed())
                 {
-                    pointToBeRetained[vA->index()] = false;
+                    pointToBeRetained.unset(vA->index());
                 }
 
                 if (vB->internalPoint() && !vB->referred() && !vB->fixed())
                 {
-                    pointToBeRetained[vB->index()] = false;
+                    pointToBeRetained.unset(vB->index());
                 }
 
                 // Do not consider this Delaunay edge any further
@@ -1368,8 +1361,8 @@ void Foam::conformalVoronoiMesh::move()
                             // removed.
                             if
                             (
-                                pointToBeRetained[vA->index()] == true
-                             && pointToBeRetained[vB->index()] == true
+                                pointToBeRetained.test(vA->index())
+                             && pointToBeRetained.test(vB->index())
                             )
                             {
                                 const Foam::point pt(0.5*(dVA + dVB));
@@ -1388,7 +1381,7 @@ void Foam::conformalVoronoiMesh::move()
                          && !vA->fixed()
                         )
                         {
-                            pointToBeRetained[vA->index()] = false;
+                            pointToBeRetained.unset(vA->index());
                         }
 
                         if
@@ -1398,7 +1391,7 @@ void Foam::conformalVoronoiMesh::move()
                          && !vB->fixed()
                         )
                         {
-                            pointToBeRetained[vB->index()] = false;
+                            pointToBeRetained.unset(vB->index());
                         }
                     }
                     else
@@ -1454,7 +1447,7 @@ void Foam::conformalVoronoiMesh::move()
     {
         if (vit->internalPoint() && !vit->referred() && !vit->fixed())
         {
-            if (pointToBeRetained[vit->index()] == true)
+            if (pointToBeRetained.test(vit->index()))
             {
                 limitDisplacement
                 (
@@ -1484,7 +1477,7 @@ void Foam::conformalVoronoiMesh::move()
     {
         if (vit->internalPoint() && !vit->referred() && !vit->fixed())
         {
-            if (pointToBeRetained[vit->index()] == true)
+            if (pointToBeRetained.test(vit->index()))
             {
                 // Convert vit->point() to FOAM vector (double) to do addition,
                 // avoids memory increase because a record of the constructions
@@ -1540,7 +1533,7 @@ void Foam::conformalVoronoiMesh::move()
         {
             if (vit->internalPoint() && !vit->referred())
             {
-                if (pointToBeRetained[vit->index()] == true)
+                if (pointToBeRetained.test(vit->index()))
                 {
                     meshTools::writeOBJ(str, topoint(vit->point()));
 

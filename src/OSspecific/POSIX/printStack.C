@@ -50,7 +50,7 @@ string pOpen(const string& cmd, label line=0)
         char *buf = nullptr;
 
         // Read line number of lines
-        for (label cnt = 0; cnt <= line; cnt++)
+        for (label cnt = 0; cnt <= line; ++cnt)
         {
             size_t linecap = 0;
             ssize_t linelen = ::getline(&buf, &linecap, cmdPipe);
@@ -86,9 +86,21 @@ string pOpen(const string& cmd, label line=0)
 
 inline word addressToWord(const uintptr_t addr)
 {
-    OStringStream nStream;
-    nStream << "0x" << hex << addr;
-    return nStream.str();
+    OStringStream os;
+    #ifdef darwin
+    os << "0x" << hex << uint64_t(addr);
+    #else
+    os << "0x" << hex << addr;
+    #endif
+    return os.str();
+}
+
+
+inline string& shorterPath(string& s)
+{
+    s.replace(cwd() + '/', "");
+    s.replace(home(), "~");
+    return s;
 }
 
 
@@ -103,7 +115,13 @@ void printSourceFileAndLine
     uintptr_t address = uintptr_t(addr);
     word myAddress = addressToWord(address);
 
-    if (filename.ext() == "so")
+    // Can use relative addresses for executables and libraries with the
+    // Darwin addr2line implementation.
+    // On other systems (Linux), only use relative addresses for libraries.
+
+    #ifndef darwin
+    if (filename.hasExt("so"))
+    #endif
     {
         // Convert address into offset into dynamic library
         uintptr_t offset = uintptr_t(info->dli_fbase);
@@ -122,20 +140,18 @@ void printSourceFileAndLine
             1
         );
 
-        if (line == "")
+        if (line.empty())
         {
             os  << " addr2line failed";
         }
         else if (line == "??:0")
         {
-            os  << " in " << filename;
+            line = filename;
+            os  << " in " << shorterPath(line).c_str();
         }
         else
         {
-            string cwdLine(line.replaceAll(cwd() + '/', ""));
-            string homeLine(cwdLine.replaceAll(home(), '~'));
-
-            os  << " at " << homeLine.c_str();
+            os  << " at " << shorterPath(line).c_str();
         }
     }
 }
@@ -161,7 +177,6 @@ fileName absolutePath(const char* fn)
 
 word demangleSymbol(const char* sn)
 {
-    word res;
     int st;
     char* cxx_sname = abi::__cxa_demangle
     (
@@ -173,15 +188,13 @@ word demangleSymbol(const char* sn)
 
     if (st == 0 && cxx_sname)
     {
-        res = word(cxx_sname);
+        word demangled(cxx_sname);
         free(cxx_sname);
-    }
-    else
-    {
-        res = word(sn);
+
+        return demangled;
     }
 
-    return res;
+    return sn;
 }
 
 
@@ -189,8 +202,8 @@ word demangleSymbol(const char* sn)
 
 } // End namespace Foam
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 void Foam::error::safePrintStack(std::ostream& os)
 {
@@ -201,7 +214,7 @@ void Foam::error::safePrintStack(std::ostream& os)
 
     // See if they contain function between () e.g. "(__libc_start_main+0xd0)"
     // and see if cplus_demangle can make sense of part before +
-    for (size_t i = 0; i < size; i++)
+    for (size_t i = 0; i < size; ++i)
     {
         string msg(strings[i]);
         fileName programFile;
@@ -225,7 +238,7 @@ void Foam::error::printStack(Ostream& os)
     fileName fname = "???";
     word address;
 
-    for(size_t i=0; i<size; i++)
+    for (size_t i=0; i<size; ++i)
     {
         int st = dladdr(callstack[i], info);
 

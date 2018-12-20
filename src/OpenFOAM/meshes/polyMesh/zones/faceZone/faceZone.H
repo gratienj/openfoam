@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,10 +50,8 @@ SourceFiles
 namespace Foam
 {
 
+// Forward declarations
 class mapPolyMesh;
-
-// Forward declaration of friend functions and operators
-
 class faceZone;
 Ostream& operator<<(Ostream& os, const faceZone& zn);
 
@@ -71,16 +69,16 @@ class faceZone
         //- Set flip-map to uniform value
         void setFlipMap(const bool val);
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         faceZone(const faceZone&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const faceZone&) = delete;
 
 
 protected:
 
-    // Protected data
+    // Protected Data
 
         //- Flip map for all faces in the zone.
         //  Use true if the face needs flipping for the correct orientation.
@@ -119,7 +117,7 @@ protected:
 
 public:
 
-    // Static data members
+    // Static Data Members
 
         //- The name associated with the zone-labels dictionary entry
         static const char * const labelsName;
@@ -177,7 +175,7 @@ public:
         (
             const word& name,
             const labelUList& addr,
-            const boolList& fm,
+            const boolUList& fm,
             const label index,
             const faceZoneMesh& zm
         );
@@ -186,8 +184,8 @@ public:
         faceZone
         (
             const word& name,
-            const Xfer<labelList>& addr,
-            const Xfer<boolList>& fm,
+            labelList&& addr,
+            boolList&& fm,
             const label index,
             const faceZoneMesh& zm
         );
@@ -208,7 +206,7 @@ public:
         (
             const faceZone& origZone,
             const labelUList& addr,
-            const boolList& fm,
+            const boolUList& fm,
             const label index,
             const faceZoneMesh& zm
         );
@@ -219,8 +217,8 @@ public:
         faceZone
         (
             const faceZone& origZone,
-            const Xfer<labelList>& addr,
-            const Xfer<boolList>& fm,
+            labelList&& addr,
+            boolList&& fm,
             const label index,
             const faceZoneMesh& zm
         );
@@ -228,10 +226,7 @@ public:
         //- Construct and return a clone, resetting the zone mesh
         virtual autoPtr<faceZone> clone(const faceZoneMesh& zm) const
         {
-            return autoPtr<faceZone>
-            (
-                new faceZone(*this, *this, flipMap(), index(), zm)
-            );
+            return autoPtr<faceZone>::New(*this, *this, flipMap(), index(), zm);
         }
 
         //- Construct and return a clone,
@@ -239,15 +234,12 @@ public:
         virtual autoPtr<faceZone> clone
         (
             const labelUList& addr,
-            const boolList& fm,
+            const boolUList& fm,
             const label index,
             const faceZoneMesh& zm
         ) const
         {
-            return autoPtr<faceZone>
-            (
-                new faceZone(*this, addr, fm, index, zm)
-            );
+            return autoPtr<faceZone>::New(*this, addr, fm, index, zm);
         }
 
 
@@ -315,14 +307,14 @@ public:
         virtual void resetAddressing
         (
             const labelUList& addr,
-            const boolList& flipMap
+            const boolUList& flipMap
         );
 
         //- Move reset addressing - use uniform flip map value
         //  Clears demand-driven data.
         virtual void resetAddressing
         (
-            const Xfer<labelList>& addr,
+            labelList&& addr,
             const bool flipMapValue
         );
 

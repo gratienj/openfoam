@@ -53,8 +53,8 @@ Foam::laminarFlameSpeedModels::SCOPE::polynomial::polynomial
 )
 :
     FixedList<scalar, 7>(polyDict.lookup("coefficients")),
-    ll(readScalar(polyDict.lookup("lowerLimit"))),
-    ul(readScalar(polyDict.lookup("upperLimit"))),
+    ll(polyDict.get<scalar>("lowerLimit")),
+    ul(polyDict.get<scalar>("upperLimit")),
     llv(polyPhi(ll, *this)),
     ulv(polyPhi(ul, *this)),
     lu(0)
@@ -73,21 +73,32 @@ Foam::laminarFlameSpeedModels::SCOPE::SCOPE
     (
         dictionary
         (
-          IFstream
-          (
-              fileName
-              (
-                  dict.lookup("fuelFile")
-              )
-          )()
+            IFstream
+            (
+                dict.get<fileName>("fuelFile")
+            )()
         ).optionalSubDict(typeName + "Coeffs")
     ),
-    LFL_(readScalar(coeffsDict_.lookup("lowerFlamabilityLimit"))),
-    UFL_(readScalar(coeffsDict_.lookup("upperFlamabilityLimit"))),
+    LFL_
+    (
+        coeffsDict_.getCompat<scalar>
+        (
+            "lowerFlammabilityLimit",
+            {{"lowerFlamabilityLimit", 1712}}
+        )
+    ),
+    UFL_
+    (
+        coeffsDict_.getCompat<scalar>
+        (
+            "upperFlammabilityLimit",
+            {{"upperFlamabilityLimit", 1712}}
+        )
+    ),
     SuPolyL_(coeffsDict_.subDict("lowerSuPolynomial")),
     SuPolyU_(coeffsDict_.subDict("upperSuPolynomial")),
-    Texp_(readScalar(coeffsDict_.lookup("Texp"))),
-    pexp_(readScalar(coeffsDict_.lookup("pexp"))),
+    Texp_(coeffsDict_.get<scalar>("Texp")),
+    pexp_(coeffsDict_.get<scalar>("pexp")),
     MaPolyL_(coeffsDict_.subDict("lowerMaPolynomial")),
     MaPolyU_(coeffsDict_.subDict("upperMaPolynomial"))
 {
@@ -145,19 +156,19 @@ inline Foam::scalar Foam::laminarFlameSpeedModels::SCOPE::SuRef
 {
     if (phi < LFL_ || phi > UFL_)
     {
-        // Return 0 beyond the flamibility limits
+        // Return 0 beyond the flammability limits
         return scalar(0);
     }
     else if (phi < SuPolyL_.ll)
     {
         // Use linear interpolation between the low end of the
-        // lower polynomial and the lower flamibility limit
+        // lower polynomial and the lower flammability limit
         return SuPolyL_.llv*(phi - LFL_)/(SuPolyL_.ll - LFL_);
     }
     else if (phi > SuPolyU_.ul)
     {
         // Use linear interpolation between the upper end of the
-        // upper polynomial and the upper flamibility limit
+        // upper polynomial and the upper flammability limit
         return SuPolyU_.ulv*(UFL_ - phi)/(UFL_ - SuPolyU_.ul);
     }
     else if (phi < SuPolyL_.lu)
@@ -255,7 +266,7 @@ Foam::tmp<Foam::volScalarField> Foam::laminarFlameSpeedModels::SCOPE::Su0pTphi
                 IOobject::NO_WRITE
             ),
             p.mesh(),
-            dimensionedScalar("Su0", dimVelocity, 0.0)
+            dimensionedScalar(dimVelocity, Zero)
         )
     );
 
@@ -304,7 +315,7 @@ Foam::tmp<Foam::volScalarField> Foam::laminarFlameSpeedModels::SCOPE::Su0pTphi
                 IOobject::NO_WRITE
             ),
             p.mesh(),
-            dimensionedScalar("Su0", dimVelocity, 0.0)
+            dimensionedScalar(dimVelocity, Zero)
         )
     );
 
@@ -358,7 +369,7 @@ Foam::tmp<Foam::volScalarField> Foam::laminarFlameSpeedModels::SCOPE::Ma
                 IOobject::NO_WRITE
             ),
             phi.mesh(),
-            dimensionedScalar("Ma", dimless, 0.0)
+            dimensionedScalar(dimless, Zero)
         )
     );
 
@@ -397,7 +408,7 @@ Foam::laminarFlameSpeedModels::SCOPE::Ma() const
         (
             dimensionedScalar
             (
-                psiuReactionThermo_.lookup("stoichiometricAirFuelMassRatio")
+                "stoichiometricAirFuelMassRatio", dimless, psiuReactionThermo_
             )*ft/(scalar(1) - ft)
         );
     }
@@ -438,7 +449,7 @@ Foam::laminarFlameSpeedModels::SCOPE::operator()() const
             psiuReactionThermo_.Tu(),
             dimensionedScalar
             (
-                psiuReactionThermo_.lookup("stoichiometricAirFuelMassRatio")
+                "stoichiometricAirFuelMassRatio", dimless, psiuReactionThermo_
             )*ft/(scalar(1) - ft)
         );
     }

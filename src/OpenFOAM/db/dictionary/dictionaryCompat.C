@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,6 +24,24 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "dictionary.H"
+#include "Pstream.H"
+
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+
+namespace
+{
+
+// Should issue warning if there is +ve versioning (+ve version number)
+// and the this version number is older than the current OpenFOAM version
+// as conveyed by the OPENFOAM compiler define.
+
+static inline constexpr bool shouldWarnVersion(const int version)
+{
+    return (version > 0 && version < OPENFOAM);
+}
+
+} // End anonymous namespace
+
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -31,11 +49,10 @@ Foam::dictionary::const_searcher Foam::dictionary::csearchCompat
 (
     const word& keyword,
     std::initializer_list<std::pair<const char*,int>> compat,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    const_searcher finder(csearch(keyword, recursive,patternMatch));
+    const_searcher finder(csearch(keyword, matchOpt));
 
     if (finder.found())
     {
@@ -44,17 +61,23 @@ Foam::dictionary::const_searcher Foam::dictionary::csearchCompat
 
     for (const std::pair<const char*,int>& iter : compat)
     {
-        finder = csearch(word::validate(iter.first), recursive,patternMatch);
+        finder = csearch(word::validate(iter.first), matchOpt);
 
         if (finder.found())
         {
-            if (iter.second)
+            // Only want a single warning (on master), but guard with a
+            // parRun check to avoid Pstream::master() when Pstream has not
+            // yet been initialized
+            if
+            (
+                shouldWarnVersion(iter.second)
+             && (Pstream::parRun() ? Pstream::master() : true)
+            )
             {
-                // Emit warning, but only if version (non-zero) was provided
                 std::cerr
                     << "--> FOAM IOWarning :" << nl
                     << "    Found [v" << iter.second << "] '"
-                    << iter.first << "' instead of '"
+                    << iter.first << "' entry instead of '"
                     << keyword.c_str() << "' in dictionary \""
                     << name().c_str() << "\" "
                     << nl
@@ -75,23 +98,21 @@ bool Foam::dictionary::foundCompat
 (
     const word& keyword,
     std::initializer_list<std::pair<const char*,int>> compat,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    return csearchCompat(keyword, compat, recursive,patternMatch).found();
+    return csearchCompat(keyword, compat, matchOpt).found();
 }
 
 
-const Foam::entry* Foam::dictionary::lookupEntryPtrCompat
+const Foam::entry* Foam::dictionary::findCompat
 (
     const word& keyword,
     std::initializer_list<std::pair<const char*,int>> compat,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    return csearchCompat(keyword, compat, recursive,patternMatch).ptr();
+    return csearchCompat(keyword, compat, matchOpt).ptr();
 }
 
 
@@ -99,19 +120,15 @@ const Foam::entry& Foam::dictionary::lookupEntryCompat
 (
     const word& keyword,
     std::initializer_list<std::pair<const char*,int>> compat,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    const const_searcher
-        finder(csearchCompat(keyword, compat, recursive,patternMatch));
+    const const_searcher finder(csearchCompat(keyword, compat, matchOpt));
 
     if (!finder.found())
     {
-        FatalIOErrorInFunction
-        (
-            *this
-        )   << "keyword " << keyword << " is undefined in dictionary "
+        FatalIOErrorInFunction(*this)
+            << "Entry '" << keyword << "' not found in dictionary "
             << name()
             << exit(FatalIOError);
     }
@@ -124,11 +141,10 @@ Foam::ITstream& Foam::dictionary::lookupCompat
 (
     const word& keyword,
     std::initializer_list<std::pair<const char*,int>> compat,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    return lookupEntryCompat(keyword, compat, recursive,patternMatch).stream();
+    return lookupEntryCompat(keyword, compat, matchOpt).stream();
 }
 
 

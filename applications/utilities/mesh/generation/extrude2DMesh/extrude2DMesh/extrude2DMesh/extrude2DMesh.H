@@ -77,6 +77,7 @@ class extrude2DMesh
         const word patchType_;
 
         label frontPatchi_;
+
         label backPatchi_;
 
     // Private Member Functions
@@ -87,11 +88,11 @@ class extrude2DMesh
         //- Find extrusion direction
         //void findExtrudeDirection();
 
-        //- Disallow default bitwise copy construct
-        extrude2DMesh(const extrude2DMesh&);
+        //- No copy construct
+        extrude2DMesh(const extrude2DMesh&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const extrude2DMesh&);
+        //- No copy assignment
+        void operator=(const extrude2DMesh&) = delete;
 
 public:
 
@@ -109,7 +110,7 @@ public:
 
 
     //- Destructor
-    ~extrude2DMesh();
+    ~extrude2DMesh() = default;
 
 
     // Member Functions

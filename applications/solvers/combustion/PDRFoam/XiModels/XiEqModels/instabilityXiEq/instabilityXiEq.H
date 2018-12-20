@@ -65,11 +65,11 @@ class instability
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        instability(const instability&);
+        //- No copy construct
+        instability(const instability&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const instability&);
+        //- No copy assignment
+        void operator=(const instability&) = delete;
 
 
 public:
@@ -96,7 +96,7 @@ public:
 
     // Member Functions
 
-        //- Return the flame-wrinking XiEq
+        //- Return the flame-wrinkling XiEq
         virtual tmp<volScalarField> XiEq() const;
 
         //- Update properties from given dictionary

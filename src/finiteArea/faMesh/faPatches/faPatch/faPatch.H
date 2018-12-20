@@ -56,6 +56,8 @@ namespace Foam
 {
 
 class faBoundaryMesh;
+class faPatch;
+Ostream& operator<<(Ostream&, const faPatch&);
 
 /*---------------------------------------------------------------------------*\
                            Class faPatch Declaration
@@ -91,10 +93,10 @@ private:
 
     // Private Member Functions
 
-        //- Disallow construct as copy
+        //- No copy construct
         faPatch(const faPatch&) = delete;
 
-        //- Disallow assignment
+        //- No copy assignment
         void operator=(const faPatch&) = delete;
 
 
@@ -196,10 +198,9 @@ public:
             const label ngbPolyPatchIndex
         ) const
         {
-            return autoPtr<faPatch>
-            (
-                new faPatch(name(), edgeLabels, index, bm, ngbPolyPatchIndex)
-            );
+            return
+                autoPtr<faPatch>::New
+                (name(), edgeLabels, index, bm, ngbPolyPatchIndex);
         }
 
 
@@ -267,7 +268,7 @@ public:
         virtual void write(Ostream&) const;
 
 
-        // Acces functions for geometrical data
+        // Access functions for geometrical data
 
             //- Return patch point labels
             const labelList& pointLabels() const;

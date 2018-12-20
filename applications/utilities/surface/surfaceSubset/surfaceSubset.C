@@ -28,8 +28,8 @@ Group
     grpSurfaceUtilities
 
 Description
-    A surface analysis tool which sub-sets the triSurface
-    to choose only a part of interest. Based on subsetMesh.
+    A surface analysis tool that subsets the triSurface to choose a
+    region of interest. Based on subsetMesh.
 
 \*---------------------------------------------------------------------------*/
 
@@ -37,7 +37,6 @@ Description
 #include "triSurfaceSearch.H"
 #include "argList.H"
 #include "Fstream.H"
-#include "Switch.H"
 #include "IOdictionary.H"
 #include "boundBox.H"
 #include "indexedOctree.H"
@@ -52,10 +51,16 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "A surface analysis tool that subsets the triSurface to choose a"
+        " region of interest."
+    );
+
     argList::noParallel();
-    argList::addArgument("surfaceSubsetDict");
-    argList::addArgument("surfaceFile");
-    argList::addArgument("output surfaceFile");
+    argList::addArgument("dict", "The surfaceSubsetDict");
+    argList::addArgument("input", "The input surface file");
+    argList::addArgument("output", "The output surface file");
     argList args(argc, argv);
 
     Info<< "Reading dictionary " << args[1] << " ..." << endl;
@@ -102,10 +107,8 @@ int main(int argc, char *argv[])
             << exit(FatalError);
     }
 
-    Switch addFaceNeighbours
-    (
-        meshSubsetDict.lookup("addFaceNeighbours")
-    );
+    const bool addFaceNeighbours =
+        meshSubsetDict.get<bool>("addFaceNeighbours");
 
     const bool invertSelection =
         meshSubsetDict.lookupOrDefault("invertSelection", false);
@@ -229,9 +232,9 @@ int main(int argc, char *argv[])
     {
         const dictionary& surfDict = meshSubsetDict.subDict("surface");
 
-        fileName surfName(surfDict.lookup("name"));
+        const fileName surfName(surfDict.get<fileName>("name"));
 
-        Switch outside(surfDict.lookup("outside"));
+        const bool outside(surfDict.get<bool>("outside"));
 
         if (outside)
         {
@@ -285,8 +288,8 @@ int main(int argc, char *argv[])
         const dictionary& planeDict = meshSubsetDict.subDict("plane");
 
         const plane pl(planeDict);
-        const scalar distance(readScalar(planeDict.lookup("distance")));
-        const scalar cosAngle(readScalar(planeDict.lookup("cosAngle")));
+        const scalar distance(planeDict.get<scalar>("distance"));
+        const scalar cosAngle(planeDict.get<scalar>("cosAngle"));
 
         // Select all triangles that are close to the plane and
         // whose normal aligns with the plane as well.

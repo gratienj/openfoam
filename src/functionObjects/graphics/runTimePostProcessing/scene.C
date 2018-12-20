@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,7 +37,6 @@ License
 #include "vtkRendererCollection.h"
 #include "vtkRenderWindow.h"
 #include "vtkWindowToImageFilter.h"
-
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -87,7 +86,7 @@ void Foam::functionObjects::runTimePostPro::scene::readCamera
     cameraUp_ = Function1<vector>::New("up", dict);
 
     dict.readIfPresent("clipBox", clipBox_);
-    dict.lookup("parallelProjection") >> parallelProjection_;
+    dict.readEntry("parallelProjection", parallelProjection_);
     if (!parallelProjection_)
     {
         if (dict.found("viewAngle"))
@@ -122,11 +121,10 @@ void Foam::functionObjects::runTimePostPro::scene::readColours
     const dictionary& dict
 )
 {
-    const wordList colours = dict.toc();
-    forAll(colours, i)
+    const wordList colours(dict.toc());
+    for (const word& c : colours)
     {
-        const word& c = colours[i];
-        colours_.insert(c, Function1<vector>::New(c, dict).ptr());
+        colours_.insert(c, Function1<vector>::New(c, dict));
     }
 }
 
@@ -390,9 +388,13 @@ void Foam::functionObjects::runTimePostPro::scene::saveImage
 
     const Time& runTime = obr_.time();
 
-    fileName prefix(Pstream::parRun() ?
-        runTime.path()/".."/"postProcessing"/name_/obr_.time().timeName() :
-        runTime.path()/"postProcessing"/name_/obr_.time().timeName());
+    const fileName prefix
+    (
+        runTime.globalPath()
+      / functionObject::outputPrefix
+      / name_
+      / runTime.timeName()
+    );
 
     mkDir(prefix);
 

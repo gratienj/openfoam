@@ -65,7 +65,6 @@ class limitVelocity
 :
     public cellSetOption
 {
-
 protected:
 
     // Protected data
@@ -81,11 +80,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        limitVelocity(const limitVelocity&);
+        //- No copy construct
+        limitVelocity(const limitVelocity&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const limitVelocity&);
+        //- No copy assignment
+        void operator=(const limitVelocity&) = delete;
 
 
 public:
@@ -107,8 +106,7 @@ public:
 
 
     //- Destructor
-    virtual ~limitVelocity()
-    {}
+    virtual ~limitVelocity() = default;
 
 
     // Member Functions

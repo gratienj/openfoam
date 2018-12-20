@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,6 +58,7 @@ const Foam::labelListList& Foam::primitiveMesh::cellPoints() const
 const Foam::labelList& Foam::primitiveMesh::cellPoints
 (
     const label celli,
+    labelHashSet& set,
     DynamicList<label>& storage
 ) const
 {
@@ -65,45 +66,36 @@ const Foam::labelList& Foam::primitiveMesh::cellPoints
     {
         return cellPoints()[celli];
     }
-    else
+
+    const faceList& fcs = faces();
+    const labelList& cFaces = cells()[celli];
+
+    set.clear();
+
+    for (const label facei : cFaces)
     {
-        const faceList& fcs = faces();
-        const labelList& cFaces = cells()[celli];
-
-        labelSet_.clear();
-
-        forAll(cFaces, i)
-        {
-            const labelList& f = fcs[cFaces[i]];
-
-            forAll(f, fp)
-            {
-                labelSet_.insert(f[fp]);
-            }
-        }
-
-        storage.clear();
-        if (labelSet_.size() > storage.capacity())
-        {
-            storage.setCapacity(labelSet_.size());
-        }
-
-        forAllConstIter(labelHashSet, labelSet_, iter)
-        {
-            storage.append(iter.key());
-        }
-
-        return storage;
+        set.insert(fcs[facei]);
     }
+
+    storage.clear();
+    if (set.size() > storage.capacity())
+    {
+        storage.setCapacity(set.size());
+    }
+
+    for (const label pointi : set)
+    {
+        storage.append(pointi);
+    }
+
+    return storage;
 }
 
 
 const Foam::labelList& Foam::primitiveMesh::cellPoints(const label celli) const
 {
-    return cellPoints(celli, labels_);
+    return cellPoints(celli, labelSet_, labels_);
 }
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // ************************************************************************* //

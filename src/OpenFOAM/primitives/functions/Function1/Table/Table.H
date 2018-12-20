@@ -47,8 +47,7 @@ SourceFiles
 #ifndef Table_H
 #define Table_H
 
-#include "Function1.H"
-#include "Tuple2.H"
+#include "TableBase.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -68,7 +67,7 @@ class Table
 {
     // Private Member Functions
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const Table<Type>&) = delete;
 
 
@@ -85,6 +84,12 @@ public:
 
         //- Copy constructor
         explicit Table(const Table<Type>& tbl);
+
+        //- Construct and return a clone
+        virtual tmp<Function1<Type>> clone() const
+        {
+            return tmp<Function1<Type>>(new Table<Type>(*this));
+        }
 
 
     //- Destructor

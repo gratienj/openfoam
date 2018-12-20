@@ -33,6 +33,7 @@ License
 #include "mapPolyMesh.H"
 #include "solidBodyMotionFunction.H"
 #include "transformField.H"
+#include "fvOptions.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -79,12 +80,7 @@ solidBodyDisplacementLaplacianFvMotionSolver
             IOobject::AUTO_WRITE
         ),
         fvMesh_,
-        dimensionedVector
-        (
-            "cellDisplacement",
-            pointDisplacement_.dimensions(),
-            Zero
-        ),
+        dimensionedVector(pointDisplacement_.dimensions(), Zero),
         cellMotionBoundaryTypes<vector>(pointDisplacement_.boundaryField())
     ),
     pointLocation_(nullptr),
@@ -101,7 +97,10 @@ solidBodyDisplacementLaplacianFvMotionSolver
     frozenPointsZone_
     (
         coeffDict().found("frozenPointsZone")
-      ? fvMesh_.pointZones().findZoneID(coeffDict().lookup("frozenPointsZone"))
+      ? fvMesh_.pointZones().findZoneID
+        (
+            coeffDict().get<word>("frozenPointsZone")
+        )
       : -1
     )
 {
@@ -170,12 +169,7 @@ solidBodyDisplacementLaplacianFvMotionSolver
             IOobject::AUTO_WRITE
         ),
         fvMesh_,
-        dimensionedVector
-        (
-            "cellDisplacement",
-            pointDisplacement_.dimensions(),
-            Zero
-        ),
+        dimensionedVector(pointDisplacement_.dimensions(), Zero),
         cellMotionBoundaryTypes<vector>(pointDisplacement_.boundaryField())
     ),
     pointLocation_(nullptr),
@@ -192,7 +186,10 @@ solidBodyDisplacementLaplacianFvMotionSolver
     frozenPointsZone_
     (
         coeffDict().found("frozenPointsZone")
-      ? fvMesh_.pointZones().findZoneID(coeffDict().lookup("frozenPointsZone"))
+      ? fvMesh_.pointZones().findZoneID
+        (
+            coeffDict().get<word>("frozenPointsZone")
+        )
       : -1
     )
 {
@@ -258,7 +255,8 @@ Foam::solidBodyDisplacementLaplacianFvMotionSolver::diffusivity()
             coeffDict().lookup("diffusivity")
         );
     }
-    return diffusivityPtr_();
+
+    return *diffusivityPtr_;
 }
 
 
@@ -343,15 +341,24 @@ void Foam::solidBodyDisplacementLaplacianFvMotionSolver::solve()
     diffusivity().correct();
     pointDisplacement_.boundaryFieldRef().updateCoeffs();
 
-    Foam::solve
+    fv::options& fvOptions(fv::options::New(fvMesh_));
+
+    fvVectorMatrix TEqn
     (
         fvm::laplacian
         (
-            diffusivity().operator()(),
+            dimensionedScalar("viscosity", dimViscosity, 1.0)
+           *diffusivity().operator()(),
             cellDisplacement_,
             "laplacian(diffusivity,cellDisplacement)"
         )
+     ==
+        fvOptions(cellDisplacement_)
     );
+
+    fvOptions.constrain(TEqn);
+    TEqn.solveSegregatedOrCoupled(TEqn.solverDict());
+    fvOptions.correct(cellDisplacement_);
 }
 
 

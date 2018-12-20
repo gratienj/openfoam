@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -123,7 +123,7 @@ public:
 
     // Constructors
 
-        //- Construct from (base couped patch) components
+        //- Construct from (base coupled patch) components
         cyclicACMIPolyPatch
         (
             const word& name,
@@ -179,7 +179,7 @@ public:
         //- Construct and return a clone, resetting the boundary mesh
         virtual autoPtr<polyPatch> clone(const polyBoundaryMesh& bm) const
         {
-            return autoPtr<polyPatch>(new cyclicACMIPolyPatch(*this, bm));
+            return autoPtr<polyPatch>::NewFrom<cyclicACMIPolyPatch>(*this, bm);
         }
 
         //- Construct and return a clone, resetting the face list
@@ -266,18 +266,6 @@ public:
             //- Overlap tolerance
             inline static scalar tolerance();
 
-
-        //- Calculate the patch geometry
-        virtual void calcGeometry
-        (
-            const primitivePatch& referPatch,
-            const pointField& thisCtrs,
-            const vectorField& thisAreas,
-            const pointField& thisCc,
-            const pointField& nbrCtrs,
-            const vectorField& nbrAreas,
-            const pointField& nbrCc
-        );
 
         //- Initialize ordering for primitivePatch. Does not
         //  refer to *this (except for name() and type() etc.)

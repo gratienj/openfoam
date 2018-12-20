@@ -7,7 +7,7 @@ autoPtr<psiuReactionThermo> pThermo
 psiuReactionThermo& thermo = pThermo();
 thermo.validate(args.executable(), "ha", "ea");
 
-basicMultiComponentMixture& composition = thermo.composition();
+basicSpecieMixture& composition = thermo.composition();
 
 volScalarField rho
 (
@@ -165,7 +165,7 @@ IOdictionary PDRProperties
 autoPtr<PDRDragModel> drag = PDRDragModel::New
 (
     PDRProperties,
-    turbulence,
+    *turbulence,
     rho,
     U,
     phi
@@ -176,7 +176,7 @@ autoPtr<XiModel> flameWrinkling = XiModel::New
 (
     PDRProperties,
     thermo,
-    turbulence,
+    *turbulence,
     Su,
     rho,
     b,
@@ -215,3 +215,4 @@ flameWrinkling->addXi(fields);
 #include "createK.H"
 
 #include "createMRF.H"
+#include "createFvOptions.H"

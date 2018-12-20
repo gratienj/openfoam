@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -175,8 +175,7 @@ void Foam::triSurface::checkTriangles(const bool verbose)
     // Done to keep numbering constant in phase 1
 
     // List of valid triangles
-    boolList valid(size(), true);
-    bool hasInvalid = false;
+    bitSet valid(size(), true);
 
     forAll(*this, facei)
     {
@@ -185,8 +184,7 @@ void Foam::triSurface::checkTriangles(const bool verbose)
         if ((f[0] == f[1]) || (f[0] == f[2]) || (f[1] == f[2]))
         {
             // 'degenerate' triangle check
-            valid[facei] = false;
-            hasInvalid = true;
+            valid.unset(facei);
 
             if (verbose)
             {
@@ -222,8 +220,7 @@ void Foam::triSurface::checkTriangles(const bool verbose)
                          && ((f[2] == n[0]) || (f[2] == n[1]) || (f[2] == n[2]))
                         )
                         {
-                            valid[facei] = false;
-                            hasInvalid = true;
+                            valid.unset(facei);
 
                             if (verbose)
                             {
@@ -247,17 +244,13 @@ void Foam::triSurface::checkTriangles(const bool verbose)
         }
     }
 
-    if (hasInvalid)
+    if (!valid.all())
     {
-        // Pack
+        // Compact
         label newFacei = 0;
-        forAll(*this, facei)
+        for (const label facei : valid)
         {
-            if (valid[facei])
-            {
-                const labelledTri& f = (*this)[facei];
-                (*this)[newFacei++] = f;
-            }
+            (*this)[newFacei++] = (*this)[facei];
         }
 
         if (verbose)
@@ -307,7 +300,7 @@ Foam::surfacePatchList
 Foam::triSurface::calcPatches(labelList& faceMap) const
 {
     // Determine the sorted order:
-    // use sortedOrder directly (the intermediate list is discared anyhow)
+    // use sortedOrder directly (the intermediate list is discarded anyhow)
 
     List<label> regions(size());
     forAll(regions, facei)
@@ -409,7 +402,7 @@ void Foam::triSurface::setDefaultPatches()
 Foam::triSurface::triSurface()
 :
     ParentType(List<Face>(), pointField()),
-    patches_(0),
+    patches_(),
     sortedEdgeFacesPtr_(nullptr),
     edgeOwnerPtr_(nullptr)
 {}
@@ -428,9 +421,7 @@ Foam::triSurface::triSurface(triSurface&& surf)
 :
     triSurface()
 {
-    FaceListType::operator=(std::move(static_cast<FaceListType&>(surf)));
-    storedPoints() = std::move(surf.storedPoints());
-    patches_ = std::move(surf.patches());
+    transfer(surf);
 }
 
 
@@ -438,10 +429,10 @@ Foam::triSurface::triSurface
 (
     const List<labelledTri>& triangles,
     const geometricSurfacePatchList& patches,
-    const pointField& points
+    const pointField& pts
 )
 :
-    ParentType(triangles, points),
+    ParentType(triangles, pts),
     patches_(patches),
     sortedEdgeFacesPtr_(nullptr),
     edgeOwnerPtr_(nullptr)
@@ -452,25 +443,11 @@ Foam::triSurface::triSurface
 (
     List<labelledTri>& triangles,
     const geometricSurfacePatchList& patches,
-    pointField& points,
+    pointField& pts,
     const bool reuse
 )
 :
-    ParentType(triangles, points, reuse),
-    patches_(patches),
-    sortedEdgeFacesPtr_(nullptr),
-    edgeOwnerPtr_(nullptr)
-{}
-
-
-Foam::triSurface::triSurface
-(
-    const Xfer<List<labelledTri>>& triangles,
-    const geometricSurfacePatchList& patches,
-    const Xfer<List<point>>& points
-)
-:
-    ParentType(triangles, points),
+    ParentType(triangles, pts, reuse),
     patches_(patches),
     sortedEdgeFacesPtr_(nullptr),
     edgeOwnerPtr_(nullptr)
@@ -480,10 +457,10 @@ Foam::triSurface::triSurface
 Foam::triSurface::triSurface
 (
     const List<labelledTri>& triangles,
-    const pointField& points
+    const pointField& pts
 )
 :
-    ParentType(triangles, points),
+    ParentType(triangles, pts),
     patches_(),
     sortedEdgeFacesPtr_(nullptr),
     edgeOwnerPtr_(nullptr)
@@ -495,10 +472,10 @@ Foam::triSurface::triSurface
 Foam::triSurface::triSurface
 (
     const triFaceList& triangles,
-    const pointField& points
+    const pointField& pts
 )
 :
-    ParentType(convertToTri(triangles, 0), points),
+    ParentType(convertToTri(triangles, 0), pts),
     patches_(),
     sortedEdgeFacesPtr_(nullptr),
     edgeOwnerPtr_(nullptr)
@@ -507,19 +484,30 @@ Foam::triSurface::triSurface
 }
 
 
-Foam::triSurface::triSurface(const fileName& name, const scalar scaleFactor)
+Foam::triSurface::triSurface
+(
+    const fileName& name,
+    const scalar scaleFactor
+)
+:
+    triSurface(name, name.ext(), scaleFactor)
+{}
+
+
+Foam::triSurface::triSurface
+(
+    const fileName& name,
+    const word& ext,
+    const scalar scaleFactor
+)
 :
     ParentType(List<Face>(), pointField()),
     patches_(),
     sortedEdgeFacesPtr_(nullptr),
     edgeOwnerPtr_(nullptr)
 {
-    const word ext = name.ext();
-
     read(name, ext);
-
     scalePoints(scaleFactor);
-
     setDefaultPatches();
 }
 
@@ -589,28 +577,41 @@ const Foam::labelList& Foam::triSurface::edgeOwner() const
 }
 
 
-void Foam::triSurface::movePoints(const pointField& newPoints)
+void Foam::triSurface::movePoints(const pointField& pts)
 {
     // Remove all geometry dependent data
     deleteDemandDrivenData(sortedEdgeFacesPtr_);
 
-    // Adapt for new point position
-    ParentType::movePoints(newPoints);
+    // Adapt for new point positions
+    ParentType::movePoints(pts);
 
     // Copy new points
-    storedPoints() = newPoints;
+    storedPoints() = pts;
+}
+
+
+void Foam::triSurface::swapPoints(pointField& pts)
+{
+    // Remove all geometry dependent data
+    deleteDemandDrivenData(sortedEdgeFacesPtr_);
+
+    // Adapt for new point positions
+    ParentType::movePoints(pts);
+
+    // Move/swap new points
+    storedPoints().swap(pts);
 }
 
 
 void Foam::triSurface::scalePoints(const scalar scaleFactor)
 {
     // Avoid bad scaling
-    if (scaleFactor > VSMALL && scaleFactor != 1.0)
+    if (scaleFactor > SMALL && scaleFactor != 1.0)
     {
         // Remove all geometry dependent data
         clearTopology();
 
-        // Adapt for new point position
+        // Adapt for new point positions
         ParentType::movePoints(pointField());
 
         storedPoints() *= scaleFactor;
@@ -656,26 +657,6 @@ void Foam::triSurface::triFaceFaces(List<face>& plainFaces) const
     {
         plainFaces[facei] = this->operator[](facei);
     }
-}
-
-
-Foam::Xfer<Foam::List<Foam::labelledTri>>
-Foam::triSurface::xferFaces()
-{
-    // Topology changed because of transfer
-    clearOut();
-
-    return this->storedFaces().xfer();
-}
-
-
-Foam::Xfer<Foam::List<Foam::point>>
-Foam::triSurface::xferPoints()
-{
-    // Topology changed because of transfer
-    clearOut();
-
-    return this->storedPoints().xfer();
 }
 
 
@@ -801,7 +782,7 @@ void Foam::triSurface::subsetMeshMap
 
     pointMap.setSize(nPoints());
 
-    boolList pointHad(nPoints(), false);
+    bitSet pointHad(nPoints(), false);
 
     forAll(include, oldFacei)
     {
@@ -815,9 +796,8 @@ void Foam::triSurface::subsetMeshMap
 
             for (const label verti : f)
             {
-                if (!pointHad[verti])
+                if (pointHad.set(verti))
                 {
-                    pointHad[verti] = true;
                     pointMap[pointi++] = verti;
                 }
             }
@@ -867,38 +847,52 @@ Foam::triSurface Foam::triSurface::subsetMesh
         newTriangles[facei].region() = tri.region();
     }
 
-    // Construct subsurface
+    // Construct sub-surface
     return triSurface(newTriangles, patches(), newPoints, true);
 }
 
 
-void Foam::triSurface::reset
-(
-    const Xfer<List<labelledTri>>& triangles,
-    const geometricSurfacePatchList& patches,
-    const Xfer<List<point>>& points
-)
+void Foam::triSurface::swapFaces(List<labelledTri>& faceLst)
 {
-    clearOut();
+    clearOut();   // Topology changes
 
-    this->storedFaces().transfer(triangles());
-    this->storedPoints().transfer(points());
-
-    patches_ = patches;
+    this->storedFaces().swap(faceLst);
 }
 
 
-void Foam::triSurface::reset(MeshedSurface<labelledTri>& input)
+void Foam::triSurface::transfer(triSurface& surf)
 {
-    const auto& zones = input.surfZones();
+    clearOut();
 
-    geometricSurfacePatchList patches(zones.size());
-    forAll(zones, zonei)
-    {
-        patches[zonei] = geometricSurfacePatch(zones[zonei]);
-    }
+    FaceListType::transfer(surf.storedFaces());
+    storedPoints().transfer(surf.storedPoints());
+    patches_.transfer(surf.patches());
 
-    this->reset(input.xferFaces(), patches, input.xferPoints());
+    surf.clearOut();
+}
+
+
+void Foam::triSurface::transfer(MeshedSurface<labelledTri>& surf)
+{
+    // Transcribe zone -> patch info
+    auto patches = ListOps::create<geometricSurfacePatch>
+    (
+        surf.surfZones(),
+        geometricSurfacePatch::fromIdentifier()
+    );
+
+    // Fairly ugly, but the only way to get at the data safely
+    List<labelledTri> fcs;
+    pointField pts;
+
+    surf.swapFaces(fcs);
+    surf.swapPoints(pts);
+
+    clearOut();
+    surf.clear();
+
+    triSurface s(fcs, patches, pts, true);
+    swap(s);
 }
 
 
@@ -916,11 +910,13 @@ void Foam::triSurface::operator=(const triSurface& surf)
 
 void Foam::triSurface::operator=(triSurface&& surf)
 {
-    clearOut();
+    transfer(surf);
+}
 
-    FaceListType::operator=(std::move(static_cast<FaceListType&>(surf)));
-    storedPoints() = std::move(surf.storedPoints());
-    patches_ = std::move(surf.patches());
+
+void Foam::triSurface::operator=(MeshedSurface<labelledTri>&& surf)
+{
+    transfer(surf);
 }
 
 

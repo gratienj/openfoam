@@ -46,26 +46,23 @@ namespace Foam
             Info<< "Reading " << GeoFieldType::typeName
                 << ' ' << io->name() << endl;
 
-            return autoPtr<GeoFieldType>
+            return autoPtr<GeoFieldType>::New
             (
-                new GeoFieldType
+                IOobject
                 (
-                    IOobject
-                    (
-                        io->name(),
-                        io->instance(),
-                        io->local(),
-                        io->db(),
-                        IOobject::MUST_READ,
-                        IOobject::AUTO_WRITE,
-                        io->registerObject()
-                    ),
-                    mesh
-                )
+                    io->name(),
+                    io->instance(),
+                    io->local(),
+                    io->db(),
+                    IOobject::MUST_READ,
+                    IOobject::AUTO_WRITE,
+                    io->registerObject()
+                ),
+                mesh
             );
         }
 
-        return autoPtr<GeoFieldType>();
+        return nullptr;
     }
 }
 
@@ -86,7 +83,7 @@ Foam::lumpedPointTools::lumpedPointStates(Istream& is)
         (
             lumpedPointStateTuple
             (
-                readScalar(dict.lookup("time")),
+                dict.get<scalar>("time"),
                 lumpedPointState(dict)
             )
         );
@@ -145,7 +142,7 @@ Foam::labelList Foam::lumpedPointTools::lumpedPointPatchList
     autoPtr<pointVectorField> displacePtr = loadPointField<pointVectorField>
     (
         pMesh,
-        objects0.lookup("pointDisplacement")
+        objects0.findObject("pointDisplacement")
     );
 
     if (!displacePtr.valid())

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +32,7 @@ License
 
 template<class LListBase, class T>
 template<class INew>
-void Foam::LPtrList<LListBase, T>::read(Istream& is, const INew& iNew)
+void Foam::LPtrList<LListBase, T>::readIstream(Istream& is, const INew& inew)
 {
     is.fatalCheck(FUNCTION_NAME);
 
@@ -40,61 +40,60 @@ void Foam::LPtrList<LListBase, T>::read(Istream& is, const INew& iNew)
 
     is.fatalCheck
     (
-        "LPtrList<LListBase, T>::read(Istream&, const INew&) : "
+        "LPtrList::readIstream : "
         "reading first token"
     );
 
     if (firstToken.isLabel())
     {
-        const label s = firstToken.labelToken();
+        const label len = firstToken.labelToken();
 
         // Read beginning of contents
-        const char delimiter = is.readBeginList("LPtrList<LListBase, T>");
+        const char delimiter = is.readBeginList("LPtrList");
 
-        if (s)
+        if (len)
         {
             if (delimiter == token::BEGIN_LIST)
             {
-                for (label i=0; i<s; ++i)
+                for (label i=0; i<len; ++i)
                 {
-                    this->append(iNew(is).ptr());
+                    T* p = inew(is).ptr();
+                    this->append(p);
 
                     is.fatalCheck
                     (
-                        "LPtrList<LListBase, T>::read(Istream&, const INew&) : "
+                        "LPtrList::readIstream : "
                         "reading entry"
                     );
                 }
             }
             else
             {
-                T* tPtr = iNew(is).ptr();
-                this->append(tPtr);
+                T* p = inew(is).ptr();
+                this->append(p);
 
                 is.fatalCheck
                 (
-                    "LPtrList<LListBase, T>::read(Istream&, const INew&) : "
-                    "reading entry"
+                    "LPtrList::readIstream : "
+                    "reading the single entry"
                 );
 
-                for (label i=1; i<s; ++i)
+                for (label i=1; i<len; ++i)
                 {
-                    this->append(tPtr->clone().ptr());
+                    this->append(p->clone().ptr());
                 }
             }
         }
 
         // Read end of contents
-        is.readEndList("LPtrList<LListBase, T>");
+        is.readEndList("LPtrList");
     }
     else if (firstToken.isPunctuation())
     {
         if (firstToken.pToken() != token::BEGIN_LIST)
         {
-            FatalIOErrorInFunction
-            (
-                is
-            )   << "incorrect first token, '(', found " << firstToken.info()
+            FatalIOErrorInFunction(is)
+                << "incorrect first token, '(', found " << firstToken.info()
                 << exit(FatalIOError);
         }
 
@@ -110,7 +109,7 @@ void Foam::LPtrList<LListBase, T>::read(Istream& is, const INew& iNew)
         )
         {
             is.putBack(lastToken);
-            this->append(iNew(is).ptr());
+            this->append(inew(is).ptr());
 
             is >> lastToken;
             is.fatalCheck(FUNCTION_NAME);
@@ -118,10 +117,8 @@ void Foam::LPtrList<LListBase, T>::read(Istream& is, const INew& iNew)
     }
     else
     {
-        FatalIOErrorInFunction
-        (
-            is
-        )   << "incorrect first token, expected <int> or '(', found "
+        FatalIOErrorInFunction(is)
+            << "incorrect first token, expected <int> or '(', found "
             << firstToken.info()
             << exit(FatalIOError);
     }
@@ -134,26 +131,26 @@ void Foam::LPtrList<LListBase, T>::read(Istream& is, const INew& iNew)
 
 template<class LListBase, class T>
 template<class INew>
-Foam::LPtrList<LListBase, T>::LPtrList(Istream& is, const INew& iNew)
+Foam::LPtrList<LListBase, T>::LPtrList(Istream& is, const INew& inew)
 {
-    this->read(is, iNew);
+    this->readIstream(is, inew);
 }
 
 
 template<class LListBase, class T>
 Foam::LPtrList<LListBase, T>::LPtrList(Istream& is)
 {
-    this->read(is, INew<T>());
+    this->readIstream(is, INew<T>());
 }
 
 
 // * * * * * * * * * * * * * * * Istream Operator  * * * * * * * * * * * * * //
 
 template<class LListBase, class T>
-Foam::Istream& Foam::operator>>(Istream& is, LPtrList<LListBase, T>& L)
+Foam::Istream& Foam::operator>>(Istream& is, LPtrList<LListBase, T>& list)
 {
-    L.clear();
-    L.read(is, INew<T>());
+    list.clear();
+    list.readIstream(is, INew<T>());
 
     return is;
 }
@@ -162,26 +159,22 @@ Foam::Istream& Foam::operator>>(Istream& is, LPtrList<LListBase, T>& L)
 // * * * * * * * * * * * * * * * Ostream Operators * * * * * * * * * * * * * //
 
 template<class LListBase, class T>
-Foam::Ostream& Foam::operator<<(Ostream& os, const LPtrList<LListBase, T>& lst)
+Foam::Ostream& Foam::operator<<
+(
+    Ostream& os,
+    const LPtrList<LListBase, T>& list
+)
 {
-    // Write size
-    os << nl << lst.size();
+    // Size and start delimiter
+    os << nl << list.size() << nl << token::BEGIN_LIST << nl;
 
-    // Write beginning of contents
-    os << nl << token::BEGIN_LIST << nl;
-
-    // Write contents
-    for
-    (
-        typename LPtrList<LListBase, T>::const_iterator iter = lst.begin();
-        iter != lst.end();
-        ++iter
-    )
+    // Contents
+    for (auto iter = list.cbegin(); iter != list.cend(); ++iter)
     {
-        os << iter() << nl;
+        os << *iter << nl;
     }
 
-    // Write end of contents
+    // End delimiter
     os << token::END_LIST;
 
     os.check(FUNCTION_NAME);

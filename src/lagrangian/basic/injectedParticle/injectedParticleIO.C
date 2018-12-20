@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -63,7 +63,7 @@ Foam::injectedParticle::injectedParticle
     if (readFields)
     {
         // After the base particle class has read the fields from file and
-        // constructed the necessary barcentric co-ordinates we can update the
+        // constructed the necessary barycentric coordinates we can update the
         // particle position on this mesh
         position_ = particle::position();
 
@@ -126,6 +126,9 @@ void Foam::injectedParticle::readFields(Cloud<injectedParticle>& c)
 void Foam::injectedParticle::writeFields(const Cloud<injectedParticle>& c)
 {
     // Force writing positions instead of coordinates
+    const bool oldWriteCoordinates = particle::writeLagrangianCoordinates;
+    const bool oldWritePositions = particle::writeLagrangianPositions;
+
     particle::writeLagrangianCoordinates = false;
     particle::writeLagrangianPositions = true;
 
@@ -151,13 +154,17 @@ void Foam::injectedParticle::writeFields(const Cloud<injectedParticle>& c)
         d[i] = p.d();
         U[i] = p.U();
 
-        i++;
+        ++i;
     }
 
     tag.write();
     soi.write();
     d.write();
     U.write();
+
+    // Restore
+    particle::writeLagrangianCoordinates = oldWriteCoordinates;
+    particle::writeLagrangianPositions = oldWritePositions;
 }
 
 
@@ -168,6 +175,9 @@ void Foam::injectedParticle::writeObjects
 )
 {
     // Force writing positions instead of coordinates
+    const bool oldWriteCoordinates = particle::writeLagrangianCoordinates;
+    const bool oldWritePositions = particle::writeLagrangianPositions;
+
     particle::writeLagrangianCoordinates = false;
     particle::writeLagrangianPositions = true;
 
@@ -191,8 +201,12 @@ void Foam::injectedParticle::writeObjects
         d[i] = p.d();
         U[i] = p.U();
 
-        i++;
+        ++i;
     }
+
+    // Restore
+    particle::writeLagrangianCoordinates = oldWriteCoordinates;
+    particle::writeLagrangianPositions = oldWritePositions;
 }
 
 
@@ -204,20 +218,12 @@ void Foam::injectedParticle::writePosition(Ostream& os) const
     }
     else
     {
-        struct oldParticle
-        {
-            vector position;
-            label celli;
-            label facei;
-            scalar stepFraction;
-            label tetFacei;
-            label tetPti;
-            label origProc;
-            label origId;
-        } p;
+        positionsCompat1706 p;
 
         const size_t s =
-            offsetof(oldParticle, facei) - offsetof(oldParticle, position);
+        (
+            offsetof(positionsCompat1706, facei)
+          - offsetof(positionsCompat1706, position));
 
         p.position = position_;
         p.celli = cell();

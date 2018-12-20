@@ -101,7 +101,7 @@ bool Foam::UPstream::initNull()
 }
 
 
-bool Foam::UPstream::init(int& argc, char**& argv)
+bool Foam::UPstream::init(int& argc, char**& argv, const bool needsThread)
 {
     int flag = 0;
 
@@ -129,17 +129,16 @@ bool Foam::UPstream::init(int& argc, char**& argv)
 
 
     //MPI_Init(&argc, &argv);
-    int wanted_thread_support = MPI_THREAD_SINGLE;
-    if (fileOperations::collatedFileOperation::maxThreadFileBufferSize > 0)
-    {
-        wanted_thread_support = MPI_THREAD_MULTIPLE;
-    }
     int provided_thread_support;
     MPI_Init_thread
     (
         &argc,
         &argv,
-        wanted_thread_support,
+        (
+            needsThread
+          ? MPI_THREAD_MULTIPLE
+          : MPI_THREAD_SINGLE
+        ),
         &provided_thread_support
     );
 
@@ -188,6 +187,9 @@ bool Foam::UPstream::init(int& argc, char**& argv)
             Pout<< "UPstream::init : mpi-buffer-size " << bufSize << endl;
         }
 
+        // TBD: could add error handling here.
+        // Delete allocated and leave if we fail to attach the buffer?
+
         MPI_Buffer_attach(new char[bufSize], bufSize);
     }
     #endif
@@ -216,19 +218,29 @@ void Foam::UPstream::exit(int errnum)
     MPI_Finalized(&flag);
     if (flag)
     {
-        // Already finalized
-        FatalErrorInFunction
-            << "MPI was already finalized" << endl
-            << Foam::abort(FatalError);
+        // Already finalized - warn and exit
+        WarningInFunction
+            << "MPI was already finalized (perhaps by a connected program)"
+            << endl;
+        ::exit(1);
         return;
     }
 
     #ifndef SGIMPI
     {
-        int size;
-        char* buff;
-        MPI_Buffer_detach(&buff, &size);
-        delete[] buff;
+        // Some MPI notes suggest that the return code is MPI_SUCCESS when
+        // no buffer is attached.
+        // Be extra careful and require a non-zero size as well.
+
+        int bufSize = 0;
+        char* buf = nullptr;
+
+        flag = MPI_Buffer_detach(&buf, &bufSize);
+
+        if (MPI_SUCCESS == flag && bufSize)
+        {
+            delete[] buf;
+        }
     }
     #endif
 
@@ -495,13 +507,13 @@ void Foam::UPstream::allToAll
         (
             MPI_Alltoallv
             (
-                sendData,
-                sendSizes.begin(),
-                sendOffsets.begin(),
+                const_cast<char*>(sendData),
+                const_cast<int*>(sendSizes.begin()),
+                const_cast<int*>(sendOffsets.begin()),
                 MPI_BYTE,
                 recvData,
-                recvSizes.begin(),
-                recvOffsets.begin(),
+                const_cast<int*>(recvSizes.begin()),
+                const_cast<int*>(recvOffsets.begin()),
                 MPI_BYTE,
                 PstreamGlobals::MPICommunicators_[communicator]
             )
@@ -557,12 +569,12 @@ void Foam::UPstream::gather
         (
             MPI_Gatherv
             (
-                sendData,
+                const_cast<char*>(sendData),
                 sendSize,
                 MPI_BYTE,
                 recvData,
-                recvSizes.begin(),
-                recvOffsets.begin(),
+                const_cast<int*>(recvSizes.begin()),
+                const_cast<int*>(recvOffsets.begin()),
                 MPI_BYTE,
                 0,
                 MPI_Comm(PstreamGlobals::MPICommunicators_[communicator])
@@ -616,9 +628,9 @@ void Foam::UPstream::scatter
         (
             MPI_Scatterv
             (
-                sendData,
-                sendSizes.begin(),
-                sendOffsets.begin(),
+                const_cast<char*>(sendData),
+                const_cast<int*>(sendSizes.begin()),
+                const_cast<int*>(sendOffsets.begin()),
                 MPI_BYTE,
                 recvData,
                 recvSize,

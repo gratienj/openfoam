@@ -54,7 +54,7 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::rho(const label patchi) const
     if (rhoName_ == "rhoInf")
     {
         const label n = mesh_.boundary()[patchi].size();
-        return tmp<Field<scalar>>(new Field<scalar>(n, rhoRef_));
+        return tmp<Field<scalar>>::New(n, rhoRef_);
     }
     else if (mesh_.foundObject<volScalarField>(rhoName_, false))
     {
@@ -62,14 +62,12 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::rho(const label patchi) const
             mesh_.lookupObject<volScalarField>(rhoName_);
         return rho.boundaryField()[patchi];
     }
-    else
-    {
-        FatalErrorInFunction
-            << "Unable to set rho for patch " << patchi
-            << exit(FatalError);
-    }
 
-    return tmp<Field<scalar>>(nullptr);
+    FatalErrorInFunction
+        << "Unable to set rho for patch " << patchi
+        << exit(FatalError);
+
+    return nullptr;
 }
 
 
@@ -79,7 +77,7 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::Cp(const label patchi) const
     if (CpName_ == "CpInf")
     {
         const label n = mesh_.boundary()[patchi].size();
-        return tmp<Field<scalar>>(new Field<scalar>(n, CpRef_));
+        return tmp<Field<scalar>>::New(n, CpRef_);
     }
     else if (mesh_.foundObject<fluidThermo>(fluidThermo::typeName))
     {
@@ -91,14 +89,12 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::Cp(const label patchi) const
 
         return thermo.Cp(pp, Tp, patchi);
     }
-    else
-    {
-        FatalErrorInFunction
-            << "Unable to set Cp for patch " << patchi
-            << exit(FatalError);
-    }
 
-    return tmp<Field<scalar>>(nullptr);
+    FatalErrorInFunction
+        << "Unable to set Cp for patch " << patchi
+        << exit(FatalError);
+
+    return nullptr;
 }
 
 
@@ -145,7 +141,7 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::devReff() const
         const dictionary& transportProperties =
             mesh_.lookupObject<dictionary>("transportProperties");
 
-        dimensionedScalar nu(transportProperties.lookup("nu"));
+        dimensionedScalar nu("nu", dimViscosity, transportProperties);
 
         const volVectorField& U = mesh_.lookupObject<volVectorField>(UName_);
 
@@ -168,12 +164,8 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::Cf() const
     const volVectorField& U = mesh_.lookupObject<volVectorField>(UName_);
     const volVectorField::Boundary& Ubf = U.boundaryField();
 
-    tmp<FieldField<Field, scalar>> tCf
-    (
-        new FieldField<Field, scalar>(Ubf.size())
-    );
-
-    FieldField<Field, scalar>& Cf = tCf.ref();
+    auto tCf = tmp<FieldField<Field, scalar>>::New(Ubf.size());
+    auto& Cf = tCf.ref();
 
     forAll(Cf, patchi)
     {
@@ -183,7 +175,7 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::Cf() const
     const volSymmTensorField R(devReff());
     const volSymmTensorField::Boundary& Rbf = R.boundaryField();
 
-    for (label patchi : patchSet_)
+    for (const label patchi : patchSet_)
     {
         const fvPatchVectorField& Up = Ubf[patchi];
 
@@ -230,18 +222,18 @@ bool Foam::heatTransferCoeffModels::ReynoldsAnalogy::read
 {
     if (heatTransferCoeffModel::read(dict))
     {
-        dict.lookup("UInf") >> URef_;
+        dict.readEntry("UInf", URef_);
 
         dict.readIfPresent("Cp", CpName_);
         if (CpName_ == "CpInf")
         {
-            dict.lookup("CpInf") >> CpRef_;
+            dict.readEntry("CpInf", CpRef_);
         }
 
         dict.readIfPresent("rho", rhoName_);
         if (rhoName_ == "rhoInf")
         {
-            dict.lookup("rhoInf") >> rhoRef_;
+            dict.readEntry("rhoInf", rhoRef_);
         }
 
         return true;
@@ -257,9 +249,9 @@ void Foam::heatTransferCoeffModels::ReynoldsAnalogy::htc(volScalarField& htc)
     const scalar magU = mag(URef_);
 
     volScalarField::Boundary& htcBf = htc.boundaryFieldRef();
-    forAllConstIters(patchSet_, iter)
+
+    for (const label patchi : patchSet_)
     {
-        label patchi = iter.key();
         const scalarField rhop(rho(patchi));
         const scalarField Cpp(Cp(patchi));
 

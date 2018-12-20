@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,20 +27,16 @@ License
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
-Foam::autoPtr<Foam::basicSolidChemistryModel> Foam::basicSolidChemistryModel::
-New
-(
-    const fvMesh& mesh,
-    const word& phaseName
-)
+Foam::autoPtr<Foam::basicSolidChemistryModel>
+Foam::basicSolidChemistryModel::New(solidReactionThermo& thermo)
 {
     IOdictionary chemistryDict
     (
         IOobject
         (
-            IOobject::groupName("chemistryProperties", phaseName),
-            mesh.time().constant(),
-            mesh,
+            thermo.phasePropertyName("chemistryProperties"),
+            thermo.db().time().constant(),
+            thermo.db(),
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
             false
@@ -77,8 +73,8 @@ New
         IOobject
         (
             basicThermo::dictName,
-            mesh.time().constant(),
-            mesh,
+            thermo.db().time().constant(),
+            thermo.db(),
             IOobject::MUST_READ_IF_MODIFIED,
             IOobject::NO_WRITE,
             false
@@ -86,37 +82,37 @@ New
     );
 
     const dictionary& solidThermoTypeDict(thermoDict.subDict("thermoType"));
-    word solidThermoTypeName
+    const word solidThermoTypeName
     (
-        word(solidThermoTypeDict.lookup("transport")) + '<'
-      + word(solidThermoTypeDict.lookup("thermo")) + '<'
-      + word(solidThermoTypeDict.lookup("equationOfState")) + '<'
-      + word(solidThermoTypeDict.lookup("specie")) + ">>,"
-      + word(solidThermoTypeDict.lookup("energy")) + ">"
+        solidThermoTypeDict.get<word>("transport") + '<'
+      + solidThermoTypeDict.get<word>("thermo") + '<'
+      + solidThermoTypeDict.get<word>("equationOfState") + '<'
+      + solidThermoTypeDict.get<word>("specie") + ">>,"
+      + solidThermoTypeDict.get<word>("energy") + ">"
     );
 
     const dictionary& gasThermoTypeDict(thermoDict.subDict("gasThermoType"));
-    word gasThermoTypeName
+    const word gasThermoTypeName
     (
-        word(gasThermoTypeDict.lookup("transport")) + '<'
-      + word(gasThermoTypeDict.lookup("thermo")) + '<'
-      + word(gasThermoTypeDict.lookup("equationOfState")) + '<'
-      + word(gasThermoTypeDict.lookup("specie")) + ">>,"
-      + word(gasThermoTypeDict.lookup("energy")) + ">"
+        gasThermoTypeDict.get<word>("transport") + '<'
+      + gasThermoTypeDict.get<word>("thermo") + '<'
+      + gasThermoTypeDict.get<word>("equationOfState") + '<'
+      + gasThermoTypeDict.get<word>("specie") + ">>,"
+      + gasThermoTypeDict.get<word>("energy") + ">"
     );
 
     // Construct the name of the chemistry type from the components
-    word chemistryTypeName
+    const word chemistryTypeName
     (
-        word(chemistryTypeDict.lookup("chemistrySolver")) + '<'
-      + word(chemistryTypeDict.lookup("chemistryThermo")) + '<'
+        chemistryTypeDict.get<word>("chemistrySolver") + '<'
+      + chemistryTypeDict.get<word>("chemistryThermo") + '<'
       + typeName + ','
       + solidThermoTypeName + ',' + gasThermoTypeName + ">>"
     );
 
     Info<< "chemistryTypeName " << chemistryTypeName << endl;
 
-    auto cstrIter = fvMeshConstructorTablePtr_->cfind(chemistryTypeName);
+    auto cstrIter = thermoConstructorTablePtr_->cfind(chemistryTypeName);
 
     if (!cstrIter.found())
     {
@@ -129,7 +125,7 @@ New
         // Get the list of all the suitable chemistry packages available
         wordList validChemistryTypeNames
         (
-            fvMeshConstructorTablePtr_->sortedToc()
+            thermoConstructorTablePtr_->sortedToc()
         );
         Info<< validChemistryTypeNames << endl;
 
@@ -163,7 +159,8 @@ New
         FatalError<< exit(FatalError);
     }
 
-    return autoPtr<basicSolidChemistryModel>(cstrIter()(mesh, phaseName));
+    return
+        autoPtr<basicSolidChemistryModel>(cstrIter()(thermo));
 }
 
 

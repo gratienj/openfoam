@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -93,16 +93,11 @@ protected:
         //- Print model coefficients
         virtual void printCoeffs(const word& type);
 
+        //- No copy construct
+        LESModel(const LESModel&) = delete;
 
-private:
-
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        LESModel(const LESModel&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const LESModel&);
+        //- No copy assignment
+        void operator=(const LESModel&) = delete;
 
 
 public:
@@ -168,8 +163,7 @@ public:
 
 
     //- Destructor
-    virtual ~LESModel()
-    {}
+    virtual ~LESModel() = default;
 
 
     // Member Functions
@@ -201,7 +195,7 @@ public:
             //- Access function to filter width
             inline const volScalarField& delta() const
             {
-                return delta_();
+                return *delta_;
             }
 
 
@@ -212,7 +206,7 @@ public:
             (
                 new volScalarField
                 (
-                    IOobject::groupName("nuEff", this->U_.group()),
+                    IOobject::groupName("nuEff", this->alphaRhoPhi_.group()),
                     this->nut() + this->nu()
                 )
             );

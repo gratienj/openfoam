@@ -88,7 +88,7 @@ bool Foam::rawTopoChangerFvMesh::update()
         // - patch faces created out of previously internal faces
 
         // Is face mapped in any way?
-        PackedBoolList mappedFace(nFaces());
+        bitSet mappedFace(nFaces());
 
         const label nOldInternal = topoChangeMap().oldPatchStarts()[0];
 
@@ -97,14 +97,14 @@ bool Foam::rawTopoChangerFvMesh::update()
         {
             if (faceMap[facei] >= 0)
             {
-                mappedFace[facei] = 1;
+                mappedFace.set(facei);
             }
         }
         for (label facei = nInternalFaces(); facei < nFaces(); facei++)
         {
             if (faceMap[facei] >= 0 && faceMap[facei] >= nOldInternal)
             {
-                mappedFace[facei] = 1;
+                mappedFace.set(facei);
             }
         }
 
@@ -112,21 +112,21 @@ bool Foam::rawTopoChangerFvMesh::update()
 
         forAll(fromFaces, i)
         {
-            mappedFace[fromFaces[i].index()] = 1;
+            mappedFace.set(fromFaces[i].index());
         }
 
         const List<objectMap>& fromEdges = topoChangeMap().facesFromEdgesMap();
 
         forAll(fromEdges, i)
         {
-            mappedFace[fromEdges[i].index()] = 1;
+            mappedFace.set(fromEdges[i].index());
         }
 
         const List<objectMap>& fromPts = topoChangeMap().facesFromPointsMap();
 
         forAll(fromPts, i)
         {
-            mappedFace[fromPts[i].index()] = 1;
+            mappedFace.set(fromPts[i].index());
         }
 
         // Set unmapped faces to zero
@@ -141,11 +141,10 @@ bool Foam::rawTopoChangerFvMesh::update()
         // Special handling for phi: set unmapped faces to recreated phi
         Info<< "rawTopoChangerFvMesh :"
             << " recreating phi for unmapped boundary values." << endl;
+
         const volVectorField& U = lookupObject<volVectorField>("U");
-        surfaceScalarField& phi = const_cast<surfaceScalarField&>
-        (
-            lookupObject<surfaceScalarField>("phi")
-        );
+        surfaceScalarField& phi = lookupObjectRef<surfaceScalarField>("phi");
+
         setUnmappedValues
         (
             phi,

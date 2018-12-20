@@ -111,49 +111,61 @@ int main(int argc, char *argv[])
     );
 
     argList::noParallel();
+    argList::noFunctionObjects();  // Never use function objects
+
     #include "addOverwriteOption.H"
     #include "addRegionOption.H"
-    #include "addDictOption.H"
+
+    argList::addOption("dict", "file", "Use alternative stitchMeshDict");
 
     argList::addBoolOption
     (
         "integral",
-        "couple integral master/slave patches (2 argument mode: default)"
+        "Couple integral master/slave patches (2 argument mode: default)"
     );
     argList::addBoolOption
     (
         "partial",
-        "couple partially overlapping master/slave patches (2 argument mode)"
+        "Couple partially overlapping master/slave patches (2 argument mode)"
     );
     argList::addBoolOption
     (
         "perfect",
-        "couple perfectly aligned master/slave patches (2 argument mode)"
+        "Couple perfectly aligned master/slave patches (2 argument mode)"
     );
     argList::addBoolOption
     (
         "intermediate",
-        "write intermediate stages, not just the final result"
+        "Write intermediate stages, not just the final result"
     );
     argList::addOption
     (
         "toleranceDict",
         "file",
-        "dictionary file with tolerances"
+        "Dictionary file with tolerances"
     );
 
-    // The arguments are non-mandatory when using dictionary mode
-    argList::addArgument("masterPatch");
-    argList::addArgument("slavePatch");
+    // The arguments are optional (non-mandatory) when using dictionary mode
+    argList::noMandatoryArgs();
+    argList::addArgument
+    (
+        "master",
+        "The master patch name (non-dictionary mode)"
+    );
+    argList::addArgument
+    (
+        "slave",
+        "The slave patch name (non-dictionary mode)"
+    );
 
-    #include "setRootCaseNonMandatoryArgs.H"
+    #include "setRootCase.H"
 
     // We now handle checking args and general sanity etc.
     const bool useCommandArgs = (args.size() > 1);
 
     if (useCommandArgs)
     {
-        if (args.optionFound("dict"))
+        if (args.found("dict"))
         {
             FatalErrorInFunction
                 << "Cannot specify both dictionary and command-line arguments"
@@ -171,21 +183,21 @@ int main(int argc, char *argv[])
     {
         // Carp about inapplicable options
 
-        if (args.optionFound("integral"))
+        if (args.found("integral"))
         {
             FatalErrorInFunction
                 << "Only specify -integral with command-line arguments"
                 << endl;
         }
 
-        if (args.optionFound("partial"))
+        if (args.found("partial"))
         {
             FatalErrorInFunction
                 << "Only specify -partial with command-line arguments"
                 << endl;
         }
 
-        if (args.optionFound("perfect"))
+        if (args.found("perfect"))
         {
             FatalErrorInFunction
                 << "Only specify -perfect with command-line arguments"
@@ -194,13 +206,12 @@ int main(int argc, char *argv[])
     }
 
     #include "createTime.H"
-    runTime.functionObjects().off();
     #include "createNamedMesh.H"
 
     const word oldInstance = mesh.pointsInstance();
 
-    const bool intermediate = args.optionFound("intermediate");
-    const bool overwrite = args.optionFound("overwrite");
+    const bool intermediate = args.found("intermediate");
+    const bool overwrite = args.found("overwrite");
 
     const word dictName("stitchMeshDict");
 
@@ -210,9 +221,9 @@ int main(int argc, char *argv[])
     if (useCommandArgs)
     {
         // Command argument driven:
-        const int integralCover = args.optionFound("integral");
-        const int partialCover  = args.optionFound("partial");
-        const int perfectCover  = args.optionFound("perfect");
+        const int integralCover = args.found("integral");
+        const int partialCover  = args.found("partial");
+        const int perfectCover  = args.found("perfect");
 
         if ((integralCover + partialCover + perfectCover) > 1)
         {
@@ -291,16 +302,17 @@ int main(int argc, char *argv[])
         // Suppress duplicate names
         wordHashSet requestedPatches;
 
-        forAllConstIters(stitchDict, iter)
+        for (const entry& dEntry : stitchDict)
         {
-            if (!iter().isDict())
+            if (!dEntry.isDict())
             {
                 Info<< "Ignoring non-dictionary entry: "
-                    << iter().keyword() << nl;
+                    << dEntry.keyword() << nl;
                 continue;
             }
 
-            const dictionary& dict = iter().dict();
+            const keyType& key = dEntry.keyword();
+            const dictionary& dict = dEntry.dict();
 
             // Match type
             word matchName;
@@ -320,8 +332,8 @@ int main(int argc, char *argv[])
             }
 
             // Patch names
-            const word masterPatchName(dict["master"]);
-            const word slavePatchName(dict["slave"]);
+            const word masterPatchName(dict.get<word>("master"));
+            const word slavePatchName(dict.get<word>("slave"));
 
             // Patch names
             Info<< "    " <<  masterPatchName
@@ -357,7 +369,7 @@ int main(int argc, char *argv[])
 
             // Input was validated
 
-            validatedDict.add(iter().keyword(), iter().dict());
+            validatedDict.add(key, dict);
         }
     }
 
@@ -377,7 +389,7 @@ int main(int argc, char *argv[])
 
     // set up the tolerances for the sliding mesh
     dictionary slidingTolerances;
-    if (args.optionFound("toleranceDict"))
+    if (args.found("toleranceDict"))
     {
         IOdictionary toleranceFile
         (
@@ -432,9 +444,9 @@ int main(int argc, char *argv[])
 
     // Step through the topology changes
     label actioni = 0;
-    forAllConstIters(validatedDict, iter)
+    for (const entry& dEntry : validatedDict)
     {
-        const dictionary& dict = iter().dict();
+        const dictionary& dict = dEntry.dict();
 
         // Match type
         bool perfect = false;
@@ -454,8 +466,8 @@ int main(int argc, char *argv[])
         }
 
         // Patch names
-        const word masterPatchName(dict["master"]);
-        const word slavePatchName(dict["slave"]);
+        const word masterPatchName(dict.get<word>("master"));
+        const word slavePatchName(dict.get<word>("slave"));
 
         // Zone names
         const word mergePatchName(masterPatchName + slavePatchName);
@@ -521,7 +533,7 @@ int main(int argc, char *argv[])
             (
                 cutZoneName,
                 true // verbose
-            ).resetAddressing(faceIds.xfer(), false);
+            ).resetAddressing(std::move(faceIds), false);
 
 
             // Add the perfect interface mesh modifier
@@ -551,7 +563,7 @@ int main(int argc, char *argv[])
             (
                 mergePatchName + "MasterZone",
                 true // verbose
-            ).resetAddressing(faceIds.xfer(), false);
+            ).resetAddressing(std::move(faceIds), false);
 
             // Markup slave face ids
             faceIds.setSize(slavePatch.size());
@@ -561,7 +573,7 @@ int main(int argc, char *argv[])
             (
                 mergePatchName + "SlaveZone",
                 true // verbose
-            ).resetAddressing(faceIds.xfer(), false);
+            ).resetAddressing(std::move(faceIds), false);
 
             // Add empty zone for cut faces
             mesh.faceZones()
@@ -603,7 +615,7 @@ int main(int argc, char *argv[])
         // Advance time for intermediate results or only on final
         if (!overwrite && (intermediate || actioni == nActions))
         {
-            runTime++;
+            ++runTime;
         }
 
         // Execute all polyMeshModifiers

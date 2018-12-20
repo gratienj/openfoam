@@ -51,10 +51,10 @@ namespace combustionModels
                   Class eddyDissipationModelBase Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 class eddyDissipationModelBase
 :
-    public singleStepCombustion<CombThermoType, ThermoType>
+    public singleStepCombustion<ReactionThermo, ThermoType>
 {
     // Private data
 
@@ -64,11 +64,11 @@ class eddyDissipationModelBase
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        eddyDissipationModelBase(const eddyDissipationModelBase&);
+        //- No copy construct
+        eddyDissipationModelBase(const eddyDissipationModelBase&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const eddyDissipationModelBase&);
+        //- No copy assignment
+        void operator=(const eddyDissipationModelBase&) = delete;
 
 
 public:
@@ -79,9 +79,9 @@ public:
         eddyDissipationModelBase
         (
             const word& modelType,
-            const fvMesh& mesh,
-            const word& combustionProperties,
-            const word& phaseName
+            ReactionThermo& thermo,
+            const compressibleTurbulenceModel& turb,
+            const word& combustionProperties
         );
 
 
@@ -99,6 +99,12 @@ public:
 
         //- Calculate time scale
         virtual tmp<volScalarField> timeScale() = 0;
+
+        //- Return the CEDC coefficient
+        scalar CEDC() const
+        {
+            return CEDC_;
+        }
 
 
         // I-O

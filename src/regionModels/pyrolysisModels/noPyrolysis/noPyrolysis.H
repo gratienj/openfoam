@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -50,7 +50,7 @@ namespace pyrolysisModels
 {
 
 /*---------------------------------------------------------------------------*\
-                          Class noPyrolysis Declaration
+                         Class noPyrolysis Declaration
 \*---------------------------------------------------------------------------*/
 
 class noPyrolysis
@@ -61,11 +61,11 @@ private:
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        noPyrolysis(const noPyrolysis&);
+        //- No copy construct
+        noPyrolysis(const noPyrolysis&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const noPyrolysis&);
+        //- No copy assignment
+        void operator=(const noPyrolysis&) = delete;
 
 
 protected:
@@ -81,10 +81,13 @@ protected:
         //- Reset solidChemistryModel and solidThermo pointers
         void constructThermoChemistry();
 
-        //- Pointer to the solid chemistry model
+        //- Reference to solid thermo
+        autoPtr<solidReactionThermo> solidThermo_;
+
+        //- Reference to the solid chemistry model
         autoPtr<basicSolidChemistryModel> solidChemistry_;
 
-        //- Pointer to radiation model
+         //- Pointer to radiation model
         autoPtr<radiation::radiationModel> radiation_;
 
 
@@ -148,7 +151,6 @@ public:
 
             //- Evolve the pyrolysis equations
             virtual void evolveRegion();
-
 };
 
 

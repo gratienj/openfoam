@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,6 +36,8 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::calculate()
     const scalarField& hCells = this->he_;
     const scalarField& pCells = this->p_;
     scalarField& rhoCells = this->rho_.primitiveFieldRef();
+    //scalarField& psiCells = this->psi_.primitiveFieldRef();
+    //scalarField& muCells = this->mu_.primitiveFieldRef();
     scalarField& alphaCells = this->alpha_.primitiveFieldRef();
 
     forAll(TCells, celli)
@@ -46,14 +48,19 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::calculate()
         const typename MixtureType::thermoType& volMixture_ =
             this->cellVolMixture(pCells[celli], TCells[celli], celli);
 
-        TCells[celli] = mixture_.THE
-        (
-            hCells[celli],
-            pCells[celli],
-            TCells[celli]
-        );
+        if (this->updateT())
+        {
+            TCells[celli] = mixture_.THE
+            (
+                hCells[celli],
+                pCells[celli],
+                TCells[celli]
+            );
+        }
 
         rhoCells[celli] = volMixture_.rho(pCells[celli], TCells[celli]);
+        //psiCells[celli] = volMixture_.psi(pCells[celli], TCells[celli]);
+        //muCells[celli] = volMixture_.mu(pCells[celli], TCells[celli]);
 
         alphaCells[celli] =
             volMixture_.kappa(pCells[celli], TCells[celli])
@@ -61,26 +68,21 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::calculate()
             mixture_.Cpv(pCells[celli], TCells[celli]);
     }
 
-    volScalarField::Boundary& pBf =
-        this->p_.boundaryFieldRef();
-
-    volScalarField::Boundary& TBf =
-        this->T_.boundaryFieldRef();
-
-    volScalarField::Boundary& rhoBf =
-        this->rho_.boundaryFieldRef();
-
-    volScalarField::Boundary& heBf =
-        this->he().boundaryFieldRef();
-
-    volScalarField::Boundary& alphaBf =
-        this->alpha_.boundaryFieldRef();
+    volScalarField::Boundary& pBf = this->p_.boundaryFieldRef();
+    volScalarField::Boundary& TBf = this->T_.boundaryFieldRef();
+    volScalarField::Boundary& rhoBf = this->rho_.boundaryFieldRef();
+    //volScalarField::Boundary& psiBf = this->psi_.boundaryFieldRef();
+    //volScalarField::Boundary& muBf = this->mu_.boundaryFieldRef();
+    volScalarField::Boundary& heBf = this->he().boundaryFieldRef();
+    volScalarField::Boundary& alphaBf = this->alpha_.boundaryFieldRef();
 
     forAll(this->T_.boundaryField(), patchi)
     {
         fvPatchScalarField& pp = pBf[patchi];
         fvPatchScalarField& pT = TBf[patchi];
         fvPatchScalarField& prho = rhoBf[patchi];
+        //fvPatchScalarField& ppsi = psiBf[patchi];
+        //fvPatchScalarField& pmu = muBf[patchi];
         fvPatchScalarField& phe = heBf[patchi];
         fvPatchScalarField& palpha = alphaBf[patchi];
 
@@ -103,6 +105,8 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::calculate()
 
                 phe[facei] = mixture_.HE(pp[facei], pT[facei]);
                 prho[facei] = volMixture_.rho(pp[facei], pT[facei]);
+                //ppsi[facei] = volMixture_.psi(pp[facei], pT[facei]);
+                //pmu[facei] = volMixture_.mu(pp[facei], pT[facei]);
 
                 palpha[facei] =
                     volMixture_.kappa(pp[facei], pT[facei])
@@ -125,8 +129,14 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::calculate()
                         facei
                     );
 
-                pT[facei] = mixture_.THE(phe[facei], pp[facei] ,pT[facei]);
+                if (this->updateT())
+                {
+                    pT[facei] = mixture_.THE(phe[facei], pp[facei] ,pT[facei]);
+                }
+
                 prho[facei] = volMixture_.rho(pp[facei], pT[facei]);
+                //ppsi[facei] = volMixture_.psi(pp[facei], pT[facei]);
+                //pmu[facei] = volMixture_.mu(pp[facei], pT[facei]);
 
                 palpha[facei] =
                     volMixture_.kappa(pp[facei], pT[facei])
@@ -134,8 +144,9 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::calculate()
             }
         }
     }
-}
 
+    this->alpha_.correctBoundaryConditions();
+}
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -150,6 +161,8 @@ heSolidThermo
     heThermo<BasicSolidThermo, MixtureType>(mesh, phaseName)
 {
     calculate();
+    this->mu_ == dimensionedScalar(this->mu_.dimensions(), Zero);
+    this->psi_ == dimensionedScalar(this->psi_.dimensions(), Zero);
 }
 
 
@@ -165,6 +178,28 @@ heSolidThermo
     heThermo<BasicSolidThermo, MixtureType>(mesh, dict, phaseName)
 {
     calculate();
+    this->mu_ == dimensionedScalar(this->mu_.dimensions(), Zero);
+    this->psi_ == dimensionedScalar(this->psi_.dimensions(), Zero);
+}
+
+
+template<class BasicSolidThermo, class MixtureType>
+Foam::heSolidThermo<BasicSolidThermo, MixtureType>::
+heSolidThermo
+(
+    const fvMesh& mesh,
+    const word& phaseName,
+    const word& dictName
+)
+:
+    heThermo<BasicSolidThermo, MixtureType>(mesh, phaseName, dictName)
+{
+    calculate();
+
+    // TBD. initialise psi, mu (at heThermo level) since these do not
+    // get initialised. Move to heThermo constructor?
+    this->mu_ == dimensionedScalar(this->mu_.dimensions(), Zero);
+    this->psi_ == dimensionedScalar(this->psi_.dimensions(), Zero);
 }
 
 

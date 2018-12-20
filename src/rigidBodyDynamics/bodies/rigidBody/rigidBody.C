@@ -50,7 +50,7 @@ namespace RBD
 
 Foam::autoPtr<Foam::RBD::rigidBody> Foam::RBD::rigidBody::clone() const
 {
-    return autoPtr<rigidBody>(new rigidBody(*this));
+    return autoPtr<rigidBody>::New(*this);
 }
 
 
@@ -64,7 +64,7 @@ Foam::autoPtr<Foam::RBD::rigidBody> Foam::RBD::rigidBody::New
     const symmTensor& Ic
 )
 {
-    return autoPtr<rigidBody>(new rigidBody(name, m, c, Ic));
+    return autoPtr<rigidBody>::New(name, m, c, Ic);
 }
 
 
@@ -74,7 +74,7 @@ Foam::autoPtr<Foam::RBD::rigidBody> Foam::RBD::rigidBody::New
     const dictionary& dict
 )
 {
-    const word bodyType(dict.lookup("type"));
+    const word bodyType(dict.get<word>("type"));
 
     auto cstrIter = dictionaryConstructorTablePtr_->cfind(bodyType);
 

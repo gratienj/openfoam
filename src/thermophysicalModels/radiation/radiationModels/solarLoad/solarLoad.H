@@ -128,7 +128,7 @@ private:
         //- Selected patches to apply solar load
         labelList includePatches_;
 
-        //- Chached coarse to fine mapping for coarse mesh
+        //- Cached coarse to fine mapping for coarse mesh
         List<labelListList> coarseToFine_;
 
         //-Number of bands
@@ -187,11 +187,11 @@ private:
         //- Update absorptivity
         void updateAbsorptivity(const labelHashSet& includePatches);
 
-        //- Disallow default bitwise copy construct
-        solarLoad(const solarLoad&);
+        //- No copy construct
+        solarLoad(const solarLoad&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const solarLoad&);
+        //- No copy assignment
+        void operator=(const solarLoad&) = delete;
 
 
 public:

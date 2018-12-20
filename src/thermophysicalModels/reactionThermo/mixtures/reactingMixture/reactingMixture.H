@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -67,11 +67,11 @@ class reactingMixture
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        reactingMixture(const reactingMixture&);
+        //- No copy construct
+        reactingMixture(const reactingMixture&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const reactingMixture&);
+        //- No copy assignment
+        void operator=(const reactingMixture&) = delete;
 
 
 public:
@@ -92,6 +92,12 @@ public:
 
 
     // Member functions
+
+        //- Return the instantiated type name
+        static word typeName()
+        {
+            return "reactingMixture<" + ThermoType::typeName() + '>';
+        }
 
         //- Read dictionary
         void read(const dictionary&);

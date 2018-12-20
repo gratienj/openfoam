@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,14 +44,9 @@ Usage
 
             coordinateSystem
             {
-                type    cartesian;
                 origin  (0 0 0);
-                coordinateRotation
-                {
-                    type    axesRotation;
-                    e1  (0.70710678 0.70710678 0);
-                    e2  (0 0 1);
-                }
+                e1      (0.70710678 0.70710678 0);
+                e2      (0 0 1);
             }
         }
     }
@@ -89,7 +84,6 @@ class explicitPorositySource
 :
     public cellSetOption
 {
-
 protected:
 
     // Protected data
@@ -102,11 +96,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        explicitPorositySource(const explicitPorositySource&);
+        //- No copy construct
+        explicitPorositySource(const explicitPorositySource&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const explicitPorositySource&);
+        //- No copy assignment
+        void operator=(const explicitPorositySource&) = delete;
 
 
 public:
@@ -128,43 +122,45 @@ public:
 
 
     //- Destructor
-    virtual ~explicitPorositySource()
-    {}
+    virtual ~explicitPorositySource() = default;
 
 
     // Member Functions
 
-        // Add explicit and implicit contributions
-
-            //- Add implicit contribution to momentum equation
-            virtual void addSup
-            (
-                fvMatrix<vector>& eqn,
-                const label fieldi
-            );
-
-            //- Add implicit contribution to compressible momentum equation
-            virtual void addSup
-            (
-                const volScalarField& rho,
-                fvMatrix<vector>& eqn,
-                const label fieldi
-            );
-
-            //- Add implicit contribution to phase momentum equation
-            virtual void addSup
-            (
-                const volScalarField& alpha,
-                const volScalarField& rho,
-                fvMatrix<vector>& eqn,
-                const label fieldi
-            );
+        //- Access to the porosityModel
+        const porosityModel& model() const
+        {
+            return *porosityPtr_;
+        }
 
 
-        // IO
+        //- Add implicit contribution to momentum equation
+        virtual void addSup
+        (
+            fvMatrix<vector>& eqn,
+            const label fieldi
+        );
 
-            //- Read dictionary
-            virtual bool read(const dictionary& dict);
+        //- Add implicit contribution to compressible momentum equation
+        virtual void addSup
+        (
+            const volScalarField& rho,
+            fvMatrix<vector>& eqn,
+            const label fieldi
+        );
+
+        //- Add implicit contribution to phase momentum equation
+        virtual void addSup
+        (
+            const volScalarField& alpha,
+            const volScalarField& rho,
+            fvMatrix<vector>& eqn,
+            const label fieldi
+        );
+
+
+        //- Read dictionary
+        virtual bool read(const dictionary& dict);
 };
 
 

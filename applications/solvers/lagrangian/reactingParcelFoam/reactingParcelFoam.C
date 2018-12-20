@@ -37,7 +37,8 @@ Description
 #include "turbulentFluidThermoModel.H"
 #include "basicReactingMultiphaseCloud.H"
 #include "surfaceFilmModel.H"
-#include "rhoCombustionModel.H"
+#include "rhoReactionThermo.H"
+#include "CombustionModel.H"
 #include "radiationModel.H"
 #include "SLGThermo.H"
 #include "fvOptions.H"
@@ -50,16 +51,24 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Transient solver for compressible, turbulent flow"
+        " with reacting, multiphase particle clouds"
+        " and surface film modelling."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
     #include "createTimeControls.H"
     #include "createFields.H"
     #include "createFieldRefs.H"
-    #include "createFvOptions.H"
+    #include "createRegionControls.H"
     #include "initContinuityErrs.H"
 
     turbulence->validate();
@@ -88,7 +97,7 @@ int main(int argc, char *argv[])
             #include "setMultiRegionDeltaT.H"
         }
 
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -126,9 +135,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End" << endl;

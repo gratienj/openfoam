@@ -51,7 +51,7 @@ constantAlphaContactAngleFvPatchScalarField
 )
 :
     alphaContactAngleFvPatchScalarField(p, iF, dict),
-    theta0_(readScalar(dict.lookup("theta0")))
+    theta0_(dict.get<scalar>("theta0"))
 {
     evaluate();
 }
@@ -103,7 +103,7 @@ Foam::constantAlphaContactAngleFvPatchScalarField::theta
     const fvsPatchVectorField&
 ) const
 {
-    return tmp<scalarField>(new scalarField(size(), theta0_));
+    return tmp<scalarField>::New(size(), theta0_);
 }
 
 

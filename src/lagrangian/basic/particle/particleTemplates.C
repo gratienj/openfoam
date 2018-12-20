@@ -40,7 +40,7 @@ License
 template<class TrackCloudType>
 void Foam::particle::readFields(TrackCloudType& c)
 {
-    bool valid = c.size();
+    const bool valid = c.size();
 
     IOobject procIO(c.fieldIOobject("origProcId", IOobject::MUST_READ));
 
@@ -70,7 +70,7 @@ void Foam::particle::readFields(TrackCloudType& c)
 template<class TrackCloudType>
 void Foam::particle::writeFields(const TrackCloudType& c)
 {
-    label np = c.size();
+    const label np = c.size();
 
     if (writeLagrangianCoordinates)
     {
@@ -84,7 +84,7 @@ void Foam::particle::writeFields(const TrackCloudType& c)
         IOPosition<TrackCloudType> ioP
         (
             c,
-            IOPosition<TrackCloudType>::geometryType::POSITIONS
+            cloud::geometryType::POSITIONS
         );
         ioP.write(np > 0);
     }
@@ -116,7 +116,7 @@ void Foam::particle::writeFields(const TrackCloudType& c)
 template<class CloudType>
 void Foam::particle::writeObjects(const CloudType& c, objectRegistry& obr)
 {
-    label np = c.size();
+    const label np = c.size();
 
     IOField<label>& origProc(cloud::createIOField<label>("origProc", np, obr));
     IOField<label>& origId(cloud::createIOField<label>("origId", np, obr));
@@ -156,6 +156,8 @@ void Foam::particle::hitFace
     }
     else if (onBoundaryFace())
     {
+        changeToMasterPatch();
+
         if (!p.hitPatch(cloud, ttd))
         {
             const polyPatch& patch = mesh_.boundaryMesh()[p.patch()];
@@ -212,11 +214,6 @@ void Foam::particle::trackToAndHitFace
 {
     trackToFace(direction, fraction);
 
-    if (onBoundaryFace())
-    {
-        changeToMasterPatch();
-    }
-
     hitFace(direction, cloud, td);
 }
 
@@ -253,8 +250,7 @@ void Foam::particle::hitSymmetryPlanePatch
 template<class TrackCloudType>
 void Foam::particle::hitSymmetryPatch(TrackCloudType&, trackingData&)
 {
-    vector nf = normal();
-    nf /= mag(nf);
+    const vector nf = normal();
 
     transformProperties(I - 2.0*nf*nf);
 }
@@ -331,7 +327,7 @@ void Foam::particle::hitCyclicAMIPatch
     // Set the topology
     facei_ = tetFacei_ = receiveFacei + receiveCpp.start();
 
-    // Locate the particle on the recieving side
+    // Locate the particle on the receiving side
     vector directionT = direction;
     cpp.reverseTransformDirection(directionT, sendFacei);
     locate

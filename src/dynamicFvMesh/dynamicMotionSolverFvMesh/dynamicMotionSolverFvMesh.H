@@ -59,11 +59,11 @@ class dynamicMotionSolverFvMesh
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        dynamicMotionSolverFvMesh(const dynamicMotionSolverFvMesh&);
+        //- No copy construct
+        dynamicMotionSolverFvMesh(const dynamicMotionSolverFvMesh&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const dynamicMotionSolverFvMesh&);
+        //- No copy assignment
+        void operator=(const dynamicMotionSolverFvMesh&) = delete;
 
 
 public:
@@ -76,6 +76,18 @@ public:
 
         //- Construct from IOobject
         dynamicMotionSolverFvMesh(const IOobject& io);
+
+        //- Construct from components without boundary.
+        //  Boundary is added using addFvPatches() member function
+        dynamicMotionSolverFvMesh
+        (
+            const IOobject& io,
+            pointField&& points,
+            faceList&& faces,
+            labelList&& allOwner,
+            labelList&& allNeighbour,
+            const bool syncPar = true
+        );
 
 
     //- Destructor

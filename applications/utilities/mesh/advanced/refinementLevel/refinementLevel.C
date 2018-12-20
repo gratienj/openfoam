@@ -28,8 +28,8 @@ Group
     grpMeshAdvancedUtilities
 
 Description
-    Tries to figure out what the refinement level is on refined cartesian
-    meshes. Run BEFORE snapping.
+    Attempt to determine the refinement levels of a refined cartesian mesh.
+    Run BEFORE snapping.
 
     Writes
     - volScalarField 'refinementLevel' with current refinement level.
@@ -98,13 +98,18 @@ bool limitRefinementLevel
 }
 
 
-
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Attempt to determine refinement levels of a refined cartesian mesh.\n"
+        "Run BEFORE snapping!"
+    );
+
     argList::addBoolOption
     (
         "readLevel",
-        "read level from refinementLevel file"
+        "Read level from refinementLevel file"
     );
 
     #include "setRootCase.H"
@@ -118,7 +123,7 @@ int main(int argc, char *argv[])
         << " to allow for some truncation error."
         << nl << endl;
 
-    const bool readLevel = args.optionFound("readLevel");
+    const bool readLevel = args.found("readLevel");
 
     const scalarField& vols = mesh.cellVolumes();
 
@@ -184,11 +189,7 @@ int main(int argc, char *argv[])
         const DynamicList<label>& bin = bins[binI];
 
         cellSet cells(mesh, "vol" + name(binI), bin.size());
-
-        forAll(bin, i)
-        {
-            cells.insert(bin[i]);
-        }
+        cells.insert(bin);
 
         Info<< "    " << lowerLimits[binI] << " .. " << upperLimits[binI]
             << "  : writing " << bin.size() << " cells to cellSet "
@@ -214,9 +215,9 @@ int main(int argc, char *argv[])
             runTime.timeName(),
             runTime
         ),
-        xferCopy(mesh.points()),   // could we safely re-use the data?
-        xferCopy(mesh.faces()),
-        xferCopy(mesh.cells())
+        pointField(mesh.points()),  // Could we safely re-use the data?
+        faceList(mesh.faces()),
+        cellList(mesh.cells())
     );
 
     // Add the boundary patches
@@ -282,7 +283,7 @@ int main(int argc, char *argv[])
             IOobject::NO_WRITE
         ),
         fMesh,
-        dimensionedScalar("zero", dimless/dimTime, 0)
+        dimensionedScalar(dimless/dimTime, Zero)
     );
 
     // Set cell values

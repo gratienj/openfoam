@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,7 +27,7 @@ License
 #include "triSurfaceSearch.H"
 #include "OBJstream.H"
 #include "labelPairHashes.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "triSurface.H"
 #include "pointIndexHit.H"
 #include "mergePoints.H"
@@ -46,11 +46,11 @@ const Foam::Enum
     Foam::surfaceIntersection::intersectionType
 >
 Foam::surfaceIntersection::selfIntersectionNames
-{
+({
     { intersectionType::SELF, "self" },
     { intersectionType::SELF_REGION, "region" },
     { intersectionType::NONE, "none" },
-};
+});
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -820,7 +820,7 @@ void Foam::surfaceIntersection::doCutEdges
 
         // Optionally prevent intersection within a single region.
         // Like self-intersect, but only if regions are different
-        PackedBoolList maskRegions(32);
+        bitSet maskRegions(32);
 
         treeDataTriSurface::findAllIntersectOp
             allIntersectOp(searchTree, maskFaces);
@@ -867,7 +867,7 @@ void Foam::surfaceIntersection::doCutEdges
 
                 maskFaces.append(pHit.index());
 
-                if (maskRegions[surf1[pHit.index()].region()])
+                if (maskRegions.test(surf1[pHit.index()].region()))
                 {
                     continue;
                 }
@@ -1525,7 +1525,7 @@ void Foam::surfaceIntersection::mergePoints(const scalar mergeDist)
 
 void Foam::surfaceIntersection::mergeEdges()
 {
-    HashSet<edge, Hash<edge>> uniqEdges(2*cutEdges_.size());
+    edgeHashSet uniqEdges(2*cutEdges_.size());
 
     label nUniqEdges = 0;
     labelList edgeNumbering(cutEdges_.size(), -1);

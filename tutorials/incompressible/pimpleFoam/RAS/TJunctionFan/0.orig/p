@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -28,7 +28,7 @@ boundaryField
         direction       in;
         readerType      openFoam;
         hasHeaderLine   true;
-        file            "$FOAM_CASE/constant/FluxVsdP.dat";
+        file            "<constant>/FluxVsdP.dat";
         //nonDimensional  true;
         //rpm             300;
         //dm              2e-2;

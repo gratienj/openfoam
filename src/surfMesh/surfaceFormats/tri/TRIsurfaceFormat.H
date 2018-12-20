@@ -69,12 +69,6 @@ class TRIsurfaceFormat
             const label zoneI
         );
 
-        //- Disallow default bitwise copy construct
-        TRIsurfaceFormat(const TRIsurfaceFormat<Face>&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const TRIsurfaceFormat<Face>&) = delete;
-
 
 public:
 
@@ -98,8 +92,7 @@ public:
             const dictionary& options = dictionary::null
         );
 
-        //- Write UnsortedMeshedSurface,
-        //  by default the output is not sorted by zones
+        //- Write UnsortedMeshedSurface, the output remains unsorted
         static void write
         (
             const fileName& filename,
@@ -113,7 +106,7 @@ public:
         //- Read from file
         virtual bool read(const fileName& filename);
 
-        //- Write object
+        //- Write surface mesh to file
         virtual void write
         (
             const fileName& name,

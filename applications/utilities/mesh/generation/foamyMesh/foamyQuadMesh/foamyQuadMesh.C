@@ -53,6 +53,11 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Conformal Voronoi 2D automatic mesh generator"
+    );
+
     argList::noParallel();
     argList::addOption("pointsFile", "filename");
 
@@ -81,14 +86,14 @@ int main(int argc, char *argv[])
     );
     const dictionary& extrusionDict(controlDict.subDict("extrusion"));
 
-    Switch extrude(extrusionDict.lookup("extrude"));
-    const bool overwrite = args.optionFound("overwrite");
+    const bool extrude = extrusionDict.get<bool>("extrude");
+    const bool overwrite = args.found("overwrite");
 
     // Read and triangulation
     // ~~~~~~~~~~~~~~~~~~~~~~
     CV2D mesh(runTime, controlDict);
 
-    if (args.optionFound("pointsFile"))
+    if (args.found("pointsFile"))
     {
         mesh.insertPoints(args["pointsFile"]);
     }
@@ -152,10 +157,10 @@ int main(int argc, char *argv[])
             IOobject::NO_WRITE,
             false
         ),
-        xferMove(poly2DMesh.points()),
-        xferMove(poly2DMesh.faces()),
-        xferMove(poly2DMesh.owner()),
-        xferMove(poly2DMesh.neighbour())
+        std::move(poly2DMesh.points()),
+        std::move(poly2DMesh.faces()),
+        std::move(poly2DMesh.owner()),
+        std::move(poly2DMesh.neighbour())
     );
 
     Info<< "Constructing patches." << endl;
@@ -200,13 +205,13 @@ int main(int argc, char *argv[])
 
             autoPtr<mapPolyMesh> morphMap = meshMod.changeMesh(pMesh, false);
 
-            pMesh.updateMesh(morphMap);
+            pMesh.updateMesh(morphMap());
         }
     }
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
     else
     {

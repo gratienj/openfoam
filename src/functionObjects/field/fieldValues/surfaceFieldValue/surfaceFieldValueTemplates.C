@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +29,7 @@ License
 #include "volFields.H"
 #include "sampledSurface.H"
 #include "surfaceWriter.H"
+#include "interpolationCell.H"
 #include "interpolationCellPoint.H"
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
@@ -100,18 +101,15 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::getFieldValues
 
                 // Average
                 const faceList& faces = surfacePtr_().faces();
-                tmp<Field<Type>> tavg
-                (
-                    new Field<Type>(faces.size(), Zero)
-                );
-                Field<Type>& avg = tavg.ref();
+                auto tavg = tmp<Field<Type>>::New(faces.size(), Zero);
+                auto& avg = tavg.ref();
 
                 forAll(faces, facei)
                 {
                     const face& f = faces[facei];
-                    forAll(f, fp)
+                    for (const label labi : f)
                     {
-                        avg[facei] += intFld[f[fp]];
+                        avg[facei] += intFld[labi];
                     }
                     avg[facei] /= f.size();
                 }
@@ -120,7 +118,9 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::getFieldValues
             }
             else
             {
-                return surfacePtr_().sample(fld);
+                const interpolationCell<Type> interp(fld);
+
+                return surfacePtr_().sample(interp);
             }
         }
         else
@@ -136,7 +136,7 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::getFieldValues
             << abort(FatalError);
     }
 
-    return tmp<Field<Type>>(new Field<Type>(0));
+    return tmp<Field<Type>>::New();
 }
 
 
@@ -178,7 +178,6 @@ processSameTypeValues
             if (canWeight(weightField))
             {
                 tmp<scalarField> weight(weightingFactor(weightField));
-
                 result = gSum(weight*values);
             }
             else
@@ -275,8 +274,26 @@ processSameTypeValues
 
         case opAreaNormalAverage:
         case opAreaNormalIntegrate:
+        case opUniformity:
         {
             // Handled in specializations only
+            break;
+        }
+
+        case opWeightedUniformity:
+        case opAbsWeightedUniformity:
+        {
+            if (canWeight(weightField))
+            {
+                // Change weighting from vector -> scalar and dispatch again
+                return processValues<Type, scalar>
+                (
+                    values,
+                    Sf,
+                    weightingFactor(weightField)
+                );
+            }
+
             break;
         }
     }
@@ -448,8 +465,8 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::filterField
     const GeometricField<Type, fvPatchField, volMesh>& field
 ) const
 {
-    tmp<Field<Type>> tvalues(new Field<Type>(faceId_.size()));
-    Field<Type>& values = tvalues.ref();
+    auto tvalues = tmp<Field<Type>>::New(faceId_.size());
+    auto& values = tvalues.ref();
 
     forAll(values, i)
     {
@@ -483,8 +500,8 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::filterField
     const GeometricField<Type, fvsPatchField, surfaceMesh>& field
 ) const
 {
-    tmp<Field<Type>> tvalues(new Field<Type>(faceId_.size()));
-    Field<Type>& values = tvalues.ref();
+    auto tvalues = tmp<Field<Type>>::New(faceId_.size());
+    auto& values = tvalues.ref();
 
     forAll(values, i)
     {

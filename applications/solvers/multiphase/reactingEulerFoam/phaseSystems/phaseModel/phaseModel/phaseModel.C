@@ -56,7 +56,7 @@ Foam::phaseModel::phaseModel
             IOobject::AUTO_WRITE
         ),
         fluid.mesh(),
-        dimensionedScalar("alpha", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     ),
 
     fluid_(fluid),
@@ -77,7 +77,7 @@ Foam::phaseModel::phaseModel
 Foam::autoPtr<Foam::phaseModel> Foam::phaseModel::clone() const
 {
     NotImplemented;
-    return autoPtr<phaseModel>(nullptr);
+    return nullptr;
 }
 
 

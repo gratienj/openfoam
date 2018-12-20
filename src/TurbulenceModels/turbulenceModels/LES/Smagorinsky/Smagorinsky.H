@@ -93,9 +93,11 @@ class Smagorinsky
 {
     // Private Member Functions
 
-        // Disallow default bitwise copy construct and assignment
-        Smagorinsky(const Smagorinsky&);
-        void operator=(const Smagorinsky&);
+        //- No copy construct
+        Smagorinsky(const Smagorinsky&) = delete;
+
+        //- No copy assignment
+        void operator=(const Smagorinsky&) = delete;
 
 
 protected:
@@ -158,7 +160,7 @@ public:
             return k(fvc::grad(this->U_));
         }
 
-        //- Return sub-grid disipation rate
+        //- Return sub-grid dissipation rate
         virtual tmp<volScalarField> epsilon() const;
 
         //- Correct Eddy-Viscosity and related properties

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -72,28 +72,29 @@ bool Foam::MRFZoneList::active(const bool warn) const
 void Foam::MRFZoneList::reset(const dictionary& dict)
 {
     label count = 0;
-    forAllConstIter(dictionary, dict, iter)
+    for (const entry& dEntry : dict)
     {
-        if (iter().isDict())
+        if (dEntry.isDict())
         {
-            count++;
+            ++count;
         }
     }
 
-    this->setSize(count);
-    label i = 0;
-    forAllConstIter(dictionary, dict, iter)
+    this->resize(count);
+
+    count = 0;
+    for (const entry& dEntry : dict)
     {
-        if (iter().isDict())
+        if (dEntry.isDict())
         {
-            const word& name = iter().keyword();
-            const dictionary& modelDict = iter().dict();
+            const word& name = dEntry.keyword();
+            const dictionary& modelDict = dEntry.dict();
 
             Info<< "    creating MRF zone: " << name << endl;
 
             this->set
             (
-                i++,
+                count++,
                 new MRFZone(name, mesh_, modelDict)
             );
         }
@@ -177,7 +178,7 @@ Foam::tmp<Foam::volVectorField> Foam::MRFZoneList::DDt
                 U.mesh()
             ),
             U.mesh(),
-            dimensionedVector("0", U.dimensions()/dimTime, Zero)
+            dimensionedVector(U.dimensions()/dimTime, Zero)
         )
     );
     volVectorField& acceleration = tacceleration.ref();
@@ -409,6 +410,18 @@ void Foam::MRFZoneList::correctBoundaryFlux
         )
         {
             phibf[patchi] == Uf[patchi];
+        }
+    }
+}
+
+
+void Foam::MRFZoneList::update()
+{
+    if (mesh_.topoChanging())
+    {
+        forAll(*this, i)
+        {
+            operator[](i).update();
         }
     }
 }

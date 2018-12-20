@@ -41,7 +41,7 @@ Description
     to specify a multiplier (of the max component).
 
     The orientation of the porous region is defined with the same notation as
-    a co-ordinate system, but only a Cartesian co-ordinate system is valid.
+    a coordinate system, but only a Cartesian coordinate system is valid.
 
 SourceFiles
     DarcyForchheimer.C
@@ -72,10 +72,10 @@ class DarcyForchheimer
 {
     // Private data
 
-        //- Darcy coeffient XYZ components (user-supplied) [1/m2]
+        //- Darcy coefficient XYZ components (user-supplied) [1/m2]
         dimensionedVector dXYZ_;
 
-        //- Forchheimer coeffient XYZ components (user-supplied) [1/m]
+        //- Forchheimer coefficient XYZ components (user-supplied) [1/m]
         dimensionedVector fXYZ_;
 
         //- Darcy coefficient - converted from dXYZ [1/m2]
@@ -118,11 +118,11 @@ class DarcyForchheimer
             const vectorField& U
         ) const;
 
-        //- Disallow default bitwise copy construct
-        DarcyForchheimer(const DarcyForchheimer&);
+        //- No copy construct
+        DarcyForchheimer(const DarcyForchheimer&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const DarcyForchheimer&);
+        //- No copy assignment
+        void operator=(const DarcyForchheimer&) = delete;
 
 
 public:
@@ -141,7 +141,7 @@ public:
     );
 
     //- Destructor
-    virtual ~DarcyForchheimer();
+    virtual ~DarcyForchheimer() = default;
 
 
     // Member Functions

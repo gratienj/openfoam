@@ -47,7 +47,7 @@ SourceFiles
 
 #include "labelPair.H"
 #include "pointIndexHit.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "boundBox.H"
 #include "MeshedSurface.H"
 #include "MeshedSurfacesFwd.H"
@@ -56,6 +56,8 @@ SourceFiles
 
 namespace Foam
 {
+
+// Forward declarations
 
 class polyMesh;
 class triSurface;
@@ -76,16 +78,16 @@ class isoSurfaceCell
 
         enum segmentCutType
         {
-            NEARFIRST,      // intersection close to e.first()
-            NEARSECOND,     //  ,,                   e.second()
-            NOTNEAR         // no intersection
+            NEARFIRST,      //!< Intersection close to e.first()
+            NEARSECOND,     //!< Intersection close to e.second()
+            NOTNEAR         //!< No intersection
         };
 
         enum cellCutType
         {
-            NOTCUT,     // not cut
-            SPHERE,     // all edges to cell centre cut
-            CUT         // normal cut
+            NOTCUT,     //!< Cell not cut
+            SPHERE,     //!< All edges to cell centre cut
+            CUT         //!< Normal cut
         };
 
 
@@ -101,6 +103,9 @@ class isoSurfaceCell
 
         //- Optional bounds
         const boundBox bounds_;
+
+        //- Optional cells to ignore.
+        const bitSet& ignoreCells_;
 
         //- When to merge points
         const scalar mergeDistance_;
@@ -146,7 +151,7 @@ class isoSurfaceCell
         //- Determine whether cell is cut
         cellCutType calcCutType
         (
-            const PackedBoolList&,
+            const bitSet&,
             const scalarField& cellValues,
             const scalarField& pointValues,
             const label
@@ -154,7 +159,7 @@ class isoSurfaceCell
 
         void calcCutTypes
         (
-            const PackedBoolList&,
+            const bitSet&,
             const scalarField& cellValues,
             const scalarField& pointValues
         );
@@ -166,7 +171,7 @@ class isoSurfaceCell
             const labelledTri&
         );
 
-        //- Caculate centre of surface.
+        //- Calculate centre of surface.
         static point calcCentre(const triSurface&);
 
         //- Replace surface (localPoints, localTris) with single point.
@@ -182,7 +187,7 @@ class isoSurfaceCell
         //  point.
         void calcSnappedCc
         (
-            const PackedBoolList& isTet,
+            const bitSet& isTet,
             const scalarField& cVals,
             const scalarField& pVals,
             DynamicList<point>& triPoints,
@@ -214,7 +219,7 @@ class isoSurfaceCell
         //  point.
         void calcSnappedPoint
         (
-            const PackedBoolList& isTet,
+            const bitSet& isTet,
             const scalarField& cVals,
             const scalarField& pVals,
             DynamicList<point>& triPoints,
@@ -322,7 +327,11 @@ public:
 
     // Constructors
 
-        //- Construct from dictionary
+        //- Construct from cell and point values
+        //
+        //  \param bounds optional bounding box for trimming
+        //  \param mergeTol fraction of mesh bounding box for merging points
+        //  \param ignoreCells cells to ignore in the cellValues
         isoSurfaceCell
         (
             const polyMesh& mesh,
@@ -331,19 +340,27 @@ public:
             const scalar iso,
             const bool regularise,
             const boundBox& bounds = boundBox::invertedBox,
-            const scalar mergeTol = 1e-6    // fraction of bounding box
+            const scalar mergeTol = 1e-6,
+            const bitSet& ignoreCells = bitSet()
         );
 
 
     // Member Functions
 
-        //- For every face, the original cell in mesh
+        //- For each face, the original cell in mesh
         const labelList& meshCells() const
         {
             return meshCells_;
         }
 
-        //- Interpolates cCoords,pCoords.
+        //- For each face, the original cell in mesh
+        labelList& meshCells()
+        {
+            return meshCells_;
+        }
+
+
+        //- Interpolates cCoords, pCoords.
         template<class Type>
         tmp<Field<Type>> interpolate
         (

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -50,7 +50,7 @@ tmp<volScalarField> v2f<BasicTurbulenceModel>::Ts() const
                 max
                 (
                     this->nu(),
-                    dimensionedScalar("zero", this->nu()().dimensions(), 0.0)
+                    dimensionedScalar(this->nu()().dimensions(), Zero)
                 )
               / epsilon_
             )
@@ -75,12 +75,7 @@ tmp<volScalarField> v2f<BasicTurbulenceModel>::Ls() const
                     max
                     (
                         this->nu(),
-                        dimensionedScalar
-                        (
-                            "zero",
-                            this->nu()().dimensions(),
-                            0.0
-                        )
+                        dimensionedScalar(this->nu()().dimensions(), Zero)
                     )
                 )/epsilon_
             )
@@ -222,7 +217,7 @@ v2f<BasicTurbulenceModel>::v2f
     (
         IOobject
         (
-            IOobject::groupName("k", U.group()),
+            IOobject::groupName("k", alphaRhoPhi.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -234,7 +229,7 @@ v2f<BasicTurbulenceModel>::v2f
     (
         IOobject
         (
-            IOobject::groupName("epsilon", U.group()),
+            IOobject::groupName("epsilon", alphaRhoPhi.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -246,7 +241,7 @@ v2f<BasicTurbulenceModel>::v2f
     (
         IOobject
         (
-            IOobject::groupName("v2", U.group()),
+            IOobject::groupName("v2", alphaRhoPhi.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -258,7 +253,7 @@ v2f<BasicTurbulenceModel>::v2f
     (
         IOobject
         (
-            IOobject::groupName("f", U.group()),
+            IOobject::groupName("f", alphaRhoPhi.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -346,7 +341,7 @@ void v2f<BasicTurbulenceModel>::correct()
     const volScalarField Ceps1
     (
         "Ceps1",
-        1.4*(1.0 + 0.05*min(sqrt(k_/v2_), scalar(100.0)))
+        1.4*(1.0 + 0.05*min(sqrt(k_/v2_), scalar(100)))
     );
 
     // Update epsilon (and possibly G) at the wall

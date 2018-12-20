@@ -183,7 +183,7 @@ const Foam::List<Foam::labelPair>& Foam::mapDistributeBase::schedule() const
             )
         );
     }
-    return schedulePtr_();
+    return *schedulePtr_;
 }
 
 
@@ -282,7 +282,7 @@ void Foam::mapDistributeBase::printLayout(Ostream& os) const
 void Foam::mapDistributeBase::calcCompactAddressing
 (
     const globalIndex& globalNumbering,
-    const labelList& elements,
+    const labelUList& elements,
     List<Map<label>>& compactMap
 ) const
 {
@@ -491,7 +491,6 @@ void Foam::mapDistributeBase::exchangeAddressing
     }
 
 
-
     // Find out what to receive/send in compact addressing.
 
     // What I want to receive is what others have to send
@@ -559,18 +558,38 @@ Foam::mapDistributeBase::mapDistributeBase()
 {}
 
 
+
+Foam::mapDistributeBase::mapDistributeBase(const mapDistributeBase& map)
+:
+    constructSize_(map.constructSize_),
+    subMap_(map.subMap_),
+    constructMap_(map.constructMap_),
+    subHasFlip_(map.subHasFlip_),
+    constructHasFlip_(map.constructHasFlip_),
+    schedulePtr_()
+{}
+
+
+Foam::mapDistributeBase::mapDistributeBase(mapDistributeBase&& map)
+:
+    mapDistributeBase()
+{
+    transfer(map);
+}
+
+
 Foam::mapDistributeBase::mapDistributeBase
 (
     const label constructSize,
-    const Xfer<labelListList>& subMap,
-    const Xfer<labelListList>& constructMap,
+    labelListList&& subMap,
+    labelListList&& constructMap,
     const bool subHasFlip,
     const bool constructHasFlip
 )
 :
     constructSize_(constructSize),
-    subMap_(subMap),
-    constructMap_(constructMap),
+    subMap_(std::move(subMap)),
+    constructMap_(std::move(constructMap)),
     subHasFlip_(subHasFlip),
     constructHasFlip_(constructHasFlip),
     schedulePtr_()
@@ -579,8 +598,8 @@ Foam::mapDistributeBase::mapDistributeBase
 
 Foam::mapDistributeBase::mapDistributeBase
 (
-    const labelList& sendProcs,
-    const labelList& recvProcs
+    const labelUList& sendProcs,
+    const labelUList& recvProcs
 )
 :
     constructSize_(0),
@@ -602,8 +621,8 @@ Foam::mapDistributeBase::mapDistributeBase
 
     forAll(sendProcs, sampleI)
     {
-        label sendProc = sendProcs[sampleI];
-        label recvProc = recvProcs[sampleI];
+        const label sendProc = sendProcs[sampleI];
+        const label recvProc = recvProcs[sampleI];
 
         // Note that also need to include local communication (both
         // RecvProc and sendProc on local processor)
@@ -632,8 +651,8 @@ Foam::mapDistributeBase::mapDistributeBase
 
     forAll(sendProcs, sampleI)
     {
-        label sendProc = sendProcs[sampleI];
-        label recvProc = recvProcs[sampleI];
+        const label sendProc = sendProcs[sampleI];
+        const label recvProc = recvProcs[sampleI];
 
         if (Pstream::myProcNo() == sendProc)
         {
@@ -681,7 +700,7 @@ Foam::mapDistributeBase::mapDistributeBase
     //    {
     //        Map<label>& globalMap = compactMap[proci];
     //
-    //        SortableList<label> sorted(globalMap.toc().xfer());
+    //        const List<label> sorted(globalMap.sortedToc());
     //
     //        forAll(sorted, i)
     //        {
@@ -741,7 +760,7 @@ Foam::mapDistributeBase::mapDistributeBase
     //    {
     //        Map<label>& globalMap = compactMap[proci];
     //
-    //        SortableList<label> sorted(globalMap.toc().xfer());
+    //        const List<label> sorted(globalMap.sortedToc());
     //
     //        forAll(sorted, i)
     //        {
@@ -771,26 +790,56 @@ Foam::mapDistributeBase::mapDistributeBase
 }
 
 
-Foam::mapDistributeBase::mapDistributeBase(const mapDistributeBase& map)
+Foam::mapDistributeBase::mapDistributeBase
+(
+    labelListList&& subMap,
+    const bool subHasFlip,
+    const bool constructHasFlip
+)
 :
-    constructSize_(map.constructSize_),
-    subMap_(map.subMap_),
-    constructMap_(map.constructMap_),
-    subHasFlip_(map.subHasFlip_),
-    constructHasFlip_(map.constructHasFlip_),
+    constructSize_(0),
+    subMap_(std::move(subMap)),
+    subHasFlip_(subHasFlip),
+    constructHasFlip_(constructHasFlip),
     schedulePtr_()
-{}
+{
+    // Send over how many i need to receive.
+    labelList recvSizes;
+    Pstream::exchangeSizes(subMap_, recvSizes);
 
+    // Determine order of receiving
+    labelListList constructMap(Pstream::nProcs());
 
-Foam::mapDistributeBase::mapDistributeBase(const Xfer<mapDistributeBase>& map)
-:
-    constructSize_(map().constructSize_),
-    subMap_(map().subMap_.xfer()),
-    constructMap_(map().constructMap_.xfer()),
-    subHasFlip_(map().subHasFlip_),
-    constructHasFlip_(map().constructHasFlip_),
-    schedulePtr_()
-{}
+    // My local segments first
+    label nLocal = recvSizes[Pstream::myProcNo()];
+    {
+        labelList& myMap = constructMap[Pstream::myProcNo()];
+        myMap.setSize(nLocal);
+        forAll(myMap, i)
+        {
+            myMap[i] = i;
+        }
+    }
+
+    label segmenti = nLocal;
+    forAll(constructMap, proci)
+    {
+        if (proci != Pstream::myProcNo())
+        {
+            // What i need to receive is what other processor is sending to me.
+            label nRecv = recvSizes[proci];
+            constructMap[proci].setSize(nRecv);
+
+            for (label i = 0; i < nRecv; i++)
+            {
+                constructMap[proci][i] = segmenti++;
+            }
+        }
+    }
+
+    constructSize_ = segmenti;
+    constructMap_.transfer(constructMap);
+}
 
 
 Foam::mapDistributeBase::mapDistributeBase(Istream& is)
@@ -809,12 +858,10 @@ void Foam::mapDistributeBase::transfer(mapDistributeBase& rhs)
     subHasFlip_ = rhs.subHasFlip_;
     constructHasFlip_ = rhs.constructHasFlip_;
     schedulePtr_.clear();
-}
 
-
-Foam::Xfer<Foam::mapDistributeBase> Foam::mapDistributeBase::xfer()
-{
-    return xferMove(*this);
+    rhs.constructSize_ = 0;
+    rhs.subHasFlip_ = false;
+    rhs.constructHasFlip_ = false;
 }
 
 
@@ -1228,9 +1275,9 @@ void Foam::mapDistributeBase::compact
 
 void Foam::mapDistributeBase::operator=(const mapDistributeBase& rhs)
 {
-    // Check for assignment to self
     if (this == &rhs)
     {
+        // Avoid self assignment
         FatalErrorInFunction
             << "Attempted assignment to self"
             << abort(FatalError);
@@ -1241,6 +1288,16 @@ void Foam::mapDistributeBase::operator=(const mapDistributeBase& rhs)
     subHasFlip_ = rhs.subHasFlip_;
     constructHasFlip_ = rhs.constructHasFlip_;
     schedulePtr_.clear();
+}
+
+
+void Foam::mapDistributeBase::operator=(mapDistributeBase&& rhs)
+{
+    if (this != &rhs)
+    {
+        // Avoid self assignment
+        transfer(rhs);
+    }
 }
 
 

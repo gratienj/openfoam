@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -29,8 +29,6 @@ License
 #include "ListOps.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
-
-const Foam::label Foam::ensightFaces::nTypes = 3;
 
 const char* Foam::ensightFaces::elemNames[3] =
     { "tria3", "quad4", "nsided" };
@@ -101,7 +99,13 @@ void Foam::ensightFaces::resizeAll()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::ensightFaces::ensightFaces(label partIndex)
+Foam::ensightFaces::ensightFaces()
+:
+    ensightFaces(0)
+{}
+
+
+Foam::ensightFaces::ensightFaces(const label partIndex)
 :
     index_(partIndex),
     address_(),
@@ -132,12 +136,6 @@ Foam::ensightFaces::ensightFaces(const ensightFaces& obj)
     // Restore total (reduced) sizes
     this->sizes_ = totSizes;
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::ensightFaces::~ensightFaces()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -251,7 +249,7 @@ void Foam::ensightFaces::classify
     const faceList& faces,
     const labelUList& addressing,
     const boolList& flipMap,
-    const PackedBoolList& exclude
+    const bitSet& exclude
 )
 {
     // Note: Since PackedList::operator[] returns zero (false) for out-of-range
@@ -268,7 +266,7 @@ void Foam::ensightFaces::classify
     {
         const label faceId = addressing[listi];
 
-        if (!exclude[faceId])
+        if (!exclude.test(faceId))
         {
             const enum elemType what = whatType(faces[faceId]);
             sizes_[what]++;
@@ -290,7 +288,7 @@ void Foam::ensightFaces::classify
         const label faceId = addressing[listi];
         const bool  doFlip = useFlip && flipMap[listi];
 
-        if (!exclude[faceId])
+        if (!exclude.test(faceId))
         {
             add(faces[faceId], faceId, doFlip);
         }

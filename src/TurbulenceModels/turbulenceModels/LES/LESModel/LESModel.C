@@ -65,7 +65,7 @@ Foam::LESModel<BasicTurbulenceModel>::LESModel
     ),
 
     LESDict_(this->subOrEmptyDict("LES")),
-    turbulence_(LESDict_.lookup("turbulence")),
+    turbulence_(LESDict_.get<Switch>("turbulence")),
     printCoeffs_(LESDict_.lookupOrDefault<Switch>("printCoeffs", false)),
     coeffDict_(LESDict_.optionalSubDict(type + "Coeffs")),
 
@@ -106,7 +106,7 @@ Foam::LESModel<BasicTurbulenceModel>::LESModel
     (
         LESdelta::New
         (
-            IOobject::groupName("delta", U.group()),
+            IOobject::groupName("delta", alphaRhoPhi.group()),
             *this,
             LESDict_
         )
@@ -141,14 +141,14 @@ Foam::LESModel<BasicTurbulenceModel>::New
         (
             IOobject
             (
-                IOobject::groupName(propertiesName, U.group()),
+                IOobject::groupName(propertiesName, alphaRhoPhi.group()),
                 U.time().constant(),
                 U.db(),
                 IOobject::MUST_READ_IF_MODIFIED,
                 IOobject::NO_WRITE,
                 false
             )
-        ).subDict("LES").lookup("LESModel")
+        ).subDict("LES").get<word>("LESModel")
     );
 
     Info<< "Selecting LES turbulence model " << modelType << endl;
@@ -180,7 +180,7 @@ bool Foam::LESModel<BasicTurbulenceModel>::read()
     if (BasicTurbulenceModel::read())
     {
         LESDict_ <<= this->subDict("LES");
-        LESDict_.lookup("turbulence") >> turbulence_;
+        LESDict_.readEntry("turbulence", turbulence_);
 
         coeffDict_ <<= LESDict_.optionalSubDict(type() + "Coeffs");
 

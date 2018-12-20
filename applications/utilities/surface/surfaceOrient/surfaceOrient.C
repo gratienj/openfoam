@@ -46,38 +46,39 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "set face normals consistent with a user-provided 'outside' point"
+        "Set face normals consistent with a user-provided 'outside' point"
     );
 
     argList::noParallel();
-    argList::addArgument("surfaceFile");
-    argList::addArgument("visiblePoint");
-    argList::addArgument("output surfaceFile");
+    argList::addArgument("input", "The input surface file");
+    argList::addArgument("point", "The visible 'outside' point");
+    argList::addArgument("output", "The output surface file");
+
     argList::addBoolOption
     (
         "inside",
-        "treat provided point as being inside"
+        "Treat provided point as being inside"
     );
     argList::addBoolOption
     (
         "usePierceTest",
-        "determine orientation by counting number of intersections"
+        "Determine orientation by counting number of intersections"
     );
     argList::addOption
     (
         "scale",
         "factor",
-        "input geometry scaling factor"
+        "Input geometry scaling factor"
     );
 
     argList args(argc, argv);
 
     const fileName surfFileName = args[1];
-    const point visiblePoint    = args.argRead<point>(2);
+    const point visiblePoint    = args.get<point>(2);
     const fileName outFileName  = args[3];
 
-    const bool orientInside = args.optionFound("inside");
-    const bool usePierceTest = args.optionFound("usePierceTest");
+    const bool orientInside = args.found("inside");
+    const bool usePierceTest = args.found("usePierceTest");
 
     Info<< "Reading surface from " << surfFileName << nl
         << "Orienting surface such that visiblePoint " << visiblePoint
@@ -92,7 +93,7 @@ int main(int argc, char *argv[])
         Info<< "outside" << endl;
     }
 
-    const scalar scaling = args.optionLookupOrDefault<scalar>("scale", -1);
+    const scalar scaling = args.opt<scalar>("scale", -1);
     if (scaling > 0)
     {
         Info<< "Input scaling: " << scaling << nl;

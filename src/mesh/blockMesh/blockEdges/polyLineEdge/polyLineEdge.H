@@ -56,11 +56,11 @@ class polyLineEdge
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        polyLineEdge(const polyLineEdge&);
+        //- No copy construct
+        polyLineEdge(const polyLineEdge&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const polyLineEdge&);
+        //- No copy assignment
+        void operator=(const polyLineEdge&) = delete;
 
 
 public:
@@ -108,7 +108,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End of namespace blockEdges
+} // End namespace blockEdges
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

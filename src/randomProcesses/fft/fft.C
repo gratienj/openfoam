@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,10 +24,94 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fft.H"
-
 #include <fftw3.h>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+void Foam::fft::fftRenumberRecurse
+(
+    List<complex>& data,
+    List<complex>& renumData,
+    const UList<int>& nn,
+    label nnprod,
+    label ii,
+    label l1,
+    label l2
+)
+{
+    if (ii == nn.size())
+    {
+        // We've worked out the renumbering scheme. Now copy
+        // the components across
+
+        data[l1] = complex(renumData[l2].Re(), renumData[l2].Im());
+    }
+    else
+    {
+        // Do another level of folding. First work out the
+        // multiplicative value of the index
+
+        nnprod /= nn[ii];
+        label i_1(0);
+
+        for (label i=0; i<nn[ii]; i++)
+        {
+            // Now evaluate the indices (both from array 1 and to
+            // array 2). These get multiplied by nnprod to (cumulatively)
+            // find the real position in the list corresponding to
+            // this set of indices
+
+            if (i < nn[ii]/2)
+            {
+                i_1 = i + nn[ii]/2;
+            }
+            else
+            {
+                i_1 = i - nn[ii]/2;
+            }
+
+
+            // Go to the next level of recursion
+
+            fftRenumberRecurse
+            (
+                data,
+                renumData,
+                nn,
+                nnprod,
+                ii+1,
+                l1+i*nnprod,
+                l2+i_1*nnprod
+            );
+        }
+    }
+}
+
+
+void Foam::fft::fftRenumber(List<complex>& data, const UList<int>& nn)
+{
+    List<complex> renumData(data);
+
+    label nnprod(1);
+    forAll(nn, i)
+    {
+        nnprod *= nn[i];
+    }
+
+    label ii(0), l1(0), l2(0);
+
+    fftRenumberRecurse
+    (
+        data,
+        renumData,
+        nn,
+        nnprod,
+        ii,
+        l1,
+        l2
+    );
+}
+
 
 Foam::tmp<Foam::complexField>
 Foam::fft::realTransform1D(const scalarField& field)
@@ -60,8 +144,8 @@ Foam::fft::realTransform1D(const scalarField& field)
     fftw_execute(plan);
 
     // field[0] = DC component
-    tmp<complexField> tresult(new complexField(nBy2 + 1));
-    complexField& result = tresult.ref();
+    auto tresult = tmp<complexField>::New(nBy2 + 1);
+    auto& result = tresult.ref();
 
     result[0].Re() = out[0];
     result[nBy2].Re() = out[nBy2];
@@ -97,12 +181,22 @@ void Foam::fft::transform
 {
     // Copy field into fftw containers
     const label N = field.size();
-    fftw_complex in[N], out[N];
+
+    fftw_complex* inPtr =
+        static_cast<fftw_complex*>(fftw_malloc(sizeof(fftw_complex)*N));
+    fftw_complex* outPtr =
+        static_cast<fftw_complex*>(fftw_malloc(sizeof(fftw_complex)*N));
+
+    // If reverse transform : renumber before transform
+    if (dir == REVERSE_TRANSFORM)
+    {
+        fftRenumber(field, nn);
+    }
 
     forAll(field, i)
     {
-        in[i][0] = field[i].Re();
-        in[i][1] = field[i].Im();
+        inPtr[i][0] = field[i].Re();
+        inPtr[i][1] = field[i].Im();
     }
 
     // Create the plan
@@ -116,34 +210,27 @@ void Foam::fft::transform
     // Generic 1..3-D plan
     const label rank = nn.size();
     fftw_plan plan =
-        fftw_plan_dft(rank, nn.begin(), in, out, dir, FFTW_ESTIMATE);
+        fftw_plan_dft(rank, nn.begin(), inPtr, outPtr, dir, FFTW_ESTIMATE);
 
     // Compute the FFT
     fftw_execute(plan);
 
     forAll(field, i)
     {
-        field[i].Re() = out[i][0];
-        field[i].Im() = out[i][1];
+        field[i].Re() = outPtr[i][0];
+        field[i].Im() = outPtr[i][1];
     }
 
     fftw_destroy_plan(plan);
 
-/*
-    fftw_real in[N], out[N];
-    // Create a plan for real data input
-    // - generates 1-sided FFT
-    // - direction given by FFTW_R2HC or FFTW_HC2R.
-    // - in[N] is the array of real input val ues
-    // - out[N] is the array of N/2 real valuea followed by N/2 complex values
-    // - 0 component = DC component
-    fftw_plan plan = fftw_plan_r2r_2d(N, in, out, FFTW_R2HC, FFTW_ESTIMATE)
+    fftw_free(inPtr);
+    fftw_free(outPtr);
 
-    // Compute the FFT
-    fftw_execute(plan);
-
-    fftw_destroy_plan(plan);
-*/
+    // If forward transform : renumber after transform
+    if (dir == FORWARD_TRANSFORM)
+    {
+        fftRenumber(field, nn);
+    }
 }
 
 
@@ -155,13 +242,13 @@ Foam::tmp<Foam::complexField> Foam::fft::forwardTransform
     const UList<int>& nn
 )
 {
-    tmp<complexField> tfftField(new complexField(tfield));
+    auto tresult = tmp<complexField>::New(tfield);
 
-    transform(tfftField.ref(), nn, FORWARD_TRANSFORM);
+    transform(tresult.ref(), nn, FORWARD_TRANSFORM);
 
     tfield.clear();
 
-    return tfftField;
+    return tresult;
 }
 
 
@@ -171,13 +258,13 @@ Foam::tmp<Foam::complexField> Foam::fft::reverseTransform
     const UList<int>& nn
 )
 {
-    tmp<complexField> tifftField(new complexField(tfield));
+    auto tresult = tmp<complexField>::New(tfield);
 
-    transform(tifftField.ref(), nn, REVERSE_TRANSFORM);
+    transform(tresult.ref(), nn, REVERSE_TRANSFORM);
 
     tfield.clear();
 
-    return tifftField;
+    return tresult;
 }
 
 
@@ -187,17 +274,11 @@ Foam::tmp<Foam::complexVectorField> Foam::fft::forwardTransform
     const UList<int>& nn
 )
 {
-    tmp<complexVectorField> tfftVectorField
-    (
-        new complexVectorField
-        (
-            tfield().size()
-        )
-    );
+    auto tresult = tmp<complexVectorField>::New(tfield().size());
 
     for (direction cmpt=0; cmpt<vector::nComponents; cmpt++)
     {
-        tfftVectorField.ref().replace
+        tresult.ref().replace
         (
             cmpt,
             forwardTransform(tfield().component(cmpt), nn)
@@ -206,7 +287,7 @@ Foam::tmp<Foam::complexVectorField> Foam::fft::forwardTransform
 
     tfield.clear();
 
-    return tfftVectorField;
+    return tresult;
 }
 
 
@@ -216,17 +297,11 @@ Foam::tmp<Foam::complexVectorField> Foam::fft::reverseTransform
     const UList<int>& nn
 )
 {
-    tmp<complexVectorField> tifftVectorField
-    (
-        new complexVectorField
-        (
-            tfield().size()
-        )
-    );
+    auto tresult = tmp<complexVectorField>::New(tfield().size());
 
     for (direction cmpt=0; cmpt<vector::nComponents; cmpt++)
     {
-        tifftVectorField.ref().replace
+        tresult.ref().replace
         (
             cmpt,
             reverseTransform(tfield().component(cmpt), nn)
@@ -235,7 +310,7 @@ Foam::tmp<Foam::complexVectorField> Foam::fft::reverseTransform
 
     tfield.clear();
 
-    return tifftVectorField;
+    return tresult;
 }
 
 

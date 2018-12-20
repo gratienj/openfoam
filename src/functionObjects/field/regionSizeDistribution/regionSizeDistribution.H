@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -113,8 +113,8 @@ Usage
         maxDiameter  | maximum region equivalent diameter | yes |
         minDiameter  | minimum region equivalent diameter | no  | 0
         setFormat    | writing format          | yes         |
-        origin       | origin of local co-ordinate system | yes    |
-        coordinateRoation | orientation of local co-ordinate system | no
+        origin       | origin of local coordinate system | yes    |
+        coordinateRoation | orientation of local coordinate system | no
         log          | Log to standard output  | no          | yes
         isoPlanes    | switch for isoPlanes    | no          | false
         origin       | origin of the plane when isoPlanes is used | no | none
@@ -144,7 +144,7 @@ SourceFiles
 #include "writer.H"
 #include "Map.H"
 #include "volFieldsFwd.H"
-#include "wordReList.H"
+#include "wordRes.H"
 #include "coordinateSystem.H"
 #include "Switch.H"
 
@@ -174,7 +174,7 @@ class regionSizeDistribution
         word alphaName_;
 
         //- Patches to walk from
-        wordReList patchNames_;
+        wordRes patchNames_;
 
         //- Switch to send output to Info as well as to file
         Switch log_;
@@ -188,17 +188,17 @@ class regionSizeDistribution
         //- Minimum droplet diameter
         scalar minDiam_;
 
-        //- Mumber of bins
+        //- Number of bins
         label nBins_;
 
         //- Names of fields to sample on regions
-        wordReList fields_;
+        wordRes fields_;
 
         //- Output formatter to write
         autoPtr<writer<scalar>> formatterPtr_;
 
         //- Optional coordinate system
-        autoPtr<coordinateSystem> coordSysPtr_;
+        autoPtr<coordinateSystem> csysPtr_;
 
         // Optional extra definition of bins on planes downstream to the origin
         // point and maximum diameter
@@ -279,11 +279,11 @@ class regionSizeDistribution
             const coordSet& coords              // graph data for bins
         ) const;
 
-        //- Disallow default bitwise copy construct
-        regionSizeDistribution(const regionSizeDistribution&);
+        //- No copy construct
+        regionSizeDistribution(const regionSizeDistribution&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const regionSizeDistribution&);
+        //- No copy assignment
+        void operator=(const regionSizeDistribution&) = delete;
 
 
 public:

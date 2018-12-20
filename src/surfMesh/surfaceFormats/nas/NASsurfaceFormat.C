@@ -117,12 +117,12 @@ bool Foam::fileFormats::NASsurfaceFormat<Face>::read
     DynamicList<Face>   dynFaces;
     DynamicList<label>  dynZones;
     DynamicList<label>  dynSizes;
+
     Map<label>          zoneLookup;
 
-    // assume the types are not intermixed
-    // leave faces that didn't have a group in 0
+    // Assume that the groups are not intermixed
+    label zoneId = 0;
     bool sorted = true;
-    label zoneI = 0;
 
     // Name for face group
     Map<word> nameLookup;
@@ -135,11 +135,11 @@ bool Foam::fileFormats::NASsurfaceFormat<Face>::read
     word  ansaType, ansaName;
 
     // A single warning per unrecognized command
-    HashSet<word> unhandledCmd;
+    wordHashSet unhandledCmd;
 
     while (is.good())
     {
-        string::size_type linei = 0;  // parsing position within current line
+        string::size_type linei = 0;  // Parsing position within current line
         string line;
         is.getLine(line);
 
@@ -221,74 +221,74 @@ bool Foam::fileFormats::NASsurfaceFormat<Face>::read
         {
             (void) nextNasField(line, linei, 8); // 8-16
             label groupId = readLabel(nextNasField(line, linei, 8)); // 16-24
-            label a = readLabel(nextNasField(line, linei, 8)); // 24-32
-            label b = readLabel(nextNasField(line, linei, 8)); // 32-40
-            label c = readLabel(nextNasField(line, linei, 8)); // 40-48
+            const auto a = readLabel(nextNasField(line, linei, 8)); // 24-32
+            const auto b = readLabel(nextNasField(line, linei, 8)); // 32-40
+            const auto c = readLabel(nextNasField(line, linei, 8)); // 40-48
 
             // Convert groupId into zoneId
-            const auto fnd = zoneLookup.cfind(groupId);
-            if (fnd.found())
+            const auto iterZone = zoneLookup.cfind(groupId);
+            if (iterZone.found())
             {
-                if (zoneI != fnd())
+                if (zoneId != *iterZone)
                 {
                     // pshell types are intermixed
                     sorted = false;
                 }
-                zoneI = fnd();
+                zoneId = *iterZone;
             }
             else
             {
-                zoneI = dynSizes.size();
-                zoneLookup.insert(groupId, zoneI);
+                zoneId = dynSizes.size();
+                zoneLookup.insert(groupId, zoneId);
                 dynSizes.append(0);
-                // Info<< "zone" << zoneI << " => group " << groupId <<endl;
+                // Info<< "zone" << zoneId << " => group " << groupId <<nl;
             }
 
             dynFaces.append(Face{a, b, c});
-            dynZones.append(zoneI);
-            dynSizes[zoneI]++;
+            dynZones.append(zoneId);
+            dynSizes[zoneId]++;
         }
         else if (cmd == "CQUAD4")
         {
             (void) nextNasField(line, linei, 8); // 8-16
             label groupId = readLabel(nextNasField(line, linei, 8)); // 16-24
-            label a = readLabel(nextNasField(line, linei, 8)); // 24-32
-            label b = readLabel(nextNasField(line, linei, 8)); // 32-40
-            label c = readLabel(nextNasField(line, linei, 8)); // 40-48
-            label d = readLabel(nextNasField(line, linei, 8)); // 48-56
+            const auto a = readLabel(nextNasField(line, linei, 8)); // 24-32
+            const auto b = readLabel(nextNasField(line, linei, 8)); // 32-40
+            const auto c = readLabel(nextNasField(line, linei, 8)); // 40-48
+            const auto d = readLabel(nextNasField(line, linei, 8)); // 48-56
 
-            // Convert groupID into zoneId
-            const auto fnd = zoneLookup.cfind(groupId);
-            if (fnd.found())
+            // Convert groupId into zoneId
+            const auto iterZone = zoneLookup.cfind(groupId);
+            if (iterZone.found())
             {
-                if (zoneI != fnd())
+                if (zoneId != *iterZone)
                 {
                     // pshell types are intermixed
                     sorted = false;
                 }
-                zoneI = fnd();
+                zoneId = *iterZone;
             }
             else
             {
-                zoneI = dynSizes.size();
-                zoneLookup.insert(groupId, zoneI);
+                zoneId = dynSizes.size();
+                zoneLookup.insert(groupId, zoneId);
                 dynSizes.append(0);
-                // Info<< "zone" << zoneI << " => group " << groupId <<endl;
+                // Info<< "zone" << zoneId << " => group " << groupId <<nl;
             }
 
             if (faceTraits<Face>::isTri())
             {
                 dynFaces.append(Face{a, b, c});
                 dynFaces.append(Face{c, d, a});
-                dynZones.append(zoneI);
-                dynZones.append(zoneI);
-                dynSizes[zoneI] += 2;
+                dynZones.append(zoneId);
+                dynZones.append(zoneId);
+                dynSizes[zoneId] += 2;
             }
             else
             {
                 dynFaces.append(Face{a,b,c,d});
-                dynZones.append(zoneI);
-                dynSizes[zoneI]++;
+                dynZones.append(zoneId);
+                dynSizes[zoneId]++;
             }
         }
         else if (cmd == "GRID")
@@ -388,10 +388,10 @@ bool Foam::fileFormats::NASsurfaceFormat<Face>::read
         const label groupId = iter.key();
         const label zoneId  = iter.object();
 
-        const auto fnd = nameLookup.cfind(groupId);
-        if (fnd.found())
+        const auto iterName = nameLookup.cfind(groupId);
+        if (iterName.found())
         {
-            names[zoneId] = fnd();
+            names[zoneId] = *iterName;
         }
         else
         {
@@ -399,8 +399,10 @@ bool Foam::fileFormats::NASsurfaceFormat<Face>::read
         }
     }
 
-    this->sortFacesAndStore(dynFaces.xfer(), dynZones.xfer(), sorted);
-    this->addZones(dynSizes, names, true); // add zones, cull empty ones
+    this->sortFacesAndStore(dynFaces, dynZones, sorted);
+
+    // Add zones (retaining empty ones)
+    this->addZones(dynSizes, names);
     this->addZonesToFaces(); // for labelledTri
 
     return true;
@@ -420,7 +422,7 @@ void Foam::fileFormats::NASsurfaceFormat<Face>::write
     const UList<label>& faceMap  = surf.faceMap();
 
     // for no zones, suppress the group name
-    const UList<surfZone>& zones =
+    const surfZoneList zones =
     (
         surf.surfZones().empty()
       ? surfaceFormatsCore::oneZone(faceLst, "")

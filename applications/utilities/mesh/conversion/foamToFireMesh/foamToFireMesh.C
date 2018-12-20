@@ -25,7 +25,7 @@ Application
     foamToFireMesh
 
 Description
-    Reads an OpenFOAM mesh and writes an AVL/FIRE fpma format
+    Write an OpenFOAM mesh in AVL/FIRE fpma format
 
 Usage
     \b foamToFireMesh [OPTION]
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "read OpenFOAM mesh and write an AVL/FIRE fpma format"
+        "Write an OpenFOAM mesh in AVL/FIRE fpma format"
     );
     argList::noParallel();
     timeSelector::addOptions();
@@ -66,13 +66,13 @@ int main(int argc, char *argv[])
     argList::addBoolOption
     (
         "ascii",
-        "write in ASCII format instead of binary"
+        "Write in ASCII format instead of binary"
     );
     argList::addOption
     (
         "scale",
         "factor",
-        "geometry scaling factor - default is 1 (none)"
+        "Geometry scaling factor - default is 1 (none)"
     );
 
     #include "setRootCase.H"
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     instantList timeDirs = timeSelector::select0(runTime, args);
 
     fileName exportName = meshWriter::defaultMeshName;
-    if (args.optionFound("case"))
+    if (args.found("case"))
     {
         exportName += '-' + args.globalCaseName();
     }
@@ -89,11 +89,11 @@ int main(int argc, char *argv[])
 
     // write control options
     // ~~~~~~~~~~~~~~~~~~~~~
-    fileFormats::FIREMeshWriter::binary = !args.optionFound("ascii");
+    fileFormats::FIREMeshWriter::binary = !args.found("ascii");
 
     // Default: no rescaling
     scalar scaleFactor = 1;
-    if (args.optionReadIfPresent("scale", scaleFactor))
+    if (args.readIfPresent("scale", scaleFactor))
     {
         if (scaleFactor <= 0)
         {

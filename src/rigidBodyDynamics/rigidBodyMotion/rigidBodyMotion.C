@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,9 +42,9 @@ void Foam::RBD::rigidBodyMotion::initialize()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::RBD::rigidBodyMotion::rigidBodyMotion()
+Foam::RBD::rigidBodyMotion::rigidBodyMotion(const Time& time)
 :
-    rigidBodyModel(),
+    rigidBodyModel(time),
     motionState_(*this),
     motionState0_(*this),
     aRelax_(1.0),
@@ -55,10 +55,11 @@ Foam::RBD::rigidBodyMotion::rigidBodyMotion()
 
 Foam::RBD::rigidBodyMotion::rigidBodyMotion
 (
+    const Time& time,
     const dictionary& dict
 )
 :
-    rigidBodyModel(dict),
+    rigidBodyModel(time, dict),
     motionState_(*this, dict),
     motionState0_(motionState_),
     X00_(X0_.size()),
@@ -69,7 +70,7 @@ Foam::RBD::rigidBodyMotion::rigidBodyMotion
 {
     if (dict.found("g"))
     {
-        g() = vector(dict.lookup("g"));
+        g() = dict.get<vector>("g");
     }
 
     initialize();
@@ -78,11 +79,12 @@ Foam::RBD::rigidBodyMotion::rigidBodyMotion
 
 Foam::RBD::rigidBodyMotion::rigidBodyMotion
 (
+    const Time& time,
     const dictionary& dict,
     const dictionary& stateDict
 )
 :
-    rigidBodyModel(dict),
+    rigidBodyModel(time, dict),
     motionState_(*this, stateDict),
     motionState0_(motionState_),
     X00_(X0_.size()),
@@ -93,7 +95,7 @@ Foam::RBD::rigidBodyMotion::rigidBodyMotion
 {
     if (dict.found("g"))
     {
-        g() = vector(dict.lookup("g"));
+        g() = dict.get<vector>("g");
     }
 
     initialize();
@@ -140,15 +142,18 @@ void Foam::RBD::rigidBodyMotion::forwardDynamics
 
 void Foam::RBD::rigidBodyMotion::solve
 (
-    scalar deltaT,
+    const scalar t,
+    const scalar deltaT,
     const scalarField& tau,
     const Field<spatialVector>& fx
 )
 {
+    motionState_.t() = t;
     motionState_.deltaT() = deltaT;
 
     if (motionState0_.deltaT() < SMALL)
     {
+        motionState0_.t() = t;
         motionState0_.deltaT() = deltaT;
     }
 

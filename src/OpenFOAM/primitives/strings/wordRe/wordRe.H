@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -59,7 +59,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 class wordRe;
 class Istream;
 class Ostream;
@@ -81,6 +81,7 @@ class wordRe
         //- The regular expression
         mutable regExp re_;
 
+
 public:
 
     // Static data members
@@ -92,15 +93,17 @@ public:
     // Public data types
 
         //- Enumeration with compile options
-        //  Note that 'REGEX' is implicit if 'NOCASE' is specified alone.
+        //  Note that 'REGEX' is implicit if 'ICASE' is specified alone.
         enum compOption
         {
-            LITERAL = 0, //!< Treat as a string literal
-            DETECT  = 1, //!< Detect if the string contains meta-characters
-            REGEX   = 2, //!< Treat as regular expression
-            NOCASE  = 4, //!< Ignore case in regular expression
-            DETECT_NOCASE = DETECT|NOCASE,  //!< Combined DETECT and NOCASE
-            REGEX_NOCASE  = REGEX|NOCASE    //!< Combined REGEX and NOCASE
+            LITERAL = 0, //!< String literal
+            REGEX   = 1, //!< Regular expression
+            ICASE   = 2, //!< Ignore case in regular expression
+            NOCASE  = 2, //!< \deprecated(2018-04) Alias for ICASE
+            DETECT  = 4, //!< Detect if the string contains meta-characters
+            UNKNOWN = 4, //!< Unknown content.
+            REGEX_ICASE  = (REGEX|ICASE),   //!< Combined REGEX and ICASE
+            DETECT_ICASE = (DETECT|ICASE),  //!< Combined DETECT and ICASE
         };
 
 
@@ -121,75 +124,78 @@ public:
         //- Construct null
         inline wordRe();
 
-        //- Construct as copy
+        //- Copy construct
         inline wordRe(const wordRe& str);
-
-        //- Construct from keyType, using its compile information
-        inline explicit wordRe(const keyType& str);
-
-        //- Construct as copy of character array, treat as a literal
-        inline explicit wordRe(const char* str);
-
-        //- Construct as copy of std::string, treat as a literal
-        inline explicit wordRe(const std::string& str);
-
-        //- Construct as copy of string, treat as a literal
-        inline explicit wordRe(const string& str);
-
-        //- Construct as copy of word, treat as a literal
-        inline explicit wordRe(const word& str);
-
-        //- Construct from keyType, use specified compile option
-        inline wordRe(const keyType& str, const compOption);
-
-        //- Construct as copy of character array, use specified compile option
-        inline wordRe(const char* str, const compOption);
-
-        //- Construct as copy of std::string, use specified compile option
-        inline wordRe(const std::string& str, const compOption);
-
-        //- Construct as copy of string, use specified compile option
-        inline wordRe(const string& str, const compOption);
-
-        //- Construct as copy of word, use specified compile option
-        inline wordRe(const word& str, const compOption);
 
         //- Move construct
         inline wordRe(wordRe&& str);
 
+        //- Construct from keyType, using its compile information
+        inline explicit wordRe(const keyType& str);
+
+        //- Copy from character array, treat as a literal
+        inline explicit wordRe(const char* str);
+
+        //- Copy from std::string, treat as a literal
+        inline explicit wordRe(const std::string& str);
+
+        //- Copy from string, treat as a literal
+        inline explicit wordRe(const string& str);
+
+        //- Copy from word, treat as a literal
+        inline explicit wordRe(const word& str);
+
+        //- Copy from keyType, use specified compile option
+        inline wordRe(const keyType& str, const compOption opt);
+
+        //- Copy from character array, use specified compile option
+        inline wordRe(const char* str, const compOption opt);
+
+        //- Copy from std::string, use specified compile option
+        inline wordRe(const std::string& str, const compOption opt);
+
+        //- Copy from string, use specified compile option
+        inline wordRe(const string& str, const compOption opt);
+
+        //- Copy from word, use specified compile option
+        inline wordRe(const word& str, const compOption opt);
+
         //- Construct from Istream
         //  Words are treated as literals, strings with an auto-test
-        wordRe(Istream& is);
+        explicit wordRe(Istream& is);
 
 
-    // Member functions
+    // Member Functions
 
-      // Access
+    // Access
 
-        //- Treat as a pattern rather than a literal string?
+        //- The wordRe is treated as literal, not as pattern.
+        inline bool isLiteral() const;
+
+        //- The wordRe is treated as a pattern, not as literal string.
         inline bool isPattern() const;
 
 
-      // Infrastructure
+    // Infrastructure
 
         //- Compile the regular expression
         inline bool compile() const;
 
         //- Possibly compile the regular expression, with greater control
-        inline bool compile(const compOption) const;
+        inline bool compile(const compOption opt) const;
 
         //- Make wordRe a literal again, instead of a regular expression.
         //  Optionally strip invalid word characters.
-        inline void uncompile(const bool doStripInvalid = false) const;
+        inline void uncompile(bool doStrip = false) const;
 
 
-      // Editing
-
-        //- Copy string, auto-test for regular expression or other options
-        inline void set(const std::string& str, const compOption = DETECT);
+    // Editing
 
         //- Copy string, auto-test for regular expression or other options
-        inline void set(const char* str, const compOption = DETECT);
+        inline void set(const std::string& str, const compOption opt = DETECT);
+
+        //- Copy string, auto-test for regular expression or other options
+        inline void set(const char* str, const compOption opt = DETECT);
 
         //- Clear string and regular expression
         inline void clear();
@@ -198,14 +204,14 @@ public:
         inline void swap(wordRe& str);
 
 
-     // Matching/Searching
+    // Matching/Searching
 
         //- Smart match as regular expression or as a string.
         //  Optionally force a literal match only
-        inline bool match(const std::string& text, bool literal = false) const;
+        inline bool match(const std::string& text, bool literal=false) const;
 
 
-      // Miscellaneous
+    // Miscellaneous
 
         //- Return a string with quoted meta-characters
         inline string quotemeta() const;
@@ -214,9 +220,10 @@ public:
         Ostream& info(Ostream& os) const;
 
 
-    // Member operators
+    // Member Operators
 
         //- Perform smart match on text, as per match()
+        //  Allows use as a predicate.
         inline bool operator()(const std::string& text) const;
 
 
@@ -246,7 +253,7 @@ public:
         inline void operator=(wordRe&& str);
 
 
-    // IOstream operators
+    // IOstream Operators
 
         friend Istream& operator>>(Istream& is, wordRe& w);
         friend Ostream& operator<<(Ostream& os, const wordRe& w);

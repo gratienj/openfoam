@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +39,7 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// template specialisation for pTraits<Scalar>
+// Template specialisation for pTraits<Scalar>
 template<>
 class pTraits<Scalar>
 {
@@ -89,13 +89,13 @@ public:
 
     // Member Functions
 
-        //- Access to the Scalar value
+        //- Access to the value
         operator Scalar() const
         {
             return p_;
         }
 
-        //- Access to the Scalar value
+        //- Access to the value
         operator Scalar&()
         {
             return p_;
@@ -105,20 +105,29 @@ public:
 
 // * * * * * * * * * * * * * * * IO/Conversion * * * * * * * * * * * * * * * //
 
-//- Return a string representation of a Scalar
+//- A word representation of a floating-point value.
+//  Uses stringstream instead of std::to_string for more consistent formatting.
 word name(const Scalar val);
 
-//- Return a word representation of a Scalar, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const char* fmt, const Scalar val);
 
-//- Return a word representation of a Scalar, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const std::string& fmt, const Scalar val);
+//- A word representation of a floating-point value.
+template<>
+struct nameOp<Scalar>
+{
+    inline word operator()(const Scalar val) const
+    {
+        return Foam::name(val);
+    }
+};
+
 
 //- Parse entire buffer as a float/double, skipping leading/trailing whitespace.
 //  \return Parsed value or FatalIOError on any problem
 Scalar ScalarRead(const char* buf);
+
+//- Parse entire buffer as a float/double, skipping leading/trailing whitespace.
+//  \return True if successful.
+bool ScalarRead(const char* buf, Scalar& val);
 
 //- Parse entire string as a float/double, skipping leading/trailing whitespace.
 //  \return Parsed value or FatalIOError on any problem
@@ -127,16 +136,13 @@ inline Scalar ScalarRead(const std::string& str)
     return ScalarRead(str.c_str());
 }
 
-//- Parse entire buffer as a float/double, skipping leading/trailing whitespace.
-//  \return True if successful.
-bool readScalar(const char* buf, Scalar& val);
-
 //- Parse entire string as a float/double, skipping leading/trailing whitespace.
 //  \return True if successful.
-inline bool readScalar(const std::string& str, Scalar& val)
+inline bool ScalarRead(const std::string& str, Scalar& val)
 {
-    return readScalar(str.c_str(), val);
+    return ScalarRead(str.c_str(), val);
 }
+
 
 Scalar ScalarRead(Istream& is);
 Istream& operator>>(Istream& is, Scalar& val);
@@ -172,11 +178,10 @@ transFunc(erfc)
 transFunc(lgamma)
 transFunc(tgamma)
 
-transFunc(j0)
-transFunc(j1)
-
-transFunc(y0)
-transFunc(y1)
+besselFunc(j0)
+besselFunc(j1)
+besselFunc(y0)
+besselFunc(y1)
 
 
 inline Scalar& setComponent(Scalar& s, const direction)
@@ -385,17 +390,85 @@ inline Scalar sqrtSumSqr(const Scalar a, const Scalar b)
 
 
 //- Stabilisation around zero for division
-inline Scalar stabilise(const Scalar s, const Scalar small)
+inline Scalar stabilise(const Scalar s, const Scalar tol)
 {
     if (s >= 0)
     {
-        return s + small;
+        return s + tol;
     }
     else
     {
-        return s - small;
+        return s - tol;
     }
 }
+
+
+// Specializations
+
+// Default definition in ops.H
+template<class T> struct compareOp;
+
+//- Compare scalar values
+template<>
+struct compareOp<Scalar>
+{
+    const Scalar tolerance;
+
+    //- Construct with specified tolerance (non-negative value)
+    compareOp(Scalar tol = ScalarVSMALL)
+    :
+        tolerance(tol)
+    {}
+
+    Scalar operator()(const Scalar& a, const Scalar& b) const
+    {
+        return (mag(a - b) <= tolerance) ? 0 : (a - b);
+    }
+};
+
+
+// Default definition in ops.H
+template<class T> struct equalOp;
+
+//- Compare scalar values for equality
+template<>
+struct equalOp<Scalar>
+{
+    const Scalar tolerance;
+
+    //- Construct with specified tolerance (non-negative value)
+    equalOp(Scalar tol = ScalarVSMALL)
+    :
+        tolerance(tol)
+    {}
+
+    bool operator()(const Scalar& a, const Scalar& b) const
+    {
+        return Foam::mag(a - b) <= tolerance;
+    }
+};
+
+
+// Default definition in ops.H
+template<class T> struct notEqualOp;
+
+//- Compare scalar values for inequality
+template<>
+struct notEqualOp<Scalar>
+{
+    const Scalar tolerance;
+
+    //- Construct with specified tolerance (non-negative value)
+    notEqualOp(Scalar tol = ScalarVSMALL)
+    :
+        tolerance(tol)
+    {}
+
+    bool operator()(const Scalar& a, const Scalar& b) const
+    {
+        return Foam::mag(a - b) > tolerance;
+    }
+};
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

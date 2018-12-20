@@ -53,7 +53,7 @@ void Foam::regionModels::regionModel1D::constructMeshObjects()
                 IOobject::NO_WRITE
             ),
             regionMesh(),
-            dimensionedScalar("zero", dimArea, 0.0)
+            dimensionedScalar(dimArea, Zero)
         )
     );
 }
@@ -250,7 +250,7 @@ Foam::tmp<Foam::labelField> Foam::regionModels::regionModel1D::moveMesh
             vectorField newDelta(cells.size() + 1, vector::zero);
 
             label j = 0;
-            forAllReverse (cells, i)
+            forAllReverse(cells, i)
             {
                 const label celli = cells[i];
                 newDelta[j+1] = (deltaV[celli]/mag(sf))*n + newDelta[j];

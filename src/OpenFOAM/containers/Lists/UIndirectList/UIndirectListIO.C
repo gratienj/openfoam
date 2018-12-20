@@ -37,52 +37,32 @@ Foam::Ostream& Foam::UIndirectList<T>::writeList
     const label shortListLen
 ) const
 {
-    const UIndirectList<T>& L = *this;
+    const UIndirectList<T>& list = *this;
 
-    const label sz = L.size();
+    const label len = list.size();
 
     // Write list contents depending on data format
     if (os.format() == IOstream::ASCII || !contiguous<T>())
     {
-        // Can the contents be considered 'uniform' (ie, identical)?
-        bool uniform = (sz > 1 && contiguous<T>());
-        if (uniform)
+        if (contiguous<T>() && list.uniform())
         {
-            for (label i=1; i < sz; ++i)
-            {
-                if (L[i] != L[0])
-                {
-                    uniform = false;
-                    break;
-                }
-            }
-        }
-
-        if (uniform)
-        {
-            // Size and start delimiter
-            os << sz << token::BEGIN_BLOCK;
-
-            // Contents
-            os << L[0];
-
-            // End delimiter
-            os << token::END_BLOCK;
+            // Two or more entries, and all entries have identical values.
+            os << len << token::BEGIN_BLOCK << list[0] << token::END_BLOCK;
         }
         else if
         (
-            sz <= 1 || !shortListLen
-         || (sz <= shortListLen && contiguous<T>())
+            len <= 1 || !shortListLen
+         || (len <= shortListLen && contiguous<T>())
         )
         {
             // Size and start delimiter
-            os << sz << token::BEGIN_LIST;
+            os << len << token::BEGIN_LIST;
 
             // Contents
-            for (label i=0; i < sz; ++i)
+            for (label i=0; i < len; ++i)
             {
                 if (i) os << token::SPACE;
-                os << L[i];
+                os << list[i];
             }
 
             // End delimiter
@@ -91,12 +71,12 @@ Foam::Ostream& Foam::UIndirectList<T>::writeList
         else
         {
             // Size and start delimiter
-            os << nl << sz << nl << token::BEGIN_LIST << nl;
+            os << nl << len << nl << token::BEGIN_LIST << nl;
 
             // Contents
-            for (label i=0; i < sz; ++i)
+            for (label i=0; i < len; ++i)
             {
-                os << L[i] << nl;
+                os << list[i] << nl;
             }
 
             // End delimiter
@@ -106,20 +86,20 @@ Foam::Ostream& Foam::UIndirectList<T>::writeList
     else
     {
         // Contents are binary and contiguous
-        os << nl << sz << nl;
+        os << nl << len << nl;
 
-        if (sz)
+        if (len)
         {
             // The TOTAL number of bytes to be written.
             // - possibly add start delimiter
-            os.beginRaw(sz*sizeof(T));
+            os.beginRaw(len*sizeof(T));
 
             // Contents
-            for (label i=0; i < sz; ++i)
+            for (label i=0; i < len; ++i)
             {
                 os.writeRaw
                 (
-                    reinterpret_cast<const char*>(&(L[i])),
+                    reinterpret_cast<const char*>(&(list[i])),
                     sizeof(T)
                 );
             }
@@ -140,10 +120,10 @@ template<class T>
 Foam::Ostream& Foam::operator<<
 (
     Foam::Ostream& os,
-    const Foam::UIndirectList<T>& lst
+    const Foam::UIndirectList<T>& list
 )
 {
-    return lst.writeList(os, 10);
+    return list.writeList(os, 10);
 }
 
 

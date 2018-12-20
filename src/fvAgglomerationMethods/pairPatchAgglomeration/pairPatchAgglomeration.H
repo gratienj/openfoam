@@ -38,7 +38,7 @@ SourceFiles
 #include "mathematicalConstants.H"
 #include "indirectPrimitivePatch.H"
 #include "List.H"
-#include "EdgeMap.H"
+#include "edgeHashes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -108,7 +108,7 @@ private:
             const bPatch& patchLevel
         );
 
-        //- Combine leves
+        //- Combine levels
         void combineLevels(const label curLevel);
 
         //- Shrink the number of levels to that specified
@@ -130,11 +130,11 @@ private:
         //- Maps current level with base patch
         void mapBaseToTopAgglom(const label fineLevelIndex);
 
-        //- Disallow default bitwise copy construct
-        pairPatchAgglomeration(const pairPatchAgglomeration&);
+        //- No copy construct
+        pairPatchAgglomeration(const pairPatchAgglomeration&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const pairPatchAgglomeration&);
+        //- No copy assignment
+        void operator=(const pairPatchAgglomeration&) = delete;
 
 
 public:

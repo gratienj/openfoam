@@ -160,21 +160,21 @@ Foam::Istream& Foam::operator>>
 
     if (firstToken.isLabel())
     {
-        const label s = firstToken.labelToken();
+        const label len = firstToken.labelToken();
 
         // Read beginning of contents
         const char delimiter = is.readBeginList("HashTable");
 
-        if (s)
+        if (len)
         {
-            if (2*s > L.capacity_)
+            if (2*len > L.capacity_)
             {
-                L.resize(2*s);
+                L.resize(2*len);
             }
 
             if (delimiter == token::BEGIN_LIST)
             {
-                for (label i=0; i<s; ++i)
+                for (label i=0; i<len; ++i)
                 {
                     Key key;
                     is >> key;
@@ -189,10 +189,8 @@ Foam::Istream& Foam::operator>>
             }
             else
             {
-                FatalIOErrorInFunction
-                (
-                    is
-                )   << "incorrect first token, '(', found " << firstToken.info()
+                FatalIOErrorInFunction(is)
+                    << "incorrect first token, '(', found " << firstToken.info()
                     << exit(FatalIOError);
             }
         }
@@ -204,10 +202,8 @@ Foam::Istream& Foam::operator>>
     {
         if (firstToken.pToken() != token::BEGIN_LIST)
         {
-            FatalIOErrorInFunction
-            (
-                is
-            )   << "incorrect first token, '(', found " << firstToken.info()
+            FatalIOErrorInFunction(is)
+                << "incorrect first token, '(', found " << firstToken.info()
                 << exit(FatalIOError);
         }
 
@@ -237,10 +233,8 @@ Foam::Istream& Foam::operator>>
     }
     else
     {
-        FatalIOErrorInFunction
-        (
-            is
-        )   << "incorrect first token, expected <int> or '(', found "
+        FatalIOErrorInFunction(is)
+            << "incorrect first token, expected <int> or '(', found "
             << firstToken.info()
             << exit(FatalIOError);
     }
@@ -258,12 +252,12 @@ Foam::Ostream& Foam::operator<<
     const HashTable<T, Key, Hash>& tbl
 )
 {
-    const label sz = tbl.size();
+    const label len = tbl.size();
 
-    if (sz)
+    if (len)
     {
         // Size and start list delimiter
-        os << nl << sz << nl << token::BEGIN_LIST << nl;
+        os << nl << len << nl << token::BEGIN_LIST << nl;
 
         // Contents
         for (auto iter = tbl.cbegin(); iter != tbl.cend(); ++iter)
@@ -276,7 +270,7 @@ Foam::Ostream& Foam::operator<<
     else
     {
         // Empty hash table
-        os << sz << token::BEGIN_LIST << token::END_LIST;
+        os << len << token::BEGIN_LIST << token::END_LIST;
     }
 
     os.check(FUNCTION_NAME);

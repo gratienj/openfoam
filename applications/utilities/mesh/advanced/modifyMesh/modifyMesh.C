@@ -28,7 +28,7 @@ Group
     grpMeshAdvancedUtilities
 
 Description
-    Manipulates mesh elements.
+    Manipulate mesh elements.
 
     Actions are:
         (boundary)points:
@@ -336,16 +336,23 @@ label findCell(const primitiveMesh& mesh, const point& nearPoint)
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Manipulate mesh elements.\n"
+        "For example, moving points, splitting/collapsing edges etc."
+    );
     #include "addOverwriteOption.H"
-    #include "addDictOption.H"
+    argList::addOption("dict", "file", "Use alternative modifyMeshDict");
+
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
     #include "createPolyMesh.H"
+
     const word oldInstance = mesh.pointsInstance();
 
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
     Info<< "Reading modifyMeshDict\n" << endl;
 
@@ -411,7 +418,7 @@ int main(int argc, char *argv[])
     const SubList<face> outsideFaces
     (
         mesh.faces(),
-        mesh.nFaces() - mesh.nInternalFaces(),
+        mesh.nBoundaryFaces(),
         mesh.nInternalFaces()
     );
 
@@ -554,7 +561,7 @@ int main(int argc, char *argv[])
 
         if (!overwrite)
         {
-            runTime++;
+            ++runTime;
         }
         else
         {
@@ -579,7 +586,7 @@ int main(int argc, char *argv[])
 
         pointField newPoints(points);
 
-        PackedBoolList collapseEdge(mesh.nEdges());
+        bitSet collapseEdge(mesh.nEdges());
         Map<point> collapsePointToLocation(mesh.nPoints());
 
         // Get new positions and construct collapse network
@@ -588,7 +595,7 @@ int main(int argc, char *argv[])
             label edgeI = iter.key();
             const edge& e = edges[edgeI];
 
-            collapseEdge[edgeI] = true;
+            collapseEdge.set(edgeI);
             collapsePointToLocation.set(e[1], points[e[0]]);
 
             newPoints[e[0]] = iter();
@@ -630,7 +637,7 @@ int main(int argc, char *argv[])
 
         if (!overwrite)
         {
-            runTime++;
+            ++runTime;
         }
         else
         {
@@ -675,7 +682,7 @@ int main(int argc, char *argv[])
 
         if (!overwrite)
         {
-            runTime++;
+            ++runTime;
         }
         else
         {

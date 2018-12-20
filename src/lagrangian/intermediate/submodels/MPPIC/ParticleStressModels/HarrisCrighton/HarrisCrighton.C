@@ -52,9 +52,9 @@ Foam::ParticleStressModels::HarrisCrighton::HarrisCrighton
 )
 :
     ParticleStressModel(dict),
-    pSolid_(readScalar(dict.lookup("pSolid"))),
-    beta_(readScalar(dict.lookup("beta"))),
-    eps_(readScalar(dict.lookup("eps")))
+    pSolid_(dict.get<scalar>("pSolid")),
+    beta_(dict.get<scalar>("beta")),
+    eps_(dict.get<scalar>("eps"))
 {}
 
 
@@ -76,7 +76,7 @@ Foam::ParticleStressModels::HarrisCrighton::~HarrisCrighton()
 {}
 
 
-// * * * * * * * * * * * * * Privare Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 Foam::tmp<Foam::Field<Foam::scalar>>
 Foam::ParticleStressModels::HarrisCrighton::denominator

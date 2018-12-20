@@ -55,7 +55,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 
 class token;
 
@@ -76,9 +76,10 @@ public:
     //  the maximum number of types is limited to 30.
     enum tokenType
     {
-        UNDEFINED,        //!< An undefined token-type
+        UNDEFINED = 0,    //!< An undefined token-type
 
         // Fundamental types
+        BOOL,             //!< boolean type
         FLAG,             //!< stream flag (1-byte bitmask)
         PUNCTUATION,      //!< single character punctuation
         LABEL,            //!< label (integer) type
@@ -92,7 +93,7 @@ public:
                           //!< dictionary \c $variable expansion
         VERBATIMSTRING,   //!< Contents are a Foam::string representing verbatim
                           //!< content
-        COMPOUND,         //!< Compound type such as List\<label\> etc.
+        COMPOUND,         //!< Compound type such as \c List\<label\> etc.
 
         ERROR             //!< A token error encountered
     };
@@ -115,22 +116,24 @@ public:
         TAB            = '\t',
         NL             = '\n',
 
-        END_STATEMENT  = ';', //!< End entry [#isseparator]
-        BEGIN_LIST     = '(', //!< Begin list [#isseparator]
-        END_LIST       = ')', //!< End list [#isseparator]
-        BEGIN_SQR      = '[', //!< Begin dimensions [#isseparator]
-        END_SQR        = ']', //!< End dimensions [#isseparator]
-        BEGIN_BLOCK    = '{', //!< Begin block [#isseparator]
-        END_BLOCK      = '}', //!< End block [#isseparator]
-        COLON          = ':', //!< Colon [#isseparator]
-        COMMA          = ',', //!< Comma [#isseparator]
+        END_STATEMENT  = ';',   //!< End entry [#isseparator]
+        BEGIN_LIST     = '(',   //!< Begin list [#isseparator]
+        END_LIST       = ')',   //!< End list [#isseparator]
+        BEGIN_SQR      = '[',   //!< Begin dimensions [#isseparator]
+        END_SQR        = ']',   //!< End dimensions [#isseparator]
+        BEGIN_BLOCK    = '{',   //!< Begin block [#isseparator]
+        END_BLOCK      = '}',   //!< End block [#isseparator]
+        COLON          = ':',   //!< Colon [#isseparator]
+        COMMA          = ',',   //!< Comma [#isseparator]
         HASH           = '#',
         ATSYM          = '@',
+        SQUOTE         = '\'',  //!< Single quote
+        DQUOTE         = '"',   //!< Double quote
 
-        BEGIN_STRING   = '"',
-        END_STRING     = BEGIN_STRING,
+        BEGIN_STRING   = DQUOTE, //!< Double quote for begin string
+        END_STRING     = DQUOTE, //!< Double quote for end string
 
-        ASSIGN         = '=', //!< Assigment/equals [#isseparator]
+        ASSIGN         = '=', //!< Assignment/equals [#isseparator]
         ADD            = '+', //!< Addition [#isseparator]
         SUBTRACT       = '-', //!< Substract or start of negative number
         MULTIPLY       = '*', //!< Multiply [#isseparator]
@@ -143,9 +146,13 @@ public:
     :
         public refCount
     {
-        // Private data
+        bool empty_;
 
-            bool empty_;
+        //- No copy construct
+        compound(const compound&) = delete;
+
+        //- No copy assignment
+        compound& operator=(const compound&) = delete;
 
     public:
 
@@ -171,24 +178,21 @@ public:
                 empty_(false)
             {}
 
-            //- No default copy construct
-            compound(const compound&) = delete;
-
 
         // Selectors
 
             //- Select null constructed
             static autoPtr<compound> New(const word& type, Istream& is);
 
+            //- Return true if name is a known (registered) compound type
+            static bool isCompound(const word& name);
+
 
         //- Destructor
-        virtual ~compound();
+        virtual ~compound() = default;
 
 
         // Member Functions
-
-            //- Return true if name is a known compound type
-            static bool isCompound(const word& name);
 
             bool empty() const
             {
@@ -206,9 +210,6 @@ public:
 
 
         // Operators
-
-            //- No default assign operator
-            compound& operator=(const compound&) = delete;
 
             //- Output operator
             friend Ostream& operator<<(Ostream& os, const compound& ct);
@@ -305,7 +306,7 @@ public:
     // Constructors
 
         //- Construct null
-        inline token();
+        inline constexpr token() noexcept;
 
         //- Copy construct
         inline token(const token& t);
@@ -360,6 +361,9 @@ public:
 
     // Static Member Functions
 
+        //- Create a bool token.
+        inline static token boolean(bool on);
+
         //- Create a token with stream flags, no sanity check
         //
         //  \param bitmask the flags to set
@@ -408,6 +412,9 @@ public:
         //- True if token is ERROR
         inline bool error() const;
 
+        //- True if token is BOOL
+        inline bool isBool() const;
+
         //- True if token is FLAG
         inline bool isFlag() const;
 
@@ -447,7 +454,11 @@ public:
 
     // Access
 
-        //- Return flag bitmask
+        //- Return boolean token value.
+        //  Report FatalIOError and return false if token is not BOOL
+        inline bool boolToken() const;
+
+        //- Return flag bitmask value.
         //  Report FatalIOError and return NO_FLAG if token is not FLAG
         inline int flagToken() const;
 
@@ -547,16 +558,17 @@ public:
         //- Move assign from string
         inline void operator=(string&& str);
 
-        //- Transfer word pointer to the token
-        //  \deprecated in favour of using move assign from word
-        inline void operator=(word* wordPtr);
-
-        //- Transfer string pointer to the token
-        //  \deprecated in favour of using move assign from string
-        inline void operator=(string* stringPtr);
-
         //- Assign compound with reference counting to token
         inline void operator=(compound* compoundPtr);
+
+
+        //- Deprecated(2016-05) transfer word pointer to the token
+        //  \deprecated(2017-11) - use move assign from word
+        inline void operator=(word* wordPtr);
+
+        //- Deprecated(2017-11) transfer string pointer to the token
+        //  \deprecated(2017-11) - use move assign from string
+        inline void operator=(string* stringPtr);
 
 
     // Equality

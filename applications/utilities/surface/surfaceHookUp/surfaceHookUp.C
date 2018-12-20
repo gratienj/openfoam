@@ -41,7 +41,7 @@ Usage
 #include "triSurfaceMesh.H"
 #include "indexedOctree.H"
 #include "treeBoundBox.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "unitConversion.H"
 #include "searchableSurfaces.H"
 #include "IOdictionary.H"
@@ -127,8 +127,7 @@ void greenRefine
 //{
 //    const edge& e = surf.edges()[edgeIndex];
 
-//    vector eVec = e.vec(surf.localPoints());
-//    eVec /= mag(eVec) + SMALL;
+//    const vector eVec = e.unitVec(surf.localPoints());
 
 //    const labelList& pEdges = surf.pointEdges()[pointIndex];
 //
@@ -136,8 +135,7 @@ void greenRefine
 //    {
 //        const edge& nearE = surf.edges()[pEdges[eI]];
 
-//        vector nearEVec = nearE.vec(surf.localPoints());
-//        nearEVec /= mag(nearEVec) + SMALL;
+//        const vector nearEVec = nearE.unitVec(surf.localPoints());
 
 //        const scalar dot = eVec & nearEVec;
 //        const scalar minCos = degToRad(angle);
@@ -165,10 +163,10 @@ void createBoundaryEdgeTrees
 
         // Boundary edges
         treeBoundaryEdges[surfI] =
-            labelList
+            identity
             (
-                identity(surf.nEdges() - surf.nInternalEdges())
-              + surf.nInternalEdges()
+                surf.nEdges() - surf.nInternalEdges(),
+                surf.nInternalEdges()
             );
 
         Random rndGen(17301893);
@@ -271,13 +269,12 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "hook surfaces to other surfaces by moving and retriangulating their"
-        "boundary edges to match other surface boundary edges"
+        "Hook surfaces to other surfaces by moving and retriangulating their"
+        " boundary edges to match other surface boundary edges"
     );
     argList::noParallel();
-    argList::addArgument("hookTolerance");
-
-    #include "addDictOption.H"
+    argList::addArgument("hookTolerance", "The point merge tolerance");
+    argList::addOption("dict", "file", "Use alternative surfaceHookUpDict");
 
     #include "setRootCase.H"
     #include "createTime.H"
@@ -289,7 +286,7 @@ int main(int argc, char *argv[])
 
     const IOdictionary dict(dictIO);
 
-    const scalar dist(args.argRead<scalar>(1));
+    const scalar dist(args.get<scalar>(1));
     const scalar matchTolerance(max(1e-6*dist, SMALL));
     const label maxIters = 100;
 
@@ -329,7 +326,7 @@ int main(int argc, char *argv[])
 
     List<DynamicList<labelledTri>> newFaces(surfs.size());
     List<DynamicList<point>> newPoints(surfs.size());
-    List<PackedBoolList> visitedFace(surfs.size());
+    List<bitSet> visitedFace(surfs.size());
 
     PtrList<triSurfaceMesh> newSurfaces(surfs.size());
     forAll(surfs, surfI)
@@ -370,7 +367,7 @@ int main(int argc, char *argv[])
 
             newFaces[surfI] = newSurf.localFaces();
             newPoints[surfI] = newSurf.localPoints();
-            visitedFace[surfI] = PackedBoolList(newSurf.size(), false);
+            visitedFace[surfI] = bitSet(newSurf.size(), false);
         }
 
         forAll(newSurfaces, surfI)
@@ -528,7 +525,7 @@ int main(int argc, char *argv[])
                         newFacesFromSplit
                     );
 
-                    visitedFace[hitSurfI][facei] = true;
+                    visitedFace[hitSurfI].set(facei);
 
                     forAll(newFacesFromSplit, newFacei)
                     {

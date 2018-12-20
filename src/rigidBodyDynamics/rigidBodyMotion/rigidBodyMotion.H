@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -55,6 +55,10 @@ SourceFiles
 
 namespace Foam
 {
+
+// Forward declarations
+class Time;
+
 namespace RBD
 {
 
@@ -100,11 +104,11 @@ class rigidBodyMotion
         //- Initialize the body-state
         void initialize();
 
-        //- Disallow copy construct
-        rigidBodyMotion(const rigidBodyMotion&);
+        //- No copy construct
+        rigidBodyMotion(const rigidBodyMotion&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const rigidBodyMotion&);
+        //- No copy assignment
+        void operator=(const rigidBodyMotion&) = delete;
 
 
 public:
@@ -112,17 +116,19 @@ public:
     // Constructors
 
         //- Construct null
-        rigidBodyMotion();
+        rigidBodyMotion(const Time& time);
 
         //- Construct from dictionary
         rigidBodyMotion
         (
+            const Time& time,
             const dictionary& dict
         );
 
         //- Construct from constant and state dictionaries
         rigidBodyMotion
         (
+            const Time& time,
             const dictionary& dict,
             const dictionary& stateDict
         );
@@ -169,10 +175,11 @@ public:
             ) const;
 
             //- Integrate velocities, orientation and position
-            //  for the given time-step
+            //  for the given time and time-step
             void solve
             (
-                scalar deltaT,
+                const scalar t,
+                const scalar deltaT,
                 const scalarField& tau,
                 const Field<spatialVector>& fx
             );

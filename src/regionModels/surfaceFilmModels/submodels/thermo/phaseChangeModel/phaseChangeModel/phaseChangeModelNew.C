@@ -42,7 +42,7 @@ autoPtr<phaseChangeModel> phaseChangeModel::New
     const dictionary& dict
 )
 {
-    const word modelType(dict.lookup("phaseChangeModel"));
+    const word modelType(dict.get<word>("phaseChangeModel"));
 
     Info<< "    Selecting phaseChangeModel " << modelType << endl;
 
@@ -64,8 +64,8 @@ autoPtr<phaseChangeModel> phaseChangeModel::New
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // end namespace surfaceFilmModels
-} // end namespace regionModels
-} // end namespace Foam
+} // End namespace surfaceFilmModels
+} // End namespace regionModels
+} // End namespace Foam
 
 // ************************************************************************* //

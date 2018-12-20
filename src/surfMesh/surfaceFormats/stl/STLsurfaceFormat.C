@@ -37,9 +37,9 @@ inline void Foam::fileFormats::STLsurfaceFormat<Face>::writeShell
     const Face& f
 )
 {
-    // calculate the normal ourselves, for flexibility and speed
-    vector norm = triPointRef(pts[f[0]], pts[f[1]], pts[f[2]]).normal();
-    norm /= mag(norm) + VSMALL;
+    // Calculate the normal ourselves, for flexibility and speed
+    const vector norm =
+        triPointRef(pts[f[0]], pts[f[1]], pts[f[2]]).unitNormal();
 
     // simple triangulation about f[0].
     // better triangulation should have been done before
@@ -71,9 +71,9 @@ inline void Foam::fileFormats::STLsurfaceFormat<Face>::writeShell
     const label zoneI
 )
 {
-    // calculate the normal ourselves, for flexibility and speed
-    vector norm = triPointRef(pts[f[0]], pts[f[1]], pts[f[2]]).normal();
-    norm /= mag(norm) + VSMALL;
+    // Calculate the normal ourselves, for flexibility and speed
+    const vector norm =
+        triPointRef(pts[f[0]], pts[f[1]], pts[f[2]]).unitNormal();
 
     // simple triangulation about f[0].
     // better triangulation should have been done before
@@ -137,9 +137,9 @@ bool Foam::fileFormats::STLsurfaceFormat<Face>::read
     }
 
     // Retrieve the original zone information
-    List<word>  names(reader.names().xfer());
-    List<label> sizes(reader.sizes().xfer());
-    List<label> zoneIds(reader.zoneIds().xfer());
+    List<word>  names(std::move(reader.names()));
+    List<label> sizes(std::move(reader.sizes()));
+    List<label> zoneIds(std::move(reader.zoneIds()));
 
     // Generate the (sorted) faces
     List<Face> faceLst(zoneIds.size());
@@ -161,7 +161,7 @@ bool Foam::fileFormats::STLsurfaceFormat<Face>::read
     else
     {
         // Determine the sorted order:
-        // use sortedOrder directly (the intermediate list is discared anyhow)
+        // use sortedOrder directly (the intermediate list is discarded anyhow)
         labelList faceMap;
         sortedOrder(zoneIds, faceMap);
 
@@ -215,7 +215,7 @@ void Foam::fileFormats::STLsurfaceFormat<Face>::writeAscii
     const UList<Face>&   faceLst = surf.surfFaces();
     const UList<label>&  faceMap = surf.faceMap();
 
-    const UList<surfZone>& zones =
+    const surfZoneList zones =
     (
         surf.surfZones().empty()
       ? surfaceFormatsCore::oneZone(faceLst)
@@ -269,7 +269,7 @@ void Foam::fileFormats::STLsurfaceFormat<Face>::writeBinary
     const UList<Face>&   faceLst = surf.surfFaces();
     const UList<label>&  faceMap = surf.faceMap();
 
-    const UList<surfZone>& zones =
+    const surfZoneList zones =
     (
         surf.surfZones().size() > 1
       ? surf.surfZones()

@@ -155,16 +155,13 @@ Foam::threePhaseInterfaceProperties::threePhaseInterfaceProperties
     mixture_(mixture),
     cAlpha_
     (
-        readScalar
+        mixture.U().mesh().solverDict
         (
-            mixture.U().mesh().solverDict
-            (
-                mixture_.alpha1().name()
-            ).lookup("cAlpha")
-        )
+            mixture_.alpha1().name()
+        ).get<scalar>("cAlpha")
     ),
-    sigma12_("sigma12", dimensionSet(1, 0, -2, 0, 0), mixture),
-    sigma13_("sigma13", dimensionSet(1, 0, -2, 0, 0), mixture),
+    sigma12_("sigma12", dimMass/sqr(dimTime), mixture),
+    sigma13_("sigma13", dimMass/sqr(dimTime), mixture),
 
     deltaN_
     (
@@ -181,7 +178,7 @@ Foam::threePhaseInterfaceProperties::threePhaseInterfaceProperties
             mixture.alpha1().mesh()
         ),
         mixture.alpha1().mesh(),
-        dimensionedScalar("nHatf", dimArea, 0.0)
+        dimensionedScalar(dimArea, Zero)
     ),
 
     K_
@@ -193,7 +190,7 @@ Foam::threePhaseInterfaceProperties::threePhaseInterfaceProperties
             mixture.alpha1().mesh()
         ),
         mixture.alpha1().mesh(),
-        dimensionedScalar("K", dimless/dimLength, 0.0)
+        dimensionedScalar(dimless/dimLength, Zero)
     )
 {
     calculateK();

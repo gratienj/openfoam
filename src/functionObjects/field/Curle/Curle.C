@@ -61,12 +61,7 @@ bool Foam::functionObjects::Curle::calc()
         const volScalarField::Boundary& dpdtBf = dpdt.boundaryField();
         const surfaceVectorField::Boundary& SfBf = mesh_.Sf().boundaryField();
 
-        dimensionedVector dfdt
-        (
-            "0",
-            p.dimensions()*dimArea/dimTime,
-            vector::zero
-        );
+        dimensionedVector dfdt("dfdt", p.dimensions()*dimArea/dimTime, Zero);
 
         for (auto patchi : patchSet_)
         {
@@ -80,33 +75,28 @@ bool Foam::functionObjects::Curle::calc()
 
         const volVectorField& C = mesh_.C();
 
-        tmp<volScalarField> tpDash
+        auto tpDash = tmp<volScalarField>::New
         (
-            new volScalarField
+            IOobject
             (
-                IOobject
-                (
-                    resultName_,
-                    mesh_.time().timeName(),
-                    mesh_,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
+                resultName_,
+                mesh_.time().timeName(),
                 mesh_,
-                dimensionedScalar("0", p.dimensions(), 0)
-            )
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh_,
+            dimensionedScalar(p.dimensions(), Zero)
         );
+        auto& pDash = tpDash.ref();
 
-        volScalarField& pDash = tpDash.ref();
         const volVectorField d(scopedName("d"), C - x0_);
         pDash = (d/magSqr(d) & dfdt)/(4.0*mathematical::pi*c0_);
 
         return store(resultName_, tpDash);
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -120,8 +110,8 @@ Foam::functionObjects::Curle::Curle
 :
     fieldExpression(name, runTime, dict, "p"),
     patchSet_(),
-    x0_("x0", dimLength, vector::zero),
-    c0_("c0", dimVelocity, 0)
+    x0_("x0", dimLength,  Zero),
+    c0_("c0", dimVelocity, Zero)
 {
     read(dict);
 
@@ -141,8 +131,7 @@ bool Foam::functionObjects::Curle::read(const dictionary& dict)
 {
     if (fieldExpression::read(dict))
     {
-        patchSet_ =
-            mesh_.boundaryMesh().patchSet(wordReList(dict.lookup("patches")));
+        patchSet_ = mesh_.boundaryMesh().patchSet(dict.get<wordRes>("patches"));
 
         if (patchSet_.empty())
         {
@@ -154,7 +143,7 @@ bool Foam::functionObjects::Curle::read(const dictionary& dict)
         }
 
         // Read the reference speed of sound
-        dict.lookup("c0") >> c0_;
+        dict.readEntry("c0", c0_);
 
 
         // Set the location of the effective point source to the area-average

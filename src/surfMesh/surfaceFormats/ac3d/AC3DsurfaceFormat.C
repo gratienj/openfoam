@@ -245,8 +245,8 @@ bool Foam::fileFormats::AC3DsurfaceFormat<Face>::read
     this->storedPoints().transfer(dynPoints);
     this->storedFaces().transfer(dynFaces);
 
-    // add zones, culling empty ones
-    this->addZones(sizes, names, true);
+    // Add zones (retaining empty ones)
+    this->addZones(sizes, names);
     this->addZonesToFaces(); // for labelledTri
     this->stitchFaces(SMALL);
 
@@ -312,7 +312,7 @@ void Foam::fileFormats::AC3DsurfaceFormat<Face>::write
     const pointField& pointLst = surf.points();
     const UList<Face>& faceLst = surf.surfFaces();
 
-    const UList<surfZone>& zones =
+    const surfZoneList zones =
     (
         surf.surfZones().size()
       ? surf.surfZones()
@@ -393,7 +393,7 @@ void Foam::fileFormats::AC3DsurfaceFormat<Face>::write
 
     if (zoneLst.size() <= 1)
     {
-        const List<surfZone>& zones =
+        const surfZoneList zones =
         (
             zoneLst.size()
           ? zoneLst

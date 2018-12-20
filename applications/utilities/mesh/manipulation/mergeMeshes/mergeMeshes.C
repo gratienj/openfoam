@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "merge two meshes"
+        "Merge two meshes"
     );
 
     #include "addOverwriteOption.H"
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     (
         "masterRegion",
         "name",
-        "specify alternative mesh region for the master mesh"
+        "Specify alternative mesh region for the master mesh"
     );
 
     argList::addArgument("addCase");
@@ -82,13 +82,13 @@ int main(int argc, char *argv[])
     (
         "addRegion",
         "name",
-        "specify alternative mesh region for the additional mesh"
+        "Specify alternative mesh region for the additional mesh"
     );
     argList::addOption
     (
         "resultTime",
         "time",
-        "specify a time for the resulting mesh"
+        "Specify a time for the resulting mesh"
     );
 
     argList args(argc, argv);
@@ -97,24 +97,16 @@ int main(int argc, char *argv[])
          FatalError.exit();
     }
 
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
     fileName masterCase = args[1];
     fileName addCase = args[2];
 
     const word masterRegion =
-        args.optionLookupOrDefault<word>
-        (
-            "masterRegion",
-            polyMesh::defaultRegion
-        );
+        args.opt<word>("masterRegion", polyMesh::defaultRegion);
 
     const word addRegion =
-        args.optionLookupOrDefault<word>
-        (
-            "masterRegion",
-            polyMesh::defaultRegion
-        );
+        args.opt<word>("addRegion", polyMesh::defaultRegion);
 
     // Since we don't use argList processor directory detection, add it to
     // the casename ourselves so it triggers the logic inside TimePath.
@@ -166,7 +158,7 @@ int main(int argc, char *argv[])
     const bool specifiedInstance =
     (
         !overwrite
-     && args.optionReadIfPresent("resultTime", meshInstance)
+     && args.readIfPresent("resultTime", meshInstance)
     );
 
     if (specifiedInstance)

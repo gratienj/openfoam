@@ -82,11 +82,11 @@ class block
         //- Creates boundary patch faces for the block
         void createBoundary();
 
-        //- Disallow default bitwise copy construct
-        block(const block&);
+        //- No copy construct
+        block(const block&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const block&);
+        //- No copy assignment
+        void operator=(const block&) = delete;
 
 
 public:
@@ -116,6 +116,18 @@ public:
 
     // Constructors
 
+        //- Construct from components. Optional cellSet/zone name.
+        block
+        (
+            const cellShape& bshape,
+            const pointField& vertices,
+            const blockEdgeList& edges,
+            const blockFaceList& faces,
+            const Vector<label>& density,
+            const UList<gradingDescriptors>& expand,
+            const word& zoneName = ""
+        );
+
         //- Construct from components with Istream
         block
         (
@@ -134,7 +146,7 @@ public:
         autoPtr<block> clone() const
         {
             NotImplemented;
-            return autoPtr<block>(nullptr);
+            return nullptr;
         }
 
         //- New function which constructs and returns pointer to a block

@@ -33,6 +33,7 @@ License
 #include "surfaceInterpolate.H"
 #include "fvcLaplacian.H"
 #include "mapPolyMesh.H"
+#include "fvOptions.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -77,12 +78,7 @@ Foam::displacementSBRStressFvMotionSolver::displacementSBRStressFvMotionSolver
             IOobject::AUTO_WRITE
         ),
         fvMesh_,
-        dimensionedVector
-        (
-            "cellDisplacement",
-            pointDisplacement().dimensions(),
-            Zero
-        ),
+        dimensionedVector(pointDisplacement().dimensions(), Zero),
         cellMotionBoundaryTypes<vector>(pointDisplacement().boundaryField())
     ),
     interpolationPtr_
@@ -122,7 +118,6 @@ displacementSBRStressFvMotionSolver
         fvMesh_,
         dimensionedVector
         (
-            "cellDisplacement",
             displacementMotionSolver::pointDisplacement().dimensions(),
             Zero
         ),
@@ -176,15 +171,21 @@ Foam::displacementSBRStressFvMotionSolver::curPoints() const
 void Foam::displacementSBRStressFvMotionSolver::solve()
 {
     // The points have moved so before interpolation update
-    // the mtionSolver accordingly
+    // the motionSolver accordingly
     movePoints(fvMesh_.points());
 
     diffusivityPtr_->correct();
     pointDisplacement_.boundaryFieldRef().updateCoeffs();
 
-    surfaceScalarField Df(diffusivityPtr_->operator()());
+    const surfaceScalarField Df
+    (
+        dimensionedScalar("viscosity", dimViscosity, 1.0)
+       *diffusivityPtr_->operator()()
+    );
 
     volTensorField gradCd("gradCd", fvc::grad(cellDisplacement_));
+
+    fv::options& fvOptions(fv::options::New(fvMesh_));
 
     fvVectorMatrix TEqn
     (
@@ -233,9 +234,13 @@ void Foam::displacementSBRStressFvMotionSolver::solve()
            )
         )
         */
+     ==
+        fvOptions(cellDisplacement_)
     );
 
+    fvOptions.constrain(TEqn);
     TEqn.solveSegregatedOrCoupled(TEqn.solverDict());
+    fvOptions.correct(cellDisplacement_);
 }
 
 

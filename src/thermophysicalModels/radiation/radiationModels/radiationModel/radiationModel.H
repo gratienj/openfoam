@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -135,11 +135,11 @@ private:
         //- Initialise
         void initialise();
 
-        //- Disallow default bitwise copy construct
-        radiationModel(const radiationModel&);
+        //- No copy construct
+        radiationModel(const radiationModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const radiationModel&);
+        //- No copy assignment
+        void operator=(const radiationModel&) = delete;
 
 
 public:
@@ -247,6 +247,19 @@ public:
             virtual tmp<fvScalarMatrix> ST
             (
                 const dimensionedScalar& rhoCp,
+                volScalarField& T
+            ) const;
+
+            //- Temperature source term
+            virtual tmp<fvScalarMatrix> ST
+            (
+                tmp<volScalarField> rhoCp,
+                volScalarField& T
+            ) const;
+
+            //- Temperature source term
+            virtual tmp<fvScalarMatrix> ST
+            (
                 volScalarField& T
             ) const;
 

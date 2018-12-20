@@ -52,11 +52,18 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Clean surface by removing baffles, sliver faces,"
+        " collapsing small edges, etc."
+    );
+
     argList::noParallel();
-    argList::addArgument("surfaceFile");
-    argList::addArgument("min length");
-    argList::addArgument("min quality");
-    argList::addArgument("output surfaceFile");
+    argList::addArgument("input", "The input surface file");
+    argList::addArgument("length", "The min length");
+    argList::addArgument("quality", "The min quality");
+    argList::addArgument("output", "The output surface file");
+
     argList::addBoolOption
     (
         "noClean",
@@ -71,8 +78,8 @@ int main(int argc, char *argv[])
     argList args(argc, argv);
 
     const fileName inFileName = args[1];
-    const scalar minLen = args.argRead<scalar>(2);
-    const scalar minQuality = args.argRead<scalar>(3);
+    const scalar minLen = args.get<scalar>(2);
+    const scalar minQuality = args.get<scalar>(3);
     const fileName outFileName = args[4];
 
     Info<< "Reading surface " << inFileName << nl
@@ -87,11 +94,11 @@ int main(int argc, char *argv[])
     triSurface surf
     (
         inFileName,
-        args.optionLookupOrDefault<scalar>("scale", -1)
+        args.opt<scalar>("scale", -1)
     );
     surf.writeStats(Info);
 
-    if (!args.optionFound("noClean"))
+    if (!args.found("noClean"))
     {
         Info<< "Removing duplicate and illegal triangles ..." << nl << endl;
         surf.cleanup(true);

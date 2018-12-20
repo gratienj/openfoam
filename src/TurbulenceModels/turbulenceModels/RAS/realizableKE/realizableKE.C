@@ -192,7 +192,7 @@ realizableKE<BasicTurbulenceModel>::realizableKE
     (
         IOobject
         (
-            "k",
+            IOobject::groupName("k", U.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -204,7 +204,7 @@ realizableKE<BasicTurbulenceModel>::realizableKE
     (
         IOobject
         (
-            "epsilon",
+            IOobject::groupName("epsilon", U.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -283,7 +283,7 @@ void realizableKE<BasicTurbulenceModel>::correct()
         max
         (
             this->nu(),
-            dimensionedScalar("zero", this->nu()().dimensions(), 0.0)
+            dimensionedScalar(this->nu()().dimensions(), Zero)
         )
     );
 

@@ -38,7 +38,7 @@ SourceFiles
 
 #include "HashSet.H"
 #include "Map.H"
-#include "wordReList.H"
+#include "wordRe.H"
 #include "scalarField.H"
 #include "point.H"
 #include "primitivePatch.H"
@@ -73,11 +73,11 @@ class cellDistFuncs
         static label findIndex(const label n, const labelList&, const label);
 
 
-        //- Disallow default bitwise copy construct
-        cellDistFuncs(const cellDistFuncs&);
+        //- No copy construct
+        cellDistFuncs(const cellDistFuncs&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const cellDistFuncs&);
+        //- No copy assignment
+        void operator=(const cellDistFuncs&) = delete;
 
 public:
 
@@ -98,7 +98,7 @@ public:
         }
 
         //- Return the set of patch IDs corresponding to the given names
-        labelHashSet getPatchIDs(const wordReList& patchNames) const;
+        labelHashSet getPatchIDs(const UList<wordRe>& patchNames) const;
 
         //- Get patchIDs of/derived off certain type (e.g. 'processorPolyPatch')
         //  Uses isA, not isType

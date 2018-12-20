@@ -38,6 +38,7 @@ Description
 #include "OFstream.H"
 #include "mappedPolyPatch.H"
 #include "mappedFixedValueFvPatchFields.H"
+#include "fvCFD.H"
 
 using namespace Foam;
 
@@ -81,7 +82,7 @@ int main(int argc, char *argv[])
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedVector("zero", dimLength, Zero),
+        dimensionedVector(dimLength, Zero),
         patchFieldTypes
     );
 

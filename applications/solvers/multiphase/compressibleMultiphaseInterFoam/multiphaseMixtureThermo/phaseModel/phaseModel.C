@@ -61,7 +61,7 @@ Foam::phaseModel::phaseModel
             IOobject::AUTO_WRITE
         ),
         p.mesh(),
-        dimensionedScalar("0", dimless/dimTime, 0)
+        dimensionedScalar(dimless/dimTime, Zero)
     )
 {
     {
@@ -81,7 +81,7 @@ Foam::phaseModel::phaseModel
 Foam::autoPtr<Foam::phaseModel> Foam::phaseModel::clone() const
 {
     NotImplemented;
-    return autoPtr<phaseModel>(nullptr);
+    return nullptr;
 }
 
 

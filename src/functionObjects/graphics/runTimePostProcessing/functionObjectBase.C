@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,39 +41,35 @@ namespace runTimePostPro
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-bool Foam::functionObjects::runTimePostPro::functionObjectBase::removeFile
-(
-    const word& keyword,
-    const word& fieldName
-)
-{
-    dictionary dict;
-    state_.getObjectDict(functionObjectName_, fieldName, dict);
-
-    fileName fName;
-    if (dict.readIfPresent(keyword, fName))
-    {
-        Foam::rm(fName);
-        return true;
-    }
-
-    return false;
-}
-
-
 Foam::fileName
 Foam::functionObjects::runTimePostPro::functionObjectBase::getFileName
 (
     const word& keyword,
-    const word& fieldName
+    const word& subDictName
 ) const
 {
     dictionary dict;
-    state_.getObjectDict(functionObjectName_, fieldName, dict);
+    state_.getObjectDict(functionObjectName_, subDictName, dict);
 
-    fileName fName(dict.lookupOrDefault(keyword, fileName::null));
+    fileName f;
+    if (dict.readIfPresent<fileName>(keyword, f))
+    {
+        f.expand();
+    }
 
-    return fName;
+    return f;
+}
+
+
+bool Foam::functionObjects::runTimePostPro::functionObjectBase::removeFile
+(
+    const word& keyword,
+    const word& subDictName
+)
+{
+    // Foam::rm() ignores empty names etc.
+
+    return Foam::rm(getFileName(keyword, subDictName));
 }
 
 
@@ -83,21 +79,13 @@ Foam::functionObjects::runTimePostPro::functionObjectBase::functionObjectBase
 (
     const stateFunctionObject& state,
     const dictionary& dict,
-    const HashPtrTable<Function1<vector>, word>& colours
+    const HashPtrTable<Function1<vector>>& colours
 )
 :
     fieldVisualisationBase(dict, colours),
     state_(state),
-    functionObjectName_(""),
-    clearObjects_(dict.lookupOrDefault<bool>("clearObjects", false))
-{
-    dict.lookup("functionObject") >> functionObjectName_;
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::functionObjects::runTimePostPro::functionObjectBase::~functionObjectBase()
+    functionObjectName_(dict.get<word>("functionObject")),
+    clearObjects_(dict.lookupOrDefault("clearObjects", false))
 {}
 
 

@@ -149,9 +149,9 @@ bool Foam::regionModels::regionModel::read()
     {
         if (active_)
         {
-            if (const dictionary* dictPtr = subDictPtr(modelName_ + "Coeffs"))
+            if (const dictionary* dictptr = findDict(modelName_ + "Coeffs"))
             {
-                coeffs_ <<= *dictPtr;
+                coeffs_ <<= *dictptr;
             }
 
             infoOutput_.readIfPresent("infoOutput", *this);
@@ -159,10 +159,8 @@ bool Foam::regionModels::regionModel::read()
 
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 
@@ -170,18 +168,16 @@ bool Foam::regionModels::regionModel::read(const dictionary& dict)
 {
     if (active_)
     {
-        if (const dictionary* dictPtr = dict.subDictPtr(modelName_ + "Coeffs"))
+        if (const dictionary* dictptr = dict.findDict(modelName_ + "Coeffs"))
         {
-            coeffs_ <<= *dictPtr;
+            coeffs_ <<= *dictptr;
         }
 
         infoOutput_.readIfPresent("infoOutput", dict);
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 
@@ -398,7 +394,7 @@ Foam::regionModels::regionModel::regionModel
     ),
     primaryMesh_(mesh),
     time_(mesh.time()),
-    active_(lookup("active")),
+    active_(get<Switch>("active")),
     infoOutput_(true),
     modelName_(modelName),
     regionMeshPtr_(nullptr),
@@ -446,7 +442,7 @@ Foam::regionModels::regionModel::regionModel
     ),
     primaryMesh_(mesh),
     time_(mesh.time()),
-    active_(dict.lookup("active")),
+    active_(dict.get<Switch>("active")),
     infoOutput_(false),
     modelName_(modelName),
     regionMeshPtr_(nullptr),

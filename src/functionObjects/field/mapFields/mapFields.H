@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -53,7 +53,7 @@ Usage
         type         | Type name: mapFields       | yes       |
         mapRegion    | Name of region to map to   | yes       |
         mapMethod    | Mapping method             | yes       |
-        patchMapMethod | Patch mapping method     | no        | <auto>
+        patchMapMethod | Patch mapping method     | no        | \<auto\>
         consistent   | Mapping meshes have consistent boundaries | yes |
         fields       | List of field names to map | yes       |
         log          | Log to standard output     | no        | yes
@@ -98,15 +98,15 @@ class mapFields
         autoPtr<meshToMesh> interpPtr_;
 
         //- List of field names to interpolate
-        wordReList fieldNames_;
+        wordRes fieldNames_;
 
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         mapFields(const mapFields&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const mapFields&) = delete;
 
         //- Helper function to create the mesh-to-mesh interpolation
@@ -142,7 +142,7 @@ public:
 
 
     //- Destructor
-    virtual ~mapFields();
+    virtual ~mapFields() = default;
 
 
     // Member Functions

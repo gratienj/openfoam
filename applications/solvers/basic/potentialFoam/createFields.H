@@ -13,7 +13,7 @@ volVectorField U
 );
 
 // Initialise the velocity internal field to zero
-U = dimensionedVector("0", U.dimensions(), Zero);
+U = dimensionedVector(U.dimensions(), Zero);
 
 surfaceScalarField phi
 (
@@ -28,7 +28,7 @@ surfaceScalarField phi
     fvc::flux(U)
 );
 
-if (args.optionFound("initialiseUBCs"))
+if (args.found("initialiseUBCs"))
 {
     U.correctBoundaryConditions();
     phi = fvc::flux(U);
@@ -38,10 +38,9 @@ if (args.optionFound("initialiseUBCs"))
 // Construct a pressure field
 // If it is available read it otherwise construct from the velocity BCs
 // converting fixed-value BCs to zero-gradient and vice versa.
-word pName("p");
 
-// Update name of the pressure field from the command-line option
-args.optionReadIfPresent("pName", pName);
+// Allow override from command-line -pName option
+const word pName = args.opt<word>("pName", "p");
 
 // Infer the pressure BCs from the velocity
 wordList pBCTypes
@@ -74,7 +73,7 @@ volScalarField p
         false
     ),
     mesh,
-    dimensionedScalar(pName, sqr(dimVelocity), 0),
+    dimensionedScalar(sqr(dimVelocity), Zero),
     pBCTypes
 );
 
@@ -105,7 +104,7 @@ volScalarField Phi
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("Phi", dimLength*dimVelocity, 0),
+    dimensionedScalar(dimLength*dimVelocity, Zero),
     PhiBCTypes
 );
 

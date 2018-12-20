@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,24 +46,23 @@ defineTypeNameAndDebug(contactAngleForce, 0);
 
 void contactAngleForce::initialise()
 {
-    const wordReList zeroForcePatches
+    const wordRes zeroForcePatches
     (
-        coeffDict_.lookupOrDefault<wordReList>("zeroForcePatches", wordReList())
+        coeffDict_.lookupOrDefault<wordRes>("zeroForcePatches", wordRes())
     );
 
     if (zeroForcePatches.size())
     {
         const polyBoundaryMesh& pbm = filmModel_.regionMesh().boundaryMesh();
-        scalar dLim = readScalar(coeffDict_.lookup("zeroForceDistance"));
+        const scalar dLim = coeffDict_.get<scalar>("zeroForceDistance");
 
         Info<< "        Assigning zero contact force within " << dLim
             << " of patches:" << endl;
 
         labelHashSet patchIDs = pbm.patchSet(zeroForcePatches);
 
-        forAllConstIter(labelHashSet, patchIDs, iter)
+        for (const label patchi : patchIDs)
         {
-            label patchi = iter.key();
             Info<< "            " << pbm[patchi].name() << endl;
         }
 
@@ -100,7 +99,7 @@ contactAngleForce::contactAngleForce
 )
 :
     force(typeName, film, dict),
-    Ccf_(readScalar(coeffDict_.lookup("Ccf"))),
+    Ccf_(coeffDict_.get<scalar>("Ccf")),
     mask_
     (
         IOobject
@@ -142,7 +141,7 @@ tmp<fvVectorMatrix> contactAngleForce::correct(volVectorField& U)
                 IOobject::NO_WRITE
             ),
             filmModel_.regionMesh(),
-            dimensionedVector("zero", dimForce/dimArea, Zero)
+            dimensionedVector(dimForce/dimArea, Zero)
         )
     );
 

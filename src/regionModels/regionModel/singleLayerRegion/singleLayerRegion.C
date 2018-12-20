@@ -56,7 +56,7 @@ void Foam::regionModels::singleLayerRegion::constructMeshObjects()
                 NO_WRITE
             ),
             regionMesh(),
-            dimensionedVector("zero", dimless, Zero),
+            dimensionedVector(dimless, Zero),
             zeroGradientFvPatchField<vector>::typeName
         )
     );
@@ -75,7 +75,7 @@ void Foam::regionModels::singleLayerRegion::constructMeshObjects()
                 NO_WRITE
             ),
             regionMesh(),
-            dimensionedScalar("zero", dimArea, 0.0),
+            dimensionedScalar(dimArea, Zero),
             zeroGradientFvPatchField<scalar>::typeName
         )
     );
@@ -213,7 +213,7 @@ const Foam::volVectorField& Foam::regionModels::singleLayerRegion::nHat() const
             << abort(FatalError);
     }
 
-    return nHatPtr_();
+    return *nHatPtr_;
 }
 
 
@@ -226,7 +226,7 @@ const Foam::volScalarField& Foam::regionModels::singleLayerRegion::magSf() const
             << abort(FatalError);
     }
 
-    return magSfPtr_();
+    return *magSfPtr_;
 }
 
 

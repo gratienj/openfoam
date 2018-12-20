@@ -95,13 +95,16 @@ thermalBaffle1DFvPatchScalarField
     mappedPatchBase(p.patch(), NEARESTPATCHFACE, dict),
     mixedFvPatchScalarField(p, iF),
     TName_("T"),
-    baffleActivated_(dict.lookupOrDefault<bool>("baffleActivated", true)),
+    baffleActivated_(dict.lookupOrDefault("baffleActivated", true)),
     thickness_(),
     qs_(p.size(), 0),
     solidDict_(dict),
     solidPtr_(),
     qrPrevious_(p.size(), 0.0),
-    qrRelaxation_(dict.lookupOrDefault<scalar>("relaxation", 1)),
+    qrRelaxation_
+    (
+        dict.lookupOrDefaultCompat("qrRelaxation", {{"relaxation", 1712}}, 1)
+    ),
     qrName_(dict.lookupOrDefault<word>("qr", "none"))
 {
     fvPatchScalarField::operator=(scalarField("value", dict, p.size()));
@@ -204,7 +207,7 @@ const solidType& thermalBaffle1DFvPatchScalarField<solidType>::solid() const
         {
             solidPtr_.reset(new solidType(solidDict_));
         }
-        return solidPtr_();
+        return *solidPtr_;
     }
     else
     {
@@ -230,12 +233,10 @@ baffleThickness() const
     {
         if (thickness_.size() != patch().size())
         {
-            FatalIOErrorInFunction
-            (
-                solidDict_
-            )<< " Field thickness has not been specified "
-            << " for patch " << this->patch().name()
-            << exit(FatalIOError);
+            FatalIOErrorInFunction(solidDict_)
+                << "Field thickness has not been specified"
+                   " for patch " << this->patch().name()
+                << exit(FatalIOError);
         }
 
         return thickness_;
@@ -437,7 +438,7 @@ void thermalBaffle1DFvPatchScalarField<solidType>::write(Ostream& os) const
 
     qrPrevious_.writeEntry("qrPrevious", os);
     os.writeEntry("qr", qrName_);
-    os.writeEntry("relaxation", qrRelaxation_);
+    os.writeEntry("qrRelaxation", qrRelaxation_);
 }
 
 

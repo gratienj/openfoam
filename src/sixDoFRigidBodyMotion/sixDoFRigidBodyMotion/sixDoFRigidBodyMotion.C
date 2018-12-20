@@ -119,11 +119,11 @@ Foam::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion
             dict.lookupOrDefault("orientation", tensor::I)
         )
     ),
-    mass_(readScalar(dict.lookup("mass"))),
+    mass_(dict.get<scalar>("mass")),
     momentOfInertia_(dict.lookup("momentOfInertia")),
     aRelax_(dict.lookupOrDefault<scalar>("accelerationRelaxation", 1.0)),
     aDamp_(dict.lookupOrDefault<scalar>("accelerationDamping", 1.0)),
-    report_(dict.lookupOrDefault<Switch>("report", false)),
+    report_(dict.lookupOrDefault("report", false)),
     solver_(sixDoFSolver::New(dict.subDict("solver"), *this))
 {
     addRestraints(dict);
@@ -171,14 +171,14 @@ Foam::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion
     aRelax_(sDoFRBM.aRelax_),
     aDamp_(sDoFRBM.aDamp_),
     report_(sDoFRBM.report_),
-    solver_(sDoFRBM.solver_, false)
+    solver_(sDoFRBM.solver_.clone())
 {}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::sixDoFRigidBodyMotion::~sixDoFRigidBodyMotion()
-{}
+{} // Define here (incomplete type in header)
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -196,17 +196,17 @@ void Foam::sixDoFRigidBodyMotion::addRestraints
 
         restraints_.setSize(restraintDict.size());
 
-        forAllConstIter(IDLList<entry>, restraintDict, iter)
+        for (const entry& dEntry : restraintDict)
         {
-            if (iter().isDict())
+            if (dEntry.isDict())
             {
                 restraints_.set
                 (
                     i++,
                     sixDoFRigidBodyMotionRestraint::New
                     (
-                        iter().keyword(),
-                        iter().dict()
+                        dEntry.keyword(),
+                        dEntry.dict()
                     )
                 );
             }
@@ -233,17 +233,17 @@ void Foam::sixDoFRigidBodyMotion::addConstraints
         pointConstraint pct;
         pointConstraint pcr;
 
-        forAllConstIter(IDLList<entry>, constraintDict, iter)
+        for (const entry& dEntry : constraintDict)
         {
-            if (iter().isDict())
+            if (dEntry.isDict())
             {
                 constraints_.set
                 (
                     i,
                     sixDoFRigidBodyMotionConstraint::New
                     (
-                        iter().keyword(),
-                        iter().dict(),
+                        dEntry.keyword(),
+                        dEntry.dict(),
                         *this
                     )
                 );

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,6 +27,12 @@ InNamspace
 Description
     Operations on lists of strings.
 
+Namespace
+    Foam::stringListOps
+
+Description
+    Various utility functions to work on lists of strings.
+
 SourceFiles
     stringListOpsTemplates.C
 
@@ -37,22 +43,13 @@ SourceFiles
 
 #include "labelList.H"
 #include "stringList.H"
-#include "regExp.H"
 #include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    //- Single-string match for one of the regular expressions
-    //  \deprecated use stringOps::match instead (deprecated NOV-2017)
-    inline bool findStrings(const wordRes& matcher, const std::string& text)
-    {
-        return matcher(text);
-    }
-
-
-    //- Extract list indices
+    //- Extract list indices for all matches.
     //  The unary match predicate has the following signature:
     //  \code
     //  bool operator()(const std::string& text);
@@ -63,7 +60,7 @@ namespace Foam
     labelList findMatchingStrings
     (
         const UnaryMatchPredicate& matcher,
-        const UList<StringType>& lst,
+        const UList<StringType>& input,
         const bool invert=false
     );
 
@@ -74,11 +71,11 @@ namespace Foam
     labelList findStrings
     (
         const regExp& matcher,
-        const UList<StringType>& lst,
+        const UList<StringType>& input,
         const bool invert=false
     )
     {
-        return findMatchingStrings(matcher, lst, invert);
+        return findMatchingStrings(matcher, input, invert);
     }
 
 
@@ -87,28 +84,17 @@ namespace Foam
     template<class StringType>
     labelList findStrings
     (
-        const char* re,
-        const UList<StringType>& lst,
+        const keyType& matcher,
+        const UList<StringType>& input,
         const bool invert=false
     )
     {
-        const regExp matcher(re);
-        return findMatchingStrings(matcher, lst, invert);
-    }
-
-
-    //- Return list indices for strings matching the regular expression
-    //  Template partial specialization of findMatchingStrings
-    template<class StringType>
-    labelList findStrings
-    (
-        const std::string& re,
-        const UList<StringType>& lst,
-        const bool invert=false
-    )
-    {
-        const regExp matcher(re);
-        return findMatchingStrings(matcher, lst, invert);
+        return
+        (
+            matcher.isPattern()
+          ? findMatchingStrings(regExp(matcher), input, invert)
+          : findMatchingStrings(matcher, input, invert)
+        );
     }
 
 
@@ -118,11 +104,11 @@ namespace Foam
     labelList findStrings
     (
         const wordRe& matcher,
-        const UList<StringType>& lst,
+        const UList<StringType>& input,
         const bool invert=false
     )
     {
-        return findMatchingStrings(matcher, lst, invert);
+        return findMatchingStrings(matcher, input, invert);
     }
 
 
@@ -132,27 +118,40 @@ namespace Foam
     labelList findStrings
     (
         const wordRes& matcher,
-        const UList<StringType>& lst,
+        const UList<StringType>& input,
         const bool invert=false
     )
     {
-        return findMatchingStrings(matcher, lst, invert);
+        return findMatchingStrings(matcher, input, invert);
+    }
+
+    //- Return list indices for strings matching one of the regular expression
+    //  Template partial specialization of findMatchingStrings
+    template<class StringType>
+    labelList findStrings
+    (
+        const UList<wordRe>& patterns,
+        const UList<StringType>& input,
+        const bool invert=false
+    )
+    {
+        return findMatchingStrings(wordRes::matcher(patterns), input, invert);
     }
 
 
-  // Subsetting multi-string matches (similar to ListOp):
+    // Subsetting multi-string matches (similar to ListOp):
 
     //- Extract elements of StringList when regular expression matches
     //  optionally invert the match
     //  eg, to extract all selected elements:
     //  \code
-    //    subsetMatchingStrings<regExp, stringList>(myRegExp, lst);
+    //    subsetMatchingStrings<regExp, stringList>(myRegExp, list);
     //  \endcode
     template<class UnaryMatchPredicate, class StringListType>
     StringListType subsetMatchingStrings
     (
         const UnaryMatchPredicate& matcher,
-        const StringListType& lst,
+        const StringListType& input,
         const bool invert=false
     );
 
@@ -163,11 +162,11 @@ namespace Foam
     StringListType subsetStrings
     (
         const regExp& matcher,
-        const StringListType& lst,
+        const StringListType& input,
         const bool invert=false
     )
     {
-        return subsetMatchingStrings(matcher, lst, invert);
+        return subsetMatchingStrings(matcher, input, invert);
     }
 
 
@@ -176,27 +175,17 @@ namespace Foam
     template<class StringListType>
     StringListType subsetStrings
     (
-        const char* re,
-        const StringListType& lst,
+        const keyType& matcher,
+        const StringListType& input,
         const bool invert=false
     )
     {
-        const regExp matcher(re);
-        return subsetMatchingStrings(matcher, lst, invert);
-    }
-
-    //- Extract elements of StringList when regular expression matches
-    //  Template partial specialization of subsetMatchingStrings
-    template<class StringListType>
-    StringListType subsetStrings
-    (
-        const std::string& re,
-        const StringListType& lst,
-        const bool invert=false
-    )
-    {
-        const regExp matcher(re);
-        return subsetMatchingStrings(matcher, lst, invert);
+        return
+        (
+            matcher.isPattern()
+          ? subsetMatchingStrings(regExp(matcher), input, invert)
+          : subsetMatchingStrings(matcher, input, invert)
+        );
     }
 
     //- Extract elements of StringList when regular expression matches
@@ -205,11 +194,11 @@ namespace Foam
     StringListType subsetStrings
     (
         const wordRe& matcher,
-        const StringListType& lst,
+        const StringListType& input,
         const bool invert=false
     )
     {
-        return subsetMatchingStrings(matcher, lst, invert);
+        return subsetMatchingStrings(matcher, input, invert);
     }
 
     //- Extract elements of StringList when regular expression matches
@@ -218,11 +207,25 @@ namespace Foam
     StringListType subsetStrings
     (
         const wordRes& matcher,
-        const StringListType& lst,
+        const StringListType& input,
         const bool invert=false
     )
     {
-        return subsetMatchingStrings(matcher, lst, invert);
+        return subsetMatchingStrings(matcher, input, invert);
+    }
+
+
+    //- Extract elements of StringList when regular expression matches
+    //  Template partial specialization of subsetMatchingStrings
+    template<class StringListType>
+    StringListType subsetStrings
+    (
+        const UList<wordRe>& patterns,
+        const StringListType& input,
+        const bool invert=false
+    )
+    {
+        return subsetMatchingStrings(wordRes::matcher(patterns), input, invert);
     }
 
 
@@ -234,7 +237,7 @@ namespace Foam
     void inplaceSubsetMatchingStrings
     (
         const UnaryMatchPredicate& matcher,
-        StringListType& lst,
+        StringListType& input,
         const bool invert=false
     );
 
@@ -244,39 +247,29 @@ namespace Foam
     void inplaceSubsetStrings
     (
         const regExp& matcher,
-        StringListType& lst,
+        StringListType& input,
         const bool invert=false
     )
     {
-        inplaceSubsetMatchingStrings(matcher, lst, invert);
+        inplaceSubsetMatchingStrings(matcher, input, invert);
     }
 
-    //- Inplace extract elements of StringList when regular expression matches
-    //  Template partial specialization of inplaceSubsetMatchingStrings
+    //- Extract elements of StringList when regular expression matches
+    //  Template partial specialization of subsetMatchingStrings
     template<class StringListType>
     void inplaceSubsetStrings
     (
-        const char* re,
-        StringListType& lst,
+        const keyType& matcher,
+        StringListType& input,
         const bool invert=false
     )
     {
-        const regExp matcher(re);
-        inplaceSubsetMatchingStrings(matcher, lst, invert);
-    }
-
-    //- Inplace extract elements of StringList when regular expression matches
-    //  Template partial specialization of inplaceSubsetMatchingStrings
-    template<class StringListType>
-    void inplaceSubsetStrings
-    (
-        const std::string& re,
-        StringListType& lst,
-        const bool invert=false
-    )
-    {
-        const regExp matcher(re);
-        inplaceSubsetMatchingStrings(matcher, lst, invert);
+        return
+        (
+            matcher.isPattern()
+          ? inplaceSubsetMatchingStrings(regExp(matcher), input, invert)
+          : inplaceSubsetMatchingStrings(matcher, input, invert)
+        );
     }
 
     //- Inplace extract elements of StringList when regular expression matches
@@ -285,11 +278,11 @@ namespace Foam
     void inplaceSubsetStrings
     (
         const wordRe& matcher,
-        StringListType& lst,
+        StringListType& input,
         const bool invert=false
     )
     {
-        inplaceSubsetMatchingStrings(matcher, lst, invert);
+        inplaceSubsetMatchingStrings(matcher, input, invert);
     }
 
     //- Inplace extract elements of StringList when regular expression matches
@@ -298,15 +291,144 @@ namespace Foam
     void inplaceSubsetStrings
     (
         const wordRes& matcher,
-        StringListType& lst,
+        StringListType& input,
         const bool invert=false
     )
     {
-        inplaceSubsetMatchingStrings(matcher, lst, invert);
+        inplaceSubsetMatchingStrings(matcher, input, invert);
     }
 
-}
+    //- Inplace extract elements of StringList when regular expression matches
+    //  Template partial specialization of inplaceSubsetMatchingStrings
+    template<class StringListType>
+    void inplaceSubsetStrings
+    (
+        const UList<wordRe>& regexs,
+        StringListType& input,
+        const bool invert=false
+    )
+    {
+        inplaceSubsetMatchingStrings(wordRes::matcher(regexs), input, invert);
+    }
 
+
+
+
+/*---------------------------------------------------------------------------*\
+                      Namespace stringListOps Declaration
+\*---------------------------------------------------------------------------*/
+
+namespace stringListOps
+{
+
+//- Functor to determine if a string is exists in a list of strings.
+//  For example,
+//
+//  \code
+//  reduce(text, stringListOps::foundOp<word>(myNames));
+//  \endcode
+template<class StringType>
+struct foundOp
+{
+    const UList<StringType>& values;
+
+    foundOp(const UList<StringType>& list)
+    :
+        values(list)
+    {}
+
+    bool operator()(const std::string& text) const
+    {
+        return values.found(text);
+    }
+};
+
+} // End namespace stringListOps
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Housekeeping
+
+namespace Foam
+{
+    //- Deprecated(2018-02) find using C-string as a regex
+    //  \deprecated(2018-02) Treating string as regex may be inefficient
+    //      and lead to unintended results.
+    //      Use regExp, keyType, wordRe instead, or findMatchingStrings()
+    template<class StringType>
+    labelList findStrings
+    (
+        const char* disallowed,
+        const UList<StringType>& input,
+        const bool invert=false
+    ) = delete;
+
+    //- Deprecated(2018-02) find using string as a regex
+    //  \deprecated(2018-02) Treating string as regex may be inefficient
+    //      and lead to unintended results.
+    //      Use regExp, keyType, wordRe instead, or findMatchingStrings()
+    template<class StringType>
+    labelList findStrings
+    (
+        const std::string& disallowed,
+        const UList<StringType>& input,
+        const bool invert=false
+    ) = delete;
+
+    //- Deprecated(2018-02) subset using C-string as a regex
+    //  \deprecated(2018-02) Treating string as regex may be inefficient
+    //      and lead to unintended results.
+    //      Use regExp, keyType, wordRe instead, or subsetMatchingStrings()
+    template<class StringListType>
+    StringListType subsetStrings
+    (
+        const char* disallowed,
+        const StringListType& input,
+        const bool invert=false
+    ) = delete;
+
+    //- Deprecated(2018-02) subset using string as a regex
+    //  \deprecated(2018-02) Treating string as regex may be inefficient
+    //      and lead to unintended results.
+    //      Use regExp, keyType, wordRe instead, or subsetMatchingStrings()
+    template<class StringListType>
+    StringListType subsetStrings
+    (
+        const std::string& disallowed,
+        const StringListType& input,
+        const bool invert=false
+    ) = delete;
+
+    //- Deprecated(2018-02) subset using C-string as a regex
+    //  \deprecated(2018-02) Treating string as regex may be inefficient
+    //      and lead to unintended results.
+    //      Use regExp, keyType, wordRe instead, or inplaceSubsetMatchingStrings()
+    template<class StringListType>
+    void inplaceSubsetStrings
+    (
+        const char* disallowed,
+        StringListType& input,
+        const bool invert=false
+    ) = delete;
+
+    //- Deprecated(2018-02) subset using string as a regex
+    //  \deprecated(2018-02) Treating string as regex may be inefficient
+    //      and lead to unintended results.
+    //      Use keyType, wordRe instead, or inplaceSubsetMatchingStrings()
+    template<class StringListType>
+    void inplaceSubsetStrings
+    (
+        const std::string& disallowed,
+        StringListType& input,
+        const bool invert=false
+    ) = delete;
+
+} // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

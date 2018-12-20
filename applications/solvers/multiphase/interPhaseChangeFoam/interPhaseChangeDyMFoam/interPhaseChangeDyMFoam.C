@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,10 +28,11 @@ Group
     grpMultiphaseSolvers grpMovingMeshSolvers
 
 Description
-    Solver for 2 incompressible, isothermal immiscible fluids with phase-change
-    (e.g. cavitation).  Uses a VOF (volume of fluid) phase-fraction based
-    interface capturing approach, with optional mesh motion and mesh topology
-    changes including adaptive re-meshing.
+    Solver for two incompressible, isothermal immiscible fluids with
+    phase-change (e.g. cavitation).
+    Uses VOF (volume of fluid) phase-fraction based interface capturing,
+    with optional mesh motion and mesh topology changes including
+    adaptive re-meshing.
 
     The momentum and other fluid properties are of the "mixture" and a
     single momentum equation is solved.
@@ -59,17 +60,23 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for two incompressible, isothermal immiscible fluids with"
+        " phase-change.\n"
+        "Uses VOF (volume of fluid) phase-fraction based interface capturing,"
+        " with optional mesh motion and mesh topology changes including"
+        " adaptive re-meshing."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
-    #include "createControl.H"
-    #include "createTimeControls.H"
-    #include "../interFoam/interDyMFoam/createDyMControls.H"
+    #include "createDyMControls.H"
     #include "initContinuityErrs.H"
     #include "createFields.H"
-    #include "createFvOptions.H"
 
     volScalarField rAU
     (
@@ -97,7 +104,7 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
-        #include "../interFoam/interDyMFoam/readControls.H"
+        #include "readDyMControls.H"
 
         // Store divU from the previous mesh so that it can be mapped
         // and used in correctPhi to ensure the corrected phi has the
@@ -107,7 +114,7 @@ int main(int argc, char *argv[])
         #include "CourantNo.H"
         #include "setDeltaT.H"
 
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -158,7 +165,7 @@ int main(int argc, char *argv[])
                     mesh
                 ),
                 mesh,
-                dimensionedScalar("0", dimMass/dimTime, 0)
+                dimensionedScalar(dimMass/dimTime, Zero)
             );
 
             mixture->correct();
@@ -182,9 +189,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

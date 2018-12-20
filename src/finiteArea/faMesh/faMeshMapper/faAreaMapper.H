@@ -68,9 +68,6 @@ class faAreaMapper
         //- Reference to mapPolyMesh
         const mapPolyMesh& mpm_;
 
-        //- Are there any inserted (unmapped) faces
-        bool insertedFaces_;
-
         //- Is the mapping direct
         bool direct_;
 
@@ -104,11 +101,11 @@ class faAreaMapper
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        faAreaMapper(const faAreaMapper&);
+        //- No copy construct
+        faAreaMapper(const faAreaMapper&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faAreaMapper&);
+        //- No copy assignment
+        void operator=(const faAreaMapper&) = delete;
 
         //- Calculate addressing
         void calcAddressing() const;
@@ -170,7 +167,7 @@ public:
         //- Return interpolated addressing
         virtual const labelListList& addressing() const;
 
-        //- Return interpolaion weights
+        //- Return interpolation weights
         virtual const scalarListList& weights() const;
 
         //- Are there any inserted faces

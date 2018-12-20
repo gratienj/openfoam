@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -86,22 +86,19 @@ template<class BasicTurbulenceModel>
 tmp<volScalarField>
 Stokes<BasicTurbulenceModel>::nut() const
 {
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("nut", this->U_.group()),
-                this->runTime_.timeName(),
-                this->mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            IOobject::groupName("nut", this->alphaRhoPhi_.group()),
+            this->runTime_.timeName(),
             this->mesh_,
-            dimensionedScalar("nut", dimViscosity, 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        this->mesh_,
+        dimensionedScalar(dimViscosity, Zero)
     );
 }
 
@@ -128,7 +125,7 @@ Stokes<BasicTurbulenceModel>::nuEff() const
     (
         new volScalarField
         (
-            IOobject::groupName("nuEff", this->U_.group()), this->nu()
+            IOobject::groupName("nuEff", this->alphaRhoPhi_.group()), this->nu()
         )
     );
 }
@@ -149,22 +146,19 @@ template<class BasicTurbulenceModel>
 tmp<volScalarField>
 Stokes<BasicTurbulenceModel>::k() const
 {
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("k", this->U_.group()),
-                this->runTime_.timeName(),
-                this->mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            IOobject::groupName("k", this->alphaRhoPhi_.group()),
+            this->runTime_.timeName(),
             this->mesh_,
-            dimensionedScalar("k", sqr(this->U_.dimensions()), 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        this->mesh_,
+        dimensionedScalar(sqr(this->U_.dimensions()), Zero)
     );
 }
 
@@ -173,25 +167,19 @@ template<class BasicTurbulenceModel>
 tmp<volScalarField>
 Stokes<BasicTurbulenceModel>::epsilon() const
 {
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("epsilon", this->U_.group()),
-                this->runTime_.timeName(),
-                this->mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            IOobject::groupName("epsilon", this->alphaRhoPhi_.group()),
+            this->runTime_.timeName(),
             this->mesh_,
-            dimensionedScalar
-            (
-                "epsilon", sqr(this->U_.dimensions())/dimTime, 0.0
-            )
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        this->mesh_,
+        dimensionedScalar(sqr(this->U_.dimensions())/dimTime, Zero)
     );
 }
 
@@ -200,25 +188,19 @@ template<class BasicTurbulenceModel>
 tmp<volSymmTensorField>
 Stokes<BasicTurbulenceModel>::R() const
 {
-    return tmp<volSymmTensorField>
+    return tmp<volSymmTensorField>::New
     (
-        new volSymmTensorField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("R", this->U_.group()),
-                this->runTime_.timeName(),
-                this->mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
+            IOobject::groupName("R", this->alphaRhoPhi_.group()),
+            this->runTime_.timeName(),
             this->mesh_,
-            dimensionedSymmTensor
-            (
-                "R", sqr(this->U_.dimensions()), Zero
-            )
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        this->mesh_,
+        dimensionedSymmTensor(sqr(this->U_.dimensions()), Zero)
     );
 }
 

@@ -25,7 +25,7 @@ surfaceScalarField phi
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", mesh.Sf().dimensions()*U.dimensions(), 0.0)
+    dimensionedScalar(mesh.Sf().dimensions()*U.dimensions(), Zero)
 );
 
 
@@ -47,3 +47,5 @@ dimensionedVector gradP
     dimensionSet(0, 1, -2, 0, 0),
     Zero
 );
+
+#include "createFvOptions.H"

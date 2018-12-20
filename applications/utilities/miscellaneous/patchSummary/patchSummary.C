@@ -28,7 +28,7 @@ Group
     grpMiscUtilities
 
 Description
-    Writes fields and boundary condition info for each patch at each requested
+    Write field and boundary condition info for each patch at each requested
     time instance.
 
     Default action is to write a single entry for patches/patchGroups with the
@@ -48,6 +48,12 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Write field and boundary condition info for each patch"
+        " at each requested time instance"
+    );
+
     timeSelector::addOptions();
 
     #include "addRegionOption.H"
@@ -61,7 +67,7 @@ int main(int argc, char *argv[])
 
     instantList timeDirs = timeSelector::select0(runTime, args);
 
-    const bool expand = args.optionFound("expand");
+    const bool expand = args.found("expand");
 
 
     #include "createNamedMesh.H"
@@ -81,9 +87,10 @@ int main(int argc, char *argv[])
                 << endl;
         }
 
-
-        const IOobjectList fieldObjs(mesh, runTime.timeName());
-        const wordList objNames = fieldObjs.names();
+        const wordList objNames
+        (
+            IOobjectList(mesh, runTime.timeName()).sortedNames()
+        );
 
         PtrList<volScalarField> vsf(objNames.size());
         PtrList<volVectorField> vvf(objNames.size());

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -60,14 +60,14 @@ const Foam::Enum
     Foam::kahipDecomp::configs
 >
 Foam::kahipDecomp::configNames
-{
+({
     { kahipDecomp::configs::FAST, "fast" },
     { kahipDecomp::configs::ECO, "eco" },
     { kahipDecomp::configs::STRONG, "strong" },
     { kahipDecomp::configs::FASTSOCIAL, "fast-social" },
     { kahipDecomp::configs::ECOSOCIAL, "eco-social" },
     { kahipDecomp::configs::STRONGSOCIAL, "strong-social" },
-};
+});
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -78,7 +78,7 @@ Foam::label Foam::kahipDecomp::decomposeSerial
     const labelUList& xadj,
     const UList<scalar>& cWeights,
     List<label>& decomp
-)
+) const
 {
     // Default setup
     enum configs kahipConfig = configs::FAST;
@@ -130,9 +130,7 @@ Foam::label Foam::kahipDecomp::decomposeSerial
         }
     }
 
-    kahipConfig =
-        configNames.lookupOrDefault("config", coeffsDict_, kahipConfig);
-
+    configNames.readIfPresent("config", coeffsDict_, kahipConfig);
     coeffsDict_.readIfPresent("imbalance", imbalance);
     coeffsDict_.readIfPresent("verbose", verbose);
 

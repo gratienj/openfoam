@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,13 @@ License
 namespace Foam
 {
     defineTypeNameAndDebug(isoSurface, 0);
+}
 
+
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+
+namespace Foam
+{
     // Helper class for slicing triangles
     class storeOp
     {
@@ -53,7 +59,8 @@ namespace Foam
             tris_.append(tri);
         }
     };
-}
+
+} // End namespace Foam
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -80,13 +87,13 @@ bool Foam::isoSurface::collocatedPatch(const polyPatch& pp)
 }
 
 
-Foam::PackedBoolList Foam::isoSurface::collocatedFaces
+Foam::bitSet Foam::isoSurface::collocatedFaces
 (
     const coupledPolyPatch& pp
 ) const
 {
     // Initialise to false
-    PackedBoolList collocated(pp.size());
+    bitSet collocated(pp.size());
 
     if (isA<processorPolyPatch>(pp))
     {
@@ -94,7 +101,7 @@ Foam::PackedBoolList Foam::isoSurface::collocatedFaces
         {
             forAll(pp, i)
             {
-                collocated[i] = 1u;
+                collocated.set(i);
             }
         }
     }
@@ -104,7 +111,7 @@ Foam::PackedBoolList Foam::isoSurface::collocatedFaces
         {
             forAll(pp, i)
             {
-                collocated[i] = 1u;
+                collocated.set(i);
             }
         }
     }
@@ -131,17 +138,17 @@ void Foam::isoSurface::syncUnseparatedPoints
     if (Pstream::parRun())
     {
         // Send
-        forAll(patches, patchi)
+        for (const polyPatch& p : patches)
         {
             if
             (
-                isA<processorPolyPatch>(patches[patchi])
-             && patches[patchi].nPoints() > 0
-             && collocatedPatch(patches[patchi])
+                isA<processorPolyPatch>(p)
+             && p.nPoints() > 0
+             && collocatedPatch(p)
             )
             {
                 const processorPolyPatch& pp =
-                    refCast<const processorPolyPatch>(patches[patchi]);
+                    refCast<const processorPolyPatch>(p);
 
                 const labelList& meshPts = pp.meshPoints();
                 const labelList& nbrPts = pp.neighbPoints();
@@ -150,7 +157,7 @@ void Foam::isoSurface::syncUnseparatedPoints
 
                 forAll(nbrPts, pointi)
                 {
-                    label nbrPointi = nbrPts[pointi];
+                    const label nbrPointi = nbrPts[pointi];
                     patchInfo[nbrPointi] = pointValues[meshPts[pointi]];
                 }
 
@@ -164,18 +171,17 @@ void Foam::isoSurface::syncUnseparatedPoints
         }
 
         // Receive and combine.
-
-        forAll(patches, patchi)
+        for (const polyPatch& p : patches)
         {
             if
             (
-                isA<processorPolyPatch>(patches[patchi])
-             && patches[patchi].nPoints() > 0
-             && collocatedPatch(patches[patchi])
+                isA<processorPolyPatch>(p)
+             && p.nPoints() > 0
+             && collocatedPatch(p)
             )
             {
                 const processorPolyPatch& pp =
-                    refCast<const processorPolyPatch>(patches[patchi]);
+                    refCast<const processorPolyPatch>(p);
 
                 pointField nbrPatchInfo(pp.nPoints());
                 {
@@ -193,7 +199,7 @@ void Foam::isoSurface::syncUnseparatedPoints
 
                 forAll(meshPts, pointi)
                 {
-                    label meshPointi = meshPts[pointi];
+                    const label meshPointi = meshPts[pointi];
                     minEqOp<point>()
                     (
                         pointValues[meshPointi],
@@ -205,12 +211,12 @@ void Foam::isoSurface::syncUnseparatedPoints
     }
 
     // Do the cyclics.
-    forAll(patches, patchi)
+    for (const polyPatch& p : patches)
     {
-        if (isA<cyclicPolyPatch>(patches[patchi]))
+        if (isA<cyclicPolyPatch>(p))
         {
             const cyclicPolyPatch& cycPatch =
-                refCast<const cyclicPolyPatch>(patches[patchi]);
+                refCast<const cyclicPolyPatch>(p);
 
             if (cycPatch.owner() && collocatedPatch(cycPatch))
             {
@@ -234,8 +240,8 @@ void Foam::isoSurface::syncUnseparatedPoints
                 forAll(coupledPoints, i)
                 {
                     const edge& e = coupledPoints[i];
-                    label p0 = meshPts[e[0]];
-                    label p1 = nbrMeshPoints[e[1]];
+                    const label p0 = meshPts[e[0]];
+                    const label p1 = nbrMeshPoints[e[1]];
 
                     minEqOp<point>()(pointValues[p0], half1Values[i]);
                     minEqOp<point>()(pointValues[p1], half0Values[i]);
@@ -254,7 +260,7 @@ void Foam::isoSurface::syncUnseparatedPoints
 
         forAll(pd.sharedPointLabels(), i)
         {
-            label meshPointi = pd.sharedPointLabels()[i];
+            const label meshPointi = pd.sharedPointLabels()[i];
             // Fill my entries in the shared points
             sharedPts[pd.sharedPointAddr()[i]] = pointValues[meshPointi];
         }
@@ -267,7 +273,7 @@ void Foam::isoSurface::syncUnseparatedPoints
         // my local information.
         forAll(pd.sharedPointLabels(), i)
         {
-            label meshPointi = pd.sharedPointLabels()[i];
+            const label meshPointi = pd.sharedPointLabels()[i];
             pointValues[meshPointi] = sharedPts[pd.sharedPointAddr()[i]];
         }
     }
@@ -280,16 +286,14 @@ Foam::scalar Foam::isoSurface::isoFraction
     const scalar s1
 ) const
 {
-    scalar d = s1-s0;
+    const scalar d = s1-s0;
 
     if (mag(d) > VSMALL)
     {
         return (iso_-s0)/d;
     }
-    else
-    {
-        return -1.0;
-    }
+
+    return -1.0;
 }
 
 
@@ -303,17 +307,19 @@ bool Foam::isoSurface::isEdgeOfFaceCut
 {
     forAll(f, fp)
     {
-        bool fpLower = (pVals[f[fp]] < iso_);
+        const bool fpLower = (pVals[f[fp]] < iso_);
+
         if
         (
-            (fpLower != ownLower)
-         || (fpLower != neiLower)
-         || (fpLower != (pVals[f[f.fcIndex(fp)]] < iso_))
+            fpLower != ownLower
+         || fpLower != neiLower
+         || fpLower != (pVals[f[f.fcIndex(fp)]] < iso_)
         )
         {
             return true;
         }
     }
+
     return false;
 }
 
@@ -334,16 +340,16 @@ void Foam::isoSurface::getNeighbour
 
     if (mesh_.isInternalFace(facei))
     {
-        label nbr = (own[facei] == celli ? nei[facei] : own[facei]);
+        const label nbr = (own[facei] == celli ? nei[facei] : own[facei]);
         nbrValue = cVals[nbr];
         nbrPoint = meshC[nbr];
     }
     else
     {
-        label bFacei = facei-mesh_.nInternalFaces();
-        label patchi = boundaryRegion[bFacei];
+        const label bFacei = facei-mesh_.nInternalFaces();
+        const label patchi = boundaryRegion[bFacei];
         const polyPatch& pp = mesh_.boundaryMesh()[patchi];
-        label patchFacei = facei-pp.start();
+        const label patchFacei = facei-pp.start();
 
         nbrValue = cVals.boundaryField()[patchi][patchFacei];
         nbrPoint = meshC.boundaryField()[patchi][patchFacei];
@@ -366,10 +372,10 @@ void Foam::isoSurface::calcCutTypes
     faceCutType_.setSize(mesh_.nFaces());
     faceCutType_ = NOTCUT;
 
-    for (label facei = 0; facei < mesh_.nInternalFaces(); facei++)
+    for (label facei = 0; facei < mesh_.nInternalFaces(); ++facei)
     {
-        // CC edge.
-        bool ownLower = (cVals[own[facei]] < iso_);
+        const scalar& ownValue = cVals[own[facei]];
+        const bool ownLower = (ownValue < iso_);
 
         scalar nbrValue;
         point nbrPoint;
@@ -384,7 +390,7 @@ void Foam::isoSurface::calcCutTypes
             nbrPoint
         );
 
-        bool neiLower = (nbrValue < iso_);
+        const bool neiLower = (nbrValue < iso_);
 
         if (ownLower != neiLower)
         {
@@ -392,8 +398,8 @@ void Foam::isoSurface::calcCutTypes
         }
         else
         {
-            // See if any mesh edge is cut by looping over all the edges of the
-            // face.
+            // Is mesh edge cut?
+            // - by looping over all the edges of the face.
             const face f = mesh_.faces()[facei];
 
             if (isEdgeOfFaceCut(pVals, f, ownLower, neiLower))
@@ -403,15 +409,14 @@ void Foam::isoSurface::calcCutTypes
         }
     }
 
-    forAll(patches, patchi)
+    for (const polyPatch& pp : patches)
     {
-        const polyPatch& pp = patches[patchi];
-
         label facei = pp.start();
 
         forAll(pp, i)
         {
-            bool ownLower = (cVals[own[facei]] < iso_);
+            const scalar& ownValue = cVals[own[facei]];
+            const bool ownLower = (ownValue < iso_);
 
             scalar nbrValue;
             point nbrPoint;
@@ -426,7 +431,7 @@ void Foam::isoSurface::calcCutTypes
                 nbrPoint
             );
 
-            bool neiLower = (nbrValue < iso_);
+            const bool neiLower = (nbrValue < iso_);
 
             if (ownLower != neiLower)
             {
@@ -434,7 +439,8 @@ void Foam::isoSurface::calcCutTypes
             }
             else
             {
-                // Mesh edge.
+                // Is mesh edge cut?
+                // - by looping over all the edges of the face.
                 const face f = mesh_.faces()[facei];
 
                 if (isEdgeOfFaceCut(pVals, f, ownLower, neiLower))
@@ -443,56 +449,64 @@ void Foam::isoSurface::calcCutTypes
                 }
             }
 
-            facei++;
+            ++facei;
         }
     }
-
-
 
     nCutCells_ = 0;
     cellCutType_.setSize(mesh_.nCells());
     cellCutType_ = NOTCUT;
 
-    for (label facei = 0; facei < mesh_.nInternalFaces(); facei++)
+
+    // Propagate internal face cuts into the cells.
+
+    for (label facei = 0; facei < mesh_.nInternalFaces(); ++facei)
     {
-        if (faceCutType_[facei] != NOTCUT)
+        if (faceCutType_[facei] == NOTCUT)
         {
-            if (cellCutType_[own[facei]] == NOTCUT)
-            {
-                cellCutType_[own[facei]] = CUT;
-                nCutCells_++;
-            }
-            if (cellCutType_[nei[facei]] == NOTCUT)
-            {
-                cellCutType_[nei[facei]] = CUT;
-                nCutCells_++;
-            }
+            continue;
+        }
+
+        if (cellCutType_[own[facei]] == NOTCUT)
+        {
+            cellCutType_[own[facei]] = CUT;
+            ++nCutCells_;
+        }
+        if (cellCutType_[nei[facei]] == NOTCUT)
+        {
+            cellCutType_[nei[facei]] = CUT;
+            ++nCutCells_;
         }
     }
-    for (label facei = mesh_.nInternalFaces(); facei < mesh_.nFaces(); facei++)
+
+
+    // Propagate boundary face cuts into the cells.
+
+    for (label facei = mesh_.nInternalFaces(); facei < mesh_.nFaces(); ++facei)
     {
-        if (faceCutType_[facei] != NOTCUT)
+        if (faceCutType_[facei] == NOTCUT)
         {
-            if (cellCutType_[own[facei]] == NOTCUT)
-            {
-                cellCutType_[own[facei]] = CUT;
-                nCutCells_++;
-            }
+            continue;
+        }
+
+        if (cellCutType_[own[facei]] == NOTCUT)
+        {
+            cellCutType_[own[facei]] = CUT;
+            ++nCutCells_;
         }
     }
 
     if (debug)
     {
-        Pout<< "isoSurface : detected " << nCutCells_
-            << " candidate cut cells (out of " << mesh_.nCells()
-            << ")." << endl;
+        Pout<< "isoSurface : candidate cut cells "
+            << nCutCells_ << " / " << mesh_.nCells() << endl;
     }
 }
 
 
 Foam::point Foam::isoSurface::calcCentre(const triSurface& s)
 {
-    // Caculate centre of surface.
+    // Calculate centre of surface.
 
     vector sum = Zero;
 
@@ -597,7 +611,7 @@ void Foam::isoSurface::calcSnappedCc
                             if (s[i] >= 0.0 && s[i] <= 0.5)
                             {
                                 otherPointSum += pt[i];
-                                nOther++;
+                                ++nOther;
                             }
                         }
                     }
@@ -671,7 +685,7 @@ void Foam::isoSurface::calcSnappedCc
 
 void Foam::isoSurface::calcSnappedPoint
 (
-    const PackedBoolList& isBoundaryPoint,
+    const bitSet& isBoundaryPoint,
     const labelList& boundaryRegion,
     const volVectorField& meshC,
     const volScalarField& cVals,
@@ -691,7 +705,7 @@ void Foam::isoSurface::calcSnappedPoint
 
     forAll(mesh_.pointFaces(), pointi)
     {
-        if (isBoundaryPoint.get(pointi) == 1)
+        if (isBoundaryPoint.test(pointi))
         {
             continue;
         }
@@ -700,10 +714,8 @@ void Foam::isoSurface::calcSnappedPoint
 
         bool anyCut = false;
 
-        forAll(pFaces, i)
+        for (const label facei : pFaces)
         {
-            label facei = pFaces[i];
-
             if (faceCutType_[facei] == CUT)
             {
                 anyCut = true;
@@ -721,12 +733,10 @@ void Foam::isoSurface::calcSnappedPoint
         label nOther = 0;
         point otherPointSum = Zero;
 
-        forAll(pFaces, pFacei)
+        for (const label facei : pFaces)
         {
             // Create points for all intersections close to point
             // (i.e. from pyramid edges)
-
-            label facei = pFaces[pFacei];
             const face& f = mesh_.faces()[facei];
             label own = mesh_.faceOwner()[facei];
 
@@ -792,7 +802,7 @@ void Foam::isoSurface::calcSnappedPoint
                 if (s[i] >= 0.0 && s[i] <= 0.5)
                 {
                     otherPointSum += pt[i];
-                    nOther++;
+                    ++nOther;
                 }
             }
         }
@@ -1070,7 +1080,7 @@ void Foam::isoSurface::trimToPlanes
 
     forAll(planes, faceI)
     {
-        const plane& pl = planes[faceI];
+        const plane& pln = planes[faceI];
 
         if (useA)
         {
@@ -1078,7 +1088,7 @@ void Foam::isoSurface::trimToPlanes
             forAll(insideOpA.tris_, i)
             {
                 const triPoints& tri = insideOpA.tris_[i];
-                triPointRef(tri).sliceWithPlane(pl, insideOpB, dop);
+                triPointRef(tri).sliceWithPlane(pln, insideOpB, dop);
             }
         }
         else
@@ -1087,7 +1097,7 @@ void Foam::isoSurface::trimToPlanes
             forAll(insideOpB.tris_, i)
             {
                 const triPoints& tri = insideOpB.tris_[i];
-                triPointRef(tri).sliceWithPlane(pl, insideOpA, dop);
+                triPointRef(tri).sliceWithPlane(pln, insideOpA, dop);
             }
         }
         useA = !useA;
@@ -1131,13 +1141,11 @@ void Foam::isoSurface::trimToBox
     }
 
     // Generate inwards pointing planes
-    PtrList<plane> planes(6);
-    const pointField pts(bb.treeBoundBox::points());
-    forAll(treeBoundBox::faces, faceI)
+    PtrList<plane> planes(treeBoundBox::faceNormals.size());
+    forAll(treeBoundBox::faceNormals, faceI)
     {
-        const face& f = treeBoundBox::faces[faceI];
         const vector& n = treeBoundBox::faceNormals[faceI];
-        planes.set(faceI, new plane(pts[f[0]], -n));
+        planes.set(faceI, new plane(bb.faceCentre(faceI), -n));
     }
 
     label nTris = triPoints.size()/3;
@@ -1266,13 +1274,7 @@ Foam::triSurface Foam::isoSurface::subsetMesh
 {
     const boolList include
     (
-        createWithValues<boolList>
-        (
-            s.size(),
-            false,
-            newToOldFaces,
-            true
-        )
+        ListOps::createWithValue<bool>(s.size(), newToOldFaces, true, false)
     );
 
     newToOldPoints.setSize(s.points().size());
@@ -1332,8 +1334,8 @@ Foam::triSurface Foam::isoSurface::subsetMesh
 
 Foam::isoSurface::isoSurface
 (
-    const volScalarField& cVals,
-    const scalarField& pVals,
+    const volScalarField& cellValues,
+    const scalarField& pointValues,
     const scalar iso,
     const bool regularise,
     const boundBox& bounds,
@@ -1341,8 +1343,8 @@ Foam::isoSurface::isoSurface
 )
 :
     MeshStorage(),
-    mesh_(cVals.mesh()),
-    pVals_(pVals),
+    mesh_(cellValues.mesh()),
+    pVals_(pointValues),
     iso_(iso),
     regularise_(regularise),
     bounds_(bounds),
@@ -1351,10 +1353,10 @@ Foam::isoSurface::isoSurface
     if (debug)
     {
         Pout<< "isoSurface:" << nl
-            << "    isoField      : " << cVals.name() << nl
+            << "    isoField      : " << cellValues.name() << nl
             << "    cell min/max  : "
-            << min(cVals.primitiveField()) << " / "
-            << max(cVals.primitiveField()) << nl
+            << min(cellValues.primitiveField()) << " / "
+            << max(cellValues.primitiveField()) << nl
             << "    point min/max : "
             << min(pVals_) << " / "
             << max(pVals_) << nl
@@ -1372,7 +1374,7 @@ Foam::isoSurface::isoSurface
     // Rewrite input volScalarField to have interpolated values
     // on separated patches.
 
-    cValsPtr_.reset(adaptPatchFields(cVals).ptr());
+    cValsPtr_.reset(adaptPatchFields(cellValues).ptr());
 
 
     // Construct cell centres field consistent with cVals
@@ -1404,12 +1406,12 @@ Foam::isoSurface::isoSurface
         // Adapt separated coupled (proc and cyclic) patches
         if (pp.coupled())
         {
-            fvPatchVectorField& pfld = const_cast<fvPatchVectorField&>
+            auto& pfld = const_cast<fvPatchVectorField&>
             (
                 meshC.boundaryField()[patchi]
             );
 
-            PackedBoolList isCollocated
+            bitSet isCollocated
             (
                 collocatedFaces(refCast<const coupledPolyPatch>(pp))
             );
@@ -1424,9 +1426,10 @@ Foam::isoSurface::isoSurface
         }
         else if (isA<emptyPolyPatch>(pp))
         {
-            typedef slicedVolVectorField::Boundary bType;
-
-            bType& bfld = const_cast<bType&>(meshC.boundaryField());
+            auto& bfld = const_cast<slicedVolVectorField::Boundary&>
+            (
+                meshC.boundaryField()
+            );
 
             // Clear old value. Cannot resize it since is a slice.
             bfld.set(patchi, nullptr);
@@ -1450,7 +1453,7 @@ Foam::isoSurface::isoSurface
 
 
     // Pre-calculate patch-per-face to avoid whichPatch call.
-    labelList boundaryRegion(mesh_.nFaces()-mesh_.nInternalFaces());
+    labelList boundaryRegion(mesh_.nBoundaryFaces());
 
     forAll(patches, patchi)
     {
@@ -1461,7 +1464,7 @@ Foam::isoSurface::isoSurface
         forAll(pp, i)
         {
             boundaryRegion[facei-mesh_.nInternalFaces()] = patchi;
-            facei++;
+            ++facei;
         }
     }
 
@@ -1469,6 +1472,38 @@ Foam::isoSurface::isoSurface
 
     // Determine if any cut through face/cell
     calcCutTypes(boundaryRegion, meshC, cValsPtr_(), pVals_);
+
+    if (debug)
+    {
+        const fvMesh& fvm = mesh_;
+
+        volScalarField debugField
+        (
+            IOobject
+            (
+                "isoSurface.cutType",
+                fvm.time().timeName(),
+                fvm.time(),
+                IOobject::NO_READ,
+                IOobject::NO_WRITE,
+                false
+            ),
+            fvm,
+            dimensionedScalar(dimless, Zero)
+        );
+
+        auto& debugFld = debugField.primitiveFieldRef();
+
+        forAll(cellCutType_, celli)
+        {
+            debugFld[celli] = cellCutType_[celli];
+        }
+
+        Pout<< "Writing cut types:"
+            << debugField.objectPath() << endl;
+
+        debugField.write();
+    }
 
 
     DynamicList<point> snappedPoints(nCutCells_);
@@ -1510,22 +1545,19 @@ Foam::isoSurface::isoSurface
     if (regularise_)
     {
         // Determine if point is on boundary.
-        PackedBoolList isBoundaryPoint(mesh_.nPoints());
+        bitSet isBoundaryPoint(mesh_.nPoints());
 
-        forAll(patches, patchi)
+        for (const polyPatch& pp : patches)
         {
             // Mark all boundary points that are not physically coupled
             // (so anything but collocated coupled patches)
 
-            if (patches[patchi].coupled())
+            if (pp.coupled())
             {
                 const coupledPolyPatch& cpp =
-                    refCast<const coupledPolyPatch>
-                    (
-                        patches[patchi]
-                    );
+                    refCast<const coupledPolyPatch>(pp);
 
-                PackedBoolList isCollocated(collocatedFaces(cpp));
+                bitSet isCollocated(collocatedFaces(cpp));
 
                 forAll(isCollocated, i)
                 {
@@ -1533,25 +1565,17 @@ Foam::isoSurface::isoSurface
                     {
                         const face& f = mesh_.faces()[cpp.start()+i];
 
-                        forAll(f, fp)
-                        {
-                            isBoundaryPoint.set(f[fp], 1);
-                        }
+                        isBoundaryPoint.set(f);
                     }
                 }
             }
             else
             {
-                const polyPatch& pp = patches[patchi];
-
                 forAll(pp, i)
                 {
                     const face& f = mesh_.faces()[pp.start()+i];
 
-                    forAll(f, fp)
-                    {
-                        isBoundaryPoint.set(f[fp], 1);
-                    }
+                    isBoundaryPoint.set(f);
                 }
             }
         }
@@ -1695,19 +1719,21 @@ Foam::isoSurface::isoSurface
     }
 
 
-    // Transfer to mesh storage
+    // Transfer to mesh storage. Note, an iso-surface has no zones
     {
+        // Recover the pointField
+        pointField pts;
+        tmpsurf.swapPoints(pts);
+
+        // Transcribe from triFace to face
         faceList faces;
         tmpsurf.triFaceFaces(faces);
 
-        // An iso-surface has no zones
-        surfZoneList zones(0);
+        tmpsurf.clearOut();
 
-        // Reset primitive data (points, faces and zones)
-        this->MeshStorage::reset
-        (
-            tmpsurf.xferPoints(), faces.xfer(), zones.xfer()
-        );
+        MeshStorage updated(std::move(pts), std::move(faces), surfZoneList());
+
+        this->MeshStorage::transfer(updated);
     }
 }
 

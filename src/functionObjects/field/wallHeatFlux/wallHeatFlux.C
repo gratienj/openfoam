@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,15 +66,18 @@ void Foam::functionObjects::wallHeatFlux::calcHeatFlux
     volScalarField& wallHeatFlux
 )
 {
-    surfaceScalarField heatFlux(fvc::interpolate(alpha)*fvc::snGrad(he));
-
     volScalarField::Boundary& wallHeatFluxBf = wallHeatFlux.boundaryFieldRef();
 
-    const surfaceScalarField::Boundary& heatFluxBf = heatFlux.boundaryField();
+    const volScalarField::Boundary& heBf = he.boundaryField();
+
+    const volScalarField::Boundary& alphaBf = alpha.boundaryField();
 
     forAll(wallHeatFluxBf, patchi)
     {
-        wallHeatFluxBf[patchi] = heatFluxBf[patchi];
+        if (!wallHeatFluxBf[patchi].coupled())
+        {
+            wallHeatFluxBf[patchi] = alphaBf[patchi]*heBf[patchi].snGrad();
+        }
     }
 
     if (foundObject<volScalarField>(qrName_))
@@ -85,7 +88,10 @@ void Foam::functionObjects::wallHeatFlux::calcHeatFlux
 
         forAll(wallHeatFluxBf, patchi)
         {
-            wallHeatFluxBf[patchi] -= radHeatFluxBf[patchi];
+            if (!wallHeatFluxBf[patchi].coupled())
+            {
+                wallHeatFluxBf[patchi] -= radHeatFluxBf[patchi];
+            }
         }
     }
 }
@@ -118,7 +124,7 @@ Foam::functionObjects::wallHeatFlux::wallHeatFlux
                 IOobject::NO_WRITE
             ),
             mesh_,
-            dimensionedScalar("0", dimMass/pow3(dimTime), 0)
+            dimensionedScalar(dimMass/pow3(dimTime), Zero)
         )
     );
 
@@ -171,9 +177,8 @@ bool Foam::functionObjects::wallHeatFlux::read(const dictionary& dict)
     {
         Info<< "    processing wall patches: " << nl;
         labelHashSet filteredPatchSet;
-        forAllConstIter(labelHashSet, patchSet_, iter)
+        for (const label patchi : patchSet_)
         {
-            label patchi = iter.key();
             if (isA<wallPolyPatch>(pbm[patchi]))
             {
                 filteredPatchSet.insert(patchi);
@@ -265,9 +270,8 @@ bool Foam::functionObjects::wallHeatFlux::write()
     const surfaceScalarField::Boundary& magSf =
         mesh_.magSf().boundaryField();
 
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        label patchi = iter.key();
         const fvPatch& pp = patches[patchi];
 
         const scalarField& hfp = wallHeatFlux.boundaryField()[patchi];

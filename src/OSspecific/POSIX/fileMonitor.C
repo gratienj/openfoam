@@ -48,11 +48,11 @@ const Foam::Enum
     Foam::fileMonitor::fileState
 >
 Foam::fileMonitor::fileStateNames_
-{
+({
     { fileState::UNMODIFIED, "unmodified" },
     { fileState::MODIFIED, "modified" },
     { fileState::DELETED, "deleted" },
-};
+});
 
 
 namespace Foam
@@ -527,9 +527,10 @@ void Foam::fileMonitor::updateStates
         {
             forAll(state_, watchFd)
             {
-                stats[watchFd] = static_cast<unsigned int>
+                stats.set
                 (
-                    localState_[watchFd]
+                    watchFd,
+                    static_cast<unsigned int>(localState_[watchFd])
                 );
             }
         }

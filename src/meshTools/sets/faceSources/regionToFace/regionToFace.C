@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2012-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,13 +37,25 @@ License
 
 namespace Foam
 {
-
-defineTypeNameAndDebug(regionToFace, 0);
-
-addToRunTimeSelectionTable(topoSetSource, regionToFace, word);
-
-addToRunTimeSelectionTable(topoSetSource, regionToFace, istream);
-
+    defineTypeNameAndDebug(regionToFace, 0);
+    addToRunTimeSelectionTable(topoSetSource, regionToFace, word);
+    addToRunTimeSelectionTable(topoSetSource, regionToFace, istream);
+    addToRunTimeSelectionTable(topoSetFaceSource, regionToFace, word);
+    addToRunTimeSelectionTable(topoSetFaceSource, regionToFace, istream);
+    addNamedToRunTimeSelectionTable
+    (
+        topoSetFaceSource,
+        regionToFace,
+        word,
+        region
+    );
+    addNamedToRunTimeSelectionTable
+    (
+        topoSetFaceSource,
+        regionToFace,
+        istream,
+        region
+    );
 }
 
 
@@ -77,9 +89,9 @@ void Foam::regionToFace::markZone
     if (Pstream::myProcNo() == proci)
     {
         const labelList& fEdges = patch.faceEdges()[facei];
-        forAll(fEdges, i)
+        for (const label edgei : fEdges)
         {
-            changedEdges.append(fEdges[i]);
+            changedEdges.append(edgei);
             changedInfo.append(zoneI);
         }
     }
@@ -112,8 +124,12 @@ void Foam::regionToFace::markZone
 
 void Foam::regionToFace::combine(topoSet& set, const bool add) const
 {
-    Info<< "    Loading subset " << setName_ << " to delimit search region."
-        << endl;
+    if (verbose_)
+    {
+        Info<< "    Loading subset " << setName_
+            << " to delimit search region." << endl;
+    }
+
     faceSet subSet(mesh_, setName_);
 
     indirectPrimitivePatch patch
@@ -149,10 +165,13 @@ void Foam::regionToFace::combine(topoSet& set, const bool add) const
     // Globally reduce
     combineReduce(ni, mappedPatchBase::nearestEqOp());
 
-    Info<< "    Found nearest face at " << ni.first().rawPoint()
-        << " on processor " << ni.second().second()
-        << " face " << ni.first().index()
-        << " distance " << Foam::sqrt(ni.second().first()) << endl;
+    if (verbose_)
+    {
+        Info<< "    Found nearest face at " << ni.first().rawPoint()
+            << " on processor " << ni.second().second()
+            << " face " << ni.first().index()
+            << " distance " << Foam::sqrt(ni.second().first()) << endl;
+    }
 
     labelList faceRegion(patch.size(), -1);
     markZone
@@ -176,7 +195,6 @@ void Foam::regionToFace::combine(topoSet& set, const bool add) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-// Construct from components
 Foam::regionToFace::regionToFace
 (
     const polyMesh& mesh,
@@ -184,41 +202,33 @@ Foam::regionToFace::regionToFace
     const point& nearPoint
 )
 :
-    topoSetSource(mesh),
+    topoSetFaceSource(mesh),
     setName_(setName),
     nearPoint_(nearPoint)
 {}
 
 
-// Construct from dictionary
 Foam::regionToFace::regionToFace
 (
     const polyMesh& mesh,
     const dictionary& dict
 )
 :
-    topoSetSource(mesh),
-    setName_(dict.lookup("set")),
-    nearPoint_(dict.lookup("nearPoint"))
+    topoSetFaceSource(mesh),
+    setName_(dict.get<word>("set")),
+    nearPoint_(dict.get<point>("nearPoint"))
 {}
 
 
-// Construct from Istream
 Foam::regionToFace::regionToFace
 (
     const polyMesh& mesh,
     Istream& is
 )
 :
-    topoSetSource(mesh),
+    topoSetFaceSource(mesh),
     setName_(checkIs(is)),
     nearPoint_(checkIs(is))
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::regionToFace::~regionToFace()
 {}
 
 
@@ -230,21 +240,25 @@ void Foam::regionToFace::applyToSet
     topoSet& set
 ) const
 {
-    if ((action == topoSetSource::NEW) || (action == topoSetSource::ADD))
+    if (action == topoSetSource::ADD || action == topoSetSource::NEW)
     {
-        Info<< "    Adding all faces of connected region of set "
-            << setName_
-            << " starting from point "
-            << nearPoint_ << " ..." << endl;
+        if (verbose_)
+        {
+            Info<< "    Adding all faces of connected region of set "
+                << setName_ << " starting from point " << nearPoint_
+                << " ..." << endl;
+        }
 
         combine(set, true);
     }
-    else if (action == topoSetSource::DELETE)
+    else if (action == topoSetSource::SUBTRACT)
     {
-        Info<< "    Removing all cells of connected region of set "
-            << setName_
-            << " starting from point "
-            << nearPoint_ << " ..." << endl;
+        if (verbose_)
+        {
+            Info<< "    Removing all cells of connected region of set "
+                << setName_ << " starting from point " << nearPoint_
+                << " ..." << endl;
+        }
 
         combine(set, false);
     }

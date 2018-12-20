@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,25 +62,6 @@ class edge
 :
     public labelPair
 {
-    // Private Member Functions
-
-        //- Insert values, using begin/end iterators.
-        template<class InputIter>
-        inline label insertMultiple
-        (
-            const InputIter begIter,
-            const InputIter endIter
-        );
-
-        //- Remove values, using begin/end iterators.
-        template<class InputIter>
-        inline label eraseMultiple
-        (
-            const InputIter begIter,
-            const InputIter endIter
-        );
-
-
 public:
 
     // Static data members
@@ -100,13 +81,13 @@ public:
         inline edge(const labelPair& pair);
 
         //- Construct from list
-        inline edge(const FixedList<label, 2>& lst);
+        inline edge(const FixedList<label, 2>& list);
 
         //- Construct from two point labels, sorted with first less-than second
         inline edge(const label from, const label to, const bool doSort);
 
         //- Construct from list, sorted with first less-than second
-        inline edge(const FixedList<label, 2>& lst, const bool doSort);
+        inline edge(const FixedList<label, 2>& list, const bool doSort);
 
         //- Construct from Istream
         inline edge(Istream& is);
@@ -114,7 +95,7 @@ public:
 
     // Member Functions
 
-      // Access
+    // Access
 
         //- Return first vertex label
         using labelPair::first;
@@ -143,7 +124,7 @@ public:
         inline edge reverseEdge() const;
 
 
-     // Queries
+    // Queries
 
         //- Return the smallest point label used by the edge
         //  No special handling of negative point labels.
@@ -152,6 +133,9 @@ public:
         //- Return the largest point label used by the edge
         //  No special handling of negative point labels.
         inline label maxVertex() const;
+
+        //- Return true if the vertices are unique and non-negative.
+        inline bool valid() const;
 
         //- Return true if point label is found in edge.
         //  Always false for a negative label.
@@ -165,24 +149,24 @@ public:
         //  Negative point labels never connect.
         inline bool connects(const edge& other) const;
 
-        //- Return vertex common with otherEdge or -1 on failure
+        //- Return vertex common with other edge or -1 on failure
         //  Negative point labels are never considered common between edges.
         inline label commonVertex(const edge& other) const;
 
-        //- Given one vertex index, return the other one.
+        //- Given the point label for one vertex, return the other one.
         //  No special treatment for negative point labels.
-        inline label otherVertex(const label index) const;
+        inline label otherVertex(const label pointLabel) const;
 
 
-     // Editing
+    // Editing
 
         //- 'Collapse' edge by marking duplicate point labels as '-1',
-        //  the lower vertex is retained.
+        //- the lower vertex is retained.
         //  Return the effective size after collapsing.
         inline label collapse();
 
 
-     // Hash-like functions
+    // Hash-like functions
 
         //- Return the number of unique, valid (non -1) point labels.
         //  Similar to a HashTable::size().
@@ -194,50 +178,60 @@ public:
         //- 'Clears' edge by setting both ends to invalid point labels.
         inline void clear();
 
+
         //- Fill any open slot with the index if it did not previously exist.
         //  Returns true on success. A negative label never inserts.
         //  Similar to a HashTable::insert().
         inline bool insert(const label index);
 
+        //- Insert values, using begin/end iterators.
+        template<class InputIter>
+        inline label insert(InputIter begIter, InputIter endIter);
+
         //- Fill open slots with the indices if they did not previously exist.
         //  Returns true on success. Negative labels never insert.
         //  Return the number of slots filled.
         //  Similar to a HashTable::insert().
-        inline label insert(const labelUList& lst);
+        inline label insert(std::initializer_list<label> list);
 
         //- Fill open slots with the indices if they did not previously exist.
         //  Returns true on success. Negative labels never insert.
         //  Return the number of slots filled.
         //  Similar to a HashTable::insert().
         template<unsigned Size>
-        inline label insert(const FixedList<label, Size>& lst);
+        inline label insert(const FixedList<label, Size>& list);
 
         //- Fill open slots with the indices if they did not previously exist.
         //  Returns true on success. Negative labels never insert.
         //  Return the number of slots filled.
         //  Similar to a HashTable::insert().
-        inline label insert(std::initializer_list<label> lst);
+        inline label insert(const labelUList& list);
+
 
         //- Remove an existing index from the edge and set its location to '-1'.
         //  Returns the number of changes. A negative label never removes.
         //  Similar to a HashTable::erase().
         inline label erase(const label index);
 
+        //- Remove values, using begin/end iterators.
+        template<class InputIter>
+        inline label erase(InputIter begIter, InputIter endIter);
+
         //- Remove existing indices from the edge and set locations to '-1'.
         //  Returns the number of changes.
-        inline label erase(const labelUList& lst);
+        inline label erase(std::initializer_list<label> list);
 
         //- Remove existing indices from the edge and set locations to '-1'.
         //  Returns the number of changes.
         template<unsigned Size>
-        inline label erase(const FixedList<label, Size>& lst);
+        inline label erase(const FixedList<label, Size>& list);
 
         //- Remove existing indices from the edge and set locations to '-1'.
         //  Returns the number of changes.
-        inline label erase(std::initializer_list<label> lst);
+        inline label erase(const labelUList& list);
 
 
-     // Geometric functions
+    // Geometric functions
 
         //- Return centre point (centroid) of the edge.
         //  No special handling of negative point labels.
@@ -260,7 +254,7 @@ public:
         inline linePointRef line(const UList<point>& pts) const;
 
 
-     // Comparison
+    // Comparison
 
         //- Compare edges
         //  \return
@@ -269,10 +263,43 @@ public:
         //  - -1: identical values, but in different order
         static inline int compare(const edge& a, const edge& b);
 
+
+    // Hashing
+
+        //- The (commutative) hash-value for edge
+        inline unsigned hashval(unsigned seed=0) const
+        {
+            if (first() < second())
+            {
+                seed = Foam::Hash<label>()(first(), seed);
+                seed = Foam::Hash<label>()(second(), seed);
+            }
+            else
+            {
+                seed = Foam::Hash<label>()(second(), seed);
+                seed = Foam::Hash<label>()(first(), seed);
+            }
+            return seed;
+        }
+
+        //- Hashing function class for edge (commutative)
+        //  Also useful for inheritance in sub-classes
+        template<class HashT=Foam::Hash<label>>
+        struct Hash
+        {
+            inline unsigned operator()(const edge& obj, unsigned seed=0) const
+            {
+                return obj.hashval(seed);
+            }
+        };
 };
 
 
-// * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * * //
+
+// Edges are a pair of labels - thus contiguous
+template<> inline bool contiguous<edge>()  {return true;}
+
 
 //- Return reverse of an edge
 inline edge reverse(const edge& e)
@@ -281,46 +308,24 @@ inline edge reverse(const edge& e)
 }
 
 
+//- Hash specialization for edge, using a commutative (incremental) hash.
+template<>
+struct Hash<edge>
+{
+    inline unsigned operator()(const edge& e, unsigned seed=0) const
+    {
+        return e.hashval(seed);
+    }
+};
+
+
+// * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * * //
+
 //- Compare edges for equal content, ignoring orientation
 inline bool operator==(const edge& a, const edge& b);
 
 //- Compare edges for non-equal content, ignoring orientation
 inline bool operator!=(const edge& a, const edge& b);
-
-
-//- Hash specialization for hashing edges - a commutative hash value.
-//  Hash incrementally.
-template<>
-inline unsigned Hash<edge>::operator()(const edge& e, unsigned seed) const
-{
-    unsigned val = seed;
-
-    if (e.first() < e.second())
-    {
-        val = Hash<label>()(e.first(), val);
-        val = Hash<label>()(e.second(), val);
-    }
-    else
-    {
-        val = Hash<label>()(e.second(), val);
-        val = Hash<label>()(e.first(), val);
-    }
-
-    return val;
-}
-
-
-//- Hash specialization for hashing edges - a commutative hash value.
-//  Hash incrementally.
-template<>
-inline unsigned Hash<edge>::operator()(const edge& e) const
-{
-    return Hash<edge>()(e, 0);
-}
-
-// Edges are a pair of labels - thus contiguous
-template<>
-inline bool contiguous<edge>()  {return true;}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,14 +49,12 @@ class countstreambuf
 :
     public std::streambuf
 {
-    // Private data
-
-        //- The number of bytes
-        std::streamsize size_;
+    //- The number of bytes counted
+    std::streamsize size_;
 
 protected:
 
-    //- Simply handle output counting via overflow
+    //- Handle output counting via overflow
     virtual int overflow(int c = EOF)
     {
         if (c != EOF)
@@ -79,25 +77,25 @@ protected:
         return 0;
     }
 
-
 public:
 
-    // Constructors
+    //- Construct null, or with precount size
+    countstreambuf(std::streamsize precount=0)
+    :
+        size_(precount)
+    {}
 
-        //- Construct null, or with precount size
-        countstreambuf(std::streamsize precount=0)
-        :
-            size_(precount)
-        {}
+    //- \return The number of bytes counted
+    std::streamsize size() const
+    {
+        return size_;
+    }
 
-
-    // Access
-
-        //- Number of bytes counted
-        std::streamsize size() const
-        {
-            return size_;
-        }
+    //- Some information about the number of bytes counted
+    inline void printBufInfo(Ostream& os) const
+    {
+        os << "count=" << size_;
+    }
 };
 
 
@@ -105,58 +103,42 @@ public:
                         Class ocountstream Declaration
 \*---------------------------------------------------------------------------*/
 
-//- Trivial output stream for calculating byte counts
-//  Since all output values are discarded, it can also be used as a /dev/null
-//  output buffer as well
+//- Trivial output stream for calculating byte counts.
+//  Since all output values are discarded, it can be used as a /dev/null
+//  output buffer as well.
 class ocountstream
 :
     virtual public std::ios,
+    protected countstreambuf,
     public std::ostream
 {
-    // Private data
-
-    countstreambuf buf_;
-
 public:
 
-    // Constructors
-
-        //- Construct null
-        ocountstream()
-        :
-            std::ostream(&buf_)
-        {}
-
-
-    // Member Functions
-
-      // Access
-
-        //- This hides both signatures of std::basic_ios::rdbuf()
-        countstreambuf* rdbuf()
-        {
-            return &buf_;
-        }
+    //- Construct null
+    ocountstream()
+    :
+        countstreambuf(),
+        std::ostream(static_cast<countstreambuf*>(this))
+    {}
 
 
-        //- Get number of bytes counted
-        std::streamsize size() const
-        {
-            return buf_.size();
-        }
+    //- \return The number of bytes counted
+    using countstreambuf::size;
 
-
-        //- Rewind the stream, reset the count
-        void rewind()
-        {
-            buf_.pubseekpos(0);
-            clear();    // for safety, clear any old errors
-        }
+    //- Rewind the stream, reset the count
+    void rewind()
+    {
+        this->pubseekpos(0, std::ios_base::out);
+        clear(); // for safety, clear any old errors
+    }
 };
 
 
+namespace Detail
+{
+
 /*---------------------------------------------------------------------------*\
-                    Class OCountStreamAllocator Declaration
+                Class Detail::OCountStreamAllocator Declaration
 \*---------------------------------------------------------------------------*/
 
 //- An stream/stream-buffer allocator for counting
@@ -189,7 +171,7 @@ protected:
 
         void printBufInfo(Ostream& os) const
         {
-            os << "count=" << buf_.size();
+            buf_.printBufInfo(os);
         }
 
 public:
@@ -210,6 +192,8 @@ public:
         }
 };
 
+} // End namespace Detail
+
 
 /*---------------------------------------------------------------------------*\
                         Class OCountStream Declaration
@@ -218,10 +202,10 @@ public:
 //- An output stream for calculating byte counts
 class OCountStream
 :
-    public OCountStreamAllocator,
+    public Detail::OCountStreamAllocator,
     public OSstream
 {
-    typedef OCountStreamAllocator allocator_type;
+    typedef Detail::OCountStreamAllocator allocator_type;
 
 public:
 
@@ -246,7 +230,7 @@ public:
         {}
 
 
-    // Member functions
+    // Member Functions
 
         //- Rewind the stream, reset the count, clearing any old errors
         virtual void rewind()

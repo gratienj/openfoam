@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,6 +24,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "bool.H"
+#include "Switch.H"
+#include "error.H"
+#include "IOstreams.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -43,5 +46,28 @@ Foam::pTraits<bool>::pTraits(Istream& is)
 {
     is >> p_;
 }
+
+
+Foam::Istream& Foam::operator>>(Istream& is, bool& b)
+{
+    b = static_cast<bool>(Switch(is));
+    return is;
+}
+
+
+Foam::Ostream& Foam::operator<<(Ostream& os, const bool b)
+{
+    // Emit as label (not byte etc) for proper send/receive in parallel
+    os.write(label(b));
+    os.check(FUNCTION_NAME);
+    return os;
+}
+
+
+bool Foam::readBool(Istream& is)
+{
+    return static_cast<bool>(Switch(is));
+}
+
 
 // ************************************************************************* //

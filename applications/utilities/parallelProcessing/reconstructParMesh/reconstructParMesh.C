@@ -98,15 +98,12 @@ autoPtr<faceCoupleInfo> determineCoupledFaces
 {
     if (fullMatch || masterMesh.nCells() == 0)
     {
-        return autoPtr<faceCoupleInfo>
+        return autoPtr<faceCoupleInfo>::New
         (
-            new faceCoupleInfo
-            (
-                masterMesh,
-                meshToAdd,
-                mergeDist,      // Absolute merging distance
-                true            // Matching faces identical
-            )
+            masterMesh,
+            meshToAdd,
+            mergeDist,      // Absolute merging distance
+            true            // Matching faces identical
         );
     }
     else
@@ -215,20 +212,17 @@ autoPtr<faceCoupleInfo> determineCoupledFaces
         }
         addFaces.shrink();
 
-        return autoPtr<faceCoupleInfo>
+        return autoPtr<faceCoupleInfo>::New
         (
-            new faceCoupleInfo
-            (
-                masterMesh,
-                masterFaces,
-                meshToAdd,
-                addFaces,
-                mergeDist,      // Absolute merging distance
-                true,           // Matching faces identical?
-                false,          // If perfect match are faces already ordered
-                                // (e.g. processor patches)
-                false           // are faces each on separate patch?
-            )
+            masterMesh,
+            masterFaces,
+            meshToAdd,
+            addFaces,
+            mergeDist,      // Absolute merging distance
+            true,           // Matching faces identical?
+            false,          // If perfect match are faces already ordered
+                            // (e.g. processor patches)
+            false           // are faces each on separate patch?
         );
     }
 }
@@ -257,7 +251,7 @@ autoPtr<mapPolyMesh> mergeSharedPoints
 
     if (returnReduce(pointToMaster.size(), sumOp<label>()) == 0)
     {
-        return autoPtr<mapPolyMesh>(nullptr);
+        return nullptr;
     }
 
     polyTopoChange meshMod(mesh);
@@ -268,7 +262,7 @@ autoPtr<mapPolyMesh> mergeSharedPoints
     autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false, true);
 
     // Update fields. No inflation, parallel sync.
-    mesh.updateMesh(map);
+    mesh.updateMesh(map());
 
     // pointProcAddressing give indices into the master mesh so adapt them
     // for changed point numbering.
@@ -427,7 +421,7 @@ void writeCellDistance
                 IOobject::AUTO_WRITE
             ),
             masterMesh,
-            dimensionedScalar("cellDist", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             extrapolatedCalculatedFvPatchScalarField::typeName
         );
 
@@ -453,29 +447,29 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "reconstruct a mesh using geometric information only"
+        "Reconstruct a mesh using geometric information only"
     );
 
     // Enable -constant ... if someone really wants it
     // Enable -withZero to prevent accidentally trashing the initial fields
-    timeSelector::addOptions(true, true);
+    timeSelector::addOptions(true, true); // constant(true), zero(true)
+
     argList::noParallel();
     argList::addOption
     (
         "mergeTol",
         "scalar",
-        "specify the merge distance relative to the bounding box size "
-        "(default 1e-7)"
+        "The merge distance relative to the bounding box size (default 1e-7)"
     );
     argList::addBoolOption
     (
         "fullMatch",
-        "do (slower) geometric matching on all boundary faces"
+        "Do (slower) geometric matching on all boundary faces"
     );
     argList::addBoolOption
     (
         "cellDist",
-        "write cell distribution as a labelList - for use with 'manual' "
+        "Write cell distribution as a labelList - for use with 'manual' "
         "decomposition method or as a volScalarField for post-processing."
     );
 
@@ -504,7 +498,7 @@ int main(int argc, char *argv[])
 
     if
     (
-        args.optionReadIfPresent("region", regionName)
+        args.readIfPresent("region", regionName)
      && regionName != polyMesh::defaultRegion
     )
     {
@@ -512,8 +506,7 @@ int main(int argc, char *argv[])
         Info<< "Operating on region " << regionName << nl << endl;
     }
 
-    scalar mergeTol = defaultMergeTol;
-    args.optionReadIfPresent("mergeTol", mergeTol);
+    const scalar mergeTol = args.opt<scalar>("mergeTol", defaultMergeTol);
 
     scalar writeTol = Foam::pow(10.0, -scalar(IOstream::defaultPrecision()));
 
@@ -534,7 +527,8 @@ int main(int argc, char *argv[])
     }
 
 
-    const bool fullMatch = args.optionFound("fullMatch");
+    const bool fullMatch = args.found("fullMatch");
+    const bool writeCellDist = args.found("cellDist");
 
     if (fullMatch)
     {
@@ -546,13 +540,9 @@ int main(int argc, char *argv[])
             << nl << "This assumes a correct decomposition." << endl;
     }
 
-    bool writeCellDist = args.optionFound("cellDist");
-
-
     label nProcs = fileHandler().nProcs(args.path());
 
     Info<< "Found " << nProcs << " processor directories" << nl << endl;
-
 
     // Read all time databases
     PtrList<Time> databases(nProcs);
@@ -560,7 +550,7 @@ int main(int argc, char *argv[])
     forAll(databases, proci)
     {
         Info<< "Reading database "
-            << args.caseName()/fileName(word("processor") + name(proci))
+            << args.caseName()/("processor" + Foam::name(proci))
             << endl;
 
         databases.set
@@ -570,7 +560,7 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 args.rootPath(),
-                args.caseName()/fileName(word("processor") + name(proci))
+                args.caseName()/("processor" + Foam::name(proci))
             )
         );
     }
@@ -661,9 +651,7 @@ int main(int argc, char *argv[])
                             runTime,
                             IOobject::NO_READ
                         ),
-                        xferCopy(pointField()),
-                        xferCopy(faceList()),
-                        xferCopy(cellList())
+                        Zero
                     )
                 );
 
@@ -702,7 +690,7 @@ int main(int argc, char *argv[])
                 (
                     masterMesh[proci],
                     meshToAdd,
-                    couples
+                    couples()
                 );
 
                 // Added processor
@@ -741,7 +729,7 @@ int main(int argc, char *argv[])
                     (
                         masterMesh[proci],
                         masterMesh[next],
-                        couples
+                        couples()
                     );
 
                     // Processors that were already in masterMesh

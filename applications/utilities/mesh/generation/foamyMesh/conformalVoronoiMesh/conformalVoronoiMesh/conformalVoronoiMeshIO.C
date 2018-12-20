@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -115,7 +115,7 @@ void Foam::conformalVoronoiMesh::writeMesh(const fileName& instance)
         wordList patchNames;
         PtrList<dictionary> patchDicts;
         pointField cellCentres;
-        PackedBoolList boundaryFacesToRemove;
+        bitSet boundaryFacesToRemove;
 
         calcDualMesh
         (
@@ -154,7 +154,7 @@ void Foam::conformalVoronoiMesh::writeMesh(const fileName& instance)
         forAll(dualPatchStarts, patchi)
         {
             dualPatchStarts[patchi] =
-                readLabel(patchDicts[patchi].lookup("startFace"));
+                patchDicts[patchi].get<label>("startFace");
         }
     }
 
@@ -377,7 +377,7 @@ void Foam::conformalVoronoiMesh::writeMesh(const fileName& instance)
 //
 //        Info<< nl << "Writing tetDualMesh to " << instance << endl;
 //
-//        PackedBoolList boundaryFacesToRemove;
+//        bitSet boundaryFacesToRemove;
 //        writeMesh
 //        (
 //            "tetDualMesh",
@@ -404,16 +404,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::conformalVoronoiMesh::createDummyMesh
     const PtrList<dictionary>& patchDicts
 ) const
 {
-    autoPtr<fvMesh> meshPtr
-    (
-        new fvMesh
-        (
-            io,
-            xferCopy(pointField()),
-            xferCopy(faceList()),
-            xferCopy(cellList())
-        )
-    );
+    auto meshPtr = autoPtr<fvMesh>::New(io, Zero);
     fvMesh& mesh = meshPtr();
 
     List<polyPatch*> patches(patchDicts.size());
@@ -424,7 +415,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::conformalVoronoiMesh::createDummyMesh
         (
             patchDicts.set(patchi)
          && (
-                word(patchDicts[patchi].lookup("type"))
+                patchDicts[patchi].get<word>("type")
              == processorPolyPatch::typeName
             )
         )
@@ -435,8 +426,8 @@ Foam::autoPtr<Foam::fvMesh> Foam::conformalVoronoiMesh::createDummyMesh
                 0,          //patchStarts[p],
                 patchi,
                 mesh.boundaryMesh(),
-                readLabel(patchDicts[patchi].lookup("myProcNo")),
-                readLabel(patchDicts[patchi].lookup("neighbProcNo")),
+                patchDicts[patchi].get<label>("myProcNo"),
+                patchDicts[patchi].get<label>("neighbProcNo"),
                 coupledPolyPatch::COINCIDENTFULLMATCH
             );
         }
@@ -444,7 +435,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::conformalVoronoiMesh::createDummyMesh
         {
             patches[patchi] = polyPatch::New
             (
-                patchDicts[patchi].lookup("type"),
+                patchDicts[patchi].get<word>("type"),
                 patchNames[patchi],
                 0,          //patchSizes[p],
                 0,          //patchStarts[p],
@@ -478,16 +469,16 @@ void Foam::conformalVoronoiMesh::checkProcessorPatchesMatch
         (
             patchDicts.set(patchi)
          && (
-                word(patchDicts[patchi].lookup("type"))
+                patchDicts[patchi].get<word>("type")
              == processorPolyPatch::typeName
             )
         )
         {
             const label procNeighb =
-                readLabel(patchDicts[patchi].lookup("neighbProcNo"));
+                patchDicts[patchi].get<label>("neighbProcNo");
 
             procPatchSizes[Pstream::myProcNo()][procNeighb]
-                = readLabel(patchDicts[patchi].lookup("nFaces"));
+                = patchDicts[patchi].get<label>("nFaces");
         }
     }
 
@@ -619,23 +610,6 @@ void Foam::conformalVoronoiMesh::reorderProcessorPatches
     );
     const fvMesh& sortMesh = sortMeshPtr();
 
-    // Change the transform type on processors to coincident full match.
-//    forAll(sortMesh.boundaryMesh(), patchi)
-//    {
-//        const polyPatch& patch = sortMesh.boundaryMesh()[patchi];
-//
-//        if (isA<processorPolyPatch>(patch))
-//        {
-//            const processorPolyPatch& cpPatch
-//                = refCast<const processorPolyPatch>(patch);
-//
-//            processorPolyPatch& pPatch
-//                = const_cast<processorPolyPatch&>(cpPatch);
-//
-//            pPatch.transform() = coupledPolyPatch::COINCIDENTFULLMATCH;
-//        }
-//    }
-
     // Rotation on new faces.
     labelList rotation(faces.size(), label(0));
     labelList faceMap(faces.size(), label(-1));
@@ -657,8 +631,8 @@ void Foam::conformalVoronoiMesh::reorderProcessorPatches
                     SubList<face>
                     (
                         faces,
-                        readLabel(patchDicts[patchi].lookup("nFaces")),
-                        readLabel(patchDicts[patchi].lookup("startFace"))
+                        patchDicts[patchi].get<label>("nFaces"),
+                        patchDicts[patchi].get<label>("startFace")
                     ),
                     points
                 )
@@ -680,9 +654,10 @@ void Foam::conformalVoronoiMesh::reorderProcessorPatches
         if (isA<processorPolyPatch>(pp))
         {
             const label nPatchFaces =
-                readLabel(patchDicts[patchi].lookup("nFaces"));
+                patchDicts[patchi].get<label>("nFaces");
+
             const label patchStartFace =
-                readLabel(patchDicts[patchi].lookup("startFace"));
+                patchDicts[patchi].get<label>("startFace");
 
             labelList patchFaceMap(nPatchFaces, label(-1));
             labelList patchFaceRotation(nPatchFaces, label(0));
@@ -782,7 +757,7 @@ void Foam::conformalVoronoiMesh::writeMesh
     const wordList& patchNames,
     const PtrList<dictionary>& patchDicts,
     const pointField& cellCentres,
-    PackedBoolList& boundaryFacesToRemove
+    bitSet& boundaryFacesToRemove
 ) const
 {
     if (foamyHexMeshControls().objOutput())
@@ -795,7 +770,7 @@ void Foam::conformalVoronoiMesh::writeMesh
         );
     }
 
-    const label nInternalFaces = readLabel(patchDicts[0].lookup("startFace"));
+    const label nInternalFaces = patchDicts[0].get<label>("startFace");
 
     reorderPoints(points, boundaryPts, faces, nInternalFaces);
 
@@ -827,10 +802,10 @@ void Foam::conformalVoronoiMesh::writeMesh
             IOobject::NO_READ,
             IOobject::AUTO_WRITE
         ),
-        xferMove(points),
-        xferMove(faces),
-        xferMove(owner),
-        xferMove(neighbour)
+        std::move(points),
+        std::move(faces),
+        std::move(owner),
+        std::move(neighbour)
     );
 
     Info<< indent << "Adding patches to mesh" << endl;
@@ -841,13 +816,13 @@ void Foam::conformalVoronoiMesh::writeMesh
 
     forAll(patches, p)
     {
-        label totalPatchSize = readLabel(patchDicts[p].lookup("nFaces"));
+        label totalPatchSize = patchDicts[p].get<label>("nFaces");
 
         if
         (
             patchDicts.set(p)
          && (
-                word(patchDicts[p].lookup("type"))
+                patchDicts[p].get<word>("type")
              == processorPolyPatch::typeName
             )
         )
@@ -855,8 +830,7 @@ void Foam::conformalVoronoiMesh::writeMesh
             const_cast<dictionary&>(patchDicts[p]).set
             (
                 "transform",
-                "noOrdering"
-                //"coincidentFullMatch"
+                "coincidentFullMatch"
             );
 
             // Do not create empty processor patches
@@ -958,18 +932,7 @@ void Foam::conformalVoronoiMesh::writeMesh
         orEqOp<unsigned int>()
     );
 
-    labelList addr(boundaryFacesToRemove.count());
-    label count = 0;
-
-    forAll(boundaryFacesToRemove, facei)
-    {
-        if (boundaryFacesToRemove[facei])
-        {
-            addr[count++] = facei;
-        }
-    }
-
-    addr.setSize(count);
+    labelList addr(boundaryFacesToRemove.toc());
 
     faceSet indirectPatchFaces
     (
@@ -1133,7 +1096,7 @@ void Foam::conformalVoronoiMesh::writeCellSizes
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("cellSize", dimLength, 0),
+            dimensionedScalar(dimLength, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
 
@@ -1159,7 +1122,7 @@ void Foam::conformalVoronoiMesh::writeCellSizes
         //         IOobject::AUTO_WRITE
         //     ),
         //     mesh,
-        //     dimensionedScalar("cellVolume", dimLength, 0),
+        //     dimensionedScalar(dimLength, Zero),
         //     zeroGradientFvPatchScalarField::typeName
         // );
 
@@ -1178,7 +1141,7 @@ void Foam::conformalVoronoiMesh::writeCellSizes
         //         IOobject::AUTO_WRITE
         //     ),
         //     mesh,
-        //     dimensionedScalar("cellVolume", dimVolume, 0),
+        //     dimensionedScalar(dimVolume, Zero),
         //     zeroGradientFvPatchScalarField::typeName
         // );
 
@@ -1197,7 +1160,7 @@ void Foam::conformalVoronoiMesh::writeCellSizes
         //         IOobject::AUTO_WRITE
         //     ),
         //     mesh,
-        //     dimensionedScalar("cellSize", dimLength, 0),
+        //     dimensionedScalar(dimLength, Zero),
         //     zeroGradientFvPatchScalarField::typeName
         // );
 
@@ -1243,7 +1206,7 @@ void Foam::conformalVoronoiMesh::writeCellSizes
     //             IOobject::AUTO_WRITE
     //         ),
     //         ptMesh,
-    //         dimensionedScalar("ptTargetCellSize", dimLength, 0),
+    //         dimensionedScalar(dimLength, Zero),
     //         pointPatchVectorField::calculatedType()
     //     );
 
@@ -1386,15 +1349,10 @@ Foam::labelHashSet Foam::conformalVoronoiMesh::findRemainingProtrusionSet
         mesh.nCells()/1000
     );
 
-    forAllConstIter(labelHashSet, protrudingBoundaryPoints, iter)
+    for (const label pointi : protrudingBoundaryPoints)
     {
-        const label pointi = iter.key();
         const labelList& pCells = mesh.pointCells()[pointi];
-
-        forAll(pCells, pCI)
-        {
-            protrudingCells.insert(pCells[pCI]);
-        }
+        protrudingCells.insert(pCells);
     }
 
     label protrudingCellsSize = protrudingCells.size();

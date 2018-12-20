@@ -28,7 +28,7 @@ Group
     grpLagrangianSolvers
 
 Description
-    Steady state solver for compressible, turbulent flow with coal particle
+    Steady-state solver for compressible, turbulent flow with coal particle
     clouds and optional sources/constraints.
 
 \*---------------------------------------------------------------------------*/
@@ -36,7 +36,8 @@ Description
 #include "fvCFD.H"
 #include "turbulentFluidThermoModel.H"
 #include "coalCloud.H"
-#include "rhoCombustionModel.H"
+#include "rhoReactionThermo.H"
+#include "CombustionModel.H"
 #include "radiationModel.H"
 #include "IOporosityModelList.H"
 #include "fvOptions.H"
@@ -48,9 +49,16 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Steady-state solver for compressible, turbulent flow"
+        " with coal particle clouds and optional sources/constraints."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
@@ -83,9 +91,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

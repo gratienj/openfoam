@@ -244,7 +244,7 @@ tmp<volScalarField> calcNut
         // Correct nut
         turbulence->validate();
 
-        return tmp<volScalarField>(new volScalarField(turbulence->nut()));
+        return tmp<volScalarField>::New(turbulence->nut());
     }
     else
     {
@@ -264,7 +264,7 @@ tmp<volScalarField> calcNut
         // Correct nut
         turbulence->validate();
 
-        return tmp<volScalarField>(new volScalarField(turbulence->nut()));
+        return tmp<volScalarField>::New(turbulence->nut());
     }
 }
 
@@ -273,8 +273,8 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "apply a simplified boundary-layer model to the velocity and\n"
-        "turbulence fields based on the 1/7th power-law."
+        "Apply a simplified boundary-layer model to the velocity and"
+        " turbulence fields based on the 1/7th power-law."
     );
 
     #include "addRegionOption.H"
@@ -283,13 +283,13 @@ int main(int argc, char *argv[])
     (
         "ybl",
         "scalar",
-        "specify the boundary-layer thickness"
+        "Specify the boundary-layer thickness"
     );
     argList::addOption
     (
         "Cbl",
         "scalar",
-        "boundary-layer thickness as Cbl * mean distance to wall"
+        "Boundary-layer thickness as Cbl * mean distance to wall"
     );
     argList::addBoolOption
     (
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 
     #include "setRootCase.H"
 
-    if (!args.optionFound("ybl") && !args.optionFound("Cbl"))
+    if (!args.found("ybl") && !args.found("Cbl"))
     {
         FatalErrorInFunction
             << "Neither option 'ybl' or 'Cbl' have been provided to calculate "
@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
             << "Please choose either 'ybl' OR 'Cbl'."
             << exit(FatalError);
     }
-    else if (args.optionFound("ybl") && args.optionFound("Cbl"))
+    else if (args.found("ybl") && args.found("Cbl"))
     {
         FatalErrorInFunction
             << "Both 'ybl' and 'Cbl' have been provided to calculate "
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
             << exit(FatalError);
     }
 
-    bool writeNut = args.optionFound("write-nut");
+    const bool writeNut = args.found("write-nut");
 
     #include "createTime.H"
     #include "createNamedMesh.H"
@@ -374,9 +374,8 @@ int main(int argc, char *argv[])
     Info<< "Writing U\n" << endl;
     U.write();
 
-    Info<< nl << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-        << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
+    Info<< nl;
+    runTime.printExecutionTime(Info);
 
     Info<< "End\n" << endl;
 

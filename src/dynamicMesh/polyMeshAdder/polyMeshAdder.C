@@ -891,7 +891,7 @@ void Foam::polyMeshAdder::mergePointZones
     // Zone(s) per point. Two levels: if only one zone
     // stored in pointToZone. Any extra stored in additionalPointToZones.
     // This is so we only allocate labelLists per point if absolutely
-    // necesary.
+    // necessary.
     labelList pointToZone(nAllPoints, -1);
     labelListList addPointToZones(nAllPoints);
 
@@ -1216,7 +1216,7 @@ void Foam::polyMeshAdder::mergeCellZones
     // Zone(s) per cell. Two levels: if only one zone
     // stored in cellToZone. Any extra stored in additionalCellToZones.
     // This is so we only allocate labelLists per cell if absolutely
-    // necesary.
+    // necessary.
     labelList cellToZone(nAllCells, -1);
     labelListList addCellToZones(nAllCells);
 
@@ -1645,18 +1645,15 @@ Foam::autoPtr<Foam::polyMesh> Foam::polyMeshAdder::add
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // Construct mesh
-    autoPtr<polyMesh> tmesh
+    auto meshPtr = autoPtr<polyMesh>::New
     (
-        new polyMesh
-        (
-            io,
-            xferMove(allPoints),
-            xferMove(allFaces),
-            xferMove(allOwner),
-            xferMove(allNeighbour)
-        )
+        io,
+        std::move(allPoints),
+        std::move(allFaces),
+        std::move(allOwner),
+        std::move(allNeighbour)
     );
-    polyMesh& mesh = tmesh();
+    polyMesh& mesh = *meshPtr;
 
     // Add zones to new mesh.
     addZones
@@ -1676,7 +1673,7 @@ Foam::autoPtr<Foam::polyMesh> Foam::polyMeshAdder::add
     // Add patches to new mesh
     mesh.addPatches(allPatches);
 
-    return tmesh;
+    return meshPtr;
 }
 
 
@@ -1965,10 +1962,10 @@ Foam::autoPtr<Foam::mapAddedPolyMesh> Foam::polyMeshAdder::add
     mesh0.resetMotion();    // delete any oldPoints.
     mesh0.resetPrimitives
     (
-        xferMove(allPoints),
-        xferMove(allFaces),
-        xferMove(allOwner),
-        xferMove(allNeighbour),
+        autoPtr<pointField>::New(std::move(allPoints)),
+        autoPtr<faceList>::New(std::move(allFaces)),
+        autoPtr<labelList>::New(std::move(allOwner)),
+        autoPtr<labelList>::New(std::move(allNeighbour)),
         patchSizes,     // size
         patchStarts,    // patchstarts
         validBoundary   // boundary valid?

@@ -44,10 +44,10 @@ Usage
             nPhi        4;          // azimuthal angles in PI/2 on X-Y.
                                     //(from Y to X)
             nTheta      0;          // polar angles in PI (from Z to X-Y plane)
-            convergence 1e-3;       // convergence criteria for radiation
-                                    //iteration
+            tolerance   1e-3;       // convergence tolerance for radiation
+                                    // iteration
             maxIter     4;          // maximum number of iterations
-             meshOrientation    (1 1 1); //Mesh ortientation used for 2D and 1D
+            meshOrientation    (1 1 1); //Mesh orientation used for 2D and 1D
         }
 
         solverFreq   1; // Number of flow iterations per radiation iteration
@@ -106,10 +106,10 @@ class fvDOM
         //- Total radiative heat flux [W/m2]
         volScalarField qr_;
 
-         //- Emmited radiative heat flux [W/m2]
+         //- Emmitted radiative heat flux [W/m2]
         volScalarField qem_;
 
-        //- Incidet radiative heat flux [W/m2]
+        //- Incident radiative heat flux [W/m2]
         volScalarField qin_;
 
         //- Total absorption coefficient [1/m]
@@ -136,8 +136,8 @@ class fvDOM
         //- List of pointers to radiative intensity rays
         PtrList<radiativeIntensityRay> IRay_;
 
-        //- Convergence criterion
-        scalar convergence_;
+        //- Convergence tolerance
+        scalar tolerance_;
 
         //- Maximum number of iterations
         label maxIter_;
@@ -160,13 +160,13 @@ class fvDOM
         //- Initialise
         void initialise();
 
-        //- Disallow default bitwise copy construct
-        fvDOM(const fvDOM&);
+        //- No copy construct
+        fvDOM(const fvDOM&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const fvDOM&);
+        //- No copy assignment
+        void operator=(const fvDOM&) = delete;
 
-        //- Update nlack body emission
+        //- Update black body emission
         void updateBlackBodyEmission();
 
 

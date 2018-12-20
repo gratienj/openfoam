@@ -28,7 +28,7 @@ Group
     grpPostProcessingUtilities
 
 Description
-    Converts polyMesh results to tetDualMesh.
+    Convert polyMesh results to tetDualMesh.
 
 \*---------------------------------------------------------------------------*/
 
@@ -62,7 +62,7 @@ void ReadAndMapFields
     tetFields.setSize(fieldObjects.size());
 
     label i = 0;
-    forAllConstIter(IOobjectList, fieldObjects, iter)
+    forAllConstIters(fieldObjects, iter)
     {
         Info<< "Converting " << ReadGeoField::typeName << ' ' << iter.key()
             << endl;
@@ -85,12 +85,7 @@ void ReadAndMapFields
                     readField.registerObject()
                 ),
                 pointMesh::New(tetDualMesh),
-                dimensioned<Type>
-                (
-                    "zero",
-                    readField.dimensions(),
-                    Zero
-                )
+                dimensioned<Type>(readField.dimensions(), Zero)
             )
         );
 
@@ -143,10 +138,13 @@ void ReadAndMapFields
 }
 
 
-
-
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Convert polyMesh results to tetDualMesh"
+    );
+
     #include "addOverwriteOption.H"
     #include "addTimeOptions.H"
 
@@ -157,9 +155,8 @@ int main(int argc, char *argv[])
     #include "checkTimeOptions.H"
     runTime.setTime(Times[startTime], startTime);
 
-
     // Read the mesh
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     // Read the tetDualMesh
     Info<< "Create tetDualMesh for time = "

@@ -44,7 +44,7 @@ namespace vtk
 {
 
 /*---------------------------------------------------------------------------*\
-                       Class base64Formatter Declaration
+                    Class vtk::base64Formatter Declaration
 \*---------------------------------------------------------------------------*/
 
 class base64Formatter
@@ -59,10 +59,10 @@ class base64Formatter
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         base64Formatter(const base64Formatter&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const base64Formatter&) = delete;
 
 
@@ -74,7 +74,7 @@ public:
         base64Formatter(std::ostream& os);
 
 
-    //- Destructor
+    //- Destructor. Closes/flushes the underlying layer.
     virtual ~base64Formatter();
 
 

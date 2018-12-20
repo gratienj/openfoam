@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2012 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,6 +24,29 @@ License
 \*---------------------------------------------------------------------------*/
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+inline void Foam::faceAreaIntersect::triangleFan
+(
+    const face& f,
+    DynamicList<face>& faces
+)
+{
+    if (f.size() > 2)
+    {
+        const label v0 = 0;
+
+        face indices(3);
+
+        for (label i = 1; i < f.size() - 1; ++i)
+        {
+            indices[0] = f[v0];
+            indices[1] = f[i];
+            indices[2] = f[i + 1];
+            faces.append(indices);
+        }
+    }
+}
+
 
 inline void Foam::faceAreaIntersect::setTriPoints
 (
@@ -67,29 +90,6 @@ inline Foam::triPoints Foam::faceAreaIntersect::getTriPoints
 }
 
 
-inline void Foam::faceAreaIntersect::triangleFan
-(
-    const face& f,
-    DynamicList<face>& faces
-) const
-{
-    if (f.size() > 2)
-    {
-        const label v0 = 0;
-
-        labelList indices(3);
-
-        for (label i = 1; i < f.size() - 1; i++)
-        {
-            indices[0] = f[v0];
-            indices[1] = f[i];
-            indices[2] = f[i + 1];
-            faces.append(face(indices));
-        }
-    }
-}
-
-
 inline Foam::point Foam::faceAreaIntersect::planeIntersection
 (
     const FixedList<scalar, 3>& d,
@@ -98,7 +98,9 @@ inline Foam::point Foam::faceAreaIntersect::planeIntersection
     const label posI
 ) const
 {
-    return (d[posI]*t[negI] - d[negI]*t[posI])/(-d[negI] + d[posI]);
+    scalar dp = d[posI];
+    scalar dn = d[negI];
+    return (dp*t[negI] - dn*t[posI])/(-dn + dp);
 }
 
 
@@ -113,6 +115,25 @@ inline Foam::scalar Foam::faceAreaIntersect::triArea(const triPoints& t) const
 Foam::scalar& Foam::faceAreaIntersect::tolerance()
 {
     return tol;
+}
+
+
+bool Foam::faceAreaIntersect::cacheTriangulation() const
+{
+    return cacheTriangulation_;
+}
+
+
+const Foam::DynamicList<Foam::triPoints>
+Foam::faceAreaIntersect::triangles() const
+{
+    return triangles_;
+}
+
+
+Foam::DynamicList<Foam::triPoints>& Foam::faceAreaIntersect::triangles()
+{
+    return triangles_;
 }
 
 

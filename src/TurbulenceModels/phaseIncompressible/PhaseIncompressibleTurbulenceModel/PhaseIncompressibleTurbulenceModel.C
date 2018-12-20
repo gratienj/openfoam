@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -103,21 +103,18 @@ template<class TransportModel>
 Foam::tmp<Foam::volScalarField>
 Foam::PhaseIncompressibleTurbulenceModel<TransportModel>::pPrime() const
 {
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("pPrime", this->U_.group()),
-                this->runTime_.timeName(),
-                this->mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
+            IOobject::groupName("pPrime", this->alphaRhoPhi_.group()),
+            this->runTime_.timeName(),
             this->mesh_,
-            dimensionedScalar("pPrimef", dimPressure, 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        this->mesh_,
+        dimensionedScalar(dimPressure, Zero)
     );
 }
 
@@ -126,21 +123,18 @@ template<class TransportModel>
 Foam::tmp<Foam::surfaceScalarField>
 Foam::PhaseIncompressibleTurbulenceModel<TransportModel>::pPrimef() const
 {
-    return tmp<surfaceScalarField>
+    return tmp<surfaceScalarField>::New
     (
-        new surfaceScalarField
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName("pPrimef", this->U_.group()),
-                this->runTime_.timeName(),
-                this->mesh_,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
+            IOobject::groupName("pPrimef", this->alphaRhoPhi_.group()),
+            this->runTime_.timeName(),
             this->mesh_,
-            dimensionedScalar("pPrimef", dimPressure, 0.0)
-        )
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        this->mesh_,
+        dimensionedScalar(dimPressure, Zero)
     );
 }
 
@@ -166,8 +160,7 @@ Foam::PhaseIncompressibleTurbulenceModel<TransportModel>::divDevReff
 
 template<class TransportModel>
 Foam::tmp<Foam::volSymmTensorField>
-Foam::PhaseIncompressibleTurbulenceModel<TransportModel>::
-devRhoReff() const
+Foam::PhaseIncompressibleTurbulenceModel<TransportModel>::devRhoReff() const
 {
     NotImplemented;
 
@@ -177,8 +170,7 @@ devRhoReff() const
 
 template<class TransportModel>
 Foam::tmp<Foam::fvVectorMatrix>
-Foam::PhaseIncompressibleTurbulenceModel<TransportModel>::
-divDevRhoReff
+Foam::PhaseIncompressibleTurbulenceModel<TransportModel>::divDevRhoReff
 (
     volVectorField& U
 ) const

@@ -99,11 +99,11 @@ bool Foam::conformalVoronoiMesh::meshableRegion
     {
         case extendedFeatureEdgeMesh::INSIDE:
         {
-            return (side == plane::FLIP) ? true : false;
+            return (side == plane::BACK);
         }
         case extendedFeatureEdgeMesh::OUTSIDE:
         {
-            return (side == plane::NORMAL) ? true : false;
+            return (side == plane::FRONT);
         }
         case extendedFeatureEdgeMesh::BOTH:
         {
@@ -132,12 +132,12 @@ bool Foam::conformalVoronoiMesh::regionIsInside
 {
     plane::side sideA
     (
-        ((masterPtVec & normalA) <= 0) ? plane::FLIP : plane::NORMAL
+        ((masterPtVec & normalA) <= 0) ? plane::BACK : plane::FRONT
     );
 
     plane::side sideB
     (
-        ((masterPtVec & normalB) <= 0) ? plane::FLIP : plane::NORMAL
+        ((masterPtVec & normalB) <= 0) ? plane::BACK : plane::FRONT
     );
 
     const bool meshableRegionA = meshableRegion(sideA, volTypeA);
@@ -220,8 +220,7 @@ void Foam::conformalVoronoiMesh::createEdgePointGroupByCirculating
 //            << endl;
 
         // Calculate master point
-        vector masterPtVec(normalDir + nextNormalDir);
-        masterPtVec /= mag(masterPtVec) + SMALL;
+        const vector masterPtVec = normalised(normalDir + nextNormalDir);
 
         if
         (
@@ -513,7 +512,7 @@ void Foam::conformalVoronoiMesh::createExternalEdgePointGroup
     // Convex. So refPt will be inside domain and hence a master point
     Foam::point refPt = edgePt - ppDist*refVec;
 
-    // Insert the master point pairing the the first slave
+    // Insert the master point pairing the first slave
 
     if (!geometryToConformTo_.inside(refPt))
     {
@@ -532,7 +531,7 @@ void Foam::conformalVoronoiMesh::createExternalEdgePointGroup
     );
 
     // Insert the slave points by reflecting refPt in both faces.
-    // with each slave refering to the master
+    // with each slave referring to the master
 
     Foam::point reflectedA = refPt + 2*ppDist*nA;
     pts.append

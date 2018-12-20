@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,6 +39,7 @@ See also
 SourceFiles
     string.C
     stringIO.C
+    stringTemplates.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,14 +58,12 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward Declarations
 class word;
 class wordRe;
+class string;
 class Istream;
 class Ostream;
-
-// Forward declaration of friend functions and operators
-class string;
 Istream& operator>>(Istream& is, string& s);
 Ostream& operator<<(Ostream& os, const string& s);
 Ostream& operator<<(Ostream& os, const std::string& s);
@@ -84,7 +83,29 @@ protected:
 
         //- Find position of a file extension dot, return npos on failure.
         //  A wrapped version of find_last_of("./") with additional logic.
-        inline size_type find_ext() const;
+        inline static std::string::size_type find_ext(const std::string& str);
+
+        //- Find position of a file extension dot, return npos on failure.
+        //  A wrapped version of find_last_of("./") with additional logic.
+        inline std::string::size_type find_ext() const;
+
+        //- A printf-style formatter for a primitive.
+        template<class PrimitiveType>
+        static std::string::size_type string_printf
+        (
+            std::string& output,
+            const char* fmt,
+            const PrimitiveType& val
+        );
+
+        //- A printf-style formatter for a primitive.
+        template<class PrimitiveType>
+        static std::string::size_type string_printf
+        (
+            std::string& output,
+            const std::string& fmt,
+            const PrimitiveType& val
+        );
 
         //- Return file name extension (part after last .)
         word ext() const;
@@ -95,6 +116,9 @@ protected:
         //
         //  \return True if append occurred.
         bool ext(const word& ending);
+
+        //- Return true if it contains a '/' character
+        inline bool hasPath() const;
 
         //- Return true if it has an extension or simply ends with a '.'
         inline bool hasExt() const;
@@ -108,6 +132,9 @@ protected:
         //- Remove extension, returning true if string changed.
         inline bool removeExt();
 
+        //- Remove leading path, returning true if string changed.
+        inline bool removePath();
+
 
 public:
 
@@ -120,26 +147,27 @@ public:
         static const string null;
 
 
-    //- Hashing function class, shared by all the derived classes
-    class hash
+    //- Hashing function for string and derived string classes
+    struct hash
     {
-    public:
-        hash()
-        {}
-
-        //- Hash for string.
-        //  Uses Foam::string instead of std::string for automatic conversions.
-        inline unsigned operator()(const string& str, unsigned seed = 0) const;
+        inline unsigned operator()
+        (
+            const std::string& str,
+            unsigned seed = 0
+        ) const;
     };
 
 
     // Constructors
 
         //- Construct null
-        inline string();
+        string() = default;
 
-        //- Construct from std::string
+        //- Copy construct from std::string
         inline string(const std::string& str);
+
+        //- Move construct from std::string
+        inline string(std::string&& str);
 
         //- Construct as copy of character array
         inline string(const char* str);
@@ -148,21 +176,18 @@ public:
         inline string(const char* str, const size_type len);
 
         //- Construct from a single character
-        inline string(const char c);
+        inline explicit string(const char c);
 
-        //- Construct from copies of a single character
+        //- Construct fill copies of a single character
         inline string(const size_type len, const char c);
 
-        //- Move construct from std::string
-        inline string(std::string&& str);
-
         //- Construct from Istream
-        string(Istream& is);
+        explicit string(Istream& is);
 
 
     // Member Functions
 
-        //- Count the number of occurences of the specified character
+        //- Count the number of occurrences of the specified character
         //- in the string
         //  Partially deprecated (NOV-2017) in favour of stringOps::count
         size_type count(const char c) const;
@@ -192,13 +217,14 @@ public:
             const char quote = '\\'
         );
 
-        //- True when strings match literally
+        //- Test for equality.
+        //  \return True when strings match literally.
         inline bool match(const std::string& text) const;
 
         //- Avoid masking the normal std::string replace
         using std::string::replace;
 
-        //- Replace first occurence of sub-string oldStr with newStr,
+        //- Replace first occurrence of sub-string oldStr with newStr,
         //- beginning at start
         string& replace
         (
@@ -207,7 +233,7 @@ public:
             const size_type start = 0
         );
 
-        //- Replace all occurences of sub-string oldStr with newStr,
+        //- Replace all occurrences of sub-string oldStr with newStr,
         //- beginning at start. This is a no-op if oldStr is empty.
         string& replaceAll
         (
@@ -216,7 +242,7 @@ public:
             const size_type start = 0
         );
 
-        //- Expand initial tildes and all occurences of environment variables
+        //- Expand initial tildes and all occurrences of environment variables
         //  Expansion includes:
         //  -# environment variables
         //    - "$VAR", "${VAR}"
@@ -268,7 +294,7 @@ public:
 
     // Member Operators
 
-        //- Match text
+        //- Test for equality. Allows use as a predicate.
         //  \return True when strings match literally.
         inline bool operator()(const std::string& text) const;
 
@@ -287,6 +313,10 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #include "stringI.H"
+
+#ifdef NoRepository
+    #include "stringTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

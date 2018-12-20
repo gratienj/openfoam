@@ -262,11 +262,11 @@ class globalPoints
             const bool mergeSeparated
         );
 
-        //- Disallow default bitwise copy construct
-        globalPoints(const globalPoints&);
+        //- No copy construct
+        globalPoints(const globalPoints&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const globalPoints&);
+        //- No copy assignment
+        void operator=(const globalPoints&) = delete;
 
 
 public:
@@ -347,13 +347,13 @@ public:
             //- Corresponding map
             const mapDistribute& map() const
             {
-                return map_();
+                return *map_;
             }
 
             //- Corresponding map
             mapDistribute& map()
             {
-                return map_();
+                return *map_;
             }
 
             //- From (mesh or patch) point to index in procPoints

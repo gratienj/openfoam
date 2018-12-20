@@ -365,7 +365,7 @@ kOmegaSSTBase<BasicEddyViscosityModel>::kOmegaSSTBase
     (
         IOobject
         (
-            IOobject::groupName("k", U.group()),
+            IOobject::groupName("k", alphaRhoPhi.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -377,7 +377,7 @@ kOmegaSSTBase<BasicEddyViscosityModel>::kOmegaSSTBase
     (
         IOobject
         (
-            IOobject::groupName("omega", U.group()),
+            IOobject::groupName("omega", alphaRhoPhi.group()),
             this->runTime_.timeName(),
             this->mesh_,
             IOobject::MUST_READ,
@@ -430,15 +430,20 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::setDecayControl
     const dictionary& dict
 )
 {
-    decayControl_.readIfPresent("decayControl", this->coeffDict());
+    decayControl_.readIfPresent("decayControl", dict);
 
     if (decayControl_)
     {
-        kInf_.read(this->coeffDict());
-        omegaInf_.read(this->coeffDict());
+        kInf_.read(dict);
+        omegaInf_.read(dict);
 
         Info<< "    Employing decay control with kInf:" << kInf_
             << " and omegaInf:" << omegaInf_ << endl;
+    }
+    else
+    {
+        kInf_.value() = 0;
+        omegaInf_.value() = 0;
     }
 }
 

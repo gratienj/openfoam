@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -54,6 +54,7 @@ SourceFiles
 #include "triadFieldFwd.H"
 #include "DynamicList.H"
 #include "HashSet.H"
+#include "Map.H"
 #include "FixedList.H"
 #include "Pair.H"
 #include "vector2D.H"
@@ -66,6 +67,7 @@ namespace Foam
 {
 
 // Forward declaration of classes
+class boundBox;
 class edge;
 class labelledTri;
 class polyBoundaryMesh;
@@ -74,7 +76,6 @@ class triSurface;
 class face;
 class Time;
 template<class Face> class MeshedSurface;
-
 
 /*---------------------------------------------------------------------------*\
                            Class triSurfaceTools Declaration
@@ -159,8 +160,8 @@ class triSurfaceTools
                 const triSurface& surf,
                 const label edgeI,
                 const labelHashSet& collapsedFaces,
-                HashTable<label, label, Hash<label>>& edgeToEdge,
-                HashTable<label, label, Hash<label>>& edgeToFace
+                Map<label>& edgeToEdge,
+                Map<label>& edgeToFace
             );
 
             //- Calculates (cos of) angle across edgeI of facei,
@@ -172,8 +173,8 @@ class triSurfaceTools
                 const label v1,
                 const point& pt,
                 const labelHashSet& collapsedFaces,
-                const HashTable<label, label, Hash<label>>& edgeToEdge,
-                const HashTable<label, label, Hash<label>>& edgeToFace,
+                const Map<label>& edgeToEdge,
+                const Map<label>& edgeToFace,
                 const label facei,
                 const label edgeI
             );
@@ -188,8 +189,8 @@ class triSurfaceTools
                 const label v1,
                 const point& pt,
                 const labelHashSet& collapsedFaces,
-                const HashTable<label, label, Hash<label>>& edgeToEdge,
-                const HashTable<label, label, Hash<label>>& edgeToFace
+                const Map<label>& edgeToEdge,
+                const Map<label>& edgeToFace
             );
 
             //- Like collapseMinCosAngle but return true for value < minCos
@@ -199,8 +200,8 @@ class triSurfaceTools
                 const label v1,
                 const point& pt,
                 const labelHashSet& collapsedFaces,
-                const HashTable<label, label, Hash<label>>& edgeToEdge,
-                const HashTable<label, label, Hash<label>>& edgeToFace,
+                const Map<label>& edgeToEdge,
+                const Map<label>& edgeToFace,
                 const scalar minCos
             );
 
@@ -210,7 +211,7 @@ class triSurfaceTools
             //(
             //    const triSurface& surf,
             //    const label edgeI,
-            //    const HashTable<bool, label, Hash<label>>& collapsedFaces
+            //    const Map<bool>& collapsedFaces
             //);
 
         // Tracking
@@ -483,6 +484,16 @@ public:
             const bool verbose = false
         );
 
+
+        static triSurface triangulate
+        (
+            const polyBoundaryMesh& bMesh,
+            const labelHashSet& includePatches,
+            const boundBox& bBox,
+            const bool verbose = false
+        );
+
+
         //- Face-centre triangulation of (selected patches of) boundaryMesh.
         //  Needs
         //  polyMesh (or polyBoundaryMesh) since only at this level are the
@@ -606,10 +617,20 @@ public:
     // Surface checking functionality
 
         //- Check single triangle for (topological) validity
-        static bool validTri(const triSurface&, const label facei);
+        static bool validTri
+        (
+            const triSurface&,
+            const label facei,
+            const bool verbose = true
+        );
 
         //- Check single triangle for (topological) validity
-        static bool validTri(const MeshedSurface<face>&, const label facei);
+        static bool validTri
+        (
+            const MeshedSurface<face>&,
+            const label facei,
+            const bool verbose = true
+        );
 
 
     // Tracking

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,6 +76,13 @@ protected:
 
         tensor rotDelta_;
 
+
+    // Protected Member Functions
+
+        //- Check that mesh directions are compatible with decomposition
+        void checkDecompositionDirections(const Vector<label>&) const;
+
+
 public:
 
     // Constructors
@@ -99,15 +106,17 @@ public:
         );
 
 
+    // Member Functions
+
         //- Return for every coordinate the wanted processor number.
         virtual labelList decompose
         (
             const pointField& points,
             const scalarField& pointWeights
-        ) = 0;
+        ) const = 0;
 
-        //- Like decompose but with uniform weights on the points
-        virtual labelList decompose(const pointField&) = 0;
+        //- Decompose with uniform weights on the points
+        virtual labelList decompose(const pointField& points) const = 0;
 
 };
 

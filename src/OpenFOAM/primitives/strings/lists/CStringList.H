@@ -102,10 +102,10 @@ class CStringList
         int resetContent(const ListType& input);
 
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         CStringList(const CStringList&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const CStringList&) = delete;
 
 
@@ -140,6 +140,9 @@ public:
 
     // Access
 
+        //- True if the size is zero.
+        inline bool empty() const;
+
         //- Return the number of C-strings (ie, argc)
         inline int size() const;
 
@@ -158,6 +161,7 @@ public:
 
         //- The flattened character content, with interspersed nul-chars
         inline const char* data() const;
+
 
     // Edit
 

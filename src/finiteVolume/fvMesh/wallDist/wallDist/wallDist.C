@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,7 +49,7 @@ void Foam::wallDist::constructn() const
                 mesh()
             ),
             mesh(),
-            dimensionedVector("n" & patchTypeName_, dimless, Zero),
+            dimensionedVector(dimless, Zero),
             patchDistMethod::patchTypes<vector>(mesh(), patchIDs_)
         )
     );
@@ -58,9 +58,8 @@ void Foam::wallDist::constructn() const
 
     volVectorField::Boundary& nbf = n_.ref().boundaryFieldRef();
 
-    forAllConstIter(labelHashSet, patchIDs_, iter)
+    for (const label patchi : patchIDs_)
     {
-        label patchi = iter.key();
         nbf[patchi] == patches[patchi].nf();
     }
 }
@@ -106,7 +105,7 @@ Foam::wallDist::wallDist
         dimensionedScalar("y" & patchTypeName_, dimLength, SMALL),
         patchDistMethod::patchTypes<scalar>(mesh, patchIDs_)
     ),
-    nRequired_(dict_.lookupOrDefault<Switch>("nRequired", false)),
+    nRequired_(dict_.lookupOrDefault("nRequired", false)),
     n_(volVectorField::null()),
     updateInterval_(dict_.lookupOrDefault<label>("updateInterval", 1)),
     requireUpdate_(true)
@@ -160,7 +159,7 @@ Foam::wallDist::wallDist
         dimensionedScalar("y" & patchTypeName_, dimLength, SMALL),
         patchDistMethod::patchTypes<scalar>(mesh, patchIDs_)
     ),
-    nRequired_(dict_.lookupOrDefault<Switch>("nRequired", false)),
+    nRequired_(dict_.lookupOrDefault("nRequired", false)),
     n_(volVectorField::null()),
     updateInterval_(dict_.lookupOrDefault<label>("updateInterval", 1)),
     requireUpdate_(true)

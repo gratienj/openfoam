@@ -57,7 +57,7 @@ void Foam::volPointInterpolation::calcBoundaryAddressing()
             SubList<face>
             (
                 mesh().faces(),
-                mesh().nFaces()-mesh().nInternalFaces(),
+                mesh().nBoundaryFaces(),
                 mesh().nInternalFaces()
             ),
             mesh().points()
@@ -263,7 +263,7 @@ void Foam::volPointInterpolation::makeWeights()
             mesh()
         ),
         pointMesh::New(mesh()),
-        dimensionedScalar("zero", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     );
 
 

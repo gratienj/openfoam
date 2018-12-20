@@ -267,7 +267,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
 
         Info<< "Inserting points from " << controlFunction.name()
             << " (" << controlFunction.type() << ")" << endl;
-        Info<< "    Force insertion is " << forceInsertion.asText() << endl;
+        Info<< "    Force insertion is " << forceInsertion.c_str() << endl;
 
         pointField pts;
         scalarField sizes;
@@ -321,7 +321,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
         sizes.clear();
         alignments.clear();
 
-        PackedBoolList keepVertex(vertices.size(), true);
+        bitSet keepVertex(vertices.size(), true);
 
         forAll(vertices, vI)
         {
@@ -341,7 +341,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
 
             if (!keep)
             {
-                keepVertex[vI] = false;
+                keepVertex.unset(vI);
             }
         }
 
@@ -453,7 +453,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
 
         Info<< "Inserting points from " << controlFunction.name()
             << " (" << controlFunction.type() << ")" << endl;
-        Info<< "    Force insertion is " << forceInsertion.asText() << endl;
+        Info<< "    Force insertion is " << forceInsertion.c_str() << endl;
 
         DynamicList<Foam::point> extraPts;
         DynamicList<scalar> extraSizes;
@@ -496,7 +496,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
             }
         }
 
-        PackedBoolList keepVertex(vertices.size(), true);
+        bitSet keepVertex(vertices.size(), true);
 
         forAll(vertices, vI)
         {
@@ -516,7 +516,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
 
             if (!keep)
             {
-                keepVertex[vI] = false;
+                keepVertex.unset(vI);
             }
         }
 

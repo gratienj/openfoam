@@ -28,7 +28,7 @@ Group
     grpSurfaceUtilities
 
 Description
-    Smooths a surface using lambda/mu smoothing.
+    Smooth a surface using lambda/mu smoothing.
 
     To get laplacian smoothing, set lambda to the relaxation factor and mu to
     zero.
@@ -54,7 +54,7 @@ using namespace Foam;
 tmp<pointField> avg
 (
     const meshedSurface& s,
-    const PackedBoolList& fixedPoints
+    const bitSet& fixedPoints
 )
 {
     const labelListList& pointEdges = s.pointEdges();
@@ -66,7 +66,7 @@ tmp<pointField> avg
     {
         vector& avgPos = avg[vertI];
 
-        if (fixedPoints[vertI])
+        if (fixedPoints.test(vertI))
         {
             avgPos = s.localPoints()[vertI];
         }
@@ -95,7 +95,7 @@ void getFixedPoints
 (
     const edgeMesh& feMesh,
     const pointField& points,
-    PackedBoolList& fixedPoints
+    bitSet& fixedPoints
 )
 {
     scalarList matchDistance(feMesh.points().size(), 1e-1);
@@ -121,7 +121,7 @@ void getFixedPoints
     {
         if (from0To1[fpI] != -1)
         {
-            fixedPoints[from0To1[fpI]] = true;
+            fixedPoints.set(from0To1[fpI]);
         }
     }
 }
@@ -131,24 +131,32 @@ void getFixedPoints
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Smooth a surface using lambda/mu smoothing.\n"
+        "For laplacian smoothing, set lambda to the relaxation factor"
+        " and mu to zero."
+    );
+
     argList::noParallel();
     argList::validOptions.clear();
-    argList::addArgument("surfaceFile");
-    argList::addArgument("lambda (0..1)");
-    argList::addArgument("mu (0..1)");
-    argList::addArgument("iterations");
-    argList::addArgument("output surfaceFile");
+    argList::addArgument("input", "The input surface file");
+    argList::addArgument("lambda", "On the interval [0,1]");
+    argList::addArgument("mu", "On the interval [0,1]");
+    argList::addArgument("iterations", "The number of iterations to perform");
+    argList::addArgument("output", "The output surface file");
+
     argList::addOption
     (
         "featureFile",
-        "fix points from a file containing feature points and edges"
+        "Fix points from a file containing feature points and edges"
     );
     argList args(argc, argv);
 
     const fileName surfFileName = args[1];
-    const scalar lambda = args.argRead<scalar>(2);
-    const scalar mu = args.argRead<scalar>(3);
-    const label  iters = args.argRead<label>(4);
+    const scalar lambda = args.get<scalar>(2);
+    const scalar mu = args.get<scalar>(3);
+    const label  iters = args.get<label>(4);
     const fileName outFileName = args[5];
 
     if (lambda < 0 || lambda > 1)
@@ -177,9 +185,9 @@ int main(int argc, char *argv[])
         << "Vertices    : " << surf1.nPoints() << nl
         << "Bounding Box: " << boundBox(surf1.localPoints()) << endl;
 
-    PackedBoolList fixedPoints(surf1.localPoints().size(), false);
+    bitSet fixedPoints(surf1.localPoints().size(), false);
 
-    if (args.optionFound("featureFile"))
+    if (args.found("featureFile"))
     {
         const fileName featureFileName(args["featureFile"]);
         Info<< "Reading features from " << featureFileName << " ..." << endl;

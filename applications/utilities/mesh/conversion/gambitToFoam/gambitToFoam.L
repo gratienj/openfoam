@@ -28,7 +28,7 @@ Group
     grpMeshConversionUtilities
 
 Description
-    Converts a GAMBIT mesh to OpenFOAM format.
+    Convert a GAMBIT mesh to OpenFOAM format.
 
 \*---------------------------------------------------------------------------*/
 
@@ -46,6 +46,9 @@ Description
 // For EOF only
 #include <cstdio>
 
+// Flex may use register, which is deprecated and incompatible with C++17
+#pragma clang diagnostic ignored "-Wdeprecated-register"
+
 using namespace Foam;
 
 #include "argList.H"
@@ -54,8 +57,6 @@ using namespace Foam;
 #include "emptyPolyPatch.H"
 #include "preservePatchTypes.H"
 #include "cellShape.H"
-#include "SLList.H"
-#include "SLPtrList.H"
 
 label nPoints = 0;
 label nCells = 0;
@@ -310,7 +311,7 @@ mtype                 {space}"MTYPE:"{space}
         scalar y = readScalar(nodeStream);
         scalar z = readScalar(nodeStream);
 
-        // add mapping and scalced node to the list
+        // add mapping and scaled node to the list
         pointMap[curNumberOfNodes] = nodeI;
         points[curNumberOfNodes] = point(x, y, z);
         curNumberOfNodes++;
@@ -624,13 +625,18 @@ mtype                 {space}"MTYPE:"{space}
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Convert a GAMBIT mesh to OpenFOAM format"
+    );
+
     argList::noParallel();
     argList::addArgument("GAMBIT file");
     argList::addOption
     (
         "scale",
         "factor",
-        "geometry scaling factor - default is 1"
+        "Geometry scaling factor - default is 1"
     );
 
     argList args(argc, argv);
@@ -640,7 +646,7 @@ int main(int argc, char *argv[])
          FatalError.exit();
     }
 
-    const scalar scaleFactor = args.optionLookupOrDefault("scale", 1.0);
+    const scalar scaleFactor = args.opt<scalar>("scale", 1);
 
     #include "createTime.H"
 
@@ -850,7 +856,7 @@ int main(int argc, char *argv[])
             runTime.constant(),
             runTime
         ),
-        xferMove(points),
+        std::move(points),
         cells,
         boundary,
         patchNames,

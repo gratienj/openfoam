@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,17 +57,15 @@ Description
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <dlfcn.h>
-#include <link.h>
-
 #include <netinet/in.h>
-#ifdef USE_RANDOM
-    #include <climits>
-    #if INT_MAX    != 2147483647
-        #error "INT_MAX    != 2147483647"
-        #error "The random number generator may not work!"
-    #endif
+#include <dlfcn.h>
+
+#ifdef darwin
+    #include <mach-o/dyld.h>
+#else
+    #include <link.h>
 #endif
+
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -76,39 +74,10 @@ namespace Foam
     defineTypeNameAndDebug(POSIX, 0);
 }
 
+static bool cwdPreference_(Foam::debug::optimisationSwitch("cwd", 0));
 
-// * * * * * * * * * * * * * * Static Functions  * * * * * * * * * * * * * * //
 
-//
-//! \cond fileScope
-//
-// Return true if filename appears to be a backup file
-//
-static inline bool isBackupName(const Foam::fileName& name)
-{
-    if (name.empty())
-    {
-        return false;
-    }
-    else if (name.back() == '~')
-    {
-        return true;
-    }
-
-    // Now check the extension
-    const Foam::word ext = name.ext();
-    if (ext.empty())
-    {
-        return false;
-    }
-
-    return
-    (
-        ext == "bak" || ext == "BAK"
-     || ext == "old" || ext == "save"
-    );
-}
-
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 
 // Like fileName "/" global operator, but retain any invalid characters
 static inline Foam::fileName fileNameConcat
@@ -138,7 +107,26 @@ static inline Foam::fileName fileNameConcat
     // Both strings are empty
     return Foam::fileName();
 }
-//! \endcond
+
+
+// After a fork in system(), before the exec() do the following
+// - close stdin when executing in background (daemon-like)
+// - redirect stdout to stderr when infoDetailLevel == 0
+static inline void redirects(const bool bg)
+{
+    if (bg)
+    {
+        // Close stdin(0) - unchecked return value
+        (void) ::close(STDIN_FILENO);
+    }
+
+    // Redirect stdout(1) to stderr(2) '1>&2'
+    if (Foam::infoDetailLevel == 0)
+    {
+        // This is correct.  1>&2 means dup2(2, 1);
+        (void) ::dup2(STDERR_FILENO, STDOUT_FILENO);
+    }
+}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -294,7 +282,11 @@ Foam::fileName Foam::home(const std::string& userName)
 }
 
 
-Foam::fileName Foam::cwd()
+namespace Foam
+{
+
+//- The physical current working directory path name (pwd -P).
+static Foam::fileName cwd_P()
 {
     label pathLengthLimit = POSIX::pathLengthChunk;
     List<char> path(pathLengthLimit);
@@ -321,7 +313,7 @@ Foam::fileName Foam::cwd()
                     << exit(FatalError);
             }
 
-            path.setSize(pathLengthLimit);
+            path.resize(pathLengthLimit);
         }
         else
         {
@@ -333,7 +325,86 @@ Foam::fileName Foam::cwd()
         << "Couldn't get the current working directory"
         << exit(FatalError);
 
-    return fileName::null;
+    return fileName();
+}
+
+
+//- The logical current working directory path name.
+// From the PWD environment, same as pwd -L.
+static Foam::fileName cwd_L()
+{
+    const char* env = ::getenv("PWD");
+
+    // Basic check
+    if (!env || env[0] != '/')
+    {
+        WarningInFunction
+            << "PWD is invalid - reverting to physical description"
+            << nl;
+
+        return cwd_P();
+    }
+
+    fileName dir(env);
+
+    // Check for "/."
+    for
+    (
+        std::string::size_type pos = 0;
+        std::string::npos != (pos = dir.find("/.", pos));
+        /*nil*/
+    )
+    {
+        pos += 2;
+
+        if
+        (
+            // Ends in "/." or has "/./"
+            !dir[pos] || dir[pos] == '/'
+
+            // Ends in "/.." or has "/../"
+         || (dir[pos] == '.' && (!dir[pos+1] || dir[pos+1] == '/'))
+        )
+        {
+            WarningInFunction
+                << "PWD contains /. or /.. - reverting to physical description"
+                << nl;
+
+            return cwd_P();
+        }
+    }
+
+    // Finally, verify that PWD actually corresponds to the "." directory
+    if (!fileStat(dir, true).sameINode(fileStat(".", true)))
+    {
+        WarningInFunction
+            << "PWD is not the cwd() - reverting to physical description"
+            << nl;
+
+        return cwd_P();
+    }
+
+
+    return fileName(dir);
+}
+
+} // End namespace Foam
+
+
+Foam::fileName Foam::cwd()
+{
+    return cwd(cwdPreference_);
+}
+
+
+Foam::fileName Foam::cwd(bool logical)
+{
+    if (logical)
+    {
+        return cwd_L();
+    }
+
+    return cwd_P();
 }
 
 
@@ -521,6 +592,10 @@ mode_t Foam::mode(const fileName& name, const bool followLink)
     if (POSIX::debug)
     {
         Pout<< FUNCTION_NAME << " : name:" << name << endl;
+        if ((POSIX::debug & 2) && !Pstream::master())
+        {
+            error::printStack(Pout);
+        }
     }
 
     // Ignore an empty name => always 0
@@ -548,10 +623,6 @@ Foam::fileName::Type Foam::type(const fileName& name, const bool followLink)
     if (POSIX::debug)
     {
         Pout<< FUNCTION_NAME << " : name:" << name << endl;
-        if ((POSIX::debug & 2) && !Pstream::master())
-        {
-            error::printStack(Pout);
-        }
     }
 
     mode_t m = mode(name, followLink);
@@ -681,16 +752,7 @@ time_t Foam::lastModified(const fileName& name, const bool followLink)
     }
 
     // Ignore an empty name
-    if (!name.empty())
-    {
-        fileStat fileStatus(name, followLink);
-        if (fileStatus.isValid())
-        {
-            return fileStatus.status().st_mtime;
-        }
-    }
-
-    return 0;
+    return name.empty() ? 0 : fileStat(name, followLink).modTime();
 }
 
 
@@ -706,18 +768,7 @@ double Foam::highResLastModified(const fileName& name, const bool followLink)
     }
 
     // Ignore an empty name
-    if (!name.empty())
-    {
-        fileStat fileStatus(name);
-        if (fileStatus.isValid())
-        {
-            return
-                fileStatus.status().st_mtime
-              + 1e-9*fileStatus.status().st_atim.tv_nsec;
-        }
-    }
-
-    return 0;
+    return name.empty() ? 0 : fileStat(name, followLink).dmodTime();
 }
 
 
@@ -793,7 +844,7 @@ Foam::fileNameList Foam::readDir
         else if
         (
             (type == fileName::DIRECTORY)
-         || (type == fileName::FILE && !isBackupName(name))
+         || (type == fileName::FILE && !fileName::isBackup(name))
         )
         {
             if ((directory/name).type(followLink) == type)
@@ -858,7 +909,7 @@ bool Foam::cp(const fileName& src, const fileName& dest, const bool followLink)
         // If dest is a directory, create the destination file name.
         if (destFile.type() == fileName::DIRECTORY)
         {
-            destFile = destFile/src.name();
+            destFile /= src.name();
         }
 
         // Make sure the destination directory exists.
@@ -898,7 +949,7 @@ bool Foam::cp(const fileName& src, const fileName& dest, const bool followLink)
         // If dest is a directory, create the destination file name.
         if (destFile.type() == fileName::DIRECTORY)
         {
-            destFile = destFile/src.name();
+            destFile /= src.name();
         }
 
         // Make sure the destination directory exists.
@@ -914,7 +965,7 @@ bool Foam::cp(const fileName& src, const fileName& dest, const bool followLink)
         // If dest is a directory, create the destination file name.
         if (destFile.type() == fileName::DIRECTORY)
         {
-            destFile = destFile/src.components().last();
+            destFile /= src.components().last();
         }
 
         // Make sure the destination directory exists.
@@ -1364,6 +1415,7 @@ static int waitpid(const pid_t pid)
     // in parent - blocking wait
     // modest treatment of signals (in child)
     // treat 'stopped' like exit (suspend/continue)
+
     while (true)
     {
         pid_t wpid = ::waitpid(pid, &status, WUNTRACED);
@@ -1406,11 +1458,7 @@ static int waitpid(const pid_t pid)
 }
 
 
-int Foam::system
-(
-    const std::string& command,
-    const bool background
-)
+int Foam::system(const std::string& command, const bool bg)
 {
     if (command.empty())
     {
@@ -1421,17 +1469,22 @@ int Foam::system
         return 0;
     }
 
-    pid_t child_pid = ::vfork();   // NB: vfork, not fork!
+    const pid_t child_pid = ::vfork();   // NB: vfork, not fork!
+
     if (child_pid == -1)
     {
         FatalErrorInFunction
             << "vfork() failed for system command " << command
             << exit(FatalError);
-    }
 
-    if (child_pid == 0)
+        return -1;  // fallback error value
+    }
+    else if (child_pid == 0)
     {
-        // in child
+        // In child
+
+        // Close or redirect file descriptors
+        redirects(bg);
 
         // execl uses the current environ
         (void) ::execl
@@ -1443,35 +1496,25 @@ int Foam::system
             reinterpret_cast<char*>(0)
         );
 
-        // obviously failed, since exec should not return at all
+        // Obviously failed, since exec should not return
         FatalErrorInFunction
             << "exec failed: " << command
             << exit(FatalError);
+
+        return -1;  // fallback error value
     }
 
 
-    // In parent:
+    // In parent
+    // - started as background process, or blocking wait for the child
 
-    if (background)
-    {
-        // Started as background process
-        return 0;
-    }
-
-    // blocking wait for the child
-    return waitpid(child_pid);
+    return (bg ? 0 : waitpid(child_pid));
 }
 
 
-int Foam::system
-(
-    const CStringList& command,
-    const bool background
-)
+int Foam::system(const CStringList& command, const bool bg)
 {
-    const int argc = command.size();
-
-    if (!argc)
+    if (command.empty())
     {
         // Treat an empty command as a successful no-op.
         // For consistency with POSIX (man sh) behaviour for (sh -c command),
@@ -1484,109 +1527,54 @@ int Foam::system
     // triggered by fork.
     // The normal system() command has a fork buried in it that causes
     // issues with infiniband and openmpi etc.
-    pid_t child_pid = ::vfork();
+
+    const pid_t child_pid = ::vfork();
+
     if (child_pid == -1)
     {
         FatalErrorInFunction
             << "vfork() failed for system command " << command[0]
             << exit(FatalError);
+
+        return -1;  // fallback error value
     }
-
-    if (child_pid == 0)
+    else if (child_pid == 0)
     {
-        // In child:
-        // Need command and arguments separately.
-        // args is a nullptr-terminated list of c-strings
+        // In child
 
-        // execvp uses the current environ
-        (void) ::execvp(command[0], command.strings(1));
+        // Close or redirect file descriptors
+        redirects(bg);
 
-        // obviously failed, since exec should not return at all
+        // execvp searches the path, uses the current environ
+        (void) ::execvp(command[0], command.strings());
+
+        // Obviously failed, since exec should not return
         FatalErrorInFunction
             << "exec(" << command[0] << ", ...) failed"
             << exit(FatalError);
+
+        return -1;  // fallback error value
     }
 
 
-    // In parent:
+    // In parent
+    // - started as background process, or blocking wait for the child
 
-    if (background)
-    {
-        // Started as background process
-        return 0;
-    }
-
-    // blocking wait for the child
-    return waitpid(child_pid);
+    return (bg ? 0 : waitpid(child_pid));
 }
 
 
-int Foam::system
-(
-    const Foam::UList<Foam::string>& command,
-    const bool background
-)
+int Foam::system(const Foam::UList<Foam::string>& command, const bool bg)
 {
-    // In the future simply call the CStringList version:
-    //
-    //     const CStringList cmd(command);
-    //     return Foam::system(cmd, background);
-
-    const int argc = command.size();
-
-    if (!argc)
+    if (command.empty())
     {
         // Treat an empty command as a successful no-op.
-        // For consistency with POSIX (man sh) behaviour for (sh -c command),
-        // which is what is mostly being replicated here.
         return 0;
     }
 
-    // NB: use vfork, not fork!
-    // vfork behaves more like a thread and avoids copy-on-write problems
-    // triggered by fork.
-    // The normal system() command has a fork buried in it that causes
-    // issues with infiniband and openmpi etc.
-    pid_t child_pid = ::vfork();
-    if (child_pid == -1)
-    {
-        FatalErrorInFunction
-            << "vfork() failed for system command " << command[0]
-            << exit(FatalError);
-    }
-
-    if (child_pid == 0)
-    {
-        // In child:
-        // Need command and arguments separately.
-        // args is a nullptr-terminated list of c-strings
-
-        CStringList args(SubList<string>(command, 0));
-        if (argc > 1)
-        {
-            args.reset(SubList<string>(command, argc-1, 1));
-        }
-
-        // execvp uses the current environ
-        (void) ::execvp(command[0].c_str(), args.strings());
-
-        // obviously failed, since exec should not return at all
-        FatalErrorInFunction
-            << "exec(" << command[0] << ", ...) failed"
-            << exit(FatalError);
-    }
-
-
-    // In parent:
-
-    if (background)
-    {
-        // Started as background process
-        return 0;
-    }
-
-    // blocking wait for the child
-    return waitpid(child_pid);
+    // Make a deep copy as C-strings
+    const CStringList cmd(command);
+    return Foam::system(cmd, bg);
 }
 
 
@@ -1598,6 +1586,15 @@ void* Foam::dlOpen(const fileName& lib, const bool check)
             << " : dlopen of " << lib << std::endl;
     }
     void* handle = ::dlopen(lib.c_str(), RTLD_LAZY|RTLD_GLOBAL);
+
+    #ifdef darwin
+    // Re-try "libXX.so" as "libXX.dylib"
+    if (!handle && lib.hasExt("so"))
+    {
+        const fileName dylib(lib.lessExt().ext("dylib"));
+        handle = ::dlopen(dylib.c_str(), RTLD_LAZY|RTLD_GLOBAL);
+    }
+    #endif
 
     if (!handle && check)
     {
@@ -1683,6 +1680,7 @@ bool Foam::dlSymFound(void* handle, const std::string& symbol)
 }
 
 
+#ifndef darwin
 static int collectLibsCallback
 (
     struct dl_phdr_info *info,
@@ -1695,12 +1693,21 @@ static int collectLibsCallback
     ptr->append(info->dlpi_name);
     return 0;
 }
+#endif
 
 
 Foam::fileNameList Foam::dlLoaded()
 {
     DynamicList<fileName> libs;
+    #ifdef darwin
+    for (uint32_t i=0; i < _dyld_image_count(); ++i)
+    {
+       libs.append(_dyld_get_image_name(i));
+    }
+    #else
     dl_iterate_phdr(collectLibsCallback, &libs);
+    #endif
+
     if (POSIX::debug)
     {
         std::cout
@@ -1708,222 +1715,6 @@ Foam::fileNameList Foam::dlLoaded()
             << " : determined loaded libraries :" << libs.size() << std::endl;
     }
     return libs;
-}
-
-Foam::label Foam::osRandomBufferSize()
-{
-    #ifdef USE_RANDOM
-    return sizeof(random_data);
-    #else
-    return sizeof(drand48_data);
-    #endif
-}
-
-
-void Foam::osRandomSeed(const label seed)
-{
-    #ifdef USE_RANDOM
-    srandom((unsigned int)seed);
-    #else
-    srand48(seed);
-    #endif
-}
-
-
-Foam::label Foam::osRandomInteger()
-{
-    #ifdef USE_RANDOM
-    return random();
-    #else
-    return lrand48();
-    #endif
-}
-
-
-Foam::scalar Foam::osRandomDouble()
-{
-    #ifdef USE_RANDOM
-    return (scalar)random()/INT_MAX;
-    #else
-    return drand48();
-    #endif
-}
-
-
-void Foam::osRandomSeed(const label seed, List<char>& buffer)
-{
-    #ifdef USE_RANDOM
-    srandom_r((unsigned int)seed, reinterpret_cast<random_data*>(buffer.begin()));
-    #else
-    srand48_r(seed, reinterpret_cast<drand48_data*>(buffer.begin()));
-    #endif
-}
-
-
-Foam::label Foam::osRandomInteger(List<char>& buffer)
-{
-    #ifdef USE_RANDOM
-    int32_t result;
-    random_r(reinterpret_cast<random_data*>(buffer.begin()), &result);
-    return result;
-    #else
-    long result;
-    lrand48_r(reinterpret_cast<drand48_data*>(buffer.begin()), &result);
-    return result;
-    #endif
-}
-
-
-Foam::scalar Foam::osRandomDouble(List<char>& buffer)
-{
-    #ifdef USE_RANDOM
-    int32_t result;
-    random_r(reinterpret_cast<random_data*>(buffer.begin()), &result);
-    return (scalar)result/INT_MAX;
-    #else
-    double result;
-    drand48_r(reinterpret_cast<drand48_data*>(buffer.begin()), &result);
-    return result;
-    #endif
-
-}
-
-
-static Foam::DynamicList<Foam::autoPtr<pthread_t>> threads_;
-static Foam::DynamicList<Foam::autoPtr<pthread_mutex_t>> mutexes_;
-
-Foam::label Foam::allocateThread()
-{
-    forAll(threads_, i)
-    {
-        if (!threads_[i].valid())
-        {
-            if (POSIX::debug)
-            {
-                Pout<< "allocateThread : reusing index:" << i << endl;
-            }
-            // Reuse entry
-            threads_[i].reset(new pthread_t());
-            return i;
-        }
-    }
-
-    const label index = threads_.size();
-    if (POSIX::debug)
-    {
-        Pout<< "allocateThread : new index:" << index << endl;
-    }
-    threads_.append(autoPtr<pthread_t>(new pthread_t()));
-
-    return index;
-}
-
-
-void Foam::createThread
-(
-    const label index,
-    void *(*start_routine) (void *),
-    void *arg
-)
-{
-    if (POSIX::debug)
-    {
-        Pout<< "createThread : index:" << index << endl;
-    }
-    if (pthread_create(&threads_[index](), nullptr, start_routine, arg))
-    {
-        FatalErrorInFunction
-            << "Failed starting thread " << index << exit(FatalError);
-    }
-}
-
-
-void Foam::joinThread(const label index)
-{
-    if (POSIX::debug)
-    {
-        Pout<< "freeThread : join:" << index << endl;
-    }
-    if (pthread_join(threads_[index](), nullptr))
-    {
-        FatalErrorInFunction << "Failed freeing thread " << index
-            << exit(FatalError);
-    }
-}
-
-
-void Foam::freeThread(const label index)
-{
-    if (POSIX::debug)
-    {
-        Pout<< "freeThread : index:" << index << endl;
-    }
-    threads_[index].clear();
-}
-
-
-Foam::label Foam::allocateMutex()
-{
-    forAll(mutexes_, i)
-    {
-        if (!mutexes_[i].valid())
-        {
-            if (POSIX::debug)
-            {
-                Pout<< "allocateMutex : reusing index:" << i << endl;
-            }
-            // Reuse entry
-            mutexes_[i].reset(new pthread_mutex_t());
-            return i;
-        }
-    }
-
-    const label index = mutexes_.size();
-
-    if (POSIX::debug)
-    {
-        Pout<< "allocateMutex : new index:" << index << endl;
-    }
-    mutexes_.append(autoPtr<pthread_mutex_t>(new pthread_mutex_t()));
-    return index;
-}
-
-
-void Foam::lockMutex(const label index)
-{
-    if (POSIX::debug)
-    {
-        Pout<< "lockMutex : index:" << index << endl;
-    }
-    if (pthread_mutex_lock(&mutexes_[index]()))
-    {
-        FatalErrorInFunction << "Failed locking mutex " << index
-            << exit(FatalError);
-    }
-}
-
-
-void Foam::unlockMutex(const label index)
-{
-    if (POSIX::debug)
-    {
-        Pout<< "unlockMutex : index:" << index << endl;
-    }
-    if (pthread_mutex_unlock(&mutexes_[index]()))
-    {
-        FatalErrorInFunction << "Failed unlocking mutex " << index
-            << exit(FatalError);
-    }
-}
-
-
-void Foam::freeMutex(const label index)
-{
-    if (POSIX::debug)
-    {
-        Pout<< "freeMutex : index:" << index << endl;
-    }
-    mutexes_[index].clear();
 }
 
 

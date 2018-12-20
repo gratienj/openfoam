@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -113,7 +113,7 @@ label addPatch
 
 
 // Filter out the empty patches.
-void filterPatches(fvMesh& mesh, const HashSet<word>& addedPatchNames)
+void filterPatches(fvMesh& mesh, const wordHashSet& addedPatchNames)
 {
     // Remove any zero-sized ones. Assumes
     // - processor patches are already only there if needed
@@ -192,10 +192,10 @@ void modifyOrAddFace
     const label zoneID,
     const bool zoneFlip,
 
-    PackedBoolList& modifiedFace
+    bitSet& modifiedFace
 )
 {
-    if (!modifiedFace[facei])
+    if (modifiedFace.set(facei))
     {
         // First usage of face. Modify.
         meshMod.setAction
@@ -213,7 +213,6 @@ void modifyOrAddFace
                 zoneFlip                    // face flip in zone
             )
         );
-        modifiedFace[facei] = 1;
     }
     else
     {
@@ -248,7 +247,7 @@ void createFaces
     const labelList& newMasterPatches,
     const labelList& newSlavePatches,
     polyTopoChange& meshMod,
-    PackedBoolList& modifiedFace,
+    bitSet& modifiedFace,
     label& nModified
 )
 {
@@ -369,9 +368,17 @@ void createFaces
         {
             const polyPatch& pp = pbm[patchi];
 
-            label newPatchi = newMasterPatches[i];
+            const label newMasterPatchi = newMasterPatches[i];
+            const label newSlavePatchi = newSlavePatches[i];
 
-            if (pp.coupled() && pbm[newPatchi].coupled())
+            if
+            (
+                pp.coupled()
+             && (
+                    pbm[newMasterPatchi].coupled()
+                 || pbm[newSlavePatchi].coupled()
+                )
+            )
             {
                 // Do not allow coupled faces to be moved to different
                 // coupled patches.
@@ -392,12 +399,14 @@ void createFaces
                                 << "Found boundary face (in patch "
                                 << pp.name()
                                 << ") in faceZone " << fZone.name()
-                                << " to convert to baffle patch "
-                                << pbm[newPatchi].name()
+                                << " to convert to baffle patches "
+                                << pbm[newMasterPatchi].name() << "/"
+                                << pbm[newSlavePatchi].name()
                                 << endl
-                                << "    Run with -internalFacesOnly option"
-                                << " if you don't wish to convert"
-                                << " boundary faces." << endl;
+                                << "    Set internalFacesOnly to true in the"
+                                << " createBaffles control dictionary if you"
+                                << " don't wish to convert boundary faces."
+                                << endl;
                         }
 
                         modifyOrAddFace
@@ -407,11 +416,14 @@ void createFaces
                             facei,                      // label of face
                             mesh.faceOwner()[facei],    // owner
                             false,                      // face flip
-                            newPatchi,                  // patch for face
+                            fZone.flipMap()[zoneFacei]
+                          ? newSlavePatchi
+                          : newMasterPatchi,            // patch for face
                             fZone.index(),              // zone for face
                             fZone.flipMap()[zoneFacei], // face flip in zone
                             modifiedFace                // modify or add
                         );
+
                         nModified++;
                     }
                 }
@@ -428,58 +440,57 @@ int main(int argc, char *argv[])
         "Makes internal faces into boundary faces.\n"
         "Does not duplicate points."
     );
-    #include "addDictOption.H"
+
+    argList::addOption("dict", "file", "Use alternative createBafflesDict");
     #include "addOverwriteOption.H"
-    #include "addDictOption.H"
     #include "addRegionOption.H"
+
+    argList::noFunctionObjects();  // Never use function objects
+
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
     #include "createNamedMesh.H"
 
 
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
     const word oldInstance = mesh.pointsInstance();
 
     const word dictName("createBafflesDict");
     #include "setSystemMeshDictionaryIO.H"
 
-    Switch internalFacesOnly(false);
+    bool internalFacesOnly(false);
 
-    Switch noFields(false);
+    bool noFields(false);
 
     PtrList<faceSelection> selectors;
     {
         Info<< "Reading baffle criteria from " << dictName << nl << endl;
         IOdictionary dict(dictIO);
 
-        dict.lookup("internalFacesOnly") >> internalFacesOnly;
+        internalFacesOnly = dict.get<bool>("internalFacesOnly");
         noFields = dict.lookupOrDefault("noFields", false);
 
         const dictionary& selectionsDict = dict.subDict("baffles");
 
-        label n = 0;
-        forAllConstIter(dictionary, selectionsDict, iter)
+        selectors.resize(selectionsDict.size());
+
+        label nselect = 0;
+        for (const entry& dEntry : selectionsDict)
         {
-            if (iter().isDict())
-            {
-                n++;
-            }
-        }
-        selectors.setSize(n);
-        n = 0;
-        forAllConstIter(dictionary, selectionsDict, iter)
-        {
-            if (iter().isDict())
+            if (dEntry.isDict())
             {
                 selectors.set
                 (
-                    n++,
-                    faceSelection::New(iter().keyword(), mesh, iter().dict())
+                    nselect,
+                    faceSelection::New(dEntry.keyword(), mesh, dEntry.dict())
                 );
+
+                ++nselect;
             }
         }
+
+        selectors.resize(nselect);
     }
 
 
@@ -539,15 +550,13 @@ int main(int argc, char *argv[])
         if (mesh.faceZones().findZoneID(name) == -1)
         {
             mesh.faceZones().clearAddressing();
-            label sz = mesh.faceZones().size();
+            const label zoneID = mesh.faceZones().size();
 
-            labelList addr(0);
-            boolList flip(0);
-            mesh.faceZones().setSize(sz+1);
+            mesh.faceZones().setSize(zoneID+1);
             mesh.faceZones().set
             (
-                sz,
-                new faceZone(name, addr, flip, sz, mesh.faceZones())
+                zoneID,
+                new faceZone(name, labelList(), false, zoneID, mesh.faceZones())
             );
         }
     }
@@ -594,7 +603,7 @@ int main(int argc, char *argv[])
             {
                 addr[n] = facei;
                 flip[n] = faceToFlip[facei];
-                n++;
+                ++n;
             }
         }
 
@@ -605,7 +614,14 @@ int main(int argc, char *argv[])
         mesh.faceZones().set
         (
             zoneID,
-            new faceZone(name, addr, flip, zoneID, mesh.faceZones())
+            new faceZone
+            (
+                name,
+                std::move(addr),
+                std::move(flip),
+                zoneID,
+                mesh.faceZones()
+            )
         );
     }
 
@@ -613,7 +629,7 @@ int main(int argc, char *argv[])
 
     // Count patches to add
     // ~~~~~~~~~~~~~~~~~~~~
-    HashSet<word> bafflePatches;
+    wordHashSet bafflePatches;
     {
         forAll(selectors, selectorI)
         {
@@ -621,10 +637,10 @@ int main(int argc, char *argv[])
 
             if (dict.found("patches"))
             {
-                const dictionary& patchSources = dict.subDict("patches");
-                forAllConstIter(dictionary, patchSources, iter)
+                for (const entry& dEntry : dict.subDict("patches"))
                 {
-                    const word patchName(iter().dict()["name"]);
+                    const word patchName(dEntry.dict().get<word>("name"));
+
                     bafflePatches.insert(patchName);
                 }
             }
@@ -632,6 +648,7 @@ int main(int argc, char *argv[])
             {
                 const word masterName = selectors[selectorI].name() + "_master";
                 bafflePatches.insert(masterName);
+
                 const word slaveName = selectors[selectorI].name() + "_slave";
                 bafflePatches.insert(slaveName);
             }
@@ -655,7 +672,7 @@ int main(int argc, char *argv[])
     // Pass 1: add patches
     // ~~~~~~~~~~~~~~~~~~~
 
-    //HashSet<word> addedPatches;
+    // wordHashSet addedPatches;
     {
         const polyBoundaryMesh& pbm = mesh.boundaryMesh();
         forAll(selectors, selectorI)
@@ -665,14 +682,15 @@ int main(int argc, char *argv[])
 
             if (dict.found("patches"))
             {
-                const dictionary& patchSources = dict.subDict("patches");
-                forAllConstIter(dictionary, patchSources, iter)
+                for (const entry& dEntry : dict.subDict("patches"))
                 {
-                    const word patchName(iter().dict()["name"]);
+                    const dictionary& dict = dEntry.dict();
+
+                    const word patchName(dict.get<word>("name"));
 
                     if (pbm.findPatchID(patchName) == -1)
                     {
-                        dictionary patchDict = iter().dict();
+                        dictionary patchDict = dict;
                         patchDict.set("nFaces", 0);
                         patchDict.set("startFace", 0);
 
@@ -713,10 +731,9 @@ int main(int argc, char *argv[])
                 // master and slave in different groupNames
                 // (ie 3D thermal baffles)
 
-                Switch sameGroup
-                (
-                    patchSource.lookupOrDefault("sameGroup", true)
-                );
+                const bool sameGroup =
+                    patchSource.lookupOrDefault("sameGroup", true);
+
                 if (!sameGroup)
                 {
                     groupNameMaster = groupName + "Group_master";
@@ -752,7 +769,7 @@ int main(int argc, char *argv[])
     //   side come first and faces from the other side next.
 
     // Whether first use of face (modify) or consecutive (add)
-    PackedBoolList modifiedFace(mesh.nFaces());
+    bitSet modifiedFace(mesh.nFaces());
     label nModified = 0;
 
     forAll(selectors, selectorI)
@@ -768,13 +785,14 @@ int main(int argc, char *argv[])
 
         if (dict.found("patches"))
         {
-            const dictionary& patchSources = dict.subDict("patches");
-
             bool master = true;
-            forAllConstIter(dictionary, patchSources, iter)
+
+            for (const entry& dEntry : dict.subDict("patches"))
             {
-                const word patchName(iter().dict()["name"]);
-                label patchi = pbm.findPatchID(patchName);
+                const word patchName(dEntry.dict().get<word>("name"));
+
+                const label patchi = pbm.findPatchID(patchName);
+
                 if (master)
                 {
                     newMasterPatches.append(patchi);
@@ -794,7 +812,6 @@ int main(int argc, char *argv[])
             const word slaveName = selectors[selectorI].name() + "_slave";
             newSlavePatches.append(pbm.findPatchID(slaveName));
         }
-
 
 
         createFaces
@@ -817,26 +834,25 @@ int main(int argc, char *argv[])
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
 
     // Change the mesh. Change points directly (no inflation).
     autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
     // Update fields
-    mesh.updateMesh(map);
-
+    mesh.updateMesh(map());
 
 
     // Correct boundary faces mapped-out-of-nothing.
     // This is just a hack to correct the value field.
     {
-        fvMeshMapper mapper(mesh, map);
+        fvMeshMapper mapper(mesh, map());
         bool hasWarned = false;
 
-        forAllConstIter(HashSet<word>, bafflePatches, iter)
+        for (const word& patchName : bafflePatches)
         {
-            label patchi = mesh.boundaryMesh().findPatchID(iter.key());
+            label patchi = mesh.boundaryMesh().findPatchID(patchName);
 
             const fvPatchMapper& pm = mapper.boundaryMap()[patchi];
 
@@ -866,17 +882,18 @@ int main(int argc, char *argv[])
             const dictionary& dict = selectors[selectorI].dict();
             if (dict.found("patches"))
             {
-                const dictionary& patchSources = dict.subDict("patches");
-
-                forAllConstIter(dictionary, patchSources, iter)
+                for (const entry& dEntry : dict.subDict("patches"))
                 {
-                    const word patchName(iter().dict()["name"]);
+                    const dictionary& dict = dEntry.dict();
+
+                    const word patchName(dict.get<word>("name"));
+
                     label patchi = pbm.findPatchID(patchName);
 
-                    if (iter().dict().found("patchFields"))
+                    if (dEntry.dict().found("patchFields"))
                     {
                         const dictionary& patchFieldsDict =
-                            iter().dict().subDict
+                            dEntry.dict().subDict
                             (
                                 "patchFields"
                             );
@@ -894,10 +911,8 @@ int main(int argc, char *argv[])
             {
                 const dictionary& patchSource = dict.subDict("patchPairs");
 
-                Switch sameGroup
-                (
-                    patchSource.lookupOrDefault("sameGroup", true)
-                );
+                const bool sameGroup =
+                    patchSource.lookupOrDefault("sameGroup", true);
 
                 const word& groupName = selectors[selectorI].name();
 
@@ -911,11 +926,11 @@ int main(int argc, char *argv[])
                     if (sameGroup)
                     {
                         // Add coupleGroup to all entries
-                        forAllIter(dictionary, patchFieldsDict, iter)
+                        for (entry& dEntry : patchFieldsDict)
                         {
-                            if (iter().isDict())
+                            if (dEntry.isDict())
                             {
-                                dictionary& dict = iter().dict();
+                                dictionary& dict = dEntry.dict();
                                 dict.set("coupleGroup", groupName);
                             }
                         }

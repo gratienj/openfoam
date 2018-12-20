@@ -38,7 +38,7 @@ Foam::autoPtr<Foam::surfaceTensionModel> Foam::surfaceTensionModel::New
     {
         const dictionary& sigmaDict = surfaceTensionModel::sigmaDict(dict);
 
-        const word modelType(sigmaDict.lookup("type"));
+        const word modelType(sigmaDict.get<word>("type"));
 
         Info<< "Selecting surfaceTensionModel " << modelType << endl;
 
@@ -56,13 +56,11 @@ Foam::autoPtr<Foam::surfaceTensionModel> Foam::surfaceTensionModel::New
 
         return cstrIter()(sigmaDict, mesh);
     }
-    else
-    {
-        return autoPtr<surfaceTensionModel>
-        (
-            new surfaceTensionModels::constant(dict, mesh)
-        );
-    }
+
+    return autoPtr<surfaceTensionModel>
+    (
+        new surfaceTensionModels::constant(dict, mesh)
+    );
 }
 
 

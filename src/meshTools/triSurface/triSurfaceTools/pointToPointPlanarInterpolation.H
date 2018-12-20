@@ -37,8 +37,8 @@ SourceFiles
 #define pointToPointPlanarInterpolation_H
 
 #include "FixedList.H"
-#include "coordinateSystem.H"
 #include "instantList.H"
+#include "cartesianCS.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -59,8 +59,8 @@ class pointToPointPlanarInterpolation
         //- Whether to use nearest point only (avoids triangulation, projection)
         const bool nearestOnly_;
 
-        //- Coordinate system
-        coordinateSystem referenceCS_;
+        //- Cartesian reference coordinate system
+        coordSystem::cartesian referenceCS_;
 
         //- Number of source points (for checking)
         label nPoints_;
@@ -77,7 +77,7 @@ class pointToPointPlanarInterpolation
     // Private Member Functions
 
         //- Calculate a local coordinate system from set of points
-        coordinateSystem calcCoordinateSystem(const pointField&) const;
+        coordSystem::cartesian calcCoordinateSystem(const pointField&) const;
 
         //- Calculate addressing and weights
         void calcWeights
@@ -145,8 +145,8 @@ public:
             return nearestOnly_;
         }
 
-        //- Return the coordinateSystem
-        const coordinateSystem& referenceCS() const
+        //- Return the Cartesian reference coordinate system
+        const coordSystem::cartesian& referenceCS() const
         {
             return referenceCS_;
         }
@@ -173,7 +173,7 @@ public:
         //- Helper: extract words of times
         static wordList timeNames(const instantList&);
 
-        //- Helper: find time. Return true if succesful.
+        //- Helper: find time. Return true if successful.
         static bool findTime
         (
             const instantList& times,

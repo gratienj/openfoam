@@ -43,7 +43,7 @@ autoPtr<filmViscosityModel> filmViscosityModel::New
     volScalarField& mu
 )
 {
-    const word modelType(dict.lookup("filmViscosityModel"));
+    const word modelType(dict.get<word>("filmViscosityModel"));
 
     Info<< "    Selecting filmViscosityModel " << modelType << endl;
 
@@ -65,8 +65,8 @@ autoPtr<filmViscosityModel> filmViscosityModel::New
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // end namespace surfaceFilmModels
-} // end namespace regionModels
-} // end namespace Foam
+} // End namespace surfaceFilmModels
+} // End namespace regionModels
+} // End namespace Foam
 
 // ************************************************************************* //

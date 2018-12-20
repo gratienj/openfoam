@@ -152,7 +152,7 @@ Foam::shortEdgeFilter2D::shortEdgeFilter2D
 )
 :
     cv2Dmesh_(cv2Dmesh),
-    shortEdgeFilterFactor_(readScalar(dict.lookup("shortEdgeFilterFactor"))),
+    shortEdgeFilterFactor_(dict.get<scalar>("shortEdgeFilterFactor")),
     edgeAttachedToBoundaryFactor_
     (
         dict.lookupOrDefault<scalar>("edgeAttachedToBoundaryFactor", 2.0)
@@ -204,7 +204,7 @@ Foam::shortEdgeFilter2D::shortEdgeFilter2D
 
     points2D.clear();
 
-    ms_ = MeshedSurface<face>(xferMove(points), xferMove(faces));
+    ms_ = MeshedSurface<face>(std::move(points), std::move(faces));
 
     Info<< "Meshed surface stats before edge filtering :" << endl;
     ms_.writeStats(Info);
@@ -226,8 +226,7 @@ Foam::shortEdgeFilter2D::~shortEdgeFilter2D()
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-void
-Foam::shortEdgeFilter2D::filter()
+void Foam::shortEdgeFilter2D::filter()
 {
     // These are global indices.
     const pointField& points = ms_.points();
@@ -533,12 +532,7 @@ Foam::shortEdgeFilter2D::filter()
 
     newFaces.setSize(newFacei);
 
-    MeshedSurface<face> fMesh
-    (
-        xferMove(newPoints),
-        xferMove(newFaces),
-        xferCopy(List<surfZone>())
-    );
+    MeshedSurface<face> fMesh(std::move(newPoints), std::move(newFaces));
 
     updateEdgeRegionMap
     (

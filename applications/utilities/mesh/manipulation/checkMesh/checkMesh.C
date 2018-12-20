@@ -81,44 +81,49 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Checks validity of a mesh"
+    );
+
     timeSelector::addOptions();
     #include "addRegionOption.H"
     argList::addBoolOption
     (
         "noTopology",
-        "skip checking the mesh topology"
+        "Skip checking the mesh topology"
     );
     argList::addBoolOption
     (
         "allGeometry",
-        "include bounding box checks"
+        "Include bounding box checks"
     );
     argList::addBoolOption
     (
         "allTopology",
-        "include extra topology checks"
+        "Include extra topology checks"
     );
     argList::addBoolOption
     (
         "writeAllFields",
-        "write volFields with mesh quality parameters"
+        "Write volFields with mesh quality parameters"
     );
     argList::addOption
     (
         "writeFields",
         "wordList",
-        "write volFields with selected mesh quality parameters"
+        "Write volFields with selected mesh quality parameters"
     );
     argList::addBoolOption
     (
         "meshQuality",
-        "read user-defined mesh quality criterions from system/meshQualityDict"
+        "Read user-defined mesh quality criteria from system/meshQualityDict"
     );
     argList::addOption
     (
         "writeSets",
         "surfaceFormat",
-        "reconstruct and write all faceSets and cellSets in selected format"
+        "Reconstruct and write all faceSets and cellSets in selected format"
     );
 
     #include "setRootCase.H"
@@ -126,20 +131,21 @@ int main(int argc, char *argv[])
     instantList timeDirs = timeSelector::select0(runTime, args);
     #include "createNamedMesh.H"
 
-    const bool noTopology  = args.optionFound("noTopology");
-    const bool allGeometry = args.optionFound("allGeometry");
-    const bool allTopology = args.optionFound("allTopology");
-    const bool meshQuality = args.optionFound("meshQuality");
+    const bool noTopology  = args.found("noTopology");
+    const bool allGeometry = args.found("allGeometry");
+    const bool allTopology = args.found("allTopology");
+    const bool meshQuality = args.found("meshQuality");
 
-    word surfaceFormat;
-    const bool writeSets = args.optionReadIfPresent("writeSets", surfaceFormat);
-    HashSet<word> selectedFields;
-    bool writeFields = args.optionReadIfPresent
+    const word surfaceFormat = args.opt<word>("writeSets", "");
+    const bool writeSets = surfaceFormat.size();
+
+    wordHashSet selectedFields;
+    bool writeFields = args.readIfPresent
     (
         "writeFields",
         selectedFields
     );
-    if (!writeFields && args.optionFound("writeAllFields"))
+    if (!writeFields && args.found("writeAllFields"))
     {
         selectedFields.insert("nonOrthoAngle");
         selectedFields.insert("faceWeight");
@@ -149,6 +155,8 @@ int main(int argc, char *argv[])
         selectedFields.insert("cellShapes");
         selectedFields.insert("cellVolume");
         selectedFields.insert("cellVolumeRatio");
+        selectedFields.insert("minTetVolume");
+        selectedFields.insert("cellRegion");
     }
 
 

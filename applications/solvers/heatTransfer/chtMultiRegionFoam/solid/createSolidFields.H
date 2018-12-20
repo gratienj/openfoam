@@ -31,7 +31,12 @@
             coordinates.set
             (
                 i,
-                coordinateSystem::New(solidRegions[i], thermos[i])
+                coordinateSystem::New
+                (
+                    solidRegions[i],
+                    thermos[i],
+                    coordinateSystem::typeName_()
+                )
             );
 
             tmp<volVectorField> tkappaByCp =
@@ -51,18 +56,17 @@
                         IOobject::NO_WRITE
                     ),
                     solidRegions[i],
-                    dimensionedSymmTensor
-                    (
-                        "zero",
-                        tkappaByCp().dimensions(),
-                        Zero
-                    ),
+                    dimensionedSymmTensor(tkappaByCp().dimensions(), Zero),
                     zeroGradientFvPatchSymmTensorField::typeName
                 )
             );
 
             aniAlphas[i].primitiveFieldRef() =
-                coordinates[i].R().transformVector(tkappaByCp());
+                coordinates[i].transformPrincipal
+                (
+                    solidRegions[i].cellCentres(),
+                    tkappaByCp()
+                );
             aniAlphas[i].correctBoundaryConditions();
 
         }
@@ -100,7 +104,7 @@
                         IOobject::NO_WRITE
                     ),
                     solidRegions[i],
-                    dimensionedScalar("1", dimless, scalar(1.0))
+                    dimensionedScalar("1", dimless, scalar(1))
                 )
             );
         }

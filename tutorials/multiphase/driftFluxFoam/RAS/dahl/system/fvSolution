@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -24,7 +24,7 @@ solvers
 
         MULESCorr       yes;
         nLimiterIter    3;
-        alphaApplyPrevCorr  yes;
+        alphaApplyPrevCorr  no;
 
         solver          smoothSolver;
         smoother        symGaussSeidel;

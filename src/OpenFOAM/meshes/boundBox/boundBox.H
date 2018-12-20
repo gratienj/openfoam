@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,9 +45,9 @@ Note
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
-
+// Forward declarations
 class boundBox;
+class plane;
 template<class T> class tmp;
 
 Istream& operator>>(Istream& is, boundBox& bb);
@@ -78,6 +78,9 @@ public:
         //- Faces to point addressing, as per a 'hex' cell
         static const faceList faces;
 
+        //- The unit normal per face
+        static const FixedList<vector, 6> faceNormals;
+
 
     // Constructors
 
@@ -85,7 +88,7 @@ public:
         inline boundBox();
 
         //- Construct a bounding box containing a single initial point
-        explicit inline boundBox(const point& pt);
+        inline explicit boundBox(const point& pt);
 
         //- Construct from components
         inline boundBox(const point& min, const point& max);
@@ -123,7 +126,7 @@ public:
         inline boundBox(Istream& is);
 
 
-    // Member functions
+    // Member Functions
 
         // Access
 
@@ -166,8 +169,22 @@ public:
             //- Average length/height/width dimension
             inline scalar avgDim() const;
 
+            //- Count the number of positive, non-zero dimensions.
+            //  \return -1 if any dimensions are negative,
+            //  0 = 0D (point),
+            //  1 = 1D (line aligned with an axis),
+            //  2 = 2D (plane aligned with an axis),
+            //  3 = 3D (box)
+            inline label nDim() const;
+
             //- Corner points in an order corresponding to a 'hex' cell
             tmp<pointField> points() const;
+
+            //- Face midpoints
+            tmp<pointField> faceCentres() const;
+
+            //- Face centre of given face index
+            point faceCentre(const direction facei) const;
 
 
         // Manipulate
@@ -184,19 +201,11 @@ public:
             //- Extend to include the points from the temporary point field.
             inline void add(const tmp<pointField>& tpoints);
 
-            //- Extend to include the subset of the point field.
-            //  The indices could be from cell/face etc.
-            inline void add
-            (
-                const UList<point>& points,
-                const labelUList& indices
-            );
-
             //- Extend to include the points.
             template<unsigned Size>
             void add(const FixedList<point, Size>& points);
 
-            //- Extend to include the subset of the point field.
+            //- Extend to include a (subsetted) point field.
             //  The indices could be from edge/triFace etc.
             template<unsigned Size>
             void add
@@ -205,18 +214,34 @@ public:
                 const FixedList<label, Size>& indices
             );
 
+            //- Extend to include a (subsetted) point field.
+            //
+            //  \tparam IntContainer  A container with an iterator that
+            //      dereferences to an label
+            template<class IntContainer>
+            void add
+            (
+                const UList<point>& points,
+                const IntContainer& indices
+            );
+
             //- Inflate box by factor*mag(span) in all dimensions
             void inflate(const scalar s);
 
             //- Parallel reduction of min/max values
             void reduce();
 
+        // Query
+
             //- Intersection (union) with the second box.
             //  The return value is true if the intersection is non-empty.
             bool intersect(const boundBox& bb);
 
-
-        // Query
+            //- Does plane intersect this bounding box.
+            //  There is an intersection if the plane segments the corner points
+            //  \note the results are unreliable when plane coincides almost
+            //  exactly with a box face
+            bool intersects(const plane& pln) const;
 
             //- Overlaps/touches boundingBox?
             inline bool overlaps(const boundBox& bb) const;
@@ -237,42 +262,52 @@ public:
             //- Contains point? (inside only)
             inline bool containsInside(const point& pt) const;
 
-            //- Contains all of the points? (inside or on edge)
+            //- Contains all points? (inside or on edge)
             bool contains(const UList<point>& points) const;
 
-            //- Contains all of the subset of points? (inside or on edge)
-            bool contains
-            (
-                const UList<point>& points,
-                const labelUList& indices
-            ) const;
-
-            //- Contains all of the subset of points? (inside or on edge)
+            //- Contains all of the (subsetted) points? (inside or on edge)
             template<unsigned Size>
             bool contains
             (
                 const UList<point>& points,
                 const FixedList<label, Size>& indices
+            ) const;
+
+
+            //- Contains all of the (subsetted) points? (inside or on edge)
+            //
+            //  \tparam IntContainer  A container with an iterator that
+            //      dereferences to an label
+            template<class IntContainer>
+            bool contains
+            (
+                const UList<point>& points,
+                const IntContainer& indices
             ) const;
 
 
             //- Contains any of the points? (inside or on edge)
             bool containsAny(const UList<point>& points) const;
 
-            //- Contains any of the subset of points? (inside or on edge)
-            bool containsAny
-            (
-                const UList<point>& points,
-                const labelUList& indices
-            ) const;
-
-            //- Contains any of the subset of points? (inside or on edge)
+            //- Contains any of the (subsetted) points? (inside or on edge)
             template<unsigned Size>
             bool containsAny
             (
                 const UList<point>& points,
                 const FixedList<label, Size>& indices
             ) const;
+
+            //- Contains any of the (subsetted) points? (inside or on edge)
+            //
+            //  \tparam IntContainer  A container with an iterator that
+            //      dereferences to an label
+            template<class IntContainer>
+            bool containsAny
+            (
+                const UList<point>& points,
+                const IntContainer& indices
+            ) const;
+
 
             //- Return the nearest point on the boundBox to the supplied point.
             //  If point is inside the boundBox then the point is returned

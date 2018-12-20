@@ -65,11 +65,11 @@ class localBlended
         tmp<surfaceInterpolationScheme<Type>> tScheme2_;
 
 
-        //- Disallow default bitwise copy construct
-        localBlended(const localBlended&);
+        //- No copy construct
+        localBlended(const localBlended&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const localBlended&);
+        //- No copy assignment
+        void operator=(const localBlended&) = delete;
 
 
 public:
@@ -209,7 +209,7 @@ public:
                     (
                         blendingFactor
                       * tScheme1_().correction(vf)
-                      + (scalar(1.0) - blendingFactor)
+                      + (scalar(1) - blendingFactor)
                       * tScheme2_().correction(vf)
                     );
                 }
@@ -226,7 +226,7 @@ public:
             {
                 return
                 (
-                    (scalar(1.0) - blendingFactor)
+                    (scalar(1) - blendingFactor)
                   * tScheme2_().correction(vf)
                 );
             }

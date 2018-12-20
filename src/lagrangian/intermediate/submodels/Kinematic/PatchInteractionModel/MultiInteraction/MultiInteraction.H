@@ -32,8 +32,8 @@ Description
     where all the subdictionaries are the interaction models.
 
         // Exit upon first successful interaction or continue doing other
-        // models. Returned nteraction status will be true if there has been any
-        // interaction (so logical or)
+        // models. Returned interaction status will be true if there has been
+        // any interaction (so logical or)
         oneInteractionOnly true;
 
         model1
@@ -94,7 +94,7 @@ class MultiInteraction
 {
     // Private data
 
-        Switch oneInteractionOnly_;
+        bool oneInteractionOnly_;
 
         //- Submodels
         PtrList<PatchInteractionModel<CloudType>> models_;
@@ -130,7 +130,7 @@ public:
 
 
     //- Destructor
-    virtual ~MultiInteraction();
+    virtual ~MultiInteraction() = default;
 
 
     // Member Functions

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,9 +37,9 @@ void Foam::functionObjects::nearWallFields::createFields
 
     HashTable<const VolFieldType*> flds(obr_.lookupClass<VolFieldType>());
 
-    forAllConstIter(typename HashTable<const VolFieldType*>, flds, iter)
+    forAllConstIters(flds, iter)
     {
-        const VolFieldType& fld = *iter();
+        const VolFieldType& fld = *(iter.object());
 
         if (fieldMap_.found(fld.name()))
         {
@@ -105,10 +105,8 @@ void Foam::functionObjects::nearWallFields::sampleBoundaryField
 
     // Pick up data
     label nPatchFaces = 0;
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        label patchi = iter.key();
-
         fvPatchField<Type>& pfld = fldBf[patchi];
 
         Field<Type> newFld(pfld.size());

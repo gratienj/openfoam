@@ -56,7 +56,7 @@ namespace fv
 {
 
 /*---------------------------------------------------------------------------*\
-               Class buoyancyForce Declaration
+                        Class buoyancyForce Declaration
 \*---------------------------------------------------------------------------*/
 
 class buoyancyForce
@@ -70,11 +70,11 @@ class buoyancyForce
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        buoyancyForce(const buoyancyForce&);
+        //- No copy construct
+        buoyancyForce(const buoyancyForce&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const buoyancyForce&);
+        //- No copy assignment
+        void operator=(const buoyancyForce&) = delete;
 
 
 public:
@@ -97,21 +97,24 @@ public:
 
     // Member Functions
 
-        // Evaluate
+        //- Add explicit contribution to incompressible momentum equation
+        virtual void addSup
+        (
+            fvMatrix<vector>& eqn,
+            const label fieldi
+        );
 
-            //- Add explicit contribution to compressible momentum equation
-            virtual void addSup
-            (
-                const volScalarField& rho,
-                fvMatrix<vector>& eqn,
-                const label fieldi
-            );
+        //- Add explicit contribution to compressible momentum equation
+        virtual void addSup
+        (
+            const volScalarField& rho,
+            fvMatrix<vector>& eqn,
+            const label fieldi
+        );
 
 
-        // IO
-
-            //- Read source dictionary
-            virtual bool read(const dictionary& dict);
+        //- Read source dictionary
+        virtual bool read(const dictionary& dict);
 };
 
 

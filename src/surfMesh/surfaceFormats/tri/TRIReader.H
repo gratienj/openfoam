@@ -43,6 +43,7 @@ SourceFiles
 
 #include "STLpoint.H"
 #include "labelList.H"
+#include "surfaceFormatsCore.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -56,6 +57,8 @@ namespace fileFormats
 \*---------------------------------------------------------------------------*/
 
 class TRIReader
+:
+    public surfaceFormatsCore
 {
     // Private Data
 
@@ -77,12 +80,6 @@ class TRIReader
     // Private Member Functions
 
         bool readFile(const fileName& filename);
-
-        //- Disallow default bitwise copy construct
-        TRIReader(const TRIReader&) = delete;
-
-        //- Disallow default bitwise assignment
-        TRIReader& operator=(const TRIReader&) = delete;
 
 
 public:

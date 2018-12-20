@@ -40,7 +40,9 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#ifdef __GNUC__
+#ifdef darwin
+    #include <machine/endian.h>
+#elif defined __GNUC__
     #include <endian.h>
 #elif defined __mips
     #include <standards.h>
@@ -95,10 +97,10 @@ class endian
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         endian(const endian&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const endian&) = delete;
 
 public:

@@ -37,8 +37,8 @@ SourceFiles
 #ifndef PatchEdgeFaceWave_H
 #define PatchEdgeFaceWave_H
 
+#include "bitSet.H"
 #include "scalarField.H"
-#include "PackedBoolList.H"
 #include "PrimitivePatch.H"
 #include "vectorTensorTransform.H"
 
@@ -74,7 +74,7 @@ class PatchEdgeFaceWave
   // Private static data
 
         //- Relative tolerance. Stop propagation if relative changes
-        //  less than this tolerance (responsability for checking this is
+        //  less than this tolerance (responsibility for checking this is
         //  up to Type implementation)
         static scalar propagationTol_;
 
@@ -101,13 +101,13 @@ class PatchEdgeFaceWave
         TrackingData& td_;
 
         //- Has edge changed
-        PackedBoolList changedEdge_;
+        bitSet changedEdge_;
 
         //- List of changed edges
         DynamicList<label> changedEdges_;
 
         //- Has face changed
-        PackedBoolList changedFace_;
+        bitSet changedFace_;
 
         //- List of changed faces
         DynamicList<label> changedFaces_;
@@ -123,7 +123,7 @@ class PatchEdgeFaceWave
         // Addressing between edges of patch_ and globalData.coupledPatch()
         labelList patchEdges_;
         labelList coupledEdges_;
-        PackedBoolList sameEdgeOrientation_;
+        bitSet sameEdgeOrientation_;
 
 
     // Private Member Functions
@@ -151,11 +151,11 @@ class PatchEdgeFaceWave
         //- Update coupled edges
         void syncEdges();
 
-        //- Disallow default bitwise copy construct
-        PatchEdgeFaceWave(const PatchEdgeFaceWave&);
+        //- No copy construct
+        PatchEdgeFaceWave(const PatchEdgeFaceWave&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const PatchEdgeFaceWave&);
+        //- No copy assignment
+        void operator=(const PatchEdgeFaceWave&) = delete;
 
 
 public:
@@ -226,14 +226,14 @@ public:
             return td_;
         }
 
-        //- Get number of unvisited faces, i.e. faces that were not (yet)
+        //- Number of unvisited faces, i.e. faces that were not (yet)
         //  reached from walking across patch. This can happen from
         //  - not enough iterations done
         //  - a disconnected patch
         //  - a patch without walls in it
-        label getUnsetFaces() const;
+        label nUnvisitedFaces() const;
 
-        label getUnsetEdges() const;
+        label nUnvisitedEdges() const;
 
         //- Copy initial data into allEdgeInfo_
         void setEdgeInfo

@@ -66,7 +66,7 @@ class extendedUpwindCellToFaceStencil
         //- Does stencil contain upwind points only
         const bool pureUpwind_;
 
-        //- Swap map for getting neigbouring data
+        //- Swap map for getting neighbouring data
         autoPtr<mapDistribute> ownMapPtr_;
         autoPtr<mapDistribute> neiMapPtr_;
 
@@ -113,11 +113,14 @@ class extendedUpwindCellToFaceStencil
         );
 
 
-        //- Disallow default bitwise copy construct
-        extendedUpwindCellToFaceStencil(const extendedUpwindCellToFaceStencil&);
+        //- No copy construct
+        extendedUpwindCellToFaceStencil
+        (
+            const extendedUpwindCellToFaceStencil&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const extendedUpwindCellToFaceStencil&);
+        //- No copy assignment
+        void operator=(const extendedUpwindCellToFaceStencil&) = delete;
 
 
 public:
@@ -152,13 +155,13 @@ public:
         //- Return reference to the parallel distribution map
         const mapDistribute& ownMap() const
         {
-            return ownMapPtr_();
+            return *ownMapPtr_;
         }
 
         //- Return reference to the parallel distribution map
         const mapDistribute& neiMap() const
         {
-            return neiMapPtr_();
+            return *neiMapPtr_;
         }
 
         //- Return reference to the stencil

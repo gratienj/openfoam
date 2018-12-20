@@ -146,7 +146,7 @@ Foam::label Foam::meshDualiser::findDualCell
 
 void Foam::meshDualiser::generateDualBoundaryEdges
 (
-    const PackedBoolList& isBoundaryEdge,
+    const bitSet& isBoundaryEdge,
     const label pointi,
     polyTopoChange& meshMod
 )
@@ -157,7 +157,7 @@ void Foam::meshDualiser::generateDualBoundaryEdges
     {
         label edgeI = pEdges[pEdgeI];
 
-        if (edgeToDualPoint_[edgeI] == -1 && isBoundaryEdge.get(edgeI) == 1)
+        if (edgeToDualPoint_[edgeI] == -1 && isBoundaryEdge.test(edgeI))
         {
             const edge& e = mesh_.edges()[edgeI];
 
@@ -271,14 +271,14 @@ Foam::label Foam::meshDualiser::addInternalFace
         );
 
         //pointField dualPoints(meshMod.points());
-        //vector n(newFace.normal(dualPoints));
-        //n /= mag(n);
+        //const vector n(newFace.unitNormal(dualPoints));
+        //
         //Pout<< "Generated internal dualFace:" << dualFacei
         //    << " verts:" << newFace
         //    << " points:" << UIndirectList<point>(meshMod.points(), newFace)
         //    << " n:" << n
         //    << " between dualowner:" << dualCell0
-        //    << " dualneigbour:" << dualCell1
+        //    << " dualneighbour:" << dualCell1
         //    << endl;
     }
     else
@@ -298,14 +298,14 @@ Foam::label Foam::meshDualiser::addInternalFace
         );
 
         //pointField dualPoints(meshMod.points());
-        //vector n(newFace.normal(dualPoints));
-        //n /= mag(n);
+        //const vector n(newFace.unitNormal(dualPoints));
+        //
         //Pout<< "Generated internal dualFace:" << dualFacei
         //    << " verts:" << newFace
         //    << " points:" << UIndirectList<point>(meshMod.points(), newFace)
         //    << " n:" << n
         //    << " between dualowner:" << dualCell1
-        //    << " dualneigbour:" << dualCell0
+        //    << " dualneighbour:" << dualCell0
         //    << endl;
     }
     return dualFacei;
@@ -355,8 +355,8 @@ Foam::label Foam::meshDualiser::addBoundaryFace
     );
 
     //pointField dualPoints(meshMod.points());
-    //vector n(newFace.normal(dualPoints));
-    //n /= mag(n);
+    //const vector n(newFace.unitNormal(dualPoints));
+    //
     //Pout<< "Generated boundary dualFace:" << dualFacei
     //    << " verts:" << newFace
     //    << " points:" << UIndirectList<point>(meshMod.points(), newFace)
@@ -374,7 +374,7 @@ Foam::label Foam::meshDualiser::addBoundaryFace
 void Foam::meshDualiser::createFacesAroundEdge
 (
     const bool splitFace,
-    const PackedBoolList& isBoundaryEdge,
+    const bitSet& isBoundaryEdge,
     const label edgeI,
     const label startFacei,
     polyTopoChange& meshMod,
@@ -397,7 +397,7 @@ void Foam::meshDualiser::createFacesAroundEdge
         startFacei, // face
         true,       // ownerSide
         fp,         // fp
-        isBoundaryEdge.get(edgeI) == 1  // isBoundaryEdge
+        isBoundaryEdge.test(edgeI)  // isBoundaryEdge
     );
     ie.setCanonical();
 
@@ -509,7 +509,7 @@ void Foam::meshDualiser::createFacesAroundEdge
         {
             // Back at start face (for internal edge only). See if this needs
             // adding.
-            if (isBoundaryEdge.get(edgeI) == 0)
+            if (!isBoundaryEdge.test(edgeI))
             {
                 label startDual = faceToDualPoint_[startFaceLabel];
 
@@ -886,15 +886,12 @@ void Foam::meshDualiser::setRefinement
     // Mark boundary edges and points.
     // (Note: in 1.4.2 we can use the built-in mesh point ordering
     //  facility instead)
-    PackedBoolList isBoundaryEdge(mesh_.nEdges());
+    bitSet isBoundaryEdge(mesh_.nEdges());
     for (label facei = mesh_.nInternalFaces(); facei < mesh_.nFaces(); facei++)
     {
         const labelList& fEdges = mesh_.faceEdges()[facei];
 
-        forAll(fEdges, i)
-        {
-            isBoundaryEdge.set(fEdges[i], 1);
-        }
+        isBoundaryEdge.set(fEdges);
     }
 
 
@@ -1142,7 +1139,7 @@ void Foam::meshDualiser::setRefinement
         );
     }
     // Detect whether different dual cells on either side of a face. This
-    // would neccesitate having a dual face built from the face and thus a
+    // would necessitate having a dual face built from the face and thus a
     // dual point at the face centre.
     for (label facei = 0; facei < mesh_.nInternalFaces(); facei++)
     {

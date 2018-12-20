@@ -59,8 +59,8 @@ multiBandSolidAbsorptionEmission
     emiCoeffs_(maxBands_),
     nBands_(0)
 {
-    coeffsDict_.lookup("absorptivity") >> absCoeffs_;
-    coeffsDict_.lookup("emissivity") >> emiCoeffs_;
+    coeffsDict_.readEntry("absorptivity", absCoeffs_);
+    coeffsDict_.readEntry("emissivity", emiCoeffs_);
     nBands_ = absCoeffs_.size();
 }
 
@@ -147,7 +147,7 @@ Foam::radiation::multiBandSolidAbsorptionEmission::ECont
                 IOobject::NO_WRITE
             ),
             mesh(),
-            dimensionedScalar("E", dimMass/dimLength/pow3(dimTime), 0.0)
+            dimensionedScalar(dimMass/dimLength/pow3(dimTime), Zero)
         )
     );
 

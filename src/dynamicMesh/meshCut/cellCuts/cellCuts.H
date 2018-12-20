@@ -446,7 +446,7 @@ class cellCuts
             //- Set orientation of loops
             void orientPlanesAndLoops();
 
-            //- Top level driver: adressing calculation and loop detection
+            //- Top level driver: addressing calculation and loop detection
             //  (loops splitting cells).
             void calcLoopsAndAddressing(const labelList& cutCells);
 
@@ -454,11 +454,11 @@ class cellCuts
             void check() const;
 
 
-        //- Disallow default bitwise copy construct
-        cellCuts(const cellCuts&);
+        //- No copy construct
+        cellCuts(const cellCuts&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const cellCuts&);
+        //- No copy assignment
+        void operator=(const cellCuts&) = delete;
 
 
 public:
@@ -575,7 +575,7 @@ public:
                 {
                     calcFaceCuts();
                 }
-                return faceCutsPtr_();
+                return *faceCutsPtr_;
             }
 
             //- Gives for split face the two cuts that split the face into two.

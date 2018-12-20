@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,9 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "manualDecomp.H"
-#include "addToRunTimeSelectionTable.H"
-#include "IFstream.H"
 #include "labelIOList.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -55,7 +54,10 @@ namespace Foam
 Foam::manualDecomp::manualDecomp(const dictionary& decompDict)
 :
     decompositionMethod(decompDict),
-    dataFile_(findCoeffsDict(typeName + "Coeffs").lookup("dataFile"))
+    dataFile_
+    (
+        findCoeffsDict(typeName + "Coeffs").get<fileName>("dataFile")
+    )
 {}
 
 
@@ -66,7 +68,10 @@ Foam::manualDecomp::manualDecomp
 )
 :
     decompositionMethod(decompDict, regionName),
-    dataFile_(findCoeffsDict(typeName + "Coeffs").lookup("dataFile"))
+    dataFile_
+    (
+        findCoeffsDict(typeName + "Coeffs").get<fileName>("dataFile")
+    )
 {}
 
 
@@ -77,7 +82,7 @@ Foam::labelList Foam::manualDecomp::decompose
     const polyMesh& mesh,
     const pointField& points,
     const scalarField& pointWeights
-)
+) const
 {
     labelIOList finalDecomp
     (
@@ -92,7 +97,7 @@ Foam::labelList Foam::manualDecomp::decompose
         )
     );
 
-    // check if the final decomposition is OK
+    // Check if the final decomposition is OK
 
     if (finalDecomp.size() != points.size())
     {

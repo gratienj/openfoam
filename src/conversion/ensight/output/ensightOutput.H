@@ -113,14 +113,13 @@ class ensightOutput
         ensightFile& os
     );
 
-
-    //- Disallow null constructor
+    //- No null constructor
     ensightOutput() = delete;
+
 
 public:
 
     // Public Methods
-
 
     //- Write volume field component-wise
     template<class Type>
@@ -143,7 +142,7 @@ public:
         const bool nodeValues = false
     )
     {
-        return writeField(vf, ensMesh, output.rawRef(), nodeValues);
+        return writeField(vf, ensMesh, output.ref(), nodeValues);
     }
 
 };

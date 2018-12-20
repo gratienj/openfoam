@@ -162,13 +162,20 @@ protected:
         //      as second (last) member
         Pair<scalar> maxResidual(const entry& solverPerfDictEntry) const;
 
+        //- Set the firstIteration flag on the mesh data dictionary
+        virtual void setFirstIterFlag
+        (
+            const bool check = true,
+            const bool force = false
+        );
+
 
 private:
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         solutionControl(const solutionControl&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const solutionControl&) = delete;
 
 
@@ -196,7 +203,7 @@ public:
         // Access
 
             //- Return the solution dictionary
-            inline const dictionary& dict() const;
+            inline const dictionary dict() const;
 
             //- Current corrector loop index
             inline label corr() const;

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -70,12 +70,6 @@ inline Foam::face::face(std::initializer_list<label> lst)
 {}
 
 
-inline Foam::face::face(const Xfer<labelList>& lst)
-:
-    labelList(lst)
-{}
-
-
 inline Foam::face::face(labelList&& lst)
 :
     labelList(std::move(lst))
@@ -111,9 +105,17 @@ inline Foam::pointField Foam::face::points
 }
 
 
+inline Foam::vector Foam::face::unitNormal(const UList<point>& p) const
+{
+    const vector n(areaNormal(p));
+    const scalar s(Foam::mag(n));
+    return s < ROOTVSMALL ? Zero : n/s;
+}
+
+
 inline Foam::scalar Foam::face::mag(const UList<point>& p) const
 {
-    return ::Foam::mag(normal(p));
+    return ::Foam::mag(areaNormal(p));
 }
 
 
@@ -130,21 +132,27 @@ inline Foam::edge Foam::face::faceEdge(const label n) const
 }
 
 
-inline bool Foam::face::found(const label globalIndex) const
+inline bool Foam::face::found(const label pointLabel) const
 {
-    return which(globalIndex) != -1;
+    return labelList::found(pointLabel);
+}
+
+
+inline Foam::label Foam::face::which(const label pointLabel) const
+{
+    return labelList::find(pointLabel);
 }
 
 
 inline Foam::label Foam::face::nextLabel(const label i) const
 {
-    return this->fcValue(i);
+    return labelList::fcValue(i);
 }
 
 
 inline Foam::label Foam::face::prevLabel(const label i) const
 {
-    return this->rcValue(i);
+    return labelList::rcValue(i);
 }
 
 
@@ -171,7 +179,7 @@ inline bool Foam::operator!=(const face& a, const face& b)
 
 inline Foam::Istream& Foam::operator>>(Istream& is, face& f)
 {
-    if (is.version() == IOstream::originalVersion)
+    if (is.version() == IOstreamOption::originalVersion)
     {
         // Read starting (
         is.readBegin("face");

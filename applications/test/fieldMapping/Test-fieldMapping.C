@@ -38,7 +38,7 @@ Description
 #include "removeFaces.H"
 #include "mapPolyMesh.H"
 #include "polyTopoChange.H"
-#include "fvcDiv.H"
+#include "fvCFD.H"
 #include "zeroGradientFvPatchFields.H"
 #include "Random.H"
 
@@ -163,7 +163,9 @@ int main(int argc, char *argv[])
         }
 
         // Remove face
-        label candidateFacei = rndGen.integer(0, mesh.nInternalFaces()-1);
+        label candidateFacei =
+            rndGen.position<label>(0, mesh.nInternalFaces()-1);
+
         Info<< "Wanting to delete face " << mesh.faceCentres()[candidateFacei]
             << nl << endl;
 
@@ -200,7 +202,7 @@ int main(int argc, char *argv[])
         autoPtr<mapPolyMesh> morphMap = meshMod.changeMesh(mesh, inflate);
 
         Info<< "Mapping fields" << nl << endl;
-        mesh.updateMesh(morphMap);
+        mesh.updateMesh(morphMap());
 
         // Move mesh (since morphing does not do this)
         if (morphMap().hasMotionPoints())
@@ -210,7 +212,7 @@ int main(int argc, char *argv[])
         }
 
         // Update numbering of cells/vertices.
-        faceRemover.updateMesh(morphMap);
+        faceRemover.updateMesh(morphMap());
 
 
         Info<< "Writing fields" << nl << endl;
@@ -321,10 +323,7 @@ int main(int argc, char *argv[])
             }
         }
 
-
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

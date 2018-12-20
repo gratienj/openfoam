@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,7 +60,7 @@ void executeFunctionObjects
     const argList& args,
     const Time& runTime,
     fvMesh& mesh,
-    const HashSet<word>& selectedFields,
+    const wordHashSet& selectedFields,
     functionObjectList& functions,
     bool lastTime
 )
@@ -133,7 +133,14 @@ void executeFunctionObjects
 
 int main(int argc, char *argv[])
 {
-    Foam::timeSelector::addOptions();
+    argList::addNote
+    (
+        "Execute the set of functionObjects specified in the selected"
+        " dictionary or on the command-line for the"
+        " selected set of times on the selected set of fields"
+    );
+
+    timeSelector::addOptions();
     #include "addProfilingOption.H"
     #include "addRegionOption.H"
     #include "addFunctionObjectOptions.H"
@@ -143,25 +150,25 @@ int main(int argc, char *argv[])
 
     #include "setRootCase.H"
 
-    if (args.optionFound("list"))
+    if (args.found("list"))
     {
         functionObjectList::list();
         return 0;
     }
 
     #include "createTime.H"
-    Foam::instantList timeDirs = Foam::timeSelector::select0(runTime, args);
+    instantList timeDirs = timeSelector::select0(runTime, args);
     #include "createNamedMesh.H"
 
     // Initialize the set of selected fields from the command-line options
     functionObjects::fileFieldSelection fields(mesh);
-    if (args.optionFound("fields"))
+    if (args.found("fields"))
     {
-        args.optionLookup("fields")() >> fields;
+        fields.insert(args.getList<wordRe>("fields"));
     }
-    if (args.optionFound("field"))
+    if (args.found("field"))
     {
-        fields.insert(args.optionLookup("field")());
+        fields.insert(args.opt<wordRe>("field"));
     }
 
     // Externally stored dictionary for functionObjectList
@@ -191,6 +198,8 @@ int main(int argc, char *argv[])
         if (mesh.readUpdate() != polyMesh::UNCHANGED)
         {
             // Update functionObjectList if mesh changes
+            // Note clearing the dictionary to avoid merge warning
+            functionsDict.clear();
             functionsPtr = functionObjectList::New
             (
                 args,

@@ -42,9 +42,8 @@ Foam::fv::interRegionOption::meshInterp() const
             << abort(FatalError);
     }
 
-    return meshInterpPtr_();
+    return *meshInterpPtr_;
 }
-
 
 
 // ************************************************************************* //

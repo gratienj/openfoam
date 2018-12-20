@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,9 +60,9 @@ void Foam::patchCloudSet::calcSamples
 
     // Construct search tree for all patch faces.
     label sz = 0;
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        const polyPatch& pp = mesh().boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh().boundaryMesh()[patchi];
 
         sz += pp.size();
 
@@ -75,9 +75,9 @@ void Foam::patchCloudSet::calcSamples
     labelList patchFaces(sz);
     sz = 0;
     treeBoundBox bb(boundBox::invertedBox);
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        const polyPatch& pp = mesh().boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh().boundaryMesh()[patchi];
 
         forAll(pp, i)
         {
@@ -90,7 +90,7 @@ void Foam::patchCloudSet::calcSamples
 
     // Not very random
     Random rndGen(123456);
-    // Make bb asymetric just to avoid problems on symmetric meshes
+    // Make bb asymmetric just to avoid problems on symmetric meshes
     bb = bb.extend(rndGen, 1e-4);
 
     // Make sure bb is 3D.
@@ -180,9 +180,9 @@ void Foam::patchCloudSet::calcSamples
             if (nearest[i].first().hit())
             {
                 meshTools::writeOBJ(str, sampleCoords_[i]);
-                vertI++;
+                ++vertI;
                 meshTools::writeOBJ(str, nearest[i].first().hitPoint());
-                vertI++;
+                ++vertI;
                 str << "l " << vertI-1 << ' ' << vertI << nl;
             }
         }
@@ -256,6 +256,11 @@ void Foam::patchCloudSet::genSamples()
         samplingSegments,
         samplingCurveDist
     );
+
+    if (debug)
+    {
+        write(Info);
+    }
 }
 
 
@@ -278,11 +283,6 @@ Foam::patchCloudSet::patchCloudSet
     searchDist_(searchDist)
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
 
 
@@ -295,29 +295,15 @@ Foam::patchCloudSet::patchCloudSet
 )
 :
     sampledSet(name, mesh, searchEngine, dict),
-    sampleCoords_(dict.lookup("points")),
+    sampleCoords_(dict.get<pointField>("points")),
     patchSet_
     (
-        mesh.boundaryMesh().patchSet
-        (
-            wordReList(dict.lookup("patches"))
-        )
+        mesh.boundaryMesh().patchSet(dict.get<wordRes>("patches"))
     ),
-    searchDist_(readScalar(dict.lookup("maxDistance")))
+    searchDist_(dict.get<scalar>("maxDistance"))
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::patchCloudSet::~patchCloudSet()
-{}
 
 
 // ************************************************************************* //

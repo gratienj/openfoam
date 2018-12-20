@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -89,24 +89,24 @@ Foam::PairSpringSliderDashpot<CloudType>::PairSpringSliderDashpot
     PairModel<CloudType>(dict, cloud, typeName),
     Estar_(),
     Gstar_(),
-    alpha_(readScalar(this->coeffDict().lookup("alpha"))),
-    b_(readScalar(this->coeffDict().lookup("b"))),
-    mu_(readScalar(this->coeffDict().lookup("mu"))),
+    alpha_(this->coeffDict().getScalar("alpha")),
+    b_(this->coeffDict().getScalar("b")),
+    mu_(this->coeffDict().getScalar("mu")),
     cohesionEnergyDensity_
     (
-        readScalar(this->coeffDict().lookup("cohesionEnergyDensity"))
+        this->coeffDict().getScalar("cohesionEnergyDensity")
     ),
     cohesion_(false),
     collisionResolutionSteps_
     (
-        readScalar(this->coeffDict().lookup("collisionResolutionSteps"))
+        this->coeffDict().getScalar("collisionResolutionSteps")
     ),
     volumeFactor_(1.0),
     useEquivalentSize_(Switch(this->coeffDict().lookup("useEquivalentSize")))
 {
     if (useEquivalentSize_)
     {
-        volumeFactor_ = readScalar(this->coeffDict().lookup("volumeFactor"));
+        this->coeffDict().readEntry("volumeFactor", volumeFactor_);
     }
 
     scalar nu = this->owner().constProps().poissonsRatio();
@@ -193,7 +193,10 @@ void Foam::PairSpringSliderDashpot<CloudType>::evaluatePair
 
     if (normalOverlapMag > 0)
     {
-        //Particles in collision
+        // Particles in collision
+
+        // Force coefficient
+        scalar forceCoeff = this->forceCoeff(pA, pB);
 
         vector rHat_AB = r_AB/(r_AB_mag + VSMALL);
 
@@ -223,6 +226,8 @@ void Foam::PairSpringSliderDashpot<CloudType>::evaluatePair
                 *overlapArea(dAEff/2.0, dBEff/2.0, r_AB_mag)
                 *rHat_AB;
         }
+
+        fN_AB *= forceCoeff;
 
         pA.f() += fN_AB;
         pB.f() += -fN_AB;
@@ -277,6 +282,8 @@ void Foam::PairSpringSliderDashpot<CloudType>::evaluatePair
             {
                 fT_AB = - kT*tangentialOverlap_AB - etaT*USlip_AB;
             }
+
+            fT_AB *= forceCoeff;
 
             pA.f() += fT_AB;
             pB.f() += -fT_AB;

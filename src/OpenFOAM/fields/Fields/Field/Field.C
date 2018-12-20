@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,41 +29,7 @@ License
 #include "contiguous.H"
 #include "mapDistributeBase.H"
 
-// * * * * * * * * * * * * * * * Static Members  * * * * * * * * * * * * * * //
-
-template<class Type>
-const char* const Foam::Field<Type>::typeName("Field");
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-template<class Type>
-Foam::Field<Type>::Field()
-:
-    List<Type>()
-{}
-
-
-template<class Type>
-Foam::Field<Type>::Field(const label size)
-:
-    List<Type>(size)
-{}
-
-
-template<class Type>
-Foam::Field<Type>::Field(const label size, const Type& t)
-:
-    List<Type>(size, t)
-{}
-
-
-template<class Type>
-Foam::Field<Type>::Field(const label size, const zero)
-:
-    List<Type>(size, Zero)
-{}
-
 
 template<class Type>
 Foam::Field<Type>::Field
@@ -208,77 +174,14 @@ Foam::Field<Type>::Field
 
 
 template<class Type>
-Foam::Field<Type>::Field(const Field<Type>& f)
-:
-    tmp<Field<Type>>::refCount(),
-    List<Type>(f)
-{}
-
-
-template<class Type>
-Foam::Field<Type>::Field(Field<Type>& f, bool reuse)
-:
-    List<Type>(f, reuse)
-{}
-
-
-template<class Type>
-Foam::Field<Type>::Field(const Xfer<List<Type>>& f)
-:
-    List<Type>(f)
-{}
-
-
-template<class Type>
-Foam::Field<Type>::Field(const Xfer<Field<Type>>& f)
-:
-    List<Type>()
-{
-    List<Type>::transfer(f());
-}
-
-
-template<class Type>
-Foam::Field<Type>::Field(const UList<Type>& list)
-:
-    List<Type>(list)
-{}
-
-
-template<class Type>
-Foam::Field<Type>::Field(const UIndirectList<Type>& list)
-:
-    List<Type>(list)
-{}
-
-
-#ifndef NoConstructFromTmp
-template<class Type>
-Foam::Field<Type>::Field(const tmp<Field<Type>>& tf)
-:
-    List<Type>(const_cast<Field<Type>&>(tf()), tf.isTmp())
-{
-    tf.clear();
-}
-#endif
-
-
-template<class Type>
-Foam::Field<Type>::Field(Istream& is)
-:
-    List<Type>(is)
-{}
-
-
-template<class Type>
 Foam::Field<Type>::Field
 (
     const word& keyword,
     const dictionary& dict,
-    const label s
+    const label len
 )
 {
-    if (s)
+    if (len)
     {
         ITstream& is = dict.lookup(keyword);
 
@@ -289,66 +192,64 @@ Foam::Field<Type>::Field
         {
             if (firstToken.wordToken() == "uniform")
             {
-                this->setSize(s);
+                this->setSize(len);
                 operator=(pTraits<Type>(is));
             }
             else if (firstToken.wordToken() == "nonuniform")
             {
                 is >> static_cast<List<Type>&>(*this);
-                if (this->size() != s)
+                label currentSize = this->size();
+                if (currentSize != len)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        dict
-                    )   << "size " << this->size()
-                        << " is not equal to the given value of " << s
-                        << exit(FatalIOError);
+                    if (len < currentSize && allowConstructFromLargerSize)
+                    {
+                        #ifdef FULLDEBUG
+                        IOWarningInFunction(dict)
+                            << "Sizes do not match. "
+                            << "Re-sizing " << currentSize
+                            << " entries to " << len
+                            << endl;
+                        #endif
+
+                        // Resize the data
+                        this->setSize(len);
+                    }
+                    else
+                    {
+                        FatalIOErrorInFunction(dict)
+                            << "size " << this->size()
+                            << " is not equal to the given value of " << len
+                            << exit(FatalIOError);
+                    }
                 }
             }
             else
             {
-                FatalIOErrorInFunction
-                (
-                    dict
-                )   << "expected keyword 'uniform' or 'nonuniform', found "
+                FatalIOErrorInFunction(dict)
+                    << "Expected keyword 'uniform' or 'nonuniform', found "
                     << firstToken.wordToken()
                     << exit(FatalIOError);
             }
         }
+        else if (is.version() == IOstream::versionNumber(2,0))
+        {
+            IOWarningInFunction(dict)
+                << "Expected keyword 'uniform' or 'nonuniform', "
+                "assuming deprecated Field format from "
+                "Foam version 2.0." << endl;
+
+            this->setSize(len);
+
+            is.putBack(firstToken);
+            operator=(pTraits<Type>(is));
+        }
         else
         {
-            if (is.version() == 2.0)
-            {
-                IOWarningInFunction
-                (
-                    dict
-                )   << "expected keyword 'uniform' or 'nonuniform', "
-                       "assuming deprecated Field format from "
-                       "Foam version 2.0." << endl;
-
-                this->setSize(s);
-
-                is.putBack(firstToken);
-                operator=(pTraits<Type>(is));
-            }
-            else
-            {
-                FatalIOErrorInFunction
-                (
-                    dict
-                )   << "expected keyword 'uniform' or 'nonuniform', found "
-                    << firstToken.info()
-                    << exit(FatalIOError);
-            }
+            FatalIOErrorInFunction(dict)
+                << "Expected keyword 'uniform' or 'nonuniform', found "
+                << firstToken.info() << exit(FatalIOError);
         }
     }
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::Field<Type>::clone() const
-{
-    return tmp<Field<Type>>(new Field<Type>(*this));
 }
 
 
@@ -372,7 +273,7 @@ void Foam::Field<Type>::map
     {
         forAll(f, i)
         {
-            label mapI = mapAddressing[i];
+            const label mapI = mapAddressing[i];
 
             if (mapI >= 0)
             {
@@ -728,13 +629,17 @@ void Foam::Field<Type>::writeEntry(const word& keyword, Ostream& os) const
 {
     os.writeKeyword(keyword);
 
+    const label len = this->size();
+
     // Can the contents be considered 'uniform' (ie, identical)?
-    bool uniform = (this->size() && contiguous<Type>());
+    bool uniform = (contiguous<Type>() && len);
     if (uniform)
     {
-        forAll(*this, i)
+        const Type& val = this->operator[](0);
+
+        for (label i=1; i<len; ++i)
         {
-            if (this->operator[](i) != this->operator[](0))
+            if (val != this->operator[](i))
             {
                 uniform = false;
                 break;
@@ -773,20 +678,6 @@ void Foam::Field<Type>::operator=(const Field<Type>& rhs)
 
 
 template<class Type>
-void Foam::Field<Type>::operator=(const SubField<Type>& rhs)
-{
-    List<Type>::operator=(rhs);
-}
-
-
-template<class Type>
-void Foam::Field<Type>::operator=(const UList<Type>& rhs)
-{
-    List<Type>::operator=(rhs);
-}
-
-
-template<class Type>
 void Foam::Field<Type>::operator=(const tmp<Field>& rhs)
 {
     if (this == &(rhs()))
@@ -797,20 +688,6 @@ void Foam::Field<Type>::operator=(const tmp<Field>& rhs)
     }
 
     List<Type>::operator=(rhs());
-}
-
-
-template<class Type>
-void Foam::Field<Type>::operator=(const Type& t)
-{
-    List<Type>::operator=(t);
-}
-
-
-template<class Type>
-void Foam::Field<Type>::operator=(const zero)
-{
-    List<Type>::operator=(Zero);
 }
 
 

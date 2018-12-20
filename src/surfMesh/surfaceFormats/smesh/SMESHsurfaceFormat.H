@@ -61,15 +61,6 @@ class SMESHsurfaceFormat
 :
     public MeshedSurface<Face>
 {
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        SMESHsurfaceFormat(const SMESHsurfaceFormat<Face>&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const SMESHsurfaceFormat<Face>&) = delete;
-
-
 public:
 
     // Constructors
@@ -95,7 +86,7 @@ public:
 
     // Member Functions
 
-        //- Write object
+        //- Write surface mesh to file
         virtual void write
         (
             const fileName& name,

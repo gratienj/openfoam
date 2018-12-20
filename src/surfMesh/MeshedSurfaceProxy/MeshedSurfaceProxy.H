@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,6 +40,7 @@ SourceFiles
 #include "pointField.H"
 #include "labelledTri.H"
 #include "HashSet.H"
+#include "ListOps.H"
 #include "surfZoneList.H"
 #include "surfaceFormatsCore.H"
 #include "runTimeSelectionTables.H"
@@ -50,7 +51,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 
 template<class Face> class MeshedSurface;
 
@@ -101,7 +102,7 @@ public:
             const pointField& pointLst,
             const UList<Face>& faceLst,
             const UList<surfZone>& zoneLst = List<surfZone>(),
-            const labelUList& faceMap = List<label>()
+            const labelUList& faceMap = Foam::emptyLabelList
         );
 
 

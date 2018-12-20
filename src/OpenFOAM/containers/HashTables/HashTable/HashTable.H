@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -83,7 +83,6 @@ SourceFiles
 
 #include "word.H"
 #include "zero.H"
-#include "Xfer.H"
 #include "Hash.H"
 #include "HashTableCore.H"
 
@@ -166,8 +165,10 @@ class HashTable
             }
 
         private:
-            //- Disallow default bitwise copy construct / assignment
+            //- No copy construct
             pair_entry(const pair_entry&) = delete;
+
+            //- No copy assignment
             void operator=(const pair_entry&) = delete;
         };
 
@@ -215,8 +216,10 @@ class HashTable
 
 
         private:
-            //- Disallow default bitwise copy construct / assignment
+            //- No copy construct
             unary_entry(const unary_entry&) = delete;
+
+            //- No copy assignment
             void operator=(const unary_entry&) = delete;
         };
 
@@ -250,7 +253,7 @@ class HashTable
 
         //- Assign a new hash-entry to a possibly already existing key.
         //  \return True if the new entry was set.
-        bool set(const Key& key, const T& obj, const bool overwrite);
+        bool setEntry(const Key& key, const T& obj, const bool overwrite);
 
 
 public:
@@ -312,18 +315,6 @@ protected:
         //- An iterator with non-const access to HashTable internals.
         friend class Iterator<false>;
 
-
-    // Protected Member Functions
-
-        //- Remove using begin/end iterators of listed keys
-        template<class InputIter>
-        inline label eraseMultiple
-        (
-            const InputIter begIter,
-            const InputIter endIter
-        );
-
-
 public:
 
     // Constructors
@@ -337,14 +328,11 @@ public:
         //- Construct from Istream with default table capacity
         HashTable(Istream& is, const label size = 128);
 
-        //- Construct as copy
+        //- Copy construct
         HashTable(const this_type& ht);
 
         //- Move construct
-        HashTable(this_type&& ht);
-
-        //- Construct by transferring the parameter contents
-        HashTable(const Xfer<this_type>& ht);
+        HashTable(this_type&& rhs);
 
         //- Construct from an initializer list
         HashTable(std::initializer_list<std::pair<Key, T>> lst);
@@ -356,7 +344,7 @@ public:
 
     // Member Functions
 
-      // Access
+    // Access
 
         //- The size of the underlying table
         inline label capacity() const;
@@ -386,7 +374,7 @@ public:
         inline const T& lookup(const Key& key, const T& deflt) const;
 
 
-      // Table of contents
+    // Table of contents
 
         //- The table of contents (the keys) in unsorted order.
         List<Key> toc() const;
@@ -469,7 +457,7 @@ public:
         ) const;
 
 
-      // Edit
+    // Edit
 
         //- Insert a new entry, not overwriting existing entries.
         //  \return True if the entry inserted, which means that it did
@@ -499,19 +487,6 @@ public:
         //  \return True if the entry existed and was removed
         bool erase(const Key& key);
 
-        //- Remove table entries given by the listed keys
-        //  \return The number of items removed
-        label erase(const UList<Key>& keys);
-
-        //- Remove table entries given by the listed keys
-        //  \return The number of items removed
-        template<unsigned Size>
-        label erase(const FixedList<Key, Size>& keys);
-
-        //- Remove table entries given by the listed keys
-        //  \return The number of items removed
-        label erase(std::initializer_list<Key> keys);
-
         //- Remove table entries given by keys of the other hash-table.
         //
         //  The other hash-table must have the same type of key, but the
@@ -520,6 +495,23 @@ public:
         //  \return The number of items removed
         template<class AnyType, class AnyHash>
         label erase(const HashTable<AnyType, Key, AnyHash>& other);
+
+        //- Remove table entries given by the listed keys
+        //  \return The number of items removed
+        inline label erase(std::initializer_list<Key> keys);
+
+        //- Remove multiple entries using an iterator range of keys
+        template<class InputIter>
+        inline label erase(InputIter first, InputIter last);
+
+        //- Remove table entries given by the listed keys
+        //  \return The number of items removed
+        template<unsigned Size>
+        inline label erase(const FixedList<Key, Size>& keys);
+
+        //- Remove table entries given by the listed keys
+        //  \return The number of items removed
+        inline label erase(const UList<Key>& keys);
 
         //- Retain table entries given by keys of the other hash-table.
         //
@@ -595,15 +587,11 @@ public:
         //  Equivalent to clear() followed by resize(0)
         void clearStorage();
 
-        //- Swap contents of the argument table into this table
-        void swap(HashTable<T, Key, Hash>& ht);
+        //- Swap contents into this table
+        void swap(HashTable<T, Key, Hash>& rhs);
 
-        //- Transfer the contents of the argument table into this table
-        //  and annul the argument table.
-        void transfer(HashTable<T, Key, Hash>& ht);
-
-        //- Transfer contents to the Xfer container
-        inline Xfer<HashTable<T, Key, Hash>> xfer();
+        //- Transfer contents into this table.
+        void transfer(HashTable<T, Key, Hash>& rhs);
 
 
     // Member Operators
@@ -622,14 +610,11 @@ public:
         //- Return existing entry or insert a new entry.
         inline T& operator()(const Key& key, const T& deflt);
 
-        //- Return hashed entry if it exists, or return the given default
-        inline const T& operator()(const Key& key, const T& deflt) const;
-
-        //- Assignment
+        //- Copy assign
         void operator=(const HashTable<T, Key, Hash>& rhs);
 
-        //- Assignment from an initializer list
-        void operator=(std::initializer_list<std::pair<Key, T>> lst);
+        //- Copy assign from an initializer list
+        void operator=(std::initializer_list<std::pair<Key, T>> rhs);
 
         //- Move assign
         void operator=(HashTable<T, Key, Hash>&& rhs);
@@ -640,6 +625,9 @@ public:
 
         //- The opposite of the equality operation.
         bool operator!=(const HashTable<T, Key, Hash>& rhs) const;
+
+        //- Add entries into this HashTable
+        this_type& operator+=(const this_type& rhs);
 
 
 protected:
@@ -656,7 +644,7 @@ protected:
         class Iterator
         {
         public:
-          // Typedefs
+        // Typedefs
             using iterator_category = std::forward_iterator_tag;
             using difference_type = this_type::difference_type;
 
@@ -688,7 +676,7 @@ protected:
             >::type;
 
 
-          // Member Functions
+        // Member Functions
 
             //- True if iterator points to an entry
             //  This can be used directly instead of comparing to end()
@@ -697,7 +685,7 @@ protected:
             //- The key associated with the iterator
             inline const Key& key() const;
 
-          // Member Operators
+        // Member Operators
 
             //- Compare hash-entry element pointers.
             //  Independent of const/non-const access
@@ -711,7 +699,7 @@ protected:
         protected:
             friend class HashTable;  // For begin/find constructors
 
-          // Protected Data
+        // Protected Data
 
             //- The selected entry.
             //  MUST be the first member for easy comparison between iterators
@@ -728,7 +716,7 @@ protected:
             label index_;
 
 
-          // Protected Constructors
+        // Protected Constructors
 
             //- Construct null (end iterator)
             inline Iterator();
@@ -740,7 +728,7 @@ protected:
             Iterator(table_type* tbl, const Key& key);
 
 
-          // Protected Member Functions
+        // Protected Member Functions
 
             //- Increment to the next position
             inline void increment();
@@ -772,7 +760,7 @@ public:
             public Iterator<false>
         {
         public:
-          // Typedefs
+        // Typedefs
             using iterator_category = std::forward_iterator_tag;
             using difference_type   = this_type::difference_type;
 
@@ -782,10 +770,10 @@ public:
             using pointer     = this_type::pointer;
             using reference   = this_type::reference;
 
-          // Constructors
+        // Constructors
 
             //- Construct null (end iterator)
-            inline iterator() {}
+            inline iterator() = default;
 
             //- Copy construct from similar access type
             inline explicit iterator(const Iterator<false>& iter)
@@ -794,7 +782,7 @@ public:
             {}
 
 
-          // Member functions/operators
+        // Member functions/operators
 
             //- Non-const access to referenced object
             using Iterator<false>::object;
@@ -816,7 +804,7 @@ public:
             public Iterator<true>
         {
         public:
-          // Typedefs
+        // Typedefs
             using iterator_category = std::forward_iterator_tag;
             using difference_type   = this_type::difference_type;
 
@@ -826,10 +814,10 @@ public:
             using pointer     = this_type::const_pointer;
             using reference   = this_type::const_reference;
 
-          // Constructors
+        // Constructors
 
             //- Construct null (end iterator)
-            inline const_iterator() {}
+            inline const_iterator() = default;
 
             //- Copy construct from similar access type
             inline explicit const_iterator(const Iterator<true>& iter)
@@ -853,7 +841,7 @@ public:
             {}
 
 
-          // Member functions/operators
+        // Member functions/operators
 
             //- Const access to referenced object
             using Iterator<true>::object;
@@ -865,7 +853,7 @@ public:
             inline const_iterator& operator++();
             inline const_iterator operator++(int);
 
-          // Assignment
+        // Assignment
 
             const_iterator& operator=(const const_iterator&) = default;
 
@@ -978,17 +966,6 @@ public:
             const HashTable<T, Key, Hash>& tbl
         );
 };
-
-
-// Global Functions
-
-// Exchange contents of hash tables - see HashTable::swap().
-template<class T, class Key, class Hash>
-inline void Swap
-(
-    HashTable<T, Key, Hash>& a,
-    HashTable<T, Key, Hash>& b
-);
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -86,7 +86,7 @@
         //  -  0: different
         //  - +1: identical
         //  - -1: same face, but different orientation
-        static inline int compare(const triFace&, const triFace&);
+        static int compare(const triFace&, const triFace&);
         #+end_src
         or
         #+begin_src C++
@@ -95,7 +95,7 @@
         //  -  0: different
         //  - +1: identical
         //  - -1: same face, but different orientation
-        static inline int compare(const triFace&, const triFace&);
+        static int compare(const triFace&, const triFace&);
         #+end_src
         *not*
         #+begin_src C++
@@ -103,23 +103,23 @@
         //  -  0: different
         //  - +1: identical
         //  - -1: same face, but different orientation
-        static inline int compare(const triFace&, const triFace&);
+        static int compare(const triFace&, const triFace&);
         #+end_src
       + List can be nested for example
         #+begin_src C++
         //- Search for \em name
         //  in the following hierarchy:
-        //  -# personal settings:
+        //  -# user settings
         //    - ~/.OpenFOAM/\<VERSION\>/
         //      <em>for version-specific files</em>
         //    - ~/.OpenFOAM/
         //      <em>for version-independent files</em>
-        //  -# site-wide settings:
-        //    - $WM_PROJECT_INST_DIR/site/\<VERSION\>
+        //  -# group settings
+        //    - $WM_PROJECT_DIR/site/\<VERSION\>
         //      <em>for version-specific files</em>
-        //    - $WM_PROJECT_INST_DIR/site/
+        //    - $WM_PROJECT_DIR/site/
         //      <em>for version-independent files</em>
-        //  -# shipped settings:
+        //  -# other (shipped) settings
         //    - $WM_PROJECT_DIR/etc/
         //
         //  \return the full path name or fileName() if the name cannot be found

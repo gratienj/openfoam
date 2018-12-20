@@ -99,7 +99,7 @@ Foam::phaseModel::phaseModel
             mesh
         ),
         mesh,
-        dimensionedVector("0", dimVelocity/dimTime, Zero)
+        dimensionedVector(dimVelocity/dimTime, Zero)
     ),
     alphaPhi_
     (
@@ -110,7 +110,7 @@ Foam::phaseModel::phaseModel
             mesh
         ),
         mesh,
-        dimensionedScalar("0", dimensionSet(0, 3, -1, 0, 0), 0)
+        dimensionedScalar(dimensionSet(0, 3, -1, 0, 0), Zero)
     )
 {
     alphaPhi_.setOriented();
@@ -205,7 +205,7 @@ Foam::phaseModel::~phaseModel()
 Foam::autoPtr<Foam::phaseModel> Foam::phaseModel::clone() const
 {
     NotImplemented;
-    return autoPtr<phaseModel>(nullptr);
+    return nullptr;
 }
 
 
@@ -222,10 +222,10 @@ bool Foam::phaseModel::read(const dictionary& phaseDict)
 
     //if (nuModel_->read(phaseDict_))
     {
-        phaseDict_.lookup("nu") >> nu_.value();
-        phaseDict_.lookup("kappa") >> kappa_.value();
-        phaseDict_.lookup("Cp") >> Cp_.value();
-        phaseDict_.lookup("rho") >> rho_.value();
+        phaseDict_.readEntry("nu", nu_.value());
+        phaseDict_.readEntry("kappa", kappa_.value());
+        phaseDict_.readEntry("Cp", Cp_.value());
+        phaseDict_.readEntry("rho", rho_.value());
 
         return true;
     }

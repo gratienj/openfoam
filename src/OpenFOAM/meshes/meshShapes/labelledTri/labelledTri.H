@@ -97,10 +97,10 @@ public:
 
         //- Construct from a list of 3 or 4 labels.
         //  Default region is 0.
-        explicit inline labelledTri(const labelUList&);
+        inline explicit labelledTri(const labelUList&);
 
         //- Construct from an initializer list of 3 or 4 labels.
-        explicit inline labelledTri(std::initializer_list<label>);
+        inline explicit labelledTri(std::initializer_list<label>);
 
         //- Construct from Istream
         inline labelledTri(Istream&);
@@ -128,13 +128,10 @@ template<>
 inline bool contiguous<labelledTri>()  {return true;}
 
 
-//- Hash specialization to offset faces in ListListOps::combineOffset
+//- Specialization to offset faces, used in ListListOps::combineOffset
 template<>
-class offsetOp<labelledTri>
+struct offsetOp<labelledTri>
 {
-
-public:
-
     inline labelledTri operator()
     (
         const labelledTri& x,

@@ -28,7 +28,7 @@ Group
     grpMeshConversionUtilities
 
 Description
-    Converts a Fluent mesh to OpenFOAM format.
+    Convert a Fluent mesh to OpenFOAM format.
 
 \*---------------------------------------------------------------------------*/
 
@@ -51,6 +51,9 @@ Description
 #include "Swap.H"
 #include "IFstream.H"
 #include "readHexLabel.H"
+
+// Flex may use register, which is deprecated and incompatible with C++17
+#pragma clang diagnostic ignored "-Wdeprecated-register"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -77,8 +80,8 @@ labelList owner(0);
 labelList neighbour(0);
 
 // Group type and name
-Map<word> groupType(100);
-Map<word> groupName(100);
+Map<word> groupType(128);
+Map<word> groupName(128);
 
 // Point groups
 DynamicList<label> pointGroupZoneID;
@@ -100,7 +103,7 @@ DynamicList<label> cellGroupType;
 bool cubitFile = false;
 
 
-void uniquify(word& name, HashSet<word>& patchNames)
+void uniquify(word& name, wordHashSet& patchNames)
 {
     if (!patchNames.found(name))
     {
@@ -770,31 +773,35 @@ endOfSection               {space}")"{space}
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Convert a Fluent mesh to OpenFOAM format"
+    );
     argList::noParallel();
     argList::addArgument("Fluent mesh file");
     argList::addOption
     (
         "scale",
         "factor",
-        "geometry scaling factor - default is 1"
+        "Geometry scaling factor - default is 1"
     );
     argList::addOption
     (
         "ignoreCellGroups",
         "names",
-        "specify cell groups to ignore"
+        "Specify cell groups to ignore"
     );
     argList::addOption
     (
         "ignoreFaceGroups",
         "names",
-        "specify face groups to ignore"
+        "Specify face groups to ignore"
     );
 
     argList::addBoolOption
     (
         "cubit",
-        "special parsing of (incorrect) cubit files"
+        "Special parsing of (incorrect) cubit files"
     );
 
     argList args(argc, argv);
@@ -804,15 +811,15 @@ int main(int argc, char *argv[])
         FatalError.exit();
     }
 
-    args.optionReadIfPresent("scale", scaleFactor);
+    args.readIfPresent("scale", scaleFactor);
 
     wordHashSet ignoreCellGroups;
     wordHashSet ignoreFaceGroups;
 
-    args.optionReadIfPresent("ignoreCellGroups", ignoreCellGroups);
-    args.optionReadIfPresent("ignoreFaceGroups", ignoreFaceGroups);
+    args.readIfPresent("ignoreCellGroups", ignoreCellGroups);
+    args.readIfPresent("ignoreFaceGroups", ignoreFaceGroups);
 
-    cubitFile = args.optionFound("cubit");
+    cubitFile = args.found("cubit");
 
     if (cubitFile)
     {
@@ -866,7 +873,7 @@ int main(int argc, char *argv[])
     // Pre-filtering: flip "owner" boundary or wrong oriented internal
     // faces and move to neighbour
 
-    boolList fm(faces.size(), false);
+    bitSet fm(faces.size(), false);
     forAll(faces, facei)
     {
         if
@@ -875,7 +882,7 @@ int main(int argc, char *argv[])
          || (neighbour[facei] != -1 && owner[facei] > neighbour[facei])
         )
         {
-            fm[facei] = true;
+            fm.set(facei);
             if (!cubitFile)
             {
                 faces[facei].flip();
@@ -926,7 +933,7 @@ int main(int argc, char *argv[])
     // Foam patch type for Fluent zone type
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    HashSet<word> fluentGroupToFoamPatch;
+    wordHashSet fluentGroupToFoamPatch;
     fluentGroupToFoamPatch.insert("wall");
     fluentGroupToFoamPatch.insert("fan");
 
@@ -942,10 +949,7 @@ int main(int argc, char *argv[])
             runTime.constant(),
             runTime
         ),
-        xferCopy(pointField()),
-        xferCopy(faceList()),
-        xferCopy(labelList()),
-        xferCopy(labelList())
+        Zero
     );
 
 
@@ -1037,7 +1041,7 @@ int main(int argc, char *argv[])
     // ~~~~~~~~~~~~~~~~~
 
     List<polyPatch*> newPatches(patchIDs.size());
-    HashSet<word> patchNames;
+    wordHashSet patchNames;
 
     forAll(patchIDs, patchi)
     {
@@ -1135,7 +1139,7 @@ int main(int argc, char *argv[])
 
     // Cell zones
     mesh.cellZones().setSize(cellZoneIDs.size());
-    HashSet<word> cellZoneNames;
+    wordHashSet cellZoneNames;
 
     forAll(cellZoneIDs, cellZonei)
     {
@@ -1164,11 +1168,11 @@ int main(int argc, char *argv[])
 
     // Face zones
     mesh.faceZones().setSize(faceZoneIDs.size());
-    HashSet<word> faceZoneNames;
+    wordHashSet faceZoneNames;
 
     forAll(faceZoneIDs, faceZonei)
     {
-        label zoneID = faceGroupZoneID[faceZoneIDs[faceZonei] ];
+        label zoneID = faceGroupZoneID[faceZoneIDs[faceZonei]];
         word name = groupName[zoneID];
         const word& type = groupType[zoneID];
 
@@ -1279,7 +1283,7 @@ int main(int argc, char *argv[])
                     false,              // flipFaceFlux
                     -1,                 // patchID
                     faceZonei,          // zoneID
-                    fm[facei]           // zoneFlip
+                    fm.test(facei)      // zoneFlip
                 );
             }
 

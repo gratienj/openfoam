@@ -142,7 +142,7 @@ Foam::RASModels::kineticTheoryModel::kineticTheoryModel
             IOobject::NO_WRITE
         ),
         U.mesh(),
-        dimensionedScalar("zero", dimensionSet(0, 2, -1, 0, 0), 0.0)
+        dimensionedScalar(dimensionSet(0, 2, -1, 0, 0), Zero)
     ),
 
     gs0_
@@ -156,7 +156,7 @@ Foam::RASModels::kineticTheoryModel::kineticTheoryModel
             IOobject::NO_WRITE
         ),
         U.mesh(),
-        dimensionedScalar("zero", dimensionSet(0, 0, 0, 0, 0), 0.0)
+        dimensionedScalar(dimensionSet(0, 0, 0, 0, 0), Zero)
     ),
 
     kappa_
@@ -170,7 +170,7 @@ Foam::RASModels::kineticTheoryModel::kineticTheoryModel
             IOobject::NO_WRITE
         ),
         U.mesh(),
-        dimensionedScalar("zero", dimensionSet(1, -1, -1, 0, 0), 0.0)
+        dimensionedScalar(dimensionSet(1, -1, -1, 0, 0), Zero)
     ),
 
     nuFric_
@@ -184,7 +184,7 @@ Foam::RASModels::kineticTheoryModel::kineticTheoryModel
             IOobject::AUTO_WRITE
         ),
         U.mesh(),
-        dimensionedScalar("zero", dimensionSet(0, 2, -1, 0, 0), 0.0)
+        dimensionedScalar(dimensionSet(0, 2, -1, 0, 0), Zero)
     )
 {
     if (type == typeName)
@@ -212,7 +212,7 @@ bool Foam::RASModels::kineticTheoryModel::read()
         >::read()
     )
     {
-        coeffDict().lookup("equilibrium") >> equilibrium_;
+        coeffDict().readEntry("equilibrium", equilibrium_);
         e_.readIfPresent(coeffDict());
         alphaMax_.readIfPresent(coeffDict());
         alphaMinFriction_.readIfPresent(coeffDict());

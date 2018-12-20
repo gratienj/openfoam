@@ -84,14 +84,14 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         externalDisplacementMeshMover
         (
             const externalDisplacementMeshMover&
-        );
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const externalDisplacementMeshMover&);
+        //- No copy assignment
+        void operator=(const externalDisplacementMeshMover&) = delete;
 
 
 public:
@@ -174,7 +174,7 @@ public:
         // Mesh mover
 
             //- Move mesh using current pointDisplacement boundary values
-            //  and current dictionary settings. Return true if succesful
+            //  and current dictionary settings. Return true if successful
             //  (errors  on checkFaces less than allowable). Updates
             //  pointDisplacement.
             virtual bool move

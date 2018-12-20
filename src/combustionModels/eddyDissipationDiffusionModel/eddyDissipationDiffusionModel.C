@@ -31,31 +31,31 @@ namespace combustionModels
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-template<class CombThermoType, class ThermoType>
-eddyDissipationDiffusionModel<CombThermoType, ThermoType>::
+template<class ReactionThermo, class ThermoType>
+eddyDissipationDiffusionModel<ReactionThermo, ThermoType>::
 eddyDissipationDiffusionModel
 (
     const word& modelType,
-    const fvMesh& mesh,
-    const word& combustionProperties,
-    const word& phaseName
+    ReactionThermo& thermo,
+    const compressibleTurbulenceModel& turb,
+    const word& combustionProperties
 )
 :
-    eddyDissipationModelBase<CombThermoType, ThermoType>
+    eddyDissipationModelBase<ReactionThermo, ThermoType>
     (
         modelType,
-        mesh,
-        combustionProperties,
-        phaseName
+        thermo,
+        turb,
+        combustionProperties
     ),
-    Cd_(readScalar(this->coeffs().lookup("Cd")))
+    Cd_(this->coeffs().getScalar("Cd"))
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructors * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-template<class CombThermoType, class ThermoType>
-eddyDissipationDiffusionModel<CombThermoType, ThermoType>::
+template<class ReactionThermo, class ThermoType>
+eddyDissipationDiffusionModel<ReactionThermo, ThermoType>::
 ~eddyDissipationDiffusionModel()
 {}
 
@@ -63,17 +63,17 @@ eddyDissipationDiffusionModel<CombThermoType, ThermoType>::
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 Foam::tmp<Foam::volScalarField>
-eddyDissipationDiffusionModel<CombThermoType, ThermoType>::timeScale()
+eddyDissipationDiffusionModel<ReactionThermo, ThermoType>::timeScale()
 {
     return (max(this->rtTurb(), this->rtDiff()));
 }
 
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 Foam::tmp<Foam::volScalarField>
-eddyDissipationDiffusionModel<CombThermoType, ThermoType>::rtDiff() const
+eddyDissipationDiffusionModel<ReactionThermo, ThermoType>::rtDiff() const
 {
     tmp<volScalarField> tdelta
     (
@@ -88,7 +88,7 @@ eddyDissipationDiffusionModel<CombThermoType, ThermoType>::rtDiff() const
                 IOobject::NO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar("delta", dimLength, 0),
+            dimensionedScalar(dimLength, Zero),
             zeroGradientFvPatchScalarField::typeName
         )
     );
@@ -102,12 +102,12 @@ eddyDissipationDiffusionModel<CombThermoType, ThermoType>::rtDiff() const
 }
 
 
-template<class CombThermoType, class ThermoType>
-bool eddyDissipationDiffusionModel<CombThermoType, ThermoType>::read()
+template<class ReactionThermo, class ThermoType>
+bool eddyDissipationDiffusionModel<ReactionThermo, ThermoType>::read()
 {
-    if (eddyDissipationModelBase<CombThermoType, ThermoType>::read())
+    if (eddyDissipationModelBase<ReactionThermo, ThermoType>::read())
     {
-        this->coeffs().lookup("Cd") >> Cd_;
+        this->coeffs().readEntry("Cd", Cd_);
         return true;
     }
     else

@@ -55,26 +55,23 @@ autoPtr<GeoFieldType> loadField
         Info<< "Reading " << GeoFieldType::typeName
             << ' ' << io->name() << endl;
 
-        return autoPtr<GeoFieldType>
+        return autoPtr<GeoFieldType>::New
         (
-            new GeoFieldType
+            IOobject
             (
-                IOobject
-                (
-                    io->name(),
-                    io->instance(),
-                    io->local(),
-                    io->db(),
-                    IOobject::MUST_READ,
-                    IOobject::AUTO_WRITE,
-                    io->registerObject()
-                ),
-                mesh
-            )
+                io->name(),
+                io->instance(),
+                io->local(),
+                io->db(),
+                IOobject::MUST_READ,
+                IOobject::AUTO_WRITE,
+                io->registerObject()
+            ),
+            mesh
         );
     }
 
-    return autoPtr<GeoFieldType>();
+    return nullptr;
 }
 
 
@@ -84,14 +81,14 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "Extract force/moment information from existing calculations based "
-        "on the lumpedPoints pressure zones."
+        "Extract force/moment information from existing calculations based"
+        " on the lumpedPoints pressure zones."
     );
 
     argList::addBoolOption
     (
         "vtk",
-        "create visualization files of the forces"
+        "Create visualization files of the forces"
     );
 
     timeSelector::addOptions(true, false);
@@ -100,7 +97,7 @@ int main(int argc, char *argv[])
     #include "addRegionOption.H"
     #include "setRootCase.H"
 
-    const bool withVTK = args.optionFound("vtk");
+    const bool withVTK = args.found("vtk");
 
     #include "createTime.H"
     instantList timeDirs = timeSelector::select0(runTime, args);
@@ -144,7 +141,7 @@ int main(int argc, char *argv[])
 
         // Pressure field
         autoPtr<volScalarField> pField
-            = loadField<volScalarField>(mesh, objects.lookup("p"));
+            = loadField<volScalarField>(mesh, objects.findObject("p"));
 
         // The forces per zone
         if (movement().forcesAndMoments(mesh, forces, moments))
@@ -155,7 +152,7 @@ int main(int argc, char *argv[])
             if (withVTK && Pstream::master())
             {
                 const word outputName =
-                    Foam::name("forces_%06d.vtp", runTime.timeIndex());
+                    word::printf("forces_%06d.vtp", runTime.timeIndex());
 
                 Info<<"    " << outputName << endl;
 

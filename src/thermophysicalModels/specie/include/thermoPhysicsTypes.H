@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,6 +35,9 @@ Description
 #include "specie.H"
 #include "perfectGas.H"
 #include "incompressiblePerfectGas.H"
+#include "perfectFluid.H"
+#include "adiabaticPerfectFluid.H"
+#include "rhoConst.H"
 #include "hConstThermo.H"
 #include "janafThermo.H"
 
@@ -120,6 +123,62 @@ namespace Foam
         8
     > icoPoly8HThermoPhysics;
 
+    typedef
+    polynomialTransport
+    <
+        species::thermo
+        <
+            janafThermo
+            <
+                perfectGas<specie>
+            >,
+            sensibleEnthalpy
+        >,
+        8
+    > icoPoly8TranspJanafHThermoPhysics;
+
+    typedef
+    constTransport
+    <
+        species::thermo
+        <
+            hConstThermo
+            <
+                perfectFluid<specie>
+            >,
+            sensibleEnthalpy
+        >
+    >
+    constFluidHThermoPhysics;
+
+    typedef
+    constTransport
+    <
+        species::thermo
+        <
+            hConstThermo
+            <
+                adiabaticPerfectFluid<specie>
+            >,
+            sensibleEnthalpy
+        >
+    >
+    constAdiabaticFluidHThermoPhysics;
+
+    typedef
+    constTransport
+    <
+        species::thermo
+        <
+            hConstThermo
+            <
+                rhoConst<specie>
+            >,
+            sensibleEnthalpy
+        >
+    >
+    constHThermoPhysics;
+
 
     // thermo physics types based on sensibleInternalEnergy
     typedef
@@ -188,6 +247,62 @@ namespace Foam
         >,
         8
     > icoPoly8EThermoPhysics;
+
+    typedef
+    polynomialTransport
+    <
+        species::thermo
+        <
+            janafThermo
+            <
+                perfectGas<specie>
+            >,
+            sensibleInternalEnergy
+        >,
+        8
+    > icoPoly8TranspJanafEThermoPhysics;
+
+    typedef
+    constTransport
+    <
+        species::thermo
+        <
+            hConstThermo
+            <
+                perfectFluid<specie>
+            >,
+            sensibleInternalEnergy
+        >
+    >
+    constFluidEThermoPhysics;
+
+    typedef
+    constTransport
+    <
+        species::thermo
+        <
+            hConstThermo
+            <
+                adiabaticPerfectFluid<specie>
+            >,
+            sensibleInternalEnergy
+        >
+    >
+    constAdiabaticFluidEThermoPhysics;
+
+    typedef
+    constTransport
+    <
+        species::thermo
+        <
+            hConstThermo
+            <
+                rhoConst<specie>
+            >,
+            sensibleInternalEnergy
+        >
+    >
+    constEThermoPhysics;
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

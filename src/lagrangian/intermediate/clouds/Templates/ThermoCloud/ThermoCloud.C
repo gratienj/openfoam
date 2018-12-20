@@ -44,14 +44,14 @@ void Foam::ThermoCloud<CloudType>::setModels()
 
     TIntegrator_.reset
     (
-        scalarIntegrationScheme::New
+        integrationScheme::New
         (
             "T",
             this->solution().integrationSchemes()
         ).ptr()
     );
 
-    this->subModelProperties().lookup("radiation") >> radiation_;
+    this->subModelProperties().readEntry("radiation", radiation_);
 
     if (radiation_)
     {
@@ -68,7 +68,7 @@ void Foam::ThermoCloud<CloudType>::setModels()
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar("zero", dimArea, 0.0)
+                dimensionedScalar(dimArea, Zero)
             )
         );
 
@@ -85,7 +85,7 @@ void Foam::ThermoCloud<CloudType>::setModels()
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar("zero", pow4(dimTemperature), 0.0)
+                dimensionedScalar(pow4(dimTemperature), Zero)
             )
         );
 
@@ -102,12 +102,7 @@ void Foam::ThermoCloud<CloudType>::setModels()
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar
-                (
-                    "zero",
-                    sqr(dimLength)*pow4(dimTemperature),
-                    0.0
-                )
+                dimensionedScalar(sqr(dimLength)*pow4(dimTemperature), Zero)
             )
         );
     }
@@ -173,7 +168,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
                 IOobject::AUTO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar("zero", dimEnergy, 0.0)
+            dimensionedScalar(dimEnergy, Zero)
         )
     ),
     hsCoeff_
@@ -189,7 +184,7 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
                 IOobject::AUTO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar("zero", dimEnergy/dimTemperature, 0.0)
+            dimensionedScalar(dimEnergy/dimTemperature, Zero)
         )
     )
 {
@@ -343,13 +338,6 @@ Foam::ThermoCloud<CloudType>::ThermoCloud
     radAreaPT4_(nullptr),
     hsTrans_(nullptr),
     hsCoeff_(nullptr)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class CloudType>
-Foam::ThermoCloud<CloudType>::~ThermoCloud()
 {}
 
 

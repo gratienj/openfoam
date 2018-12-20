@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpcnCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,11 +62,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        AMIMethod(const AMIMethod&);
+        //- No copy construct
+        AMIMethod(const AMIMethod&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const AMIMethod&);
+        //- No copy assignment
+        void operator=(const AMIMethod&) = delete;
 
 
 protected:
@@ -84,21 +84,21 @@ protected:
         const TargetPatch& tgtPatch_;
 
         //- Flag to indicate that the two patches are co-directional and
-        //  that the orientation of the target patch should be reversed
+        //- that the orientation of the target patch should be reversed
         const bool reverseTarget_;
 
         //- Flag to indicate that the two patches must be matched/an overlap
-        //  exists between them
+        //- exists between them
         const bool requireMatch_;
 
         //- Source face areas
-        const scalarField& srcMagSf_;
+        List<scalar> srcMagSf_;
 
         //- Target face areas
-        const scalarField& tgtMagSf_;
+        List<scalar> tgtMagSf_;
 
         //- Labels of faces that are not overlapped by any target faces
-        //  (should be empty for correct functioning)
+        //- (should be empty for correct functioning)
         labelList srcNonOverlap_;
 
         //- Octree used to find face seeds
@@ -154,6 +154,15 @@ protected:
                 DynamicList<label>& faceIDs
             ) const;
 
+            //- Helper function to decompose a patch
+            template<class PatchType>
+            void triangulatePatch
+            (
+                const PatchType& patch,
+                List<DynamicList<face>>& tris,
+                List<scalar>& magSf
+            ) const;
+
 
 public:
 
@@ -169,8 +178,6 @@ public:
         (
             const SourcePatch& srcPatch,
             const TargetPatch& tgtPatch,
-            const scalarField& srcMagSf,
-            const scalarField& tgtMagSf,
             const faceAreaIntersect::triangulationMode& triMode,
             const bool reverseTarget,
             const bool requireMatch
@@ -178,8 +185,6 @@ public:
         (
             srcPatch,
             tgtPatch,
-            srcMagSf,
-            tgtMagSf,
             triMode,
             reverseTarget,
             requireMatch
@@ -191,8 +196,6 @@ public:
     (
         const SourcePatch& srcPatch,
         const TargetPatch& tgtPatch,
-        const scalarField& srcMagSf,
-        const scalarField& tgtMagSf,
         const faceAreaIntersect::triangulationMode& triMode,
         const bool reverseTarget,
         const bool requireMatch
@@ -204,8 +207,6 @@ public:
         const word& methodName,
         const SourcePatch& srcPatch,
         const TargetPatch& tgtPatch,
-        const scalarField& srcMagSf,
-        const scalarField& tgtMagSf,
         const faceAreaIntersect::triangulationMode& triMode,
         const bool reverseTarget,
         const bool requireMatch
@@ -213,7 +214,7 @@ public:
 
 
     //- Destructor
-    virtual ~AMIMethod();
+    virtual ~AMIMethod() = default;
 
 
     // Member Functions
@@ -226,6 +227,18 @@ public:
 
             //- Flag to indicate that interpolation patches are conformal
             virtual bool conformal() const;
+
+            //- Return const access to source patch face areas
+            inline const List<scalar>& srcMagSf() const;
+
+            //- Return access to source patch face areas
+            inline List<scalar>& srcMagSf();
+
+            //- Return const access to target patch face areas
+            inline const List<scalar>& tgtMagSf() const;
+
+            //- Return access to target patch face areas
+            inline List<scalar>& tgtMagSf();
 
 
         // Manipulation
@@ -241,8 +254,17 @@ public:
                 label tgtFacei = -1
             ) = 0;
 
+            //- Set the face areas for parallel runs
+            virtual void setMagSf
+            (
+                const TargetPatch& tgtPatch,
+                const mapDistribute& map,
+                scalarList& srcMagSf,
+                scalarList& tgtMagSf
+            ) const = 0;
+
             //- Normalise the weight. Can optionally subset addressing
-            //  (e.g. for mapNearest)
+            //- (e.g. for mapNearest)
             virtual void normaliseWeights
             (
                 const bool verbose,

@@ -113,7 +113,7 @@ public:
         //- Construct and return clone
         virtual autoPtr<liquidProperties> clone() const
         {
-            return autoPtr<liquidProperties>(new nC3H8O(*this));
+            return autoPtr<liquidProperties>::NewFrom<nC3H8O>(*this);
         }
 
 
@@ -155,10 +155,10 @@ public:
         //- Surface tension [N/m]
         inline scalar sigma(scalar p, scalar T) const;
 
-        //- Vapour diffussivity [m2/s]
+        //- Vapour diffusivity [m2/s]
         inline scalar D(scalar p, scalar T) const;
 
-        //- Vapour diffussivity [m2/s] with specified binary pair
+        //- Vapour diffusivity [m2/s] with specified binary pair
         // Note: behaves the same as D(p, T)
         inline scalar D(scalar p, scalar T, scalar Wb) const;
 

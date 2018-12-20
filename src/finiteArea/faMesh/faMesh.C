@@ -408,13 +408,13 @@ Foam::faMesh::faMesh
 
         faPatches[patchI].name_ = faPatchNames[patchI];
 
-        faPatches[patchI].type_ = word(curPatchDict.lookup("type"));
+        faPatches[patchI].type_ = curPatchDict.get<word>("type");
 
         faPatches[patchI].ownPolyPatchID_ =
-            pbm.findPatchID(word(curPatchDict.lookup("ownerPolyPatch")));
+            pbm.findPatchID(curPatchDict.get<word>("ownerPolyPatch"));
 
         faPatches[patchI].ngbPolyPatchID_ =
-            pbm.findPatchID(word(curPatchDict.lookup("neighbourPolyPatch")));
+            pbm.findPatchID(curPatchDict.get<word>("neighbourPolyPatch"));
     }
 
 
@@ -560,7 +560,7 @@ Foam::faMesh::faMesh
             {
                 label curFace = edgeFaces[curPMeshEdge][faceI];
 
-                if (findIndex(faceLabels_, curFace) == -1)
+                if (faceLabels_.found(curFace))
                 {
                     label polyPatchID = pbm.whichPatch(curFace);
 
@@ -997,6 +997,12 @@ Foam::label Foam::faMesh::comm() const
 Foam::label& Foam::faMesh::comm()
 {
     return comm_;
+}
+
+
+bool Foam::faMesh::hasDb() const
+{
+    return true;
 }
 
 

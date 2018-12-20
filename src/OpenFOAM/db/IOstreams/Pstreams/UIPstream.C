@@ -33,6 +33,14 @@ License
 
 namespace Foam
 {
+
+// Convert a single character to a word with length 1
+inline static Foam::word charToWord(char c)
+{
+    return Foam::word(std::string(1, c), false);
+}
+
+
 // Adjust stream format based on the flagMask
 inline static void processFlags(Istream& is, int flagMask)
 {
@@ -45,7 +53,8 @@ inline static void processFlags(Istream& is, int flagMask)
         is.format(IOstream::BINARY);
     }
 }
-}
+
+} // End anonymous namespace
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -106,17 +115,16 @@ inline Foam::Istream& Foam::UIPstream::readStringFromBuffer(std::string& str)
     size_t len;
     readFromBuffer(len);
 
-    if (len == 0)
+    if (len)
     {
-        str.clear();
+        str.assign(&externalBuf_[externalBufPosition_], len);
+        externalBufPosition_ += len;
+        checkEof();
     }
     else
     {
-        str.assign(&externalBuf_[externalBufPosition_], len);
+        str.clear();
     }
-
-    externalBufPosition_ += len;
-    checkEof();
 
     return *this;
 }
@@ -316,7 +324,7 @@ Foam::Istream& Foam::UIPstream::read(token& t)
         {
             if (isalpha(c))
             {
-                t = word(c);
+                t = charToWord(c);
                 return *this;
             }
 

@@ -83,11 +83,11 @@ class faceMDLimitedGrad
         ) const;
 
 
-        //- Disallow default bitwise copy construct
-        faceMDLimitedGrad(const faceMDLimitedGrad&);
+        //- No copy construct
+        faceMDLimitedGrad(const faceMDLimitedGrad&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faceMDLimitedGrad&);
+        //- No copy assignment
+        void operator=(const faceMDLimitedGrad&) = delete;
 
 
 public:
@@ -107,10 +107,8 @@ public:
         {
             if (k_ < 0 || k_ > 1)
             {
-                FatalIOErrorInFunction
-                (
-                    schemeData
-                )   << "coefficient = " << k_
+                FatalIOErrorInFunction(schemeData)
+                    << "coefficient = " << k_
                     << " should be >= 0 and <= 1"
                     << exit(FatalIOError);
             }

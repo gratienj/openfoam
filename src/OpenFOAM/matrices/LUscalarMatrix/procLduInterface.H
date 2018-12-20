@@ -71,8 +71,8 @@ class procLduInterface
 
     // Private Member Functions
 
-        //- Dissallow construction as copy
-        procLduInterface(const procLduInterface&);
+        //- No copy construct
+        procLduInterface(const procLduInterface&) = delete;
 
 
 public:
@@ -93,12 +93,12 @@ public:
         autoPtr<procLduInterface> clone()
         {
             NotImplemented;
-            return autoPtr<procLduInterface>(nullptr);
+            return nullptr;
         }
 
         static autoPtr<procLduInterface> New(Istream& is)
         {
-            return autoPtr<procLduInterface>(new procLduInterface(is));
+            return autoPtr<procLduInterface>::New(is);
         }
 
 

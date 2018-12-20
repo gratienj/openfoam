@@ -67,17 +67,17 @@ class rotatingMotion
         //- Axis vector
         const vector axis_;
 
-        //- Angular velocty (rad/sec)
+        //- Angular velocity (rad/sec)
         autoPtr<Function1<scalar>> omega_;
 
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        rotatingMotion(const rotatingMotion&);
+        //- No copy construct
+        rotatingMotion(const rotatingMotion&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const rotatingMotion&);
+        //- No copy assignment
+        void operator=(const rotatingMotion&) = delete;
 
 
 public:

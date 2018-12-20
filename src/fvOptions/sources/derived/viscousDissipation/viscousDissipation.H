@@ -80,10 +80,10 @@ class viscousDissipation
         //- Return the viscosity field
         tmp<volSymmTensorField> devRhoReff() const;
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         viscousDissipation(const viscousDissipation&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const viscousDissipation&) = delete;
 
 private:
@@ -115,25 +115,19 @@ public:
 
     // Member Functions
 
-        // Evaluate
+        //- Add explicit contribution to compressible energy equation
+        virtual void addSup
+        (
+            const volScalarField& rho,
+            fvMatrix<scalar>& eqn,
+            const label fieldi
+        );
 
-            //- Add explicit contribution to compressible energy equation
-            virtual void addSup
-            (
-                const volScalarField& rho,
-                fvMatrix<scalar>& eqn,
-                const label fieldi
-            );
-
-
-        // IO
-
-            //- Read source dictionary
-            virtual bool read(const dictionary& dict)
-            {
-                return true;
-            }
-
+        //- Read source dictionary
+        virtual bool read(const dictionary& dict)
+        {
+            return true;
+        }
 };
 
 

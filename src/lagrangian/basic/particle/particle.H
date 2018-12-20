@@ -126,6 +126,20 @@ public:
     };
 
 
+    //- Old particle positions content for OpenFOAM-1706 and earlier
+    struct positionsCompat1706
+    {
+        vector position;
+        label celli;
+        label facei;
+        scalar stepFraction;
+        label tetFacei;
+        label tetPti;
+        label origProc;
+        label origId;
+    };
+
+
 private:
 
     // Private data
@@ -166,7 +180,7 @@ private:
         // Tetrahedra functions
 
             //- Get the vertices of the current tet
-            void stationaryTetGeometry
+            inline void stationaryTetGeometry
             (
                 vector& centre,
                 vector& base,
@@ -179,7 +193,7 @@ private:
             //  Cartesian position in the global coordinate system. The
             //  conversion is x = A & y, where x is the Cartesian position, y is
             //  the barycentric position and A is the transformation tensor.
-            barycentricTensor stationaryTetTransform() const;
+            inline barycentricTensor stationaryTetTransform() const;
 
             //- Get the reverse transform associated with the current tet. The
             //  conversion is detA*y = (x - centre) & T. The variables x, y and
@@ -198,7 +212,7 @@ private:
             //- Get the vertices of the current moving tet. Two values are
             //  returned for each vertex. The first is a constant, and the
             //  second is a linear coefficient of the track fraction.
-            void movingTetGeometry
+            inline void movingTetGeometry
             (
                 const scalar endStepFraction,
                 Pair<vector>& centre,
@@ -211,7 +225,7 @@ private:
             //  This is of the same form as for the static case. As with the
             //  moving geometry, a linear function of the tracking fraction is
             //  returned for each component.
-            Pair<barycentricTensor> movingTetTransform
+            inline Pair<barycentricTensor> movingTetTransform
             (
                 const scalar endStepFraction
             ) const;
@@ -405,7 +419,7 @@ public:
         //- Construct a clone
         virtual autoPtr<particle> clone() const
         {
-            return autoPtr<particle>(new particle(*this));
+            return autoPtr<particle>::New(*this);
         }
 
         //- Factory class to read-construct particles used for
@@ -423,14 +437,13 @@ public:
 
             autoPtr<particle> operator()(Istream& is) const
             {
-                return autoPtr<particle>(new particle(mesh_, is, true));
+                return autoPtr<particle>::New(mesh_, is, true);
             }
         };
 
 
     //- Destructor
-    virtual ~particle()
-    {}
+    virtual ~particle() = default;
 
 
     // Member Functions
@@ -509,14 +522,8 @@ public:
             //- Return the current tet transformation tensor
             inline barycentricTensor currentTetTransform() const;
 
-            //- Return the normal of the tri on tetFacei_ for the
-            //  current tet.
+            //- The (unit) normal of the tri on tetFacei_ for the current tet.
             inline vector normal() const;
-
-            //- Return the normal of the tri on tetFacei_ for the
-            //  current tet at the start of the timestep, i.e. based
-            //  on oldPoints
-            inline vector oldNormal() const;
 
             //- Is the particle on a face?
             inline bool onFace() const;
@@ -612,7 +619,7 @@ public:
     // Patch data
 
         //- Get the normal and velocity of the current patch location
-        void patchData(vector& n, vector& U) const;
+        inline void patchData(vector& n, vector& U) const;
 
 
     // Transformations

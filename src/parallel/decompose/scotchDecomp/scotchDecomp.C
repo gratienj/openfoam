@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -127,13 +127,13 @@ License
 #include "Time.H"
 #include "OFstream.H"
 
-extern "C"
-{
+// Probably not needed, but in case we pickup a ptscotch.h ...
+#define MPICH_SKIP_MPICXX
+#define OMPI_SKIP_MPICXX
+
 #include "scotch.h"
-}
 
-
-// Hack: scotch generates floating point errors so need to switch of error
+// Hack: scotch generates floating point errors so need to switch off error
 //       trapping!
 #ifdef __GLIBC__
     #ifndef _GNU_SOURCE
@@ -141,6 +141,13 @@ extern "C"
     #endif
     #include <fenv.h>
 #endif
+
+// Provide a clear error message if we have a size mismatch
+static_assert
+(
+    sizeof(Foam::label) == sizeof(SCOTCH_Num),
+    "sizeof(Foam::label) == sizeof(SCOTCH_Num), check your scotch headers"
+);
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -166,7 +173,7 @@ namespace Foam
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::scotchDecomp::graphPath(const polyMesh& mesh)
+void Foam::scotchDecomp::graphPath(const polyMesh& mesh) const
 {
     graphPath_ = mesh.time().path()/mesh.name() + ".grf";
 }
@@ -189,7 +196,7 @@ Foam::label Foam::scotchDecomp::decomposeSerial
     const labelUList& xadj,
     const UList<scalar>& cWeights,
     List<label>& decomp
-)
+) const
 {
     // Dump graph
     if (coeffsDict_.lookupOrDefault("writeGraph", false))
@@ -476,7 +483,7 @@ Foam::labelList Foam::scotchDecomp::decompose
     const polyMesh& mesh,
     const pointField& points,
     const scalarField& pointWeights
-)
+) const
 {
     // Where to write graph
     graphPath(mesh);
@@ -496,7 +503,7 @@ Foam::labelList Foam::scotchDecomp::decompose
     const labelList& agglom,
     const pointField& agglomPoints,
     const scalarField& pointWeights
-)
+) const
 {
     // Where to write graph
     graphPath(mesh);
@@ -516,7 +523,7 @@ Foam::labelList Foam::scotchDecomp::decompose
     const labelListList& globalCellCells,
     const pointField& cellCentres,
     const scalarField& cWeights
-)
+) const
 {
     // Where to write graph
     graphPath_ = "scotch.grf";

@@ -96,22 +96,20 @@ bool Foam::functionEntries::includeEtcEntry::execute
     const fileName fName(resolveEtcFile(rawName, parentDict));
 
     autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
-    ISstream& ifs = ifsPtr();
+    auto& ifs = *ifsPtr;
 
     if (ifs)
     {
         if (Foam::functionEntries::includeEtcEntry::log)
         {
-            Info<< fName << endl;
+            DetailInfo << fName << endl;
         }
         parentDict.read(ifs);
         return true;
     }
 
-    FatalIOErrorInFunction
-    (
-        is
-    )   << "Cannot open etc file "
+    FatalIOErrorInFunction(is)
+        << "Cannot open etc file "
         << (ifs.name().size() ? ifs.name() : rawName)
         << " while reading dictionary " << parentDict.name()
         << exit(FatalIOError);
@@ -131,22 +129,20 @@ bool Foam::functionEntries::includeEtcEntry::execute
     const fileName fName(resolveEtcFile(rawName, parentDict));
 
     autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
-    ISstream& ifs = ifsPtr();
+    auto& ifs = *ifsPtr;
 
     if (ifs)
     {
         if (Foam::functionEntries::includeEtcEntry::log)
         {
-            Info<< fName << endl;
+            DetailInfo << fName << endl;
         }
         entry.read(parentDict, ifs);
         return true;
     }
 
-    FatalIOErrorInFunction
-    (
-        is
-    )   << "Cannot open etc file "
+    FatalIOErrorInFunction(is)
+        << "Cannot open etc file "
         << (ifs.name().size() ? ifs.name() : rawName)
         << " while reading dictionary " << parentDict.name()
         << exit(FatalIOError);

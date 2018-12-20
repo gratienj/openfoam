@@ -163,7 +163,7 @@ private:
         (
             Istream& inFile,
             const label n,
-            List<T>& lst
+            List<T>& list
         ) const;
 
         void warnUnhandledType
@@ -204,8 +204,8 @@ private:
 
         void read(ISstream& inFile);
 
-        //- Disallow assignment
-        void operator=(const vtkUnstructuredReader&);
+        //- No copy assignment
+        void operator=(const vtkUnstructuredReader&) = delete;
 
 
 public:

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,12 +24,62 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Time.H"
+#include "argList.H"
 #include "Pstream.H"
 #include "simpleObjectRegistry.H"
 #include "dimensionedConstants.H"
 #include "profiling.H"
 #include "IOdictionary.H"
 #include "fileOperation.H"
+
+#include <iomanip>
+
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+
+namespace Foam
+{
+
+// Output seconds as day-hh:mm:ss
+static std::ostream& printTimeHMS(std::ostream& os, double seconds)
+{
+    const unsigned long ss = seconds;
+
+    // days
+    const auto dd = (ss / 86400);
+
+    if (dd) os << dd << '-';
+
+    // hours
+    const int hh = ((ss / 3600) % 24);
+
+    if (dd || hh)
+    {
+        os  << std::setw(2) << std::setfill('0')
+            << hh << ':';
+    }
+
+    // minutes
+    os  << std::setw(2) << std::setfill('0')
+        << ((ss / 60) % 60) << ':';
+
+    // seconds
+    os  << std::setw(2) << std::setfill('0')
+        << (ss % 60);
+
+
+    // 1/100th seconds. As none or 2 decimal places
+    const int hundredths = int(100 * (seconds - ss)) % 100;
+
+    if (hundredths)
+    {
+        os  << '.' << std::setw(2) << std::setfill('0') << hundredths;
+    }
+
+    return os;
+}
+
+} // End namespace Foam
+
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -42,192 +92,251 @@ void Foam::Time::readDict()
         setEnv("FOAM_APPLICATION", application, false);
     }
 
-
     // Check for local switches and settings
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    // Debug switches
-    if (controlDict_.found("DebugSwitches"))
+    const dictionary* localDict = nullptr;
+
+    // DebugSwitches
+    if
+    (
+        (localDict = controlDict_.findDict("DebugSwitches")) != nullptr
+     && localDict->size()
+    )
     {
-        Info<< "Overriding DebugSwitches according to " << controlDict_.name()
-            << endl;
+        DetailInfo
+            << "Overriding DebugSwitches according to "
+            << controlDict_.name() << nl;
 
-        simpleObjectRegistry& objects = debug::debugObjects();
-        const dictionary& localSettings = controlDict_.subDict("DebugSwitches");
-        forAllConstIter(dictionary, localSettings, iter)
+        simpleObjectRegistry& objs = debug::debugObjects();
+
+        for (const entry& dEntry : *localDict)
         {
-            const word& name = iter().keyword();
+            const word& name = dEntry.keyword();
 
-            simpleObjectRegistryEntry* objPtr = objects.lookupPtr(name);
+            simpleObjectRegistryEntry* objPtr = objs.lookupPtr(name);
 
             if (objPtr)
             {
-                Info<< "    " << iter() << endl;
-
                 const List<simpleRegIOobject*>& objects = *objPtr;
 
-                if (iter().isDict())
+                DetailInfo << "    " << dEntry << nl;
+
+                if (dEntry.isDict())
                 {
-                    forAll(objects, i)
+                    for (simpleRegIOobject* obj : objects)
                     {
                         OStringStream os(IOstream::ASCII);
-                        os  << iter().dict();
+                        os  << dEntry.dict();
                         IStringStream is(os.str());
-                        objects[i]->readData(is);
+                        obj->readData(is);
                     }
                 }
                 else
                 {
-                    forAll(objects, i)
+                    for (simpleRegIOobject* obj : objects)
                     {
-                        objects[i]->readData(iter().stream());
+                        obj->readData(dEntry.stream());
                     }
                 }
             }
         }
     }
 
-    // Optimisation Switches
-    if (controlDict_.found("OptimisationSwitches"))
+
+    // InfoSwitches
+    if
+    (
+        (localDict = controlDict_.findDict("InfoSwitches")) != nullptr
+     && localDict->size()
+    )
     {
-        Info<< "Overriding OptimisationSwitches according to "
-            << controlDict_.name() << endl;
+        DetailInfo
+            << "Overriding InfoSwitches according to "
+            << controlDict_.name() << nl;
 
-        simpleObjectRegistry& objects = debug::optimisationObjects();
-        const dictionary& localSettings = controlDict_.subDict
-        (
-            "OptimisationSwitches"
-        );
-        forAllConstIter(dictionary, localSettings, iter)
+        simpleObjectRegistry& objs = debug::infoObjects();
+
+        for (const entry& dEntry : *localDict)
         {
-            const word& name = iter().keyword();
+            const word& name = dEntry.keyword();
 
-            simpleObjectRegistryEntry* objPtr = objects.lookupPtr(name);
+            simpleObjectRegistryEntry* objPtr = objs.lookupPtr(name);
 
             if (objPtr)
             {
-                Info<< "    " << iter() << endl;
-
                 const List<simpleRegIOobject*>& objects = *objPtr;
 
-                if (iter().isDict())
+                DetailInfo << "    " << dEntry << nl;
+
+                if (dEntry.isDict())
                 {
-                    forAll(objects, i)
+                    for (simpleRegIOobject* obj : objects)
                     {
                         OStringStream os(IOstream::ASCII);
-                        os  << iter().dict();
+                        os  << dEntry.dict();
                         IStringStream is(os.str());
-                        objects[i]->readData(is);
+                        obj->readData(is);
                     }
                 }
                 else
                 {
-                    forAll(objects, i)
+                    for (simpleRegIOobject* obj : objects)
                     {
-                        objects[i]->readData(iter().stream());
+                        obj->readData(dEntry.stream());
                     }
                 }
             }
         }
+    }
 
+    // OptimisationSwitches
+    if
+    (
+        (localDict = controlDict_.findDict("OptimisationSwitches")) != nullptr
+     && localDict->size()
+    )
+    {
+        DetailInfo
+            << "Overriding OptimisationSwitches according to "
+            << controlDict_.name() << nl;
 
-        // Handle fileHandler override explicitly since interacts with
-        // local dictionary monitoring.
-        word fileHandlerName;
-        if
-        (
-            localSettings.readIfPresent("fileHandler", fileHandlerName)
-         && fileHandler().type() != fileHandlerName
-        )
+        simpleObjectRegistry& objs = debug::optimisationObjects();
+
+        for (const entry& dEntry : *localDict)
         {
-            // Remove the old watches since destroying the file
-            fileNameList oldWatchedFiles(controlDict_.watchIndices());
-            forAllReverse(controlDict_.watchIndices(), i)
+            const word& name = dEntry.keyword();
+
+            simpleObjectRegistryEntry* objPtr = objs.lookupPtr(name);
+
+            if (objPtr)
             {
-                label watchi = controlDict_.watchIndices()[i];
-                oldWatchedFiles[i] = fileHandler().getFile(watchi);
-                fileHandler().removeWatch(watchi);
+                DetailInfo << "    " << dEntry << nl;
+
+                const List<simpleRegIOobject*>& objects = *objPtr;
+
+                if (dEntry.isDict())
+                {
+                    for (simpleRegIOobject* obj : objects)
+                    {
+                        OStringStream os(IOstream::ASCII);
+                        os  << dEntry.dict();
+                        IStringStream is(os.str());
+                        obj->readData(is);
+                    }
+                }
+                else
+                {
+                    for (simpleRegIOobject* obj : objects)
+                    {
+                        obj->readData(dEntry.stream());
+                    }
+                }
             }
-            controlDict_.watchIndices().clear();
-
-            // Installing the new handler
-            Info<< "Overriding fileHandler to " << fileHandlerName << endl;
-
-            autoPtr<fileOperation> handler
-            (
-                fileOperation::New
-                (
-                    fileHandlerName,
-                    true
-                )
-            );
-            Foam::fileHandler(handler);
-
-            // Reinstall old watches
-            fileHandler().addWatches(controlDict_, oldWatchedFiles);
         }
     }
 
 
-    // DimensionedConstants. Handled as a special case since both e.g.
-    // the 'unitSet' might be changed and the individual values
-    if (controlDict_.found("DimensionedConstants"))
+    // Handle fileHandler explicitly since it affects local dictionary
+    // monitoring.
+    word fileHandlerName;
+    if
+    (
+        localDict
+     && localDict->readIfPresent("fileHandler", fileHandlerName)
+     && fileHandler().type() != fileHandlerName
+    )
     {
-        Info<< "Overriding DimensionedConstants according to "
-            << controlDict_.name() << endl;
+        DetailInfo << "Overriding fileHandler to " << fileHandlerName << nl;
+
+        // Remove old watches since destroying the file
+        fileNameList oldWatched(controlDict_.watchIndices().size());
+        forAllReverse(controlDict_.watchIndices(), i)
+        {
+            const label watchi = controlDict_.watchIndices()[i];
+            oldWatched[i] = fileHandler().getFile(watchi);
+            fileHandler().removeWatch(watchi);
+        }
+        controlDict_.watchIndices().clear();
+
+        // Installing the new handler
+        auto handler = fileOperation::New(fileHandlerName, true);
+        Foam::fileHandler(handler);
+
+        // Reinstall old watches
+        fileHandler().addWatches(controlDict_, oldWatched);
+    }
+
+
+    // DimensionedConstants.
+    // - special case since it may change both the 'unitSet' and the
+    //   individual values
+    if
+    (
+
+        (localDict = controlDict_.findDict("DimensionedConstants")) != nullptr
+     && localDict->size()
+    )
+    {
+        DetailInfo
+            << "Overriding DimensionedConstants according to "
+            << controlDict_.name() << nl;
+
+        simpleObjectRegistry& objs = debug::dimensionedConstantObjects();
 
         // Change in-memory
-        dimensionedConstants().merge
-        (
-            controlDict_.subDict("DimensionedConstants")
-        );
-
-
-        simpleObjectRegistry& objects = debug::dimensionedConstantObjects();
+        dimensionedConstants().merge(*localDict);
 
         IStringStream dummyIs("");
 
-        forAllConstIter(simpleObjectRegistry, objects, iter)
+        forAllConstIter(simpleObjectRegistry, objs, iter)
         {
             const List<simpleRegIOobject*>& objects = *iter;
 
-            forAll(objects, i)
+            for (simpleRegIOobject* obj : objects)
             {
-                objects[i]->readData(dummyIs);
+                obj->readData(dummyIs);
 
-                Info<< "    ";
-                objects[i]->writeData(Info);
-                Info<< endl;
+                if (Foam::infoDetailLevel > 0)
+                {
+                    Info<< "    ";
+                    obj->writeData(Info);
+                    Info<< nl;
+                }
             }
         }
     }
 
 
-    // Dimension sets
-    if (controlDict_.found("DimensionSets"))
+    // DimensionSets
+    if
+    (
+        (localDict = controlDict_.findDict("DimensionSets")) != nullptr
+        && localDict->size()
+    )
     {
-        Info<< "Overriding DimensionSets according to "
-            << controlDict_.name() << endl;
+        DetailInfo
+            << "Overriding DimensionSets according to "
+            << controlDict_.name() << nl;
+
+        simpleObjectRegistry& objs = debug::dimensionSetObjects();
 
         dictionary dict(Foam::dimensionSystems());
-        dict.merge(controlDict_.subDict("DimensionSets"));
+        dict.merge(*localDict);
 
-        simpleObjectRegistry& objects = debug::dimensionSetObjects();
-
-        simpleObjectRegistryEntry* objPtr = objects.lookupPtr("DimensionSets");
+        simpleObjectRegistryEntry* objPtr = objs.lookupPtr("DimensionSets");
 
         if (objPtr)
         {
-            Info<< controlDict_.subDict("DimensionSets") << endl;
+            DetailInfo << *localDict << nl;
 
             const List<simpleRegIOobject*>& objects = *objPtr;
 
-            forAll(objects, i)
+            for (simpleRegIOobject* obj : objects)
             {
                 OStringStream os(IOstream::ASCII);
                 os  << dict;
                 IStringStream is(os.str());
-                objects[i]->readData(is);
+                obj->readData(is);
             }
         }
     }
@@ -235,17 +344,15 @@ void Foam::Time::readDict()
 
     if (!deltaTchanged_)
     {
-        deltaT_ = readScalar(controlDict_.lookup("deltaT"));
+        controlDict_.readEntry("deltaT", deltaT_);
     }
 
-    if (controlDict_.found("writeControl"))
-    {
-        writeControl_ = writeControlNames.lookup
-        (
-            "writeControl",
-            controlDict_
-        );
-    }
+    writeControlNames.readIfPresent
+    (
+        "writeControl",
+        controlDict_,
+        writeControl_
+    );
 
     scalar oldWriteInterval = writeInterval_;
 
@@ -260,7 +367,7 @@ void Foam::Time::readDict()
     }
     else
     {
-        controlDict_.lookup("writeFrequency") >> writeInterval_;
+        controlDict_.readEntry("writeFrequency", writeInterval_);
     }
 
 
@@ -300,7 +407,7 @@ void Foam::Time::readDict()
 
     if (controlDict_.found("timeFormat"))
     {
-        const word formatName(controlDict_.lookup("timeFormat"));
+        const word formatName(controlDict_.get<word>("timeFormat"));
 
         if (formatName == "general")
         {
@@ -326,13 +433,11 @@ void Foam::Time::readDict()
 
     // stopAt at 'endTime' or a specified value
     // if nothing is specified, the endTime is zero
-    if (controlDict_.found("stopAt"))
+    if (stopAtControlNames.readIfPresent("stopAt", controlDict_, stopAt_))
     {
-        stopAt_ = stopAtControlNames.lookup("stopAt", controlDict_);
-
         if (stopAt_ == saEndTime)
         {
-            controlDict_.lookup("endTime") >> endTime_;
+            controlDict_.readEntry("endTime", endTime_);
         }
         else
         {
@@ -348,25 +453,25 @@ void Foam::Time::readDict()
 
     if (controlDict_.found("writeVersion"))
     {
-        writeVersion_ = IOstream::versionNumber
+        writeStreamOption_.version
         (
-            controlDict_.lookup("writeVersion")
+            IOstreamOption::versionNumber
+            (
+                controlDict_.get<float>("writeVersion")
+            )
         );
     }
 
     if (controlDict_.found("writeFormat"))
     {
-        writeFormat_ = IOstream::formatEnum
-        (
-            controlDict_.lookup("writeFormat")
-        );
+        writeStreamOption_.format(controlDict_.get<word>("writeFormat"));
     }
 
     if (controlDict_.found("writePrecision"))
     {
         IOstream::defaultPrecision
         (
-            readUint(controlDict_.lookup("writePrecision"))
+            controlDict_.get<unsigned int>("writePrecision")
         );
 
         Sout.precision(IOstream::defaultPrecision());
@@ -384,23 +489,23 @@ void Foam::Time::readDict()
 
     if (controlDict_.found("writeCompression"))
     {
-        writeCompression_ = IOstream::compressionEnum
+        writeStreamOption_.compression
         (
-            controlDict_.lookup("writeCompression")
+            controlDict_.get<word>("writeCompression")
         );
 
         if
         (
-            writeFormat_ == IOstream::BINARY
-         && writeCompression_ == IOstream::COMPRESSED
+            writeStreamOption_.compression() == IOstream::COMPRESSED
+         && writeStreamOption_.format() == IOstream::BINARY
         )
         {
             IOWarningInFunction(controlDict_)
-                << "Selecting compressed binary is inefficient and ineffective"
-                   ", resetting to uncompressed binary"
+                << "Disabled binary format compression"
+                << " (inefficient/ineffective)"
                 << endl;
 
-            writeCompression_ = IOstream::UNCOMPRESSED;
+            writeStreamOption_.compression(IOstream::UNCOMPRESSED);
         }
     }
 
@@ -589,6 +694,34 @@ bool Foam::Time::writeAndEnd()
 void Foam::Time::writeOnce()
 {
     writeOnce_ = true;
+}
+
+
+Foam::Ostream& Foam::Time::printExecutionTime(OSstream& os) const
+{
+    switch (printExecutionFormat_)
+    {
+        case 1:
+        {
+            os  << "ExecutionTime = ";
+            printTimeHMS(os.stdStream(), elapsedCpuTime());
+
+            os  << "  ClockTime = ";
+            printTimeHMS(os.stdStream(), elapsedClockTime());
+        }
+        break;
+
+        default:
+        {
+            os  << "ExecutionTime = " << elapsedCpuTime() << " s"
+                << "  ClockTime = " << elapsedClockTime() << " s";
+        }
+        break;
+    }
+
+    os  << nl << endl;
+
+    return os;
 }
 
 

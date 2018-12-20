@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,7 +66,7 @@ void Foam::faceShading::writeRays
 
     Pout<< "cmd: objToVTK " << fName.c_str() << endl;
 
-    stringList cmd{"objToVTK", fName, fName.lessExt().ext("vtk")};
+    stringList cmd({"objToVTK", fName, fName.lessExt().ext("vtk")});
     Foam::system(cmd);
 }
 
@@ -80,32 +80,21 @@ Foam::triSurface Foam::faceShading::triangulate
     const polyBoundaryMesh& bMesh = mesh_.boundaryMesh();
 
     // Storage for surfaceMesh. Size estimate.
-    DynamicList<labelledTri> triangles
-    (
-        mesh_.nFaces() - mesh_.nInternalFaces()
-    );
+    DynamicList<labelledTri> triangles(mesh_.nBoundaryFaces());
 
     label newPatchI = 0;
 
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchI : includePatches)
     {
-        const label patchI = iter.key();
         const polyPatch& patch = bMesh[patchI];
         const pointField& points = patch.points();
 
         label nTriTotal = 0;
 
-        if (includeAllFacesPerPatch[patchI].size() > 0)
+        if (includeAllFacesPerPatch[patchI].size())
         {
-            forAllConstIter
-            (
-                labelHashSet,
-                includeAllFacesPerPatch[patchI],
-                iter1
-            )
+            for (const label patchFaceI : includeAllFacesPerPatch[patchI])
             {
-                const label patchFaceI = iter1.key();
-
                 const face& f = patch[patchFaceI];
 
                 faceList triFaces(f.nTriangles(points));
@@ -146,12 +135,11 @@ Foam::triSurface Foam::faceShading::triangulate
 
     newPatchI = 0;
 
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchI : includePatches)
     {
-        const label patchI = iter.key();
         const polyPatch& patch = bMesh[patchI];
 
-        if (includeAllFacesPerPatch[patchI].size() > 0)
+        if (includeAllFacesPerPatch[patchI].size())
         {
             surface.patches()[newPatchI].name() = patch.name();
             surface.patches()[newPatchI].geometricType() = patch.type();
@@ -333,7 +321,7 @@ void Foam::faceShading::calculate()
         List<pointIndexHit> hitInfo(startIndex.size());
         surfacesMesh.findLine(start, end, hitInfo);
 
-        // Collect the rays which has 'only one not wall' obstacle bettween
+        // Collect the rays which has 'only one not wall' obstacle between
         // start and end.
         // If the ray hit itself get stored in dRayIs
         forAll(hitInfo, rayI)
@@ -377,7 +365,7 @@ void Foam::faceShading::calculate()
                     IOobject::NO_WRITE
                 ),
                 mesh_,
-                dimensionedScalar("zero", dimless, 0)
+                dimensionedScalar(dimless, Zero)
             )
         );
 

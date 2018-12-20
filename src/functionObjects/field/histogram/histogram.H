@@ -108,7 +108,7 @@ class histogram
         //- Minimum value
         scalar min_;
 
-        //- Mumber of bins
+        //- Number of bins
         label nBins_;
 
         //- Output formatter to write
@@ -125,11 +125,11 @@ class histogram
             const scalarField& absoluteValues
         ) const;
 
-        //- Disallow default bitwise copy construct
-        histogram(const histogram&);
+        //- No copy construct
+        histogram(const histogram&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const histogram&);
+        //- No copy assignment
+        void operator=(const histogram&) = delete;
 
 
 public:

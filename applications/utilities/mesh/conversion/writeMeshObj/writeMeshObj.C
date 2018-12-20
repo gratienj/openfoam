@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,8 +28,7 @@ Group
     grpMeshConversionUtilities
 
 Description
-    For mesh debugging: writes mesh as three separate OBJ files which can
-    be viewed with e.g. javaview.
+    For mesh debugging: writes mesh as three separate OBJ files.
 
     meshPoints_XXX.obj : all points and edges as lines.
     meshFaceCentres_XXX.obj : all face centres.
@@ -60,6 +59,7 @@ void writeOBJ(const point& pt, Ostream& os)
 {
     os  << "v " << pt.x() << ' ' << pt.y() << ' ' << pt.z() << nl;
 }
+
 
 // All edges of mesh
 void writePoints(const polyMesh& mesh, const fileName& timeName)
@@ -344,10 +344,7 @@ void writePointCells
     {
         const labelList& cEdges = mesh.cellEdges()[pCells[i]];
 
-        forAll(cEdges, i)
-        {
-            allEdges.insert(cEdges[i]);
-        }
+        allEdges.insert(cEdges);
     }
 
 
@@ -363,9 +360,9 @@ void writePointCells
 
     label vertI = 0;
 
-    forAllConstIter(labelHashSet, allEdges, iter)
+    for (const label edgei : allEdges)
     {
-        const edge& e = mesh.edges()[iter.key()];
+        const edge& e = mesh.edges()[edgei];
 
         meshTools::writeOBJ(pointStream, mesh.points()[e[0]]); vertI++;
         meshTools::writeOBJ(pointStream, mesh.points()[e[1]]); vertI++;
@@ -379,63 +376,64 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "for mesh debugging: write mesh as separate OBJ files"
+        "For mesh debugging: write mesh as separate OBJ files"
     );
 
     timeSelector::addOptions();
     argList::addBoolOption
     (
         "patchFaces",
-        "write patch faces edges"
+        "Write patch faces edges"
     );
     argList::addBoolOption
     (
         "patchEdges",
-        "write patch boundary edges"
+        "Write patch boundary edges"
     );
     argList::addOption
     (
         "cell",
-        "int",
-        "write points for the specified cell"
+        "cellId",
+        "Write points for the specified cell"
     );
     argList::addOption
     (
         "face",
-        "int",
-        "write specified face"
+        "faceId",
+        "Write specified face"
     );
     argList::addOption
     (
         "point",
-        "int",
-        "write specified point"
+        "pointId",
+        "Write specified point"
     );
     argList::addOption
     (
         "cellSet",
         "name",
-        "write points for specified cellSet"
+        "Write points for specified cellSet"
     );
     argList::addOption
     (
         "faceSet",
         "name",
-        "write points for specified faceSet"
+        "Write points for specified faceSet"
     );
     #include "addRegionOption.H"
 
+    argList::noFunctionObjects();  // Never use function objects
+
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
 
-    const bool patchFaces = args.optionFound("patchFaces");
-    const bool patchEdges = args.optionFound("patchEdges");
-    const bool doCell     = args.optionFound("cell");
-    const bool doPoint    = args.optionFound("point");
-    const bool doFace     = args.optionFound("face");
-    const bool doCellSet  = args.optionFound("cellSet");
-    const bool doFaceSet  = args.optionFound("faceSet");
+    const bool patchFaces = args.found("patchFaces");
+    const bool patchEdges = args.found("patchEdges");
+    const bool doCell     = args.found("cell");
+    const bool doPoint    = args.found("point");
+    const bool doFace     = args.found("face");
+    const bool doCellSet  = args.found("cellSet");
+    const bool doFaceSet  = args.found("faceSet");
 
 
     Info<< "Writing mesh objects as .obj files such that the object"
@@ -467,19 +465,19 @@ int main(int argc, char *argv[])
             }
             if (doCell)
             {
-                label celli = args.optionRead<label>("cell");
+                const label celli = args.opt<label>("cell");
 
                 writePoints(mesh, celli, runTime.timeName());
             }
             if (doPoint)
             {
-                label pointi = args.optionRead<label>("point");
+                const label pointi = args.opt<label>("point");
 
                 writePointCells(mesh, pointi, runTime.timeName());
             }
             if (doFace)
             {
-                label facei = args.optionRead<label>("face");
+                const label facei = args.opt<label>("face");
 
                 fileName fName
                 (

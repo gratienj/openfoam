@@ -52,14 +52,14 @@ addToRunTimeSelectionTable(thermalBaffleModel, thermalBaffle, dictionary);
 
 bool thermalBaffle::read()
 {
-    this->solution().lookup("nNonOrthCorr") >> nNonOrthCorr_;
+    this->solution().readEntry("nNonOrthCorr", nNonOrthCorr_);
     return regionModel1D::read();
 }
 
 
 bool thermalBaffle::read(const dictionary& dict)
 {
-    this->solution().lookup("nNonOrthCorr") >> nNonOrthCorr_;
+    this->solution().readEntry("nNonOrthCorr", nNonOrthCorr_);
     return regionModel1D::read(dict);
 }
 
@@ -87,7 +87,7 @@ void thermalBaffle::solveEnergy()
                 false
             ),
             regionMesh(),
-            dimensionedScalar("zero", dimEnergy/dimVolume/dimTime, 0.0)
+            dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
         )
     );
 
@@ -164,7 +164,7 @@ thermalBaffle::thermalBaffle
 )
 :
     thermalBaffleModel(modelType, mesh, dict),
-    nNonOrthCorr_(readLabel(solution().lookup("nNonOrthCorr"))),
+    nNonOrthCorr_(solution().get<label>("nNonOrthCorr")),
     thermo_(solidThermo::New(regionMesh(), dict)),
     h_(thermo_->he()),
     qs_
@@ -178,12 +178,7 @@ thermalBaffle::thermalBaffle
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar
-        (
-            "zero",
-            dimEnergy/dimArea/dimTime,
-            Zero
-        )
+        dimensionedScalar(dimEnergy/dimArea/dimTime, Zero)
     ),
     Q_
     (
@@ -196,12 +191,7 @@ thermalBaffle::thermalBaffle
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar
-        (
-            "zero",
-            dimEnergy/dimVolume/dimTime,
-            Zero
-        )
+        dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
     ),
     radiation_
     (
@@ -224,7 +214,7 @@ thermalBaffle::thermalBaffle
 )
 :
     thermalBaffleModel(modelType, mesh),
-    nNonOrthCorr_(readLabel(solution().lookup("nNonOrthCorr"))),
+    nNonOrthCorr_(solution().get<label>("nNonOrthCorr")),
     thermo_(solidThermo::New(regionMesh())),
     h_(thermo_->he()),
     qs_
@@ -238,12 +228,7 @@ thermalBaffle::thermalBaffle
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar
-        (
-            "zero",
-            dimEnergy/dimArea/dimTime,
-            Zero
-        )
+        dimensionedScalar(dimEnergy/dimArea/dimTime, Zero)
     ),
     Q_
     (
@@ -256,12 +241,7 @@ thermalBaffle::thermalBaffle
             IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar
-        (
-            "zero",
-            dimEnergy/dimVolume/dimTime,
-            Zero
-        )
+        dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
     ),
     radiation_
     (
@@ -348,7 +328,7 @@ const volScalarField& thermalBaffle::T() const
 
 const solidThermo& thermalBaffle::thermo() const
 {
-    return thermo_;
+    return *thermo_;
 }
 
 
@@ -374,8 +354,8 @@ void thermalBaffle::info()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // end namespace thermalBaffleModels
-} // end namespace regionModels
-} // end namespace Foam
+} // End namespace thermalBaffleModels
+} // End namespace regionModels
+} // End namespace Foam
 
 // ************************************************************************* //

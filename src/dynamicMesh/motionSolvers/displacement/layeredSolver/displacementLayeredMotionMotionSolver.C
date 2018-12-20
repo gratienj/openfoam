@@ -60,17 +60,17 @@ namespace Foam
 void Foam::displacementLayeredMotionMotionSolver::calcZoneMask
 (
     const label cellZoneI,
-    PackedBoolList& isZonePoint,
-    PackedBoolList& isZoneEdge
+    bitSet& isZonePoint,
+    bitSet& isZoneEdge
 ) const
 {
     if (cellZoneI == -1)
     {
         isZonePoint.setSize(mesh().nPoints());
-        isZonePoint = 1;
+        isZonePoint = true;
 
         isZoneEdge.setSize(mesh().nEdges());
-        isZoneEdge = 1;
+        isZoneEdge = true;
     }
     else
     {
@@ -82,10 +82,9 @@ void Foam::displacementLayeredMotionMotionSolver::calcZoneMask
             const labelList& cPoints = mesh().cellPoints(cz[i]);
             forAll(cPoints, cPointi)
             {
-                if (!isZonePoint[cPoints[cPointi]])
+                if (isZonePoint.set(cPoints[cPointi]))
                 {
-                    isZonePoint[cPoints[cPointi]] = 1;
-                    nPoints++;
+                    ++nPoints;
                 }
             }
         }
@@ -105,10 +104,9 @@ void Foam::displacementLayeredMotionMotionSolver::calcZoneMask
             const labelList& cEdges = mesh().cellEdges(cz[i]);
             forAll(cEdges, cEdgeI)
             {
-                if (!isZoneEdge[cEdges[cEdgeI]])
+                if (isZoneEdge.set(cEdges[cEdgeI]))
                 {
-                    isZoneEdge[cEdges[cEdgeI]] = 1;
-                    nEdges++;
+                    ++nEdges;
                 }
             }
         }
@@ -135,8 +133,8 @@ void Foam::displacementLayeredMotionMotionSolver::calcZoneMask
 void Foam::displacementLayeredMotionMotionSolver::walkStructured
 (
     const label cellZoneI,
-    const PackedBoolList& isZonePoint,
-    const PackedBoolList& isZoneEdge,
+    const bitSet& isZonePoint,
+    const bitSet& isZoneEdge,
     const labelList& seedPoints,
     const vectorField& seedData,
     scalarField& distance,
@@ -232,7 +230,7 @@ Foam::displacementLayeredMotionMotionSolver::faceZoneEvaluate
     tmp<vectorField> tfld(new vectorField(meshPoints.size()));
     vectorField& fld = tfld.ref();
 
-    const word type(dict.lookup("type"));
+    const word type(dict.get<word>("type"));
 
     if (type == "fixedValue")
     {
@@ -262,9 +260,9 @@ Foam::displacementLayeredMotionMotionSolver::faceZoneEvaluate
     }
     else if (type == "uniformFollow")
     {
-        // Reads name of name of patch. Then get average point dislacement on
+        // Reads name of name of patch. Then get average point displacement on
         // patch. That becomes the value of fld.
-        const word patchName(dict.lookup("patch"));
+        const word patchName(dict.get<word>("patch"));
         label patchID = mesh().boundaryMesh().findPatchID(patchName);
         pointField pdf
         (
@@ -288,8 +286,8 @@ void Foam::displacementLayeredMotionMotionSolver::cellZoneSolve
     const dictionary& zoneDict
 )
 {
-    PackedBoolList isZonePoint(mesh().nPoints());
-    PackedBoolList isZoneEdge(mesh().nEdges());
+    bitSet isZonePoint(mesh().nPoints());
+    bitSet isZoneEdge(mesh().nEdges());
     calcZoneMask(cellZoneI, isZonePoint, isZoneEdge);
 
     const dictionary& patchesDict = zoneDict.subDict("boundaryField");
@@ -308,9 +306,9 @@ void Foam::displacementLayeredMotionMotionSolver::cellZoneSolve
 
     // Allocate the fields
     label patchi = 0;
-    forAllConstIter(dictionary, patchesDict, patchiter)
+    for (const entry& dEntry : patchesDict)
     {
-        const word& faceZoneName = patchiter().keyword();
+        const word& faceZoneName = dEntry.keyword();
         label zoneI = mesh().faceZones().findZoneID(faceZoneName);
         if (zoneI == -1)
         {
@@ -355,10 +353,10 @@ void Foam::displacementLayeredMotionMotionSolver::cellZoneSolve
     pointDisplacement_.correctBoundaryConditions();
 
     patchi = 0;
-    forAllConstIter(dictionary, patchesDict, patchiter)
+    for (const entry& dEntry : patchesDict)
     {
-        const word& faceZoneName = patchiter().keyword();
-        const dictionary& faceZoneDict = patchiter().dict();
+        const word& faceZoneName = dEntry.keyword();
+        const dictionary& faceZoneDict = dEntry.dict();
 
         // Determine the points of the faceZone within the cellZone
         const faceZone& fz = mesh().faceZones()[faceZoneName];
@@ -432,7 +430,7 @@ void Foam::displacementLayeredMotionMotionSolver::cellZoneSolve
                 false
             ),
             pointMesh::New(mesh()),
-            dimensionedScalar("zero", dimLength, 0.0)
+            dimensionedScalar(dimLength, Zero)
         );
 
         forAll(distance, pointi)
@@ -453,7 +451,7 @@ void Foam::displacementLayeredMotionMotionSolver::cellZoneSolve
     }
 
 
-    const word interpolationScheme = zoneDict.lookup("interpolationScheme");
+    const word interpolationScheme(zoneDict.get<word>("interpolationScheme"));
 
     if (interpolationScheme == "oneSided")
     {
@@ -548,11 +546,10 @@ void Foam::displacementLayeredMotionMotionSolver::solve()
     pointDisplacement_.boundaryFieldRef().updateCoeffs();
 
     // Solve motion on all regions (=cellZones)
-    const dictionary& regionDicts = coeffDict().subDict("regions");
-    forAllConstIter(dictionary, regionDicts, regionIter)
+    for (const entry& dEntry : coeffDict().subDict("regions"))
     {
-        const word& cellZoneName = regionIter().keyword();
-        const dictionary& regionDict = regionIter().dict();
+        const word& cellZoneName = dEntry.keyword();
+        const dictionary& regionDict = dEntry.dict();
 
         label zoneI = mesh().cellZones().findZoneID(cellZoneName);
 

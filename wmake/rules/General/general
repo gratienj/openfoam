@@ -1,5 +1,5 @@
 #-------------------------------*- makefile -*---------------------------------
-WM_VERSION = OPENFOAM_PLUS=1712
+WM_VERSION = OPENFOAM=1812
 
 AR         = ar
 ARFLAGS    = cr
@@ -26,9 +26,9 @@ else
 endif
 
 include $(DEFAULT_RULES)/general
-include $(DEFAULT_RULES)/$(WM_LINK_LANGUAGE)
--include $(RULES)/general
--include $(RULES)/$(WM_LINK_LANGUAGE)
+include $(DEFAULT_RULES)/c++
+sinclude $(RULES)/general
+sinclude $(RULES)/c++
 include $(GENERAL_RULES)/transform
 
 

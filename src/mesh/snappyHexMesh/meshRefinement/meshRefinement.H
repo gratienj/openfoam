@@ -56,6 +56,7 @@ SourceFiles
 #include "surfaceZonesInfo.H"
 #include "volumeType.H"
 #include "DynamicField.H"
+#include "writer.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -98,13 +99,13 @@ public:
 
         static const Enum<debugType> debugTypeNames;
 
-        //- Enumeration for what to output. Used as a bit-pattern.
-        enum outputType
-        {
-            OUTPUTLAYERINFO = (1 << 0)
-        };
-
-        static const Enum<outputType> outputTypeNames;
+        ////- Enumeration for what to output. Used as a bit-pattern.
+        //enum outputType
+        //{
+        //    OUTPUTLAYERINFO = (1 << 0)
+        //};
+        //
+        //static const Enum<outputType> outputTypeNames;
 
         //- Enumeration for what to write. Used as a bit-pattern.
         enum writeType
@@ -134,8 +135,8 @@ private:
         //- Control of writing level
         static writeType writeLevel_;
 
-        //- Control of output/log level
-        static outputType outputLevel_;
+        ////- Control of output/log level
+        //static outputType outputLevel_;
 
 
     // Private data
@@ -186,13 +187,13 @@ private:
         wordList meshedPatches_;
 
         //- FaceZone to master patch name
-        HashTable<word, word> faceZoneToMasterPatch_;
+        HashTable<word> faceZoneToMasterPatch_;
 
         //- FaceZone to slave patch name
-        HashTable<word, word> faceZoneToSlavePatch_;
+        HashTable<word> faceZoneToSlavePatch_;
 
         //- FaceZone to method to handle faces
-        HashTable<surfaceZonesInfo::faceZoneType, word> faceZoneToType_;
+        HashTable<surfaceZonesInfo::faceZoneType> faceZoneToType_;
 
 
     // Private Member Functions
@@ -505,7 +506,7 @@ private:
                 const labelList& testFaces,
 
                 labelList& namedSurfaceIndex,
-                PackedBoolList& posOrientation
+                bitSet& posOrientation
             ) const;
 
             //- Determine patches for baffles
@@ -521,6 +522,16 @@ private:
                 labelList& ownPatch,
                 labelList& neiPatch
             ) const;
+
+            autoPtr<mapPolyMesh> splitMesh
+            (
+                const label nBufferLayers,
+                const labelList& globalToMasterPatch,
+                const labelList& globalToSlavePatch,
+                labelList& cellRegion,
+                labelList& ownPatch,
+                labelList& neiPatch
+            );
 
             //- Repatches external face or creates baffle for internal face
             //  with user specified patches (might be different for both sides).
@@ -707,17 +718,17 @@ private:
                 labelList& unnamedRegion1,
                 labelList& unnamedRegion2,
                 labelList& namedSurfaceIndex,
-                PackedBoolList& posOrientation
+                bitSet& posOrientation
             ) const;
 
             //- Put cells into cellZone, faces into faceZone
             void zonify
             (
-                const PackedBoolList& isMasterFace,
+                const bitSet& isMasterFace,
                 const labelList& cellToZone,
                 const labelList& neiCellZone,
                 const labelList& faceToZone,
-                const PackedBoolList& meshFlipMap,
+                const bitSet& meshFlipMap,
                 polyTopoChange& meshMod
             ) const;
 
@@ -759,7 +770,7 @@ private:
             //  to detect non-manifold situations.
             void calcPatchNumMasterFaces
             (
-                const PackedBoolList& isMasterFace,
+                const bitSet& isMasterFace,
                 const indirectPrimitivePatch& patch,
                 labelList& nMasterFaces
             ) const;
@@ -776,20 +787,20 @@ private:
             //- Make faces consistent.
             void consistentOrientation
             (
-                const PackedBoolList& isMasterFace,
+                const bitSet& isMasterFace,
                 const indirectPrimitivePatch& patch,
                 const labelList& nMasterFaces,
                 const labelList& faceToZone,
                 const Map<label>& zoneToOrientation,
-                PackedBoolList& meshFlipMap
+                bitSet& meshFlipMap
             ) const;
 
 
-        //- Disallow default bitwise copy construct
-        meshRefinement(const meshRefinement&);
+        //- No copy construct
+        meshRefinement(const meshRefinement&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const meshRefinement&);
+        //- No copy assignment
+        void operator=(const meshRefinement&) = delete;
 
 public:
 
@@ -807,8 +818,8 @@ public:
             const bool overwrite,
             const refinementSurfaces&,
             const refinementFeatures&,
-            const shellSurfaces&,
-            const shellSurfaces&
+            const shellSurfaces&,   // omnidirectional refinement
+            const shellSurfaces&    // limit refinement
         );
 
 
@@ -859,6 +870,12 @@ public:
             const shellSurfaces& shells() const
             {
                 return shells_;
+            }
+
+            //- Reference to limit shells (regions)
+            const shellSurfaces& limitShells() const
+            {
+                return limitShells_;
             }
 
             //- Reference to meshcutting engine
@@ -950,7 +967,7 @@ public:
             static void calculateEdgeWeights
             (
                 const polyMesh& mesh,
-                const PackedBoolList& isMasterEdge,
+                const bitSet& isMasterEdge,
                 const labelList& meshPoints,
                 const edgeList& edges,
                 scalarField& edgeWeights,
@@ -963,7 +980,7 @@ public:
             static void weightedSum
             (
                 const polyMesh& mesh,
-                const PackedBoolList& isMasterEdge,
+                const bitSet& isMasterEdge,
                 const labelList& meshPoints,
                 const edgeList& edges,
                 const scalarField& edgeWeights,
@@ -1037,6 +1054,23 @@ public:
                 const scalar maxLoadUnbalance
             );
 
+            //- Calculate list of cells to directionally refine
+            labelList directionalRefineCandidates
+            (
+                const label maxGlobalCells,
+                const label maxLocalCells,
+                const labelList& currentLevel,
+                const direction dir
+            ) const;
+
+            //- Directionally refine in direction cmpt
+            autoPtr<mapPolyMesh> directionalRefine
+            (
+                const string& msg,
+                const direction cmpt,
+                const labelList& cellsToRefine
+            );
+
 
         // Baffle handling
 
@@ -1057,7 +1091,8 @@ public:
                 const labelList& globalToSlavePatch,
                 const pointField& locationsInMesh,
                 const wordList& regionsInMesh,
-                const pointField& locationsOutsideMesh
+                const pointField& locationsOutsideMesh,
+                const writer<scalar>& leakPathFormatter
             );
 
             //- Merge free-standing baffles
@@ -1073,7 +1108,8 @@ public:
                 const labelList& globalToMasterPatch,
                 const labelList& globalToSlavePatch,
                 const pointField& locationsInMesh,
-                const pointField& locationsOutsideMesh
+                const pointField& locationsOutsideMesh,
+                const writer<scalar>& leakPathFormatter
             );
 
             //- Split off (with optional buffer layers) unreachable areas
@@ -1087,7 +1123,19 @@ public:
 
                 const pointField& locationsInMesh,
                 const wordList& regionsInMesh,
-                const pointField& locationsOutsideMesh
+                const pointField& locationsOutsideMesh,
+                const writer<scalar>& leakPathFormatter
+            );
+
+            //- Remove cells from limitRegions if level -1
+            autoPtr<mapPolyMesh> removeLimitShells
+            (
+                const label nBufferLayers,
+                const label nErodeCellZones,
+                const labelList& globalToMasterPatch,
+                const labelList& globalToSlavePatch,
+                const pointField& locationsInMesh,
+                const wordList& regionsInMesh
             );
 
             //- Find boundary points that connect to more than one cell
@@ -1226,14 +1274,18 @@ public:
                 const point& p
             );
 
-            static void findRegions
+            //- Find regions points are in.
+            //  \return number of cells to be removed
+            static label findRegions
             (
                 const polyMesh&,
                 const vector& perturbVec,
                 const pointField& locationsInMesh,
                 const pointField& locationsOutsideMesh,
+                const writer<scalar>& leakPathFormatter,
                 const label nRegions,
-                labelList& cellRegion
+                labelList& cellRegion,
+                const boolList& blockedFace
             );
 
             //- Split mesh. Keep part containing point. Return empty map if
@@ -1243,7 +1295,8 @@ public:
                 const labelList& globalToMasterPatch,
                 const labelList& globalToSlavePatch,
                 const pointField& locationsInMesh,
-                const pointField& locationsOutsideMesh
+                const pointField& locationsOutsideMesh,
+                const writer<scalar>& leakPathFormatter
             );
 
             //- Split faces into two
@@ -1410,7 +1463,7 @@ public:
 
             //- Determine master point for subset of points. If coupled
             //  chooses only one
-            static PackedBoolList getMasterPoints
+            static bitSet getMasterPoints
             (
                 const polyMesh& mesh,
                 const labelList& meshPoints
@@ -1418,7 +1471,7 @@ public:
 
             //- Determine master edge for subset of edges. If coupled
             //  chooses only one
-            static PackedBoolList getMasterEdges
+            static bitSet getMasterEdges
             (
                 const polyMesh& mesh,
                 const labelList& meshEdges
@@ -1458,7 +1511,7 @@ public:
             template<class T>
             static T gAverage
             (
-                const PackedBoolList& isMasterElem,
+                const bitSet& isMasterElem,
                 const UList<T>& values
             );
 
@@ -1466,9 +1519,9 @@ public:
             static writeType writeLevel();
             static void writeLevel(const writeType);
 
-            //- Get/set output level
-            static outputType outputLevel();
-            static void outputLevel(const outputType);
+            ////- Get/set output level
+            //static outputType outputLevel();
+            //static void outputLevel(const outputType);
 
 
             //- Helper: convert wordList into bit pattern using provided Enum

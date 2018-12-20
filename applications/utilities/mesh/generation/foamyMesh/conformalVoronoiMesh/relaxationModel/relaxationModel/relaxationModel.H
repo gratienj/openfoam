@@ -66,15 +66,14 @@ protected:
         //- Method coeffs dictionary
         dictionary coeffDict_;
 
-private:
 
-    // Private Member Functions
+    // Protected Member Functions
 
-        //- Disallow default bitwise copy construct
-        relaxationModel(const relaxationModel&);
+        //- No copy construct
+        relaxationModel(const relaxationModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const relaxationModel&);
+        //- No copy assignment
+        void operator=(const relaxationModel&) = delete;
 
 
 public:
@@ -120,7 +119,7 @@ public:
 
 
     //- Destructor
-    virtual ~relaxationModel();
+    virtual ~relaxationModel() = default;
 
 
     // Member Functions

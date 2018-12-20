@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,11 +40,11 @@ const Foam::Enum
     Foam::discreteSurface::samplingSource
 >
 Foam::discreteSurface::samplingSourceNames_
-{
+({
     { samplingSource::cells, "cells" },
     { samplingSource::insideCells, "insideCells" },
     { samplingSource::boundaryFaces, "boundaryFaces" },
-};
+});
 
 
 namespace Foam
@@ -81,9 +81,8 @@ void Foam::discreteSurface::setZoneMap
 )
 {
     label sz = 0;
-    forAll(zoneLst, zonei)
+    for (const surfZone& zn : zoneLst)
     {
-        const surfZone& zn = zoneLst[zonei];
         sz += zn.size();
     }
 
@@ -111,11 +110,10 @@ Foam::discreteSurface::nonCoupledboundaryTree() const
         // all non-coupled boundary faces (not just walls)
         const polyBoundaryMesh& patches = mesh().boundaryMesh();
 
-        labelList bndFaces(mesh().nFaces()-mesh().nInternalFaces());
+        labelList bndFaces(patches.nFaces());
         label bndI = 0;
-        forAll(patches, patchi)
+        for (const polyPatch& pp : patches)
         {
-            const polyPatch& pp = patches[patchi];
             if (!pp.coupled())
             {
                 forAll(pp, i)
@@ -152,7 +150,7 @@ Foam::discreteSurface::nonCoupledboundaryTree() const
         );
     }
 
-    return boundaryTreePtr_();
+    return *boundaryTreePtr_;
 }
 
 
@@ -306,7 +304,7 @@ bool Foam::discreteSurface::update(const meshSearch& meshSearcher)
                 patchi,
                 (
                     patches[patchi].name().empty()
-                  ? Foam::name("patch%d", patchi)
+                  ? word::printf("patch%d", patchi)
                   : patches[patchi].name()
                 )
             );
@@ -339,7 +337,7 @@ bool Foam::discreteSurface::update(const meshSearch& meshSearcher)
                     zoneNames.set
                     (
                         regionid,
-                        Foam::name("patch%d", regionid)
+                        word::printf("patch%d", regionid)
                     );
                 }
 
@@ -387,7 +385,7 @@ bool Foam::discreteSurface::update(const meshSearch& meshSearcher)
         }
         if (name.empty())
         {
-            name = ::Foam::name("patch%d", regionid);
+            name = word::printf("patch%d", regionid);
         }
 
         zoneLst[zoneI] = surfZone
@@ -642,7 +640,7 @@ Foam::discreteSurface::discreteSurface
             surfaceName,
             mesh.time().constant(), // instance
             "triSurface",           // local
-            mesh,                   // registry
+            mesh.time(),            // registry
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
             false
@@ -653,8 +651,8 @@ Foam::discreteSurface::discreteSurface
     keepIds_(false),
     originalIds_(),
     zoneIds_(),
-    sampleElements_(0),
-    samplePoints_(0)
+    sampleElements_(),
+    samplePoints_()
 {}
 
 
@@ -671,28 +669,28 @@ Foam::discreteSurface::discreteSurface
     interpolate_
     (
         allowInterpolate
-     && dict.lookupOrDefault<Switch>("interpolate", false)
+     && dict.lookupOrDefault("interpolate", false)
     ),
     surface_
     (
         IOobject
         (
-            dict.lookup("surface"),
+            dict.get<word>("surface"),
             mesh.time().constant(), // instance
             "triSurface",           // local
-            mesh,                   // registry
+            mesh.time(),            // registry
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
             false
         )
     ),
-    sampleSource_(samplingSourceNames_.lookup("source", dict)),
+    sampleSource_(samplingSourceNames_.get("source", dict)),
     needsUpdate_(true),
-    keepIds_(dict.lookupOrDefault<Switch>("keepIds", false)),
+    keepIds_(dict.lookupOrDefault("keepIds", false)),
     originalIds_(),
     zoneIds_(),
-    sampleElements_(0),
-    samplePoints_(0)
+    sampleElements_(),
+    samplePoints_()
 {}
 
 
@@ -716,7 +714,7 @@ Foam::discreteSurface::discreteSurface
             name,
             mesh.time().constant(), // instance
             "triSurface",           // local
-            mesh,                   // registry
+            mesh.time(),            // registry
             IOobject::NO_READ,
             IOobject::NO_WRITE,
             false
@@ -728,8 +726,8 @@ Foam::discreteSurface::discreteSurface
     keepIds_(false),
     originalIds_(),
     zoneIds_(),
-    sampleElements_(0),
-    samplePoints_(0)
+    sampleElements_(),
+    samplePoints_()
 {}
 
 
@@ -745,6 +743,7 @@ bool Foam::discreteSurface::interpolate() const
 {
     return interpolate_;
 }
+
 
 bool Foam::discreteSurface::interpolate(bool b)
 {
@@ -841,23 +840,24 @@ bool Foam::discreteSurface::update(const treeBoundBox& bb)
 bool Foam::discreteSurface::sampleAndStore
 (
     const objectRegistry& store,
-    const word& fieldName
+    const word& fieldName,
+    const word& sampleScheme
 ) const
 {
     return
     (
-        sampleType<scalar>(store, fieldName)
-     || sampleType<vector>(store, fieldName)
-     || sampleType<sphericalTensor>(store, fieldName)
-     || sampleType<symmTensor>(store, fieldName)
-     || sampleType<tensor>(store, fieldName)
+        sampleType<scalar>(store, fieldName, sampleScheme)
+     || sampleType<vector>(store, fieldName, sampleScheme)
+     || sampleType<sphericalTensor>(store, fieldName, sampleScheme)
+     || sampleType<symmTensor>(store, fieldName, sampleScheme)
+     || sampleType<tensor>(store, fieldName, sampleScheme)
     );
 }
 
 
 void Foam::discreteSurface::print(Ostream& os) const
 {
-    os  << "discreteSurface: "
+    os  << "discreteSurface:"
         << " surface:" << surface_.objectRegistry::name()
         << " faces:"   << this->surfFaces().size()
         << " points:"  << this->points().size()

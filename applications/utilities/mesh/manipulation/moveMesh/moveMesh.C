@@ -28,7 +28,7 @@ Group
     grpMeshManipulationUtilities
 
 Description
-    Solver for moving meshes.
+    A solver utility for moving meshes.
 
 \*---------------------------------------------------------------------------*/
 
@@ -43,10 +43,14 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "A solver utility for moving meshes"
+    );
 
     #include "setRootCase.H"
     #include "createTime.H"
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     autoPtr<motionSolver> motionPtr = motionSolver::New(mesh);
 
@@ -58,9 +62,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

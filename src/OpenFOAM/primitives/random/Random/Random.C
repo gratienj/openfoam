@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
+     \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,35 +24,25 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Random.H"
-#include "OSspecific.H"
 #include "PstreamReduceOps.H"
-
-// * * * * * * * * * * * * * private Member Functions  * * * * * * * * * * * //
-
-Foam::scalar Foam::Random::scalar01()
-{
-    return osRandomDouble(buffer_);
-}
-
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::Random::Random(const label seed)
+Foam::Random::Random(const label seedValue)
 :
-    buffer_(osRandomBufferSize()),
-    seed_(seed),
+    seed_(seedValue),
+    generator_(seed_),
+    uniform01_(),
     hasGaussSample_(false),
     gaussSample_(0)
-{
-    // Initialise the random number generator
-    osRandomSeed(seed_, buffer_);
-}
+{}
 
 
 Foam::Random::Random(const Random& r, const bool reset)
 :
-    buffer_(r.buffer_),
     seed_(r.seed_),
+    generator_(r.generator_),
+    uniform01_(),
     hasGaussSample_(r.hasGaussSample_),
     gaussSample_(r.gaussSample_)
 {
@@ -60,33 +50,12 @@ Foam::Random::Random(const Random& r, const bool reset)
     {
         hasGaussSample_ = false;
         gaussSample_ = 0;
-
-        // Re-initialise the samples
-        osRandomSeed(seed_, buffer_);
+        generator_.seed(seed_);
     }
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::Random::~Random()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-void Foam::Random::reset(const label seed)
-{
-    seed_ = seed;
-    osRandomSeed(seed_, buffer_);
-}
-
-
-int Foam::Random::bit()
-{
-    return osRandomInteger(buffer_) & 1;
-}
-
 
 template<>
 Foam::scalar Foam::Random::sample01()
@@ -110,23 +79,24 @@ Foam::scalar Foam::Random::GaussNormal()
         hasGaussSample_ = false;
         return gaussSample_;
     }
-    else
+
+    // Gaussian random number as per Knuth/Marsaglia.
+    // Input: two uniform random numbers, output: two Gaussian random numbers.
+    // cache one of the values for the next call.
+    scalar rsq, v1, v2;
+    do
     {
-        scalar rsq, v1, v2;
-        do
-        {
-            v1 = 2*scalar01() - 1;
-            v2 = 2*scalar01() - 1;
-            rsq = sqr(v1) + sqr(v2);
-        } while (rsq >= 1 || rsq == 0);
+        v1 = 2*scalar01() - 1;
+        v2 = 2*scalar01() - 1;
+        rsq = sqr(v1) + sqr(v2);
+    } while (rsq >= 1 || rsq == 0);
 
-        scalar fac = sqrt(-2*log(rsq)/rsq);
+    const scalar fac = sqrt(-2*log(rsq)/rsq);
 
-        gaussSample_ = v1*fac;
-        hasGaussSample_ = true;
+    gaussSample_ = v1*fac;
+    hasGaussSample_ = true;
 
-        return v2*fac;
-    }
+    return v2*fac;
 }
 
 
@@ -151,14 +121,31 @@ Foam::scalar Foam::Random::position
 template<>
 Foam::label Foam::Random::position(const label& start, const label& end)
 {
-    return start + round(scalar01()*(end - start));
+    #ifdef FULLDEBUG
+    if (start > end)
+    {
+        FatalErrorInFunction
+            << "start index " << start << " > end index " << end << nl
+            << abort(FatalError);
+    }
+    #endif
+
+    // Extend the upper sampling range by 1 and floor the result.
+    // Since the range is non-negative, can use integer truncation
+    // instead using floor().
+
+    const label val = start + label(scalar01()*(end - start + 1));
+
+    // Rare case when scalar01() returns exactly 1.000 and the truncated
+    // value would be out of range.
+    return min(val, end);
 }
 
 
 template<>
 Foam::scalar Foam::Random::globalSample01()
 {
-    scalar value = -GREAT;
+    scalar value(-GREAT);
 
     if (Pstream::master())
     {
@@ -174,23 +161,23 @@ Foam::scalar Foam::Random::globalSample01()
 template<>
 Foam::label Foam::Random::globalSample01()
 {
-    scalar value = -GREAT;
+    label value(labelMin);
 
     if (Pstream::master())
     {
-        value = scalar01();
+        value = round(scalar01());
     }
 
     Pstream::scatter(value);
 
-    return round(value);
+    return value;
 }
 
 
 template<>
 Foam::scalar Foam::Random::globalGaussNormal()
 {
-    scalar value = -GREAT;
+    scalar value(-GREAT);
 
     if (Pstream::master())
     {
@@ -206,16 +193,16 @@ Foam::scalar Foam::Random::globalGaussNormal()
 template<>
 Foam::label Foam::Random::globalGaussNormal()
 {
-    scalar value = -GREAT;
+    label value(labelMin);
 
     if (Pstream::master())
     {
-        value = GaussNormal<scalar>();
+        value = GaussNormal<label>();
     }
 
     Pstream::scatter(value);
 
-    return round(value);
+    return value;
 }
 
 
@@ -226,16 +213,16 @@ Foam::scalar Foam::Random::globalPosition
     const scalar& end
 )
 {
-    scalar value = -GREAT;
+    scalar value(-GREAT);
 
     if (Pstream::master())
     {
-        value = scalar01()*(end - start);
+        value = position<scalar>(start, end);
     }
 
     Pstream::scatter(value);
 
-    return start + value;
+    return value;
 }
 
 
@@ -246,16 +233,16 @@ Foam::label Foam::Random::globalPosition
     const label& end
 )
 {
-    label value = labelMin;
+    label value(labelMin);
 
     if (Pstream::master())
     {
-        value = round(scalar01()*(end - start));
+        value = position<label>(start, end);
     }
 
     Pstream::scatter(value);
 
-    return start + value;
+    return value;
 }
 
 

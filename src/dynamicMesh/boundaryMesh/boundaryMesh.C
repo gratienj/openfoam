@@ -476,7 +476,7 @@ void Foam::boundaryMesh::read(const polyMesh& mesh)
     patches_.setSize(mesh.boundaryMesh().size());
 
     // Number of boundary faces
-    label nBFaces = mesh.nFaces() - mesh.nInternalFaces();
+    const label nBFaces = mesh.nBoundaryFaces();
 
     faceList bFaces(nBFaces);
 
@@ -848,7 +848,7 @@ void Foam::boundaryMesh::writeTriSurface(const fileName& fName) const
 
 // Get index in this (boundaryMesh) of face nearest to each boundary face in
 // pMesh.
-// Origininally all triangles/faces of boundaryMesh would be bunged into
+// Originally all triangles/faces of boundaryMesh would be bunged into
 // one big octree. Problem was that faces on top of each other, differing
 // only in sign of normal, could not be found separately. It would always
 // find only one. We could detect that it was probably finding the wrong one
@@ -976,7 +976,7 @@ Foam::labelList Foam::boundaryMesh::getNearest
     // Search nearest triangle centre for every polyMesh boundary face
     //
 
-    labelList nearestBFacei(pMesh.nFaces() - pMesh.nInternalFaces());
+    labelList nearestBFacei(pMesh.nBoundaryFaces());
 
     treeBoundBox tightest;
 
@@ -1168,7 +1168,7 @@ void Foam::boundaryMesh::patchify
     label meshFacei = newMesh.nInternalFaces();
 
     // First patch gets all non-coupled faces
-    label facesToBeDone = newMesh.nFaces() - newMesh.nInternalFaces();
+    label facesToBeDone = newMesh.nBoundaryFaces();
 
     forAll(patches_, bPatchi)
     {
@@ -1262,9 +1262,7 @@ void Foam::boundaryMesh::patchify
         List<DynamicList<label>> patchFaces(nNewPatches);
 
         // Give reasonable estimate for size of patches
-        label nAvgFaces =
-            (newMesh.nFaces() - newMesh.nInternalFaces())
-          / nNewPatches;
+        label nAvgFaces = newMesh.nBoundaryFaces() / nNewPatches;
 
         forAll(patchFaces, newPatchi)
         {

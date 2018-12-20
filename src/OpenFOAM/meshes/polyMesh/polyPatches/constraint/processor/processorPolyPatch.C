@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -109,8 +109,8 @@ Foam::processorPolyPatch::processorPolyPatch
 )
 :
     coupledPolyPatch(name, dict, index, bm, patchType),
-    myProcNo_(readLabel(dict.lookup("myProcNo"))),
-    neighbProcNo_(readLabel(dict.lookup("neighbProcNo"))),
+    myProcNo_(dict.get<label>("myProcNo")),
+    neighbProcNo_(dict.get<label>("neighbProcNo")),
     neighbFaceCentres_(),
     neighbFaceAreas_(),
     neighbFaceCellCentres_()
@@ -197,6 +197,16 @@ void Foam::processorPolyPatch::initGeometry(PstreamBuffers& pBufs)
 {
     if (Pstream::parRun())
     {
+        if (neighbProcNo() >= Pstream::nProcs(pBufs.comm()))
+        {
+            FatalErrorInFunction
+                << "On patch " << name()
+                << " trying to access out of range neighbour processor "
+                << neighbProcNo() << ". This can happen if" << nl
+                << "    trying to run on an incorrect number of processors"
+                << exit(FatalError);
+        }
+
         UOPstream toNeighbProc(neighbProcNo(), pBufs);
 
         toNeighbProc
@@ -350,6 +360,16 @@ void Foam::processorPolyPatch::initUpdateMesh(PstreamBuffers& pBufs)
 
     if (Pstream::parRun())
     {
+        if (neighbProcNo() >= Pstream::nProcs(pBufs.comm()))
+        {
+            FatalErrorInFunction
+                << "On patch " << name()
+                << " trying to access out of range neighbour processor "
+                << neighbProcNo() << ". This can happen if" << nl
+                << "    trying to run on an incorrect number of processors"
+                << exit(FatalError);
+        }
+
         // Express all points as patch face and index in face.
         labelList pointFace(nPoints());
         labelList pointIndex(nPoints());
@@ -511,7 +531,7 @@ const Foam::labelList& Foam::processorPolyPatch::neighbPoints() const
             << "No extended addressing calculated for patch " << name()
             << abort(FatalError);
     }
-    return neighbPointsPtr_();
+    return *neighbPointsPtr_;
 }
 
 
@@ -523,7 +543,7 @@ const Foam::labelList& Foam::processorPolyPatch::neighbEdges() const
             << "No extended addressing calculated for patch " << name()
             << abort(FatalError);
     }
-    return neighbEdgesPtr_();
+    return *neighbEdgesPtr_;
 }
 
 
@@ -788,6 +808,12 @@ bool Foam::processorPolyPatch::order
     }
     else
     {
+        // Calculate the absolute matching tolerance
+        scalarField tols
+        (
+            matchTolerance()*calcFaceTol(pp, pp.points(), pp.faceCentres())
+        );
+
         if (transform() == COINCIDENTFULLMATCH)
         {
             vectorField masterPts;
@@ -808,7 +834,7 @@ bool Foam::processorPolyPatch::order
                 const face& localFace = localFaces[lFacei];
                 label faceRotation = -1;
 
-                const scalar absTolSqr = sqr(SMALL);
+                const scalar absTolSqr = sqr(tols[lFacei]);
 
                 scalar closestMatchDistSqr = sqr(GREAT);
                 scalar matchDistSqr = sqr(GREAT);
@@ -847,7 +873,11 @@ bool Foam::processorPolyPatch::order
                     }
                 }
 
-                if (closestFaceRotation != -1 && closestMatchDistSqr == 0)
+                if
+                (
+                    closestFaceRotation != -1
+                 && closestMatchDistSqr < absTolSqr
+                )
                 {
                     faceMap[lFacei] = closestFaceMatch;
 
@@ -893,12 +923,6 @@ bool Foam::processorPolyPatch::order
                 fromNeighbour >> masterCtrs >> masterNormals
                               >> masterAnchors >> masterFacePointAverages;
             }
-
-            // Calculate typical distance from face centre
-            scalarField tols
-            (
-                matchTolerance()*calcFaceTol(pp, pp.points(), pp.faceCentres())
-            );
 
             if (debug || masterCtrs.size() != pp.size())
             {

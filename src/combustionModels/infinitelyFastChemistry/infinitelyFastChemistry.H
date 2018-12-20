@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -53,10 +53,10 @@ namespace combustionModels
                   Class infinitelyFastChemistry Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 class infinitelyFastChemistry
 :
-    public singleStepCombustion<CombThermoType, ThermoType>
+    public singleStepCombustion<ReactionThermo, ThermoType>
 {
     // Private data
 
@@ -66,11 +66,11 @@ class infinitelyFastChemistry
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        infinitelyFastChemistry(const infinitelyFastChemistry&);
+        //- No copy construct
+        infinitelyFastChemistry(const infinitelyFastChemistry&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const infinitelyFastChemistry&);
+        //- No copy assignment
+        void operator=(const infinitelyFastChemistry&) = delete;
 
 
 public:
@@ -85,9 +85,9 @@ public:
         infinitelyFastChemistry
         (
             const word& modelType,
-            const fvMesh& mesh,
-            const word& combustionProperties,
-            const word& phaseName
+            ReactionThermo& thermo,
+            const compressibleTurbulenceModel& turb,
+            const word& combustionProperties
         );
 
 

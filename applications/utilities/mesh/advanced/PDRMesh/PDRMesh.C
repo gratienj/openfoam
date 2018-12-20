@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,6 +51,7 @@ Description
 #include "fvMeshSubset.H"
 #include "argList.H"
 #include "cellSet.H"
+#include "BitOps.H"
 #include "IOobjectList.H"
 #include "volFields.H"
 #include "mapPolyMesh.H"
@@ -81,10 +82,10 @@ void modifyOrAddFace
     const label zoneID,
     const bool zoneFlip,
 
-    PackedBoolList& modifiedFace
+    bitSet& modifiedFace
 )
 {
-    if (!modifiedFace[facei])
+    if (modifiedFace.set(facei))
     {
         // First usage of face. Modify.
         meshMod.setAction
@@ -102,7 +103,6 @@ void modifyOrAddFace
                 zoneFlip                    // face flip in zone
             )
         );
-        modifiedFace[facei] = 1;
     }
     else
     {
@@ -131,69 +131,69 @@ template<class Type>
 void subsetVolFields
 (
     const fvMeshSubset& subsetter,
-    const IOobjectList& objectsList,
+    const IOobjectList& objects,
     const label patchi,
     const Type& exposedValue,
-    const word GeomVolType,
     PtrList<GeometricField<Type, fvPatchField, volMesh>>& subFields
 )
 {
+    typedef GeometricField<Type, fvPatchField, volMesh> GeoField;
+
     const fvMesh& baseMesh = subsetter.baseMesh();
 
-    label i = 0;
+    label nFields = 0;
 
-    forAllConstIter(IOobjectList , objectsList, iter)
+    for (const word& fieldName : objects.sortedNames<GeoField>())
     {
-        if (iter()->headerClassName() == GeomVolType)
+        const IOobject* ioptr = objects.findObject(fieldName);
+
+        if (!nFields)
         {
-            const word fieldName = iter()->name();
+            Info<< "Subsetting " << GeoField::typeName << nl;
+        }
+        Info<< "    " << fieldName << endl;
 
-            Info<< "Subsetting field " << fieldName << endl;
+        GeoField origField(*ioptr, baseMesh);
 
-            GeometricField<Type, fvPatchField, volMesh> volField
-            (
-                *iter(),
-                baseMesh
-            );
+        subFields.set(nFields, subsetter.interpolate(origField));
 
-            subFields.set(i, subsetter.interpolate(volField));
+        // Explicitly set exposed faces (in patchi) to exposedValue.
+        if (patchi >= 0)
+        {
+            fvPatchField<Type>& fld =
+                subFields[nFields].boundaryFieldRef()[patchi];
 
-            // Explicitly set exposed faces (in patchi) to exposedValue.
-            if (patchi >= 0)
+            const label newStart = fld.patch().patch().start();
+            const label oldPatchi = subsetter.patchMap()[patchi];
+
+            if (oldPatchi == -1)
             {
-                fvPatchField<Type>& fld =
-                    subFields[i++].boundaryFieldRef()[patchi];
+                // New patch. Reset whole value.
+                fld = exposedValue;
+            }
+            else
+            {
+                // Reset faces that originate from different patch
+                // or internal faces.
 
-                label newStart = fld.patch().patch().start();
+                const fvPatchField<Type>& origPfld =
+                    origField.boundaryField()[oldPatchi];
 
-                label oldPatchi = subsetter.patchMap()[patchi];
+                const label oldSize = origPfld.size();
+                const label oldStart = origPfld.patch().patch().start();
 
-                if (oldPatchi == -1)
+                forAll(fld, j)
                 {
-                    // New patch. Reset whole value.
-                    fld = exposedValue;
-                }
-                else
-                {
-                    // Reset those faces that originate from different patch
-                    // or internal faces.
-                    label oldSize = volField.boundaryField()[oldPatchi].size();
-                    label oldStart = volField.boundaryField()
-                    [
-                        oldPatchi
-                    ].patch().patch().start();
+                    const label oldFacei = subsetter.faceMap()[newStart+j];
 
-                    forAll(fld, j)
+                    if (oldFacei < oldStart || oldFacei >= oldStart+oldSize)
                     {
-                        label oldFacei = subsetter.faceMap()[newStart+j];
-
-                        if (oldFacei < oldStart || oldFacei >= oldStart+oldSize)
-                        {
-                            fld[j] = exposedValue;
-                        }
+                        fld[j] = exposedValue;
                     }
                 }
             }
+
+            ++nFields;
         }
     }
 }
@@ -203,71 +203,70 @@ template<class Type>
 void subsetSurfaceFields
 (
     const fvMeshSubset& subsetter,
-    const IOobjectList& objectsList,
+    const IOobjectList& objects,
     const label patchi,
     const Type& exposedValue,
-    const word GeomSurfType,
     PtrList<GeometricField<Type, fvsPatchField, surfaceMesh>>& subFields
 )
 {
+    typedef GeometricField<Type, fvsPatchField, surfaceMesh> GeoField;
+
     const fvMesh& baseMesh = subsetter.baseMesh();
 
-    label i(0);
+    label nFields = 0;
 
-    forAllConstIter(IOobjectList , objectsList, iter)
+    for (const word& fieldName : objects.sortedNames<GeoField>())
     {
-        if (iter()->headerClassName() == GeomSurfType)
+        const IOobject* ioptr = objects.findObject(fieldName);
+
+        if (!nFields)
         {
-            const word& fieldName = iter.key();
+            Info<< "Subsetting " << GeoField::typeName << nl;
+        }
+        Info<< "    " << fieldName << endl;
 
-            Info<< "Subsetting field " << fieldName << endl;
+        GeoField origField(*ioptr, baseMesh);
 
-            GeometricField<Type, fvsPatchField, surfaceMesh> volField
-            (
-                *iter(),
-                baseMesh
-            );
+        subFields.set(nFields, subsetter.interpolate(origField));
 
-            subFields.set(i, subsetter.interpolate(volField));
+        // Explicitly set exposed faces (in patchi) to exposedValue.
+        if (patchi >= 0)
+        {
+            fvsPatchField<Type>& fld =
+                subFields[nFields].boundaryFieldRef()[patchi];
 
+            const label newStart = fld.patch().patch().start();
+            const label oldPatchi = subsetter.patchMap()[patchi];
 
-            // Explicitly set exposed faces (in patchi) to exposedValue.
-            if (patchi >= 0)
+            if (oldPatchi == -1)
             {
-                fvsPatchField<Type>& fld =
-                    subFields[i++].boundaryFieldRef()[patchi];
+                // New patch. Reset whole value.
+                fld = exposedValue;
+            }
+            else
+            {
+                // Reset faces that originate from different patch
+                // or internal faces.
 
-                label newStart = fld.patch().patch().start();
+                const fvsPatchField<Type>& origPfld =
+                    origField.boundaryField()[oldPatchi];
 
-                label oldPatchi = subsetter.patchMap()[patchi];
+                const label oldSize = origPfld.size();
+                const label oldStart = origPfld.patch().patch().start();
 
-                if (oldPatchi == -1)
+                forAll(fld, j)
                 {
-                    // New patch. Reset whole value.
-                    fld = exposedValue;
-                }
-                else
-                {
-                    // Reset those faces that originate from different patch
-                    // or internal faces.
-                    label oldSize = volField.boundaryField()[oldPatchi].size();
-                    label oldStart = volField.boundaryField()
-                    [
-                        oldPatchi
-                    ].patch().patch().start();
+                    const label oldFacei = subsetter.faceMap()[newStart+j];
 
-                    forAll(fld, j)
+                    if (oldFacei < oldStart || oldFacei >= oldStart+oldSize)
                     {
-                        label oldFacei = subsetter.faceMap()[newStart+j];
-
-                        if (oldFacei < oldStart || oldFacei >= oldStart+oldSize)
-                        {
-                            fld[j] = exposedValue;
-                        }
+                        fld[j] = exposedValue;
                     }
                 }
             }
         }
+
+        ++nFields;
     }
 }
 
@@ -287,18 +286,11 @@ void initCreatedPatches
         mesh.objectRegistry::lookupClass<GeoField>()
     );
 
-    for
-    (
-        typename HashTable<const GeoField*>::
-            iterator fieldIter = fields.begin();
-        fieldIter != fields.end();
-        ++fieldIter
-    )
+    forAllIters(fields, fieldIter)
     {
         GeoField& field = const_cast<GeoField&>(*fieldIter());
 
-        typename GeoField::Boundary& fieldBf =
-            field.boundaryFieldRef();
+        auto& fieldBf = field.boundaryFieldRef();
 
         forAll(fieldBf, patchi)
         {
@@ -321,7 +313,7 @@ template<class TopoSet>
 void subsetTopoSets
 (
     const fvMesh& mesh,
-    const IOobjectList& objectsList,
+    const IOobjectList& objects,
     const labelList& map,
     const fvMesh& subMesh,
     PtrList<TopoSet>& subSets
@@ -329,39 +321,41 @@ void subsetTopoSets
 {
     // Read original sets
     PtrList<TopoSet> sets;
-    ReadFields<TopoSet>(objectsList, sets);
+    ReadFields<TopoSet>(objects, sets);
 
-    subSets.setSize(sets.size());
-    forAll(sets, i)
+    subSets.resize(sets.size());
+    forAll(sets, seti)
     {
-        TopoSet& set = sets[i];
+        TopoSet& set = sets[seti];
 
         Info<< "Subsetting " << set.type() << " " << set.name() << endl;
 
         // Map the data
-        PackedBoolList isSet(set.maxSize(mesh));
-        forAllConstIter(labelHashSet, set, iter)
+        bitSet isSet(set.maxSize(mesh));
+        for (const label id : set)
         {
-            isSet[iter.key()] = true;
+            isSet.set(id);
         }
+
         label nSet = 0;
-        forAll(map, i)
+        for (const label id : map)
         {
-            if (isSet[map[i]])
+            if (isSet.test(id))
             {
-                nSet++;
+                ++nSet;
             }
         }
 
         subSets.set
         (
-            i,
+            seti,
             new TopoSet(subMesh, set.name(), nSet, IOobject::AUTO_WRITE)
         );
-        TopoSet& subSet = subSets[i];
+        TopoSet& subSet = subSets[seti];
+
         forAll(map, i)
         {
-            if (isSet[map[i]])
+            if (isSet.test(map[i]))
             {
                 subSet.insert(i);
             }
@@ -375,7 +369,7 @@ void createCoupledBaffles
     fvMesh& mesh,
     const labelList& coupledWantedPatch,
     polyTopoChange& meshMod,
-    PackedBoolList&  modifiedFace
+    bitSet& modifiedFace
 )
 {
     const faceZoneMesh& faceZones = mesh.faceZones();
@@ -443,7 +437,7 @@ void createCyclicCoupledBaffles
     const labelList& cyclicMasterPatch,
     const labelList& cyclicSlavePatch,
     polyTopoChange& meshMod,
-    PackedBoolList&  modifiedFace
+    bitSet& modifiedFace
 )
 {
     const faceZoneMesh& faceZones = mesh.faceZones();
@@ -620,11 +614,17 @@ label findPatch(const polyBoundaryMesh& patches, const word& patchName)
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Mesh and field preparation utility for PDR type simulations."
+    );
     #include "addOverwriteOption.H"
+
+    argList::noFunctionObjects();  // Never use function objects
+
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     // Read control dictionary
     // ~~~~~~~~~~~~~~~~~~~~~~~
@@ -646,19 +646,21 @@ int main(int argc, char *argv[])
 
     // Per faceSet the patch to put the coupled baffles into
     DynamicList<FixedList<word, 3>> coupledAndPatches(10);
+
     const dictionary& functionDicts = dict.subDict("coupledFaces");
-    forAllConstIter(dictionary, functionDicts, iter)
+
+    for (const entry& dEntry : functionDicts)
     {
-        // safety:
-        if (!iter().isDict())
+        if (!dEntry.isDict())  // Safety
         {
             continue;
         }
-        const word& key = iter().keyword();
 
-        const dictionary& dict = iter().dict();
-        const word cyclicName = dict.lookup("cyclicMasterPatch");
-        const word wallName = dict.lookup("wallPatch");
+        const word& key = dEntry.keyword();
+        const dictionary& dict = dEntry.dict();
+
+        const word cyclicName = dict.get<word>("cyclicMasterPatch");
+        const word wallName = dict.get<word>("wallPatch");
         FixedList<word, 3> nameAndType;
         nameAndType[0] = key;
         nameAndType[1] = wallName;
@@ -681,17 +683,17 @@ int main(int argc, char *argv[])
     }
 
     // All exposed faces that are not explicitly marked to be put into a patch
-    const word defaultPatch(dict.lookup("defaultPatch"));
+    const word defaultPatch(dict.get<word>("defaultPatch"));
 
     Info<< "Faces that get exposed become boundary faces in patch "
         << defaultPatch << endl;
 
-    const word blockedSetName(dict.lookup("blockedCells"));
+    const word blockedSetName(dict.get<word>("blockedCells"));
 
     Info<< "Reading blocked cells from cellSet " << blockedSetName
         << endl;
 
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
 
     // Read faceSets, lookup patches
@@ -773,19 +775,19 @@ int main(int argc, char *argv[])
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     //
 
-    // Create mesh subsetting engine
-    fvMeshSubset subsetter(mesh);
-
-    {
-
-        cellSet blockedCells(mesh, blockedSetName);
-
-        // invert
-        blockedCells.invert(mesh.nCells());
-
-        // Create subsetted mesh.
-        subsetter.setLargeCellSubset(blockedCells, defaultPatchi, true);
-    }
+    // Mesh subsetting engine
+    fvMeshSubset subsetter
+    (
+        mesh,
+        BitSetOps::create
+        (
+            mesh.nCells(),
+            cellSet(mesh, blockedSetName), // Blocked cells as labelHashSet
+            false  // on=false: invert logic => retain the unblocked cells
+        ),
+        defaultPatchi,
+        true
+    );
 
 
     // Subset wantedPatch. Note that might also include boundary faces
@@ -812,31 +814,36 @@ int main(int argc, char *argv[])
 
     // Read all fields in time and constant directories
     IOobjectList objects(mesh, runTime.timeName());
-    IOobjectList timeObjects(IOobjectList(mesh, mesh.facesInstance()));
-    forAllConstIter(IOobjectList, timeObjects, iter)
     {
-        if
-        (
-            iter()->headerClassName() == volScalarField::typeName
-         || iter()->headerClassName() == volVectorField::typeName
-         || iter()->headerClassName() == volSphericalTensorField::typeName
-         || iter()->headerClassName() == volTensorField::typeName
-         || iter()->headerClassName() == volSymmTensorField::typeName
-         || iter()->headerClassName() == surfaceScalarField::typeName
-         || iter()->headerClassName() == surfaceVectorField::typeName
-         || iter()->headerClassName()
-            == surfaceSphericalTensorField::typeName
-         || iter()->headerClassName() == surfaceSymmTensorField::typeName
-         || iter()->headerClassName() == surfaceTensorField::typeName
-        )
+        IOobjectList timeObjects(mesh, mesh.facesInstance());
+
+        // Transfer specific types
+        forAllIters(timeObjects, iter)
         {
-            objects.add(*iter());
+            autoPtr<IOobject> objPtr(timeObjects.remove(iter));
+            const auto& obj = *objPtr;
+
+            if
+            (
+                obj.headerClassName() == volScalarField::typeName
+             || obj.headerClassName() == volVectorField::typeName
+             || obj.headerClassName() == volSphericalTensorField::typeName
+             || obj.headerClassName() == volTensorField::typeName
+             || obj.headerClassName() == volSymmTensorField::typeName
+             || obj.headerClassName() == surfaceScalarField::typeName
+             || obj.headerClassName() == surfaceVectorField::typeName
+             || obj.headerClassName() == surfaceSphericalTensorField::typeName
+             || obj.headerClassName() == surfaceSymmTensorField::typeName
+             || obj.headerClassName() == surfaceTensorField::typeName
+            )
+            {
+                objects.add(objPtr);
+            }
         }
     }
-
     // Read vol fields and subset.
 
-    wordList scalarNames(objects.names(volScalarField::typeName));
+    wordList scalarNames(objects.sortedNames<volScalarField>());
     PtrList<volScalarField> scalarFlds(scalarNames.size());
     subsetVolFields
     (
@@ -844,11 +851,10 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         scalar(Zero),
-        volScalarField::typeName,
         scalarFlds
     );
 
-    wordList vectorNames(objects.names(volVectorField::typeName));
+    wordList vectorNames(objects.sortedNames<volVectorField>());
     PtrList<volVectorField> vectorFlds(vectorNames.size());
     subsetVolFields
     (
@@ -856,17 +862,16 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         vector(Zero),
-        volVectorField::typeName,
         vectorFlds
     );
 
-    wordList sphericalTensorNames
+    wordList sphTensorNames
     (
-        objects.names(volSphericalTensorField::typeName)
+        objects.sortedNames<volSphericalTensorField>()
     );
-    PtrList<volSphericalTensorField> sphericalTensorFlds
+    PtrList<volSphericalTensorField> sphTensorFlds
     (
-        sphericalTensorNames.size()
+        sphTensorNames.size()
     );
     subsetVolFields
     (
@@ -874,11 +879,10 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         sphericalTensor(Zero),
-        volSphericalTensorField::typeName,
-        sphericalTensorFlds
+        sphTensorFlds
     );
 
-    wordList symmTensorNames(objects.names(volSymmTensorField::typeName));
+    wordList symmTensorNames(objects.sortedNames<volSymmTensorField>());
     PtrList<volSymmTensorField> symmTensorFlds(symmTensorNames.size());
     subsetVolFields
     (
@@ -886,11 +890,10 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         symmTensor(Zero),
-        volSymmTensorField::typeName,
         symmTensorFlds
     );
 
-    wordList tensorNames(objects.names(volTensorField::typeName));
+    wordList tensorNames(objects.sortedNames<volTensorField>());
     PtrList<volTensorField> tensorFlds(tensorNames.size());
     subsetVolFields
     (
@@ -898,13 +901,12 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         tensor(Zero),
-        volTensorField::typeName,
         tensorFlds
     );
 
     // Read surface fields and subset.
 
-    wordList surfScalarNames(objects.names(surfaceScalarField::typeName));
+    wordList surfScalarNames(objects.sortedNames<surfaceScalarField>());
     PtrList<surfaceScalarField> surfScalarFlds(surfScalarNames.size());
     subsetSurfaceFields
     (
@@ -912,11 +914,10 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         scalar(Zero),
-        surfaceScalarField::typeName,
         surfScalarFlds
     );
 
-    wordList surfVectorNames(objects.names(surfaceVectorField::typeName));
+    wordList surfVectorNames(objects.sortedNames<surfaceVectorField>());
     PtrList<surfaceVectorField> surfVectorFlds(surfVectorNames.size());
     subsetSurfaceFields
     (
@@ -924,17 +925,16 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         vector(Zero),
-        surfaceVectorField::typeName,
         surfVectorFlds
     );
 
-    wordList surfSphericalTensorNames
+    wordList surfSphTensorNames
     (
-        objects.names(surfaceSphericalTensorField::typeName)
+        objects.sortedNames<surfaceSphericalTensorField>()
     );
     PtrList<surfaceSphericalTensorField> surfSphericalTensorFlds
     (
-        surfSphericalTensorNames.size()
+        surfSphTensorNames.size()
     );
     subsetSurfaceFields
     (
@@ -942,13 +942,12 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         sphericalTensor(Zero),
-        surfaceSphericalTensorField::typeName,
         surfSphericalTensorFlds
     );
 
     wordList surfSymmTensorNames
     (
-        objects.names(surfaceSymmTensorField::typeName)
+        objects.sortedNames<surfaceSymmTensorField>()
     );
 
     PtrList<surfaceSymmTensorField> surfSymmTensorFlds
@@ -962,11 +961,10 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         symmTensor(Zero),
-        surfaceSymmTensorField::typeName,
         surfSymmTensorFlds
     );
 
-    wordList surfTensorNames(objects.names(surfaceTensorField::typeName));
+    wordList surfTensorNames(objects.sortedNames<surfaceTensorField>());
     PtrList<surfaceTensorField> surfTensorFlds(surfTensorNames.size());
     subsetSurfaceFields
     (
@@ -974,7 +972,6 @@ int main(int argc, char *argv[])
         objects,
         defaultPatchi,
         tensor(Zero),
-        surfaceTensorField::typeName,
         surfTensorFlds
     );
 
@@ -1012,10 +1009,9 @@ int main(int argc, char *argv[])
     }
 
 
-
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
 
     Info<< "Writing mesh without blockedCells to time " << runTime.value()
@@ -1032,10 +1028,10 @@ int main(int argc, char *argv[])
         vectorFlds[i].rename(vectorNames[i]);
         vectorFlds[i].writeOpt() = IOobject::AUTO_WRITE;
     }
-    forAll(sphericalTensorFlds, i)
+    forAll(sphTensorFlds, i)
     {
-        sphericalTensorFlds[i].rename(sphericalTensorNames[i]);
-        sphericalTensorFlds[i].writeOpt() = IOobject::AUTO_WRITE;
+        sphTensorFlds[i].rename(sphTensorNames[i]);
+        sphTensorFlds[i].writeOpt() = IOobject::AUTO_WRITE;
     }
     forAll(symmTensorFlds, i)
     {
@@ -1061,7 +1057,7 @@ int main(int argc, char *argv[])
     }
     forAll(surfSphericalTensorFlds, i)
     {
-        surfSphericalTensorFlds[i].rename(surfSphericalTensorNames[i]);
+        surfSphericalTensorFlds[i].rename(surfSphTensorNames[i]);
         surfSphericalTensorFlds[i].writeOpt() = IOobject::AUTO_WRITE;
     }
     forAll(surfSymmTensorFlds, i)
@@ -1120,7 +1116,7 @@ int main(int argc, char *argv[])
 
 
     // Whether first use of face (modify) or consecutive (add)
-    PackedBoolList modifiedFace(mesh.nFaces());
+    bitSet modifiedFace(mesh.nFaces());
 
     // Create coupled wall-side baffles
     createCoupledBaffles
@@ -1151,11 +1147,13 @@ int main(int argc, char *argv[])
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
 
     // Change the mesh. Change points directly (no inflation).
-    autoPtr<mapPolyMesh> map = meshMod.changeMesh(subsetter.subMesh(), false);
+    autoPtr<mapPolyMesh> mapPtr =
+        meshMod.changeMesh(subsetter.subMesh(), false);
+    mapPolyMesh& map = *mapPtr;
 
     // Update fields
     subsetter.subMesh().updateMesh(map);
@@ -1166,7 +1164,7 @@ int main(int argc, char *argv[])
     (
         subsetter.subMesh(),
         map,
-        0.0
+        Zero
     );
     initCreatedPatches<volVectorField>
     (
@@ -1197,7 +1195,7 @@ int main(int argc, char *argv[])
     (
         subsetter.subMesh(),
         map,
-        0.0
+        Zero
     );
     initCreatedPatches<surfaceVectorField>
     (
@@ -1231,9 +1229,9 @@ int main(int argc, char *argv[])
 
 
     // Move mesh (since morphing might not do this)
-    if (map().hasMotionPoints())
+    if (map.hasMotionPoints())
     {
-        subsetter.subMesh().movePoints(map().preMotionPoints());
+        subsetter.subMesh().movePoints(map.preMotionPoints());
     }
 
     Info<< "Writing mesh with split blockedFaces to time " << runTime.value()
@@ -1265,7 +1263,7 @@ int main(int argc, char *argv[])
             << " so might have to be moved back to constant/" << nl
             << endl;
 
-        word startFrom(runTime.controlDict().lookup("startFrom"));
+        const word startFrom(runTime.controlDict().get<word>("startFrom"));
 
         if (startFrom != "latestTime")
         {

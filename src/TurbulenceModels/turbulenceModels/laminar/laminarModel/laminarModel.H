@@ -71,16 +71,11 @@ protected:
         //- Print model coefficients
         virtual void printCoeffs(const word& type);
 
+        //- No copy construct
+        laminarModel(const laminarModel&) = delete;
 
-private:
-
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        laminarModel(const laminarModel&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const laminarModel&);
+        //- No copy assignment
+        void operator=(const laminarModel&) = delete;
 
 
 public:
@@ -146,8 +141,7 @@ public:
 
 
     //- Destructor
-    virtual ~laminarModel()
-    {}
+    virtual ~laminarModel() = default;
 
 
     // Member Functions

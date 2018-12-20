@@ -57,7 +57,7 @@ Foam::anisotropicFilter::anisotropicFilter
             mesh
         ),
         mesh,
-        dimensionedVector("zero", dimLength*dimLength, Zero),
+        dimensionedVector(dimLength*dimLength, Zero),
         calculatedFvPatchVectorField::typeName
     )
 {
@@ -86,7 +86,7 @@ Foam::anisotropicFilter::anisotropicFilter
     LESfilter(mesh),
     widthCoeff_
     (
-        readScalar(bd.optionalSubDict(type() + "Coeffs").lookup("widthCoeff"))
+        bd.optionalSubDict(type() + "Coeffs").get<scalar>("widthCoeff")
     ),
     coeff_
     (
@@ -97,7 +97,7 @@ Foam::anisotropicFilter::anisotropicFilter
             mesh
         ),
         mesh,
-        dimensionedVector("zero", dimLength*dimLength, Zero),
+        dimensionedVector(dimLength*dimLength, Zero),
         calculatedFvPatchScalarField::typeName
     )
 {
@@ -121,7 +121,7 @@ Foam::anisotropicFilter::anisotropicFilter
 
 void Foam::anisotropicFilter::read(const dictionary& bd)
 {
-    bd.optionalSubDict(type() + "Coeffs").lookup("widthCoeff") >> widthCoeff_;
+    bd.optionalSubDict(type() + "Coeffs").readEntry("widthCoeff", widthCoeff_);
 }
 
 

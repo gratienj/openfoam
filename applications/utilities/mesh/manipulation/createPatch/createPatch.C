@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,12 +28,12 @@ Group
     grpMeshManipulationUtilities
 
 Description
-    Utility to create patches out of selected boundary faces. Faces come either
+    Create patches out of selected boundary faces, which are either
     from existing patches or from a faceSet.
 
     More specifically it:
-    - creates new patches (from selected boundary faces). Synchronise faces
-      on coupled patches.
+    - creates new patches (from selected boundary faces).
+      Synchronise faces on coupled patches.
     - synchronises points on coupled boundaries
     - remove patches with 0 faces in them
 
@@ -102,7 +102,7 @@ void changePatchID
 
 
 // Filter out the empty patches.
-void filterPatches(polyMesh& mesh, const HashSet<word>& addedPatchNames)
+void filterPatches(polyMesh& mesh, const wordHashSet& addedPatchNames)
 {
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
@@ -464,7 +464,7 @@ void syncPoints
     }
 
     //- Note: hasTransformation is only used for warning messages so
-    //  reduction not strictly nessecary.
+    //  reduction not strictly necessary.
     //reduce(hasTransformation, orOp<bool>());
 
     // Synchronize multiple shared points.
@@ -510,26 +510,34 @@ void syncPoints
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Create patches out of selected boundary faces, which are either"
+        " from existing patches or from a faceSet"
+    );
+
     #include "addOverwriteOption.H"
     #include "addRegionOption.H"
-    #include "addDictOption.H"
-    Foam::argList::addBoolOption
+    argList::addOption("dict", "file", "Use alternative createPatchDict");
+    argList::addBoolOption
     (
         "writeObj",
-        "write obj files showing the cyclic matching process"
+        "Write obj files showing the cyclic matching process"
     );
+
+    argList::noFunctionObjects();  // Never use function objects
+
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
 
-    Foam::word meshRegionName = polyMesh::defaultRegion;
-    args.optionReadIfPresent("region", meshRegionName);
+    const word meshRegionName =
+        args.opt<word>("region", polyMesh::defaultRegion);
 
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
     #include "createNamedPolyMesh.H"
 
-    const bool writeObj = args.optionFound("writeObj");
+    const bool writeObj = args.found("writeObj");
 
     const word oldInstance = mesh.pointsInstance();
 
@@ -540,8 +548,7 @@ int main(int argc, char *argv[])
     IOdictionary dict(dictIO);
 
     // Whether to synchronise points
-    const Switch pointSync(dict.lookup("pointSync"));
-
+    const bool pointSync(dict.get<bool>("pointSync"));
 
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
@@ -557,11 +564,10 @@ int main(int argc, char *argv[])
     // Read patch construct info from dictionary
     PtrList<dictionary> patchSources(dict.lookup("patches"));
 
-    HashSet<word> addedPatchNames;
-    forAll(patchSources, addedI)
+    wordHashSet addedPatchNames;
+    for (const dictionary& dict : patchSources)
     {
-        const dictionary& dict = patchSources[addedI];
-        addedPatchNames.insert(dict.lookup("name"));
+        addedPatchNames.insert(dict.get<word>("name"));
     }
 
 
@@ -596,11 +602,9 @@ int main(int argc, char *argv[])
             }
         }
 
-        forAll(patchSources, addedI)
+        for (const dictionary& dict : patchSources)
         {
-            const dictionary& dict = patchSources[addedI];
-
-            word patchName(dict.lookup("name"));
+            const word patchName(dict.get<word>("name"));
 
             label destPatchi = patches.findPatchID(patchName);
 
@@ -672,11 +676,9 @@ int main(int argc, char *argv[])
     polyTopoChange meshMod(mesh);
 
 
-    forAll(patchSources, addedI)
+    for (const dictionary& dict : patchSources)
     {
-        const dictionary& dict = patchSources[addedI];
-
-        const word patchName(dict.lookup("name"));
+        const word patchName(dict.get<word>("name"));
         label destPatchi = patches.findPatchID(patchName);
 
         if (destPatchi == -1)
@@ -686,22 +688,19 @@ int main(int argc, char *argv[])
                 << abort(FatalError);
         }
 
-        const word sourceType(dict.lookup("constructFrom"));
+        const word sourceType(dict.get<word>("constructFrom"));
 
         if (sourceType == "patches")
         {
             labelHashSet patchSources
             (
-                patches.patchSet
-                (
-                    wordReList(dict.lookup("patches"))
-                )
+                patches.patchSet(dict.get<wordRes>("patches"))
             );
 
             // Repatch faces of the patches.
-            forAllConstIter(labelHashSet, patchSources, iter)
+            for (const label patchi : patchSources)
             {
-                const polyPatch& pp = patches[iter.key()];
+                const polyPatch& pp = patches[patchi];
 
                 Info<< "Moving faces from patch " << pp.name()
                     << " to patch " << destPatchi << endl;
@@ -720,7 +719,7 @@ int main(int argc, char *argv[])
         }
         else if (sourceType == "set")
         {
-            const word setName(dict.lookup("set"));
+            const word setName(dict.get<word>("set"));
 
             faceSet faces(mesh, setName);
 
@@ -896,7 +895,7 @@ int main(int argc, char *argv[])
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
     else
     {

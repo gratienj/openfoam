@@ -292,7 +292,7 @@ void Foam::hexRef8Data::sync(const IOobject& io)
                 new uniformDimensionedScalarField
                 (
                     rio,
-                    dimensionedScalar("zero", dimLength, masterLen)
+                    dimensionedScalar(rio.name(), dimLength, masterLen)
                 )
             );
         }
@@ -326,7 +326,6 @@ void Foam::hexRef8Data::updateMesh(const mapPolyMesh& map)
     }
 
 
-
     if (cellLevelPtr_.valid())
     {
         const labelList& cellMap = map.cellMap();
@@ -347,6 +346,7 @@ void Foam::hexRef8Data::updateMesh(const mapPolyMesh& map)
             }
         }
         cellLevel.transfer(newCellLevel);
+        cellLevelPtr_().instance() = map.mesh().facesInstance();
     }
     if (pointLevelPtr_.valid())
     {
@@ -368,13 +368,14 @@ void Foam::hexRef8Data::updateMesh(const mapPolyMesh& map)
             }
         }
         pointLevel.transfer(newPointLevel);
+        pointLevelPtr_().instance() = map.mesh().facesInstance();
     }
 
-    // No need to map the level0Edge
 
     if (refHistoryPtr_.valid() && refHistoryPtr_().active())
     {
         refHistoryPtr_().updateMesh(map);
+        refHistoryPtr_().instance() = map.mesh().facesInstance();
     }
 }
 

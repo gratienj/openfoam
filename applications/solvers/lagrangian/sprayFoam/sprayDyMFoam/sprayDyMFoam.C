@@ -37,7 +37,8 @@ Description
 #include "dynamicFvMesh.H"
 #include "turbulenceModel.H"
 #include "basicSprayCloud.H"
-#include "psiCombustionModel.H"
+#include "psiReactionThermo.H"
+#include "CombustionModel.H"
 #include "radiationModel.H"
 #include "SLGThermo.H"
 #include "pimpleControl.H"
@@ -48,17 +49,22 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Transient solver for compressible, turbulent flow"
+        " with a spray particle cloud.\n"
+        "With optional mesh motion and mesh topology changes.\n"
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
-    #include "createControl.H"
-    #include "createControls.H"
+    #include "createDyMControls.H"
     #include "createFields.H"
     #include "createFieldRefs.H"
     #include "createRhoUf.H"
-    #include "createFvOptions.H"
     #include "compressibleCourantNo.H"
     #include "setInitialDeltaT.H"
     #include "initContinuityErrs.H"
@@ -71,7 +77,7 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
-        #include "readControls.H"
+        #include "readDyMControls.H"
 
         {
             // Store divrhoU from the previous time-step/mesh for the correctPhi
@@ -84,7 +90,7 @@ int main(int argc, char *argv[])
             #include "compressibleCourantNo.H"
             #include "setDeltaT.H"
 
-            runTime++;
+            ++runTime;
 
             Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -97,21 +103,26 @@ int main(int argc, char *argv[])
             // Do any mesh changes
             mesh.update();
 
-            if (mesh.changing() && correctPhi)
+            if (mesh.changing())
             {
-                // Calculate absolute flux from the mapped surface velocity
-                phi = mesh.Sf() & rhoUf;
+                MRF.update();
 
-                #include "correctPhi.H"
+                if (correctPhi)
+                {
+                    // Calculate absolute flux from the mapped surface velocity
+                    phi = mesh.Sf() & rhoUf;
 
-                // Make the fluxes relative to the mesh-motion
-                fvc::makeRelative(phi, rho, U);
+                    #include "correctPhi.H"
+
+                    // Make the fluxes relative to the mesh-motion
+                    fvc::makeRelative(phi, rho, U);
+                }
+
+                if (checkMeshCourantNo)
+                {
+                    #include "meshCourantNo.H"
+                }
             }
-        }
-
-        if (mesh.changing() && checkMeshCourantNo)
-        {
-            #include "meshCourantNo.H"
         }
 
         parcels.evolve();
@@ -144,9 +155,7 @@ int main(int argc, char *argv[])
             combustion->Qdot()().write();
         }
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

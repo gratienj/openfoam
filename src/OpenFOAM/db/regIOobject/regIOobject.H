@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -108,8 +108,8 @@ private:
         //- Return Istream
         Istream& readStream(const bool valid = true);
 
-        //- Dissallow assignment
-        void operator=(const regIOobject&);
+        //- No copy assignment
+        void operator=(const regIOobject&) = delete;
 
 
 public:
@@ -142,7 +142,7 @@ public:
         //  if registerCopy is true
         regIOobject(const regIOobject&, bool registerCopy);
 
-        //- Construct as copy with new name, transfering registry registration
+        //- Construct as copy with new name, transferring registry registration
         //  to copy as specified
         regIOobject(const word& newName, const regIOobject&, bool registerCopy);
 
@@ -176,12 +176,17 @@ public:
             //- Transfer ownership of the given object pointer to its registry
             //  and return reference to object.
             template<class Type>
-            inline static Type& store(Type*);
+            inline static Type& store(Type* p);
 
             //- Transfer ownership of the given object pointer to its registry
-            //  and return reference to object.
+            //- and return reference to object.
             template<class Type>
-            inline static Type& store(autoPtr<Type>&);
+            inline static Type& store(autoPtr<Type>& aptr);
+
+            //- Transfer ownership of the given object pointer to its registry
+            //- and return reference to object.
+            template<class Type>
+            inline static Type& store(autoPtr<Type>&& aptr);
 
             //- Release ownership of this object from its registry
             inline void release();
@@ -281,7 +286,7 @@ public:
 
         // Writing
 
-            //- Pure virtual writaData function.
+            //- Pure virtual writeData function.
             //  Must be defined in derived types
             virtual bool writeData(Ostream&) const = 0;
 

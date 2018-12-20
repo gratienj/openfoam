@@ -100,7 +100,7 @@ Foam::twoPhaseMixtureEThermo::twoPhaseMixtureEThermo
                 IOobject::NO_WRITE
             ),
             U.mesh(),
-            dimensionedScalar("zero", dimEnergy/dimMass, 0.0),
+            dimensionedScalar(dimEnergy/dimMass, Zero),
             heBoundaryTypes()
         )
     ),
@@ -144,6 +144,13 @@ void Foam::twoPhaseMixtureEThermo::correct()
        + TSat_;
 
     T().correctBoundaryConditions();
+}
+
+
+Foam::word Foam::twoPhaseMixtureEThermo::thermoName() const
+{
+    NotImplemented;
+    return word::null;
 }
 
 
@@ -234,21 +241,18 @@ Foam::tmp<Foam::volScalarField> Foam::twoPhaseMixtureEThermo::hc() const
 {
     const fvMesh& mesh = this->T_.mesh();
 
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                "hc",
-                mesh.time().timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::AUTO_WRITE
-            ),
+            "hc",
+            mesh.time().timeName(),
             mesh,
-            dimensionedScalar("hc",Hf2() - Hf1())
-        )
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh,
+        dimensionedScalar("hc", Hf2() - Hf1())
     );
 }
 
@@ -262,7 +266,7 @@ Foam::tmp<Foam::scalarField> Foam::twoPhaseMixtureEThermo::THE
 ) const
 {
     NotImplemented;
-    return tmp<Foam::scalarField>();
+    return nullptr;
 }
 
 
@@ -275,7 +279,7 @@ Foam::tmp<Foam::scalarField> Foam::twoPhaseMixtureEThermo::THE
 ) const
 {
     NotImplemented;
-    return tmp<Foam::scalarField>();
+    return nullptr;
 }
 
 
@@ -351,7 +355,7 @@ Foam::tmp<Foam::scalarField> Foam::twoPhaseMixtureEThermo::rho
 
     return
     (
-        alpha1p*rho1().value() + (scalar(1.0) - alpha1p)*rho2().value()
+        alpha1p*rho1().value() + (scalar(1) - alpha1p)*rho2().value()
     );
 }
 
@@ -399,7 +403,7 @@ Foam::tmp<Foam::volScalarField> Foam::twoPhaseMixtureEThermo::gamma() const
 {
     return tmp<volScalarField>
     (
-       (alpha1_*Cp1() + alpha2_*Cp2()) / (alpha1_*Cv1() + alpha2_*Cv2())
+        (alpha1_*Cp1() + alpha2_*Cp2())/(alpha1_*Cv1() + alpha2_*Cv2())
     );
 }
 
@@ -432,15 +436,22 @@ Foam::tmp<Foam::scalarField> Foam::twoPhaseMixtureEThermo::Cpv
     const label patchi
 ) const
 {
-    // This is a e thermo (Cpv = Cv)
+    // This is an e thermo (Cpv = Cv)
     return Cv(p, T, patchi);
 }
 
 
 Foam::tmp<Foam::volScalarField> Foam::twoPhaseMixtureEThermo::CpByCpv() const
 {
-     NotImplemented;
-     return tmp<Foam::volScalarField>();
+    NotImplemented;
+    return nullptr;
+}
+
+
+Foam::tmp<Foam::volScalarField> Foam::twoPhaseMixtureEThermo::W() const
+{
+    NotImplemented;
+    return nullptr;
 }
 
 
@@ -451,8 +462,8 @@ Foam::tmp<Foam::scalarField> Foam::twoPhaseMixtureEThermo::CpByCpv
     const label patchi
 ) const
 {
-     NotImplemented;
-     return tmp<Foam::scalarField>();
+    NotImplemented;
+    return nullptr;
 }
 
 
@@ -570,14 +581,12 @@ bool Foam::twoPhaseMixtureEThermo::read()
 {
     if (basicThermo::read() && thermoIncompressibleTwoPhaseMixture::read())
     {
-        basicThermo::lookup("pDivU") >> pDivU_;
-        basicThermo::lookup("TSat") >> TSat_;
+        basicThermo::readEntry("pDivU", pDivU_);
+        basicThermo::readEntry("TSat", TSat_);
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -104,6 +104,14 @@ public:
             const word& phaseName
         );
 
+        //- Construct from mesh,dictionary,phase name with a single temperature
+        heThermo
+        (
+            const fvMesh&,
+            const word& phaseName,
+            const word& dictionaryName
+        );
+
 
     //- Destructor
     virtual ~heThermo();
@@ -111,18 +119,24 @@ public:
 
     // Member functions
 
-        //- Return the compostion of the mixture
+        //- Return the composition of the mixture
         virtual typename MixtureType::basicMixtureType&
         composition()
         {
             return *this;
         }
 
-        //- Return the compostion of the mixture
+        //- Return the composition of the mixture
         virtual const typename MixtureType::basicMixtureType&
         composition() const
         {
             return *this;
+        }
+
+        //- Return the name of the thermo physics
+        virtual word thermoName() const
+        {
+            return MixtureType::thermoType::typeName();
         }
 
         //- Return true if the equation of state is incompressible
@@ -257,6 +271,9 @@ public:
                 const scalarField& T,
                 const label patchi
             ) const;
+
+            //- Molecular weight [kg/kmol]
+            virtual tmp<volScalarField> W() const;
 
 
         // Fields derived from transport state variables

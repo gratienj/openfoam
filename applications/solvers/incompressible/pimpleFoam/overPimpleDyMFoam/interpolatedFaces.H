@@ -2,8 +2,8 @@
 interpolationCellPoint<vector> UInterpolator(HbyA);
 
 // Determine faces on outside of interpolated cells
-PackedBoolList isOwnerInterpolatedFace(mesh.nInternalFaces());
-PackedBoolList isNeiInterpolatedFace(mesh.nInternalFaces());
+bitSet isOwnerInterpolatedFace(mesh.nInternalFaces());
+bitSet isNeiInterpolatedFace(mesh.nInternalFaces());
 
 // Determine donor cells
 labelListList donorCell(mesh.nInternalFaces());
@@ -13,7 +13,7 @@ scalarListList weightCellCells(mesh.nInternalFaces());
 // Interpolated HbyA faces
 vectorField UIntFaces(mesh.nInternalFaces(), vector::zero);
 
-// Determine receptor neighbourd cells
+// Determine receptor neighbour cells
 labelList receptorNeigCell(mesh.nInternalFaces(), -1);
 
 {
@@ -25,10 +25,15 @@ labelList receptorNeigCell(mesh.nInternalFaces(), -1);
     PtrList<fvMeshSubset> meshParts(nZones);
     labelList nCellsPerZone(nZones, 0);
 
-    forAll(nCellsPerZone, zoneI)
+    // A mesh subset for each zone
+    forAll(meshParts, zonei)
     {
-        meshParts.set(zoneI, new fvMeshSubset(mesh));
-        meshParts[zoneI].setLargeCellSubset(zoneID, zoneI);
+        meshParts.set
+        (
+            zonei,
+            // Select cells where the zoneID == zonei
+            new fvMeshSubset(mesh, zonei, zoneID)
+        );
     }
 
     for (label faceI = 0; faceI < mesh.nInternalFaces(); faceI++)
@@ -41,7 +46,7 @@ labelList receptorNeigCell(mesh.nInternalFaces(), -1);
             && neiType == cellCellStencil::CALCULATED
         )
         {
-            isOwnerInterpolatedFace[faceI] = true;
+            isOwnerInterpolatedFace.set(faceI);
 
             const vector& fc = mesh.faceCentres()[faceI];
 
@@ -106,7 +111,7 @@ labelList receptorNeigCell(mesh.nInternalFaces(), -1);
             && neiType == cellCellStencil::INTERPOLATED
         )
         {
-            isNeiInterpolatedFace[faceI] = true;
+            isNeiInterpolatedFace.set(faceI);
 
             const vector& fc = mesh.faceCentres()[faceI];
             for (label zoneI = 0; zoneI < nZones; zoneI++)
@@ -175,11 +180,11 @@ surfaceVectorField faceNormals(mesh.Sf()/mesh.magSf());
 forAll(isNeiInterpolatedFace, faceI)
 {
     label cellId = -1;
-    if (isNeiInterpolatedFace[faceI])
+    if (isNeiInterpolatedFace.test(faceI))
     {
         cellId = mesh.faceNeighbour()[faceI];
     }
-    else if (isOwnerInterpolatedFace[faceI])
+    else if (isOwnerInterpolatedFace.test(faceI))
     {
         cellId = mesh.faceOwner()[faceI];
     }
@@ -234,11 +239,9 @@ forAll(isNeiInterpolatedFace, faceI)
                 n1 = vector(-n.z(), 0, n.x());
             }
         }
+        n1.normalise();
 
-        n1 /= mag(n1);
-
-        vector n2 = n ^ n1;
-        n2 /= mag(n2);
+        const vector n2 = normalised(n ^ n1);
 
         tensor rot =
             tensor

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -405,7 +405,7 @@ bool Foam::fileFormats::FIREMeshReader::readGeometry(const scalar scaleFactor)
             << abort(FatalError);
     }
 
-    IFstream is(geometryFile_, fmt, false);
+    IFstream is(geometryFile_, fmt);
 
     readPoints(is, scaleFactor);
     readFaces(is);
@@ -425,31 +425,29 @@ Foam::autoPtr<Foam::polyMesh> Foam::fileFormats::FIREMeshReader::mesh
 
     Info<< "Creating a polyMesh" << endl;
 
-    autoPtr<polyMesh> mesh
+    auto meshPtr = autoPtr<polyMesh>::New
     (
-        new polyMesh
+        IOobject
         (
-            IOobject
-            (
-                polyMesh::defaultRegion,
-                "constant",
-                registry
-            ),
-            xferMove(points_),
-            xferMove(meshFaces_),
-            xferMove(owner_),
-            xferMove(neigh_)
-        )
+            polyMesh::defaultRegion,
+            "constant",
+            registry
+        ),
+        std::move(points_),
+        std::move(meshFaces_),
+        std::move(owner_),
+        std::move(neigh_)
     );
+    polyMesh& mesh = *meshPtr;
 
     // adding patches also checks the mesh
-    addPatches(mesh());
+    addPatches(mesh);
 
-    cellTable_.addCellZones(mesh(), cellTableId_);
+    cellTable_.addCellZones(mesh, cellTableId_);
 
-    // addFaceZones(mesh());
+    // addFaceZones(mesh);
 
-    return mesh;
+    return meshPtr;
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -461,16 +459,10 @@ Foam::fileFormats::FIREMeshReader::FIREMeshReader
 )
 :
     meshReader(name, scaleFactor),
-    owner_(0),
-    neigh_(0),
-    faceZoneId_(0),
+    owner_(),
+    neigh_(),
+    faceZoneId_(),
     faceNames_()
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::fileFormats::FIREMeshReader::~FIREMeshReader()
 {}
 
 

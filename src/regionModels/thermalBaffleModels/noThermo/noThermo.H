@@ -59,11 +59,11 @@ private:
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        noThermo(const noThermo&);
+        //- No copy construct
+        noThermo(const noThermo&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const noThermo&);
+        //- No copy assignment
+        void operator=(const noThermo&) = delete;
 
 
 protected:
@@ -113,7 +113,7 @@ public:
             //- Return the film specific heat capacity [J/kg/K]
             virtual const tmp<volScalarField> Cp() const;
 
-            //- Return solid absortivity [1/m]
+            //- Return solid absorptivity [1/m]
             virtual const volScalarField& kappaRad() const;
 
             //- Return the film mean temperature [K]

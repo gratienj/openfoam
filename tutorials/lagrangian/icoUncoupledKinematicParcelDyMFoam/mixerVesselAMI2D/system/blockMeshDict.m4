@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -28,7 +28,7 @@ define(backQuad, ($1b $4b $3b $2b))
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-convertToMeters 0.1;
+scale   0.1;
 
 // Hub radius
 define(r, 0.2)
@@ -810,10 +810,10 @@ boundary
 /* optional
         surface
         {
-            type            searchableCylinder; // none
-            point1          (0 0 -1);
-            point2          (0 0 1);
-            radius          0.5;
+            type    cylinder; // none
+            point1  (0 0 -1);
+            point2  (0 0 1);
+            radius  0.5;
         }
 */
         faces
@@ -837,10 +837,10 @@ boundary
 /* optional
         surface
         {
-            type            searchableCylinder; // none
-            point1          (0 0 -1);
-            point2          (0 0 1);
-            radius          0.5;
+            type    cylinder; // none
+            point1  (0 0 -1);
+            point2  (0 0 1);
+            radius  0.5;
         }
 */
         faces

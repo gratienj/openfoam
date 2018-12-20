@@ -78,11 +78,11 @@ class BrunDrippingInjection
 {
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        BrunDrippingInjection(const BrunDrippingInjection&);
+        //- No copy construct
+        BrunDrippingInjection(const BrunDrippingInjection&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const BrunDrippingInjection&);
+        //- No copy assignment
+        void operator=(const BrunDrippingInjection&) = delete;
 
 
 protected:
@@ -100,7 +100,7 @@ protected:
         scalar dCoeff_;
 
         //- Stable film thickness - drips only formed if thickness
-        //  execeeds this threhold value
+        //  exceeds this threshold value
         scalar deltaStable_;
 
         //- Diameters of particles to inject into the dripping

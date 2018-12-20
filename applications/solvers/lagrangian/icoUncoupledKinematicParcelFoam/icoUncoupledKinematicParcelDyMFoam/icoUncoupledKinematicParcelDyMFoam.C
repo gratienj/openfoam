@@ -45,6 +45,12 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Transient solver for the passive transport"
+        " of a single kinematic particle cloud.\n"
+        "With optional mesh motion and mesh topology changes."
+    );
     argList::addOption
     (
         "cloud",
@@ -54,7 +60,7 @@ int main(int argc, char *argv[])
 
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
     #include "createControl.H"
@@ -84,9 +90,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

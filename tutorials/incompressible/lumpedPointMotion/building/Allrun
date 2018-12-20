@@ -75,18 +75,22 @@ copyParallelPointDisplacement()
 # Do steady-state case
 (cd steady && foamRunTutorials)
 
-if ! isTest $@
+if notTest $@
 then
-    latestTime=$(cd steady && foamListTimes -noZero -latestTime -processor)
+    latestTime=$(\cd steady && foamListTimes -noZero -latestTime -processor)
 
     # Clone the steady-state case to transient
     cloneParallelCase steady transient 0 $latestTime
 
     copyParallelPointDisplacement transient $latestTime
 
+    # Adjust application (from simpleFoam -> pimpleFoam)
+    foamDictionary transient/system/controlDict \
+        -entry application -set pimpleFoam
+
     # Do the transient case
     \cp files/Allrun.transient transient/Allrun
-    (cd transient && foamRunTutorials)
+    (\cd transient && foamRunTutorials)
 fi
 
 #------------------------------------------------------------------------------

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,6 +42,7 @@ License
 #include "fvMeshTools.H"
 #include "labelPairHashes.H"
 #include "ListOps.H"
+#include "globalIndex.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -225,13 +226,10 @@ Foam::wordList Foam::fvMeshDistribute::mergeWordList(const wordList& procNames)
     Pstream::gatherList(allNames);
     Pstream::scatterList(allNames);
 
-    HashSet<word> mergedNames;
+    wordHashSet mergedNames;
     forAll(allNames, proci)
     {
-        forAll(allNames[proci], i)
-        {
-            mergedNames.insert(allNames[proci][i]);
-        }
+        mergedNames.insert(allNames[proci]);
     }
     return mergedNames.toc();
 }
@@ -391,8 +389,7 @@ Foam::tmp<Foam::surfaceScalarField> Foam::fvMeshDistribute::generateTestField
     const fvMesh& mesh
 )
 {
-    vector testNormal(1, 1, 1);
-    testNormal /= mag(testNormal);
+    const vector testNormal = normalised(vector::one);
 
     tmp<surfaceScalarField> tfld
     (
@@ -407,7 +404,7 @@ Foam::tmp<Foam::surfaceScalarField> Foam::fvMeshDistribute::generateTestField
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("zero", dimless, 0.0)
+            dimensionedScalar(dimless, Zero)
         )
     );
     surfaceScalarField& fld = tfld.ref();
@@ -442,8 +439,7 @@ void Foam::fvMeshDistribute::testField(const surfaceScalarField& fld)
 {
     const fvMesh& mesh = fld.mesh();
 
-    vector testNormal(1, 1, 1);
-    testNormal /= mag(testNormal);
+    const vector testNormal = normalised(vector::one);
 
     const surfaceVectorField n(mesh.Sf()/mesh.magSf());
 
@@ -504,7 +500,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::deleteProcPatches
 
     // New patchID per boundary faces to be repatched. Is -1 (no change)
     // or new patchID
-    labelList newPatchID(mesh_.nFaces() - mesh_.nInternalFaces(), -1);
+    labelList newPatchID(mesh_.nBoundaryFaces(), -1);
 
     label nProcPatches = 0;
 
@@ -632,7 +628,8 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::repatch
     // shared points (see mergeSharedPoints below). So temporarily points
     // and edges do not match!
 
-    autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
+    autoPtr<mapPolyMesh> mapPtr = meshMod.changeMesh(mesh_, false, true);
+    mapPolyMesh& map = *mapPtr;
 
     // Update fields. No inflation, parallel sync.
     mesh_.updateMesh(map);
@@ -647,16 +644,16 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::repatch
 
 
     // Move mesh (since morphing does not do this)
-    if (map().hasMotionPoints())
+    if (map.hasMotionPoints())
     {
-        mesh_.movePoints(map().preMotionPoints());
+        mesh_.movePoints(map.preMotionPoints());
     }
 
     // Adapt constructMaps.
 
     if (debug)
     {
-        label index = map().reverseFaceMap().find(-1);
+        label index = map.reverseFaceMap().find(-1);
 
         if (index != -1)
         {
@@ -672,14 +669,14 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::repatch
     {
         inplaceRenumberWithFlip
         (
-            map().reverseFaceMap(),
+            map.reverseFaceMap(),
             false,
             true,
             constructFaceMap[proci]
         );
     }
 
-    return map;
+    return mapPtr;
 }
 
 
@@ -690,31 +687,61 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::repatch
 // merge those points.
 Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::mergeSharedPoints
 (
+    const labelList& pointToGlobalMaster,
     labelListList& constructPointMap
 )
 {
     // Find out which sets of points get merged and create a map from
     // mesh point to unique point.
-    Map<label> pointToMaster
-    (
-        fvMeshAdder::findSharedPoints
-        (
-            mesh_,
-            mergeTol_
-        )
-    );
+
+    label nShared = 0;
+    forAll(pointToGlobalMaster, pointi)
+    {
+        if (pointToGlobalMaster[pointi] != -1)
+        {
+            nShared++;
+        }
+    }
+
+    Map<label> globalMasterToLocalMaster(2*nShared);
+    Map<label> pointToMaster(2*nShared);
+
+    forAll(pointToGlobalMaster, pointi)
+    {
+        label globali = pointToGlobalMaster[pointi];
+        if (globali != -1)
+        {
+            Map<label>::const_iterator iter = globalMasterToLocalMaster.find
+            (
+                globali
+            );
+
+            if (iter == globalMasterToLocalMaster.end())
+            {
+                // Found first point. Designate as master
+                globalMasterToLocalMaster.insert(globali, pointi);
+                pointToMaster.insert(pointi, pointi);
+            }
+            else
+            {
+                pointToMaster.insert(pointi, iter());
+            }
+        }
+    }
 
     if (returnReduce(pointToMaster.size(), sumOp<label>()) == 0)
     {
-        return autoPtr<mapPolyMesh>(nullptr);
+        return nullptr;
     }
+
 
     polyTopoChange meshMod(mesh_);
 
     fvMeshAdder::mergePoints(mesh_, pointToMaster, meshMod);
 
     // Change the mesh (no inflation). Note: parallel comms allowed.
-    autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
+    autoPtr<mapPolyMesh> mapPtr = meshMod.changeMesh(mesh_, false, true);
+    mapPolyMesh& map = *mapPtr;
 
     // Update fields. No inflation, parallel sync.
     mesh_.updateMesh(map);
@@ -728,7 +755,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::mergeSharedPoints
         {
             label oldPointi = constructMap[i];
 
-            label newPointi = map().reversePointMap()[oldPointi];
+            label newPointi = map.reversePointMap()[oldPointi];
 
             if (newPointi < -1)
             {
@@ -746,21 +773,25 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::mergeSharedPoints
             }
         }
     }
-    return map;
+
+    return mapPtr;
 }
 
 
-// Construct the local environment of all boundary faces.
-void Foam::fvMeshDistribute::getNeighbourData
+void Foam::fvMeshDistribute::getCouplingData
 (
     const labelList& distribution,
     labelList& sourceFace,
     labelList& sourceProc,
     labelList& sourcePatch,
-    labelList& sourceNewNbrProc
+    labelList& sourceNewNbrProc,
+    labelList& sourcePointMaster
 ) const
 {
-    label nBnd = mesh_.nFaces() - mesh_.nInternalFaces();
+    // Construct the coupling information for all (boundary) faces and
+    // points
+
+    const label nBnd = mesh_.nBoundaryFaces();
     sourceFace.setSize(nBnd);
     sourceProc.setSize(nBnd);
     sourcePatch.setSize(nBnd);
@@ -890,13 +921,62 @@ void Foam::fvMeshDistribute::getNeighbourData
             }
         }
     }
+
+
+    // Collect coupled (collocated) points
+    sourcePointMaster.setSize(mesh_.nPoints());
+    sourcePointMaster = -1;
+    {
+        // Assign global master point
+        const globalIndex globalPoints(mesh_.nPoints());
+
+        const globalMeshData& gmd = mesh_.globalData();
+        const indirectPrimitivePatch& cpp = gmd.coupledPatch();
+        const labelList& meshPoints = cpp.meshPoints();
+        const mapDistribute& slavesMap = gmd.globalCoPointSlavesMap();
+        const labelListList& slaves = gmd.globalCoPointSlaves();
+
+        labelList elems(slavesMap.constructSize(), -1);
+        forAll(meshPoints, pointi)
+        {
+            const labelList& slots = slaves[pointi];
+
+            if (slots.size())
+            {
+                // pointi is a master. Assign a unique label.
+
+                label globalPointi = globalPoints.toGlobal(meshPoints[pointi]);
+                elems[pointi] = globalPointi;
+                forAll(slots, i)
+                {
+                    label sloti = slots[i];
+                    if (sloti >= meshPoints.size())
+                    {
+                        // Filter out local collocated points. We don't want
+                        // to merge these
+                        elems[slots[i]] = globalPointi;
+                    }
+                }
+            }
+        }
+
+        // Push slave-slot data back to slaves
+        slavesMap.reverseDistribute(elems.size(), elems, false);
+
+        // Extract back onto mesh
+        forAll(meshPoints, pointi)
+        {
+            sourcePointMaster[meshPoints[pointi]] = elems[pointi];
+        }
+    }
 }
 
 
 // Subset the neighbourCell/neighbourProc fields
-void Foam::fvMeshDistribute::subsetBoundaryData
+void Foam::fvMeshDistribute::subsetCouplingData
 (
     const fvMesh& mesh,
+    const labelList& pointMap,
     const labelList& faceMap,
     const labelList& cellMap,
 
@@ -909,17 +989,19 @@ void Foam::fvMeshDistribute::subsetBoundaryData
     const labelList& sourceProc,
     const labelList& sourcePatch,
     const labelList& sourceNewNbrProc,
+    const labelList& sourcePointMaster,
 
     labelList& subFace,
     labelList& subProc,
     labelList& subPatch,
-    labelList& subNewNbrProc
+    labelList& subNewNbrProc,
+    labelList& subPointMaster
 )
 {
-    subFace.setSize(mesh.nFaces() - mesh.nInternalFaces());
-    subProc.setSize(mesh.nFaces() - mesh.nInternalFaces());
-    subPatch.setSize(mesh.nFaces() - mesh.nInternalFaces());
-    subNewNbrProc.setSize(mesh.nFaces() - mesh.nInternalFaces());
+    subFace.setSize(mesh.nBoundaryFaces());
+    subProc.setSize(mesh.nBoundaryFaces());
+    subPatch.setSize(mesh.nBoundaryFaces());
+    subNewNbrProc.setSize(mesh.nBoundaryFaces());
 
     forAll(subFace, newBFacei)
     {
@@ -959,6 +1041,9 @@ void Foam::fvMeshDistribute::subsetBoundaryData
             subNewNbrProc[newBFacei] = sourceNewNbrProc[oldBFacei];
         }
     }
+
+
+    subPointMaster = UIndirectList<label>(sourcePointMaster, pointMap);
 }
 
 
@@ -1042,12 +1127,12 @@ Foam::labelList Foam::fvMeshDistribute::mapBoundaryData
 (
     const primitiveMesh& mesh,      // mesh after adding
     const mapAddedPolyMesh& map,
-    const labelList& boundaryData0, // mesh before adding
+    const labelList& boundaryData0, // on mesh before adding
     const label nInternalFaces1,
-    const labelList& boundaryData1  // added mesh
+    const labelList& boundaryData1  // on added mesh
 )
 {
-    labelList newBoundaryData(mesh.nFaces() - mesh.nInternalFaces());
+    labelList newBoundaryData(mesh.nBoundaryFaces());
 
     forAll(boundaryData0, oldBFacei)
     {
@@ -1069,6 +1154,41 @@ Foam::labelList Foam::fvMeshDistribute::mapBoundaryData
         {
             newBoundaryData[newFacei - mesh.nInternalFaces()] =
                 boundaryData1[addedBFacei];
+        }
+    }
+
+    return newBoundaryData;
+}
+
+
+Foam::labelList Foam::fvMeshDistribute::mapPointData
+(
+    const primitiveMesh& mesh,      // mesh after adding
+    const mapAddedPolyMesh& map,
+    const labelList& boundaryData0, // on mesh before adding
+    const labelList& boundaryData1  // on added mesh
+)
+{
+    labelList newBoundaryData(mesh.nPoints());
+
+    forAll(boundaryData0, oldPointi)
+    {
+        label newPointi = map.oldPointMap()[oldPointi];
+
+        // Point still exists (is necessary?)
+        if (newPointi >= 0)
+        {
+            newBoundaryData[newPointi] = boundaryData0[oldPointi];
+        }
+    }
+
+    forAll(boundaryData1, addedPointi)
+    {
+        label newPointi = map.addedPointMap()[addedPointi];
+
+        if (newPointi >= 0)
+        {
+            newBoundaryData[newPointi] = boundaryData1[addedPointi];
         }
     }
 
@@ -1124,7 +1244,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::fvMeshDistribute::doRemoveCells
     autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, false);
 
     // Update fields
-    mesh_.updateMesh(map);
+    mesh_.updateMesh(map());
 
 
     // Any exposed faces in a surfaceField will not be mapped. Map the value
@@ -1297,6 +1417,7 @@ void Foam::fvMeshDistribute::sendMesh
     const labelList& sourceProc,
     const labelList& sourcePatch,
     const labelList& sourceNewNbrProc,
+    const labelList& sourcePointMaster,
     Ostream& toDomain
 )
 {
@@ -1433,7 +1554,8 @@ void Foam::fvMeshDistribute::sendMesh
         << sourceFace
         << sourceProc
         << sourcePatch
-        << sourceNewNbrProc;
+        << sourceNewNbrProc
+        << sourcePointMaster;
 
 
     if (debug)
@@ -1456,6 +1578,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::fvMeshDistribute::receiveMesh
     labelList& domainSourceProc,
     labelList& domainSourcePatch,
     labelList& domainSourceNewNbrProc,
+    labelList& domainSourcePointMaster,
     Istream& fromNbr
 )
 {
@@ -1474,28 +1597,26 @@ Foam::autoPtr<Foam::fvMesh> Foam::fvMeshDistribute::receiveMesh
         >> domainSourceFace
         >> domainSourceProc
         >> domainSourcePatch
-        >> domainSourceNewNbrProc;
+        >> domainSourceNewNbrProc
+        >> domainSourcePointMaster;
 
     // Construct fvMesh
-    autoPtr<fvMesh> domainMeshPtr
+    auto domainMeshPtr = autoPtr<fvMesh>::New
     (
-        new fvMesh
+        IOobject
         (
-            IOobject
-            (
-                fvMesh::defaultRegion,
-                runTime.timeName(),
-                runTime,
-                IOobject::NO_READ
-            ),
-            xferMove(domainPoints),
-            xferMove(domainFaces),
-            xferMove(domainAllOwner),
-            xferMove(domainAllNeighbour),
-            false                   // no parallel comms
-        )
+            fvMesh::defaultRegion,
+            runTime.timeName(),
+            runTime,
+            IOobject::NO_READ
+        ),
+        std::move(domainPoints),
+        std::move(domainFaces),
+        std::move(domainAllOwner),
+        std::move(domainAllNeighbour),
+        false                   // no parallel comms
     );
-    fvMesh& domainMesh = domainMeshPtr();
+    fvMesh& domainMesh = *domainMeshPtr;
 
     List<polyPatch*> patches(patchEntries.size());
 
@@ -1638,28 +1759,25 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     if (!Pstream::parRun())
     {
         // Collect all maps and return
-        return autoPtr<mapDistributePolyMesh>
+        return autoPtr<mapDistributePolyMesh>::New
         (
-            new mapDistributePolyMesh
-            (
-                mesh_,
+            mesh_,
 
-                nOldPoints,
-                nOldFaces,
-                nOldCells,
-                oldPatchStarts.xfer(),
-                oldPatchNMeshPoints.xfer(),
+            nOldPoints,
+            nOldFaces,
+            nOldCells,
+            std::move(oldPatchStarts),
+            std::move(oldPatchNMeshPoints),
 
-                labelListList(1, identity(mesh_.nPoints())).xfer(),//subPointMap
-                labelListList(1, identity(mesh_.nFaces())).xfer(), //subFaceMap
-                labelListList(1, identity(mesh_.nCells())).xfer(), //subCellMap
-                labelListList(1, identity(patches.size())).xfer(), //subPatchMap
+            labelListList(one(), identity(mesh_.nPoints())), //subPointMap
+            labelListList(one(), identity(mesh_.nFaces())),  //subFaceMap
+            labelListList(one(), identity(mesh_.nCells())),  //subCellMap
+            labelListList(one(), identity(patches.size())),  //subPatchMap
 
-                labelListList(1, identity(mesh_.nPoints())).xfer(),//pointMap
-                labelListList(1, identity(mesh_.nFaces())).xfer(), //faceMap
-                labelListList(1, identity(mesh_.nCells())).xfer(), //cellMap
-                labelListList(1, identity(patches.size())).xfer()  //patchMap
-            )
+            labelListList(one(), identity(mesh_.nPoints())), //pointMap
+            labelListList(one(), identity(mesh_.nFaces())),  //faceMap
+            labelListList(one(), identity(mesh_.nCells())),  //cellMap
+            labelListList(one(), identity(patches.size()))   //patchMap
         );
     }
 
@@ -1715,13 +1833,15 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     labelList sourceFace;
     labelList sourceProc;
     labelList sourceNewNbrProc;
-    getNeighbourData
+    labelList sourcePointMaster;
+    getCouplingData
     (
         distribution,
         sourceFace,
         sourceProc,
         sourcePatch,
-        sourceNewNbrProc
+        sourceNewNbrProc,
+        sourcePointMaster
     );
 
 
@@ -1812,7 +1932,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             SubList<label>
             (
                 repatchMap().reverseFaceMap(),
-                mesh_.nFaces() - mesh_.nInternalFaces(),
+                mesh_.nBoundaryFaces(),
                 mesh_.nInternalFaces()
             )
           - mesh_.nInternalFaces()
@@ -1858,8 +1978,6 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     labelListList constructPatchMap(Pstream::nProcs());
 
 
-
-
     // Find out schedule
     // ~~~~~~~~~~~~~~~~~
 
@@ -1902,14 +2020,12 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             //OPstream str(Pstream::commsTypes::blocking, recvProc);
             UOPstream str(recvProc, pBufs);
 
-            // Mesh subsetting engine
-            fvMeshSubset subsetter(mesh_);
-
-            // Subset the cells of the current domain.
-            subsetter.setLargeCellSubset
+            // Mesh subsetting engine - subset the cells of the current domain.
+            fvMeshSubset subsetter
             (
-                distribution,
+                mesh_,
                 recvProc,
+                distribution,
                 oldInternalPatchi,  // oldInternalFaces patch
                 false               // no parallel sync
             );
@@ -1932,11 +2048,13 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             labelList procSourceProc;
             labelList procSourcePatch;
             labelList procSourceNewNbrProc;
+            labelList procSourcePointMaster;
 
-            subsetBoundaryData
+            subsetCouplingData
             (
                 subsetter.subMesh(),
-                subsetter.faceMap(),        // from subMesh to mesh
+                subsetter.pointMap(),       // from subMesh to mesh
+                subsetter.faceMap(),        //      ,,      ,,
                 subsetter.cellMap(),        //      ,,      ,,
 
                 distribution,               // old mesh distribution
@@ -1948,13 +2066,14 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                 sourceProc,
                 sourcePatch,
                 sourceNewNbrProc,
+                sourcePointMaster,
 
                 procSourceFace,
                 procSourceProc,
                 procSourcePatch,
-                procSourceNewNbrProc
+                procSourceNewNbrProc,
+                procSourcePointMaster
             );
-
 
 
             // Send to neighbour
@@ -1971,6 +2090,8 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                 procSourceProc,
                 procSourcePatch,
                 procSourceNewNbrProc,
+                procSourcePointMaster,
+
                 str
             );
 
@@ -2110,17 +2231,16 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             faceMap[faceI] += 1;
         }
         const labelHashSet& flip = subMap().flipFaceFlux();
-        forAllConstIter(labelHashSet, flip, iter)
+        for (const label facei : flip)
         {
-            label faceI = iter.key();
-            faceMap[faceI] = -faceMap[faceI];
+            faceMap[facei] = -faceMap[facei];
         }
         subPointMap[Pstream::myProcNo()] = subMap().pointMap();
         subPatchMap[Pstream::myProcNo()] = identity(patches.size());
 
         // Initialize all addressing into current mesh
         constructCellMap[Pstream::myProcNo()] = identity(mesh_.nCells());
-        constructFaceMap[Pstream::myProcNo()] = identity(mesh_.nFaces()) + 1;
+        constructFaceMap[Pstream::myProcNo()] = identity(mesh_.nFaces(), 1);
         constructPointMap[Pstream::myProcNo()] = identity(mesh_.nPoints());
         constructPatchMap[Pstream::myProcNo()] = identity(patches.size());
 
@@ -2130,10 +2250,12 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
         labelList domainSourceProc;
         labelList domainSourcePatch;
         labelList domainSourceNewNbrProc;
+        labelList domainSourcePointMaster;
 
-        subsetBoundaryData
+        subsetCouplingData
         (
             mesh_,                          // new mesh
+            subMap().pointMap(),            // from new to original mesh
             subMap().faceMap(),             // from new to original mesh
             subMap().cellMap(),
 
@@ -2146,17 +2268,20 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             sourceProc,
             sourcePatch,
             sourceNewNbrProc,
+            sourcePointMaster,
 
             domainSourceFace,
             domainSourceProc,
             domainSourcePatch,
-            domainSourceNewNbrProc
+            domainSourceNewNbrProc,
+            domainSourcePointMaster
         );
 
         sourceFace.transfer(domainSourceFace);
         sourceProc.transfer(domainSourceProc);
         sourcePatch.transfer(domainSourcePatch);
         sourceNewNbrProc.transfer(domainSourceNewNbrProc);
+        sourcePointMaster.transfer(domainSourcePointMaster);
     }
 
 
@@ -2214,6 +2339,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             labelList domainSourceProc;
             labelList domainSourcePatch;
             labelList domainSourceNewNbrProc;
+            labelList domainSourcePointMaster;
 
             autoPtr<fvMesh> domainMeshPtr;
 
@@ -2250,6 +2376,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                     domainSourceProc,
                     domainSourcePatch,
                     domainSourceNewNbrProc,
+                    domainSourcePointMaster,
                     str
                 );
                 fvMesh& domainMesh = domainMeshPtr();
@@ -2407,7 +2534,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
 
 
             constructCellMap[sendProc] = identity(domainMesh.nCells());
-            constructFaceMap[sendProc] = identity(domainMesh.nFaces()) + 1;
+            constructFaceMap[sendProc] = identity(domainMesh.nFaces(), 1);
             constructPointMap[sendProc] = identity(domainMesh.nPoints());
             constructPatchMap[sendProc] =
                 identity(domainMesh.boundaryMesh().size());
@@ -2479,7 +2606,8 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                 mesh_,
                 domainMesh,
                 couples,
-                false           // no parallel comms
+                false,          // no parallel comms
+                true            // fake complete mapping
             );
 
             // Update mesh data: sourceFace,sourceProc for added
@@ -2517,6 +2645,15 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
                 domainMesh.nInternalFaces(),
                 domainSourceNewNbrProc
             );
+            // Update pointMaster data
+            sourcePointMaster = mapPointData
+            (
+                mesh_,
+                map(),
+                sourcePointMaster,
+                domainSourcePointMaster
+            );
+
 
             // Update all addressing so xxProcAddressing points to correct
             // item in masterMesh.
@@ -2549,7 +2686,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             {
                 // Find out if any faces of domain mesh were flipped (boundary
                 // faces becoming internal)
-                label nBnd = domainMesh.nFaces()-domainMesh.nInternalFaces();
+                const label nBnd = domainMesh.nBoundaryFaces();
                 flippedAddedFaces.resize(nBnd/4);
 
                 for
@@ -2575,9 +2712,8 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
             // Added processor
             inplaceRenumber(map().addedCellMap(), constructCellMap[sendProc]);
             // Add flip
-            forAllConstIter(labelHashSet, flippedAddedFaces, iter)
+            for (const label domainFaceI : flippedAddedFaces)
             {
-                label domainFaceI = iter.key();
                 label& val = constructFaceMap[sendProc][domainFaceI];
                 val = -val;
             }
@@ -2631,6 +2767,10 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     }
 
 
+    // See if any originally shared points need to be merged. Note: does
+    // parallel comms. After this points and edges should again be consistent.
+    mergeSharedPoints(sourcePointMaster, constructPointMap);
+
 
     // Add processorPatches
     // ~~~~~~~~~~~~~~~~~~~~
@@ -2660,15 +2800,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
 
     // Change patches. Since this might change ordering of coupled faces
     // we also need to adapt our constructMaps.
-    // NOTE: there is one very particular problem with this structure.
-    // We first create the processor patches and use these to merge out
-    // shared points (see mergeSharedPoints below). So temporarily points
-    // and edges do not match!
     repatch(newPatchID, constructFaceMap);
-
-    // See if any geometrically shared points need to be merged. Note: does
-    // parallel comms. After this points and edges should again be consistent.
-    mergeSharedPoints(constructPointMap);
 
     // Bit of hack: processorFvPatchField does not get reset since created
     // from nothing so explicitly reset.
@@ -2720,31 +2852,28 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::fvMeshDistribute::distribute
     }
 
     // Collect all maps and return
-    return autoPtr<mapDistributePolyMesh>
+    return autoPtr<mapDistributePolyMesh>::New
     (
-        new mapDistributePolyMesh
-        (
-            mesh_,
+        mesh_,
 
-            nOldPoints,
-            nOldFaces,
-            nOldCells,
-            oldPatchStarts.xfer(),
-            oldPatchNMeshPoints.xfer(),
+        nOldPoints,
+        nOldFaces,
+        nOldCells,
+        std::move(oldPatchStarts),
+        std::move(oldPatchNMeshPoints),
 
-            subPointMap.xfer(),
-            subFaceMap.xfer(),
-            subCellMap.xfer(),
-            subPatchMap.xfer(),
+        std::move(subPointMap),
+        std::move(subFaceMap),
+        std::move(subCellMap),
+        std::move(subPatchMap),
 
-            constructPointMap.xfer(),
-            constructFaceMap.xfer(),
-            constructCellMap.xfer(),
-            constructPatchMap.xfer(),
+        std::move(constructPointMap),
+        std::move(constructFaceMap),
+        std::move(constructCellMap),
+        std::move(constructPatchMap),
 
-            true,           // subFaceMap has flip
-            true            // constructFaceMap has flip
-        )
+        true,           // subFaceMap has flip
+        true            // constructFaceMap has flip
     );
 }
 

@@ -39,9 +39,14 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Generates a table suitable for use by tabulated wall functions"
+    );
+
     #include "setRootCase.H"
     #include "createTime.H"
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     IOdictionary dict
     (

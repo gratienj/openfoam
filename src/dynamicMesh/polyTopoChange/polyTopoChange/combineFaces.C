@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,9 +55,8 @@ bool Foam::combineFaces::convexFace
     const face& f
 )
 {
-    // Get outwards pointing normal of f.
-    vector n = f.normal(points);
-    n /= mag(n);
+    // Get outwards pointing normal of f, only the sign matters.
+    const vector areaNorm = f.areaNormal(points);
 
     // Get edge from f[0] to f[size-1];
     vector ePrev(points[f.first()] - points[f.last()]);
@@ -78,7 +77,7 @@ bool Foam::combineFaces::convexFace
         {
             vector edgeNormal = ePrev ^ e10;
 
-            if ((edgeNormal & n) < 0)
+            if ((edgeNormal & areaNorm) < 0)
             {
                 // Concave. Check angle.
                 if ((ePrev & e10) < minConcaveCos)
@@ -150,12 +149,10 @@ void Foam::combineFaces::regioniseFaces
         // - small angle
         if (p0 != -1 && p0 == p1 && !patches[p0].coupled())
         {
-            vector f0Normal = mesh_.faceAreas()[f0];
-            f0Normal /= mag(f0Normal);
-            vector f1Normal = mesh_.faceAreas()[f1];
-            f1Normal /= mag(f1Normal);
+            vector f0Normal = normalised(mesh_.faceAreas()[f0]);
+            vector f1Normal = normalised(mesh_.faceAreas()[f1]);
 
-            if ((f0Normal&f1Normal) > minCos)
+            if ((f0Normal & f1Normal) > minCos)
             {
                 Map<label>::const_iterator f0Fnd = faceRegion.find(f0);
 
@@ -305,16 +302,15 @@ Foam::labelListList Foam::combineFaces::getMergeSets
     // Lists of faces that can be merged.
     DynamicList<labelList> allFaceSets(boundaryCells.size() / 10);
     // Storage for on-the-fly cell-edge addressing.
+    labelHashSet set;
     DynamicList<label> storage;
 
     // On all cells regionise the faces
-    forAllConstIter(labelHashSet, boundaryCells, iter)
+    for (const label celli : boundaryCells)
     {
-        label celli = iter.key();
-
         const cell& cFaces = mesh_.cells()[celli];
 
-        const labelList& cEdges = mesh_.cellEdges(celli, storage);
+        const labelList& cEdges = mesh_.cellEdges(celli, set, storage);
 
         // Region per face
         Map<label> faceRegion(cFaces.size());
@@ -388,7 +384,7 @@ Foam::labelListList Foam::combineFaces::getMergeSets
     const polyBoundaryMesh& patches = mesh_.boundaryMesh();
 
     // Pick up all cells on boundary
-    labelHashSet boundaryCells(mesh_.nFaces()-mesh_.nInternalFaces());
+    labelHashSet boundaryCells(mesh_.nBoundaryFaces());
 
     forAll(patches, patchi)
     {

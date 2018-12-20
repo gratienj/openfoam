@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -90,11 +90,11 @@ private:
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        ThermoCloud(const ThermoCloud&);
+        //- No copy construct
+        ThermoCloud(const ThermoCloud&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const ThermoCloud&);
+        //- No copy assignment
+        void operator=(const ThermoCloud&) = delete;
 
 
 protected:
@@ -127,7 +127,7 @@ protected:
         // Reference to the particle integration schemes
 
             //- Temperature integration
-            autoPtr<scalarIntegrationScheme> TIntegrator_;
+            autoPtr<integrationScheme> TIntegrator_;
 
 
         // Modelling options
@@ -214,7 +214,7 @@ public:
 
 
     //- Destructor
-    virtual ~ThermoCloud();
+    virtual ~ThermoCloud() = default;
 
 
     // Member Functions
@@ -237,7 +237,7 @@ public:
             //- Return const access to the carrier temperature field
             inline const volScalarField& T() const;
 
-            //- Return const access to the carrier prressure field
+            //- Return const access to the carrier pressure field
             inline const volScalarField& p() const;
 
 
@@ -251,7 +251,7 @@ public:
             // Integration schemes
 
                 //-Return reference to velocity integration
-                inline const scalarIntegrationScheme& TIntegrator() const;
+                inline const integrationScheme& TIntegrator() const;
 
 
             // Modelling options

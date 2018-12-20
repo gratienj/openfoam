@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,16 +64,16 @@ class basicSolidChemistryModel
         //- Construct as copy (not implemented)
         basicSolidChemistryModel(const basicSolidChemistryModel&);
 
-        //- Disallow default bitwise assignment
-        void operator=(const basicSolidChemistryModel&);
+        //- No copy assignment
+        void operator=(const basicSolidChemistryModel&) = delete;
 
 
 protected:
 
     // Protected data
 
-        //- Solid thermo package
-        autoPtr<solidReactionThermo> solidThermo_;
+        //- Solid thermo
+        solidReactionThermo& solidThermo_;
 
 
 public:
@@ -82,29 +82,29 @@ public:
     TypeName("basicSolidChemistryModel");
 
 
+    //- Thermo type
+    typedef solidReactionThermo reactionThermo;
+
+
     //- Declare run-time constructor selection tables
     declareRunTimeSelectionTable
     (
         autoPtr,
         basicSolidChemistryModel,
-        fvMesh,
-        (const fvMesh& mesh, const word& phaseName),
-        (mesh, phaseName)
+        thermo,
+        (solidReactionThermo& thermo),
+        (thermo)
     );
 
 
     // Constructors
 
-        //- Construct from mesh
-        basicSolidChemistryModel(const fvMesh& mesh, const word& phaseName);
+        //- Construct from thermo
+        basicSolidChemistryModel(solidReactionThermo& thermo);
 
 
     //- Selector
-    static autoPtr<basicSolidChemistryModel> New
-    (
-        const fvMesh& mesh,
-        const word& phaseName=word::null
-    );
+    static autoPtr<basicSolidChemistryModel> New(solidReactionThermo& thermo);
 
 
     //- Destructor

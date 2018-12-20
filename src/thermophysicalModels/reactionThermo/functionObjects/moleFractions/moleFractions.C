@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -36,11 +36,18 @@ void Foam::moleFractions<ThermoType>::calculateMoleFractions()
 
     const PtrList<volScalarField>& Y = thermo.composition().Y();
 
-    const volScalarField W(thermo.composition().W());
+    const volScalarField W(thermo.W());
 
     forAll(Y, i)
     {
-        X_[i] = W*Y[i]/thermo.composition().W(i);
+        const dimensionedScalar Wi
+        (
+            "W",
+            dimMass/dimMoles,
+            thermo.composition().W(i)
+        );
+
+        X_[i] = W*Y[i]/Wi;
     }
 }
 
@@ -57,12 +64,12 @@ Foam::moleFractions<ThermoType>::moleFractions
 :
     fvMeshFunctionObject(name, runTime, dict)
 {
-    if (mesh_.foundObject<ThermoType>(basicThermo::dictName))
-    {
-        const ThermoType& thermo =
-            mesh_.lookupObject<ThermoType>(basicThermo::dictName);
+    const ThermoType* thermo =
+        mesh_.findObject<ThermoType>(basicThermo::dictName);
 
-        const PtrList<volScalarField>& Y = thermo.composition().Y();
+    if (thermo)
+    {
+        const PtrList<volScalarField>& Y = thermo->composition().Y();
 
         X_.setSize(Y.size());
 
@@ -82,7 +89,7 @@ Foam::moleFractions<ThermoType>::moleFractions
                         IOobject::AUTO_WRITE
                     ),
                     mesh_,
-                    dimensionedScalar("X", dimless, 0)
+                    dimensionedScalar(dimless, Zero)
                 )
             );
         }

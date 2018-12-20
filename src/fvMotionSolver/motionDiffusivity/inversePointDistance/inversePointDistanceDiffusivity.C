@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -59,12 +59,6 @@ Foam::inversePointDistanceDiffusivity::inversePointDistanceDiffusivity
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::inversePointDistanceDiffusivity::~inversePointDistanceDiffusivity()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 void Foam::inversePointDistanceDiffusivity::correct()
@@ -75,9 +69,9 @@ void Foam::inversePointDistanceDiffusivity::correct()
 
     label nPatchEdges = 0;
 
-    forAllConstIter(labelHashSet, patchSet, iter)
+    for (const label patchi : patchSet)
     {
-        nPatchEdges += bdry[iter.key()].nEdges();
+        nPatchEdges += bdry[patchi].nEdges();
     }
 
     // Distance to wall on points and edges.
@@ -94,16 +88,14 @@ void Foam::inversePointDistanceDiffusivity::correct()
 
         nPatchEdges = 0;
 
-        forAllConstIter(labelHashSet, patchSet, iter)
+        for (const label patchi : patchSet)
         {
-            const polyPatch& patch = bdry[iter.key()];
+            const polyPatch& patch = bdry[patchi];
 
             const labelList& meshPoints = patch.meshPoints();
 
-            forAll(meshPoints, i)
+            for (const label pointi : meshPoints)
             {
-                label pointi = meshPoints[i];
-
                 if (!pointWallDist[pointi].valid(dummyTrackData))
                 {
                     // Not yet seeded
@@ -137,7 +129,7 @@ void Foam::inversePointDistanceDiffusivity::correct()
     }
 
 
-    for (label facei=0; facei<mesh().nInternalFaces(); facei++)
+    for (label facei=0; facei<mesh().nInternalFaces(); ++facei)
     {
         const face& f = mesh().faces()[facei];
 

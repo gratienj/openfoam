@@ -24,13 +24,41 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "error.H"
+#include "contiguous.H"
 #include "pTraits.H"
 #include "Swap.H"
+
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+
+template<class T>
+inline bool Foam::UList<T>::uniform() const
+{
+    const label len = size();
+
+    if (len > 1)
+    {
+        const T& val = first();
+
+        for (label i=1; i<len; ++i)
+        {
+            if (val != (*this)[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class T>
-inline Foam::UList<T>::UList()
+inline constexpr Foam::UList<T>::UList() noexcept
 :
     size_(0),
     v_(nullptr)
@@ -38,7 +66,7 @@ inline Foam::UList<T>::UList()
 
 
 template<class T>
-inline Foam::UList<T>::UList(T* __restrict__ v, label size)
+inline Foam::UList<T>::UList(T* __restrict__ v, label size) noexcept
 :
     size_(size),
     v_(v)
@@ -101,8 +129,9 @@ inline void Foam::UList<T>::checkStart(const label start) const
 {
     if (start < 0 || (start && start >= size_))
     {
+        // Note: accept start=0 for zero-sized lists
         FatalErrorInFunction
-            << "start " << start << " out of range 0 ... " << max(size_-1, 0)
+            << "start " << start << " out of range [0," << size_ << "]"
             << abort(FatalError);
     }
 }
@@ -114,7 +143,7 @@ inline void Foam::UList<T>::checkSize(const label size) const
     if (size < 0 || size > size_)
     {
         FatalErrorInFunction
-            << "size " << size << " out of range 0 ... " << size_
+            << "size " << size << " out of range [0," << size_ << "]"
             << abort(FatalError);
     }
 }
@@ -129,10 +158,10 @@ inline void Foam::UList<T>::checkIndex(const label i) const
             << "attempt to access element " << i << " from zero sized list"
             << abort(FatalError);
     }
-    else if (i<0 || i>=size_)
+    else if (i < 0 || i >= size_)
     {
         FatalErrorInFunction
-            << "index " << i << " out of range 0 ... " << size_-1
+            << "index " << i << " out of range [0," << size_ << "]"
             << abort(FatalError);
     }
 }
@@ -188,14 +217,31 @@ inline bool Foam::UList<T>::found(const T& val, const label start) const
 
 
 template<class T>
-inline void Foam::UList<T>::shallowCopy(const UList<T>& a)
+inline void Foam::UList<T>::shallowCopy(const UList<T>& list)
 {
-    size_ = a.size_;
-    v_ = a.v_;
+    size_ = list.size_;
+    v_ = list.v_;
 }
 
 
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
+
+namespace Foam
+{
+    // Template specialization for bool
+    template<>
+    inline const bool& Foam::UList<bool>::operator[](const label i) const
+    {
+        // Lazy evaluation - return false for out-of-range
+        if (i >= 0 && i < size_)
+        {
+            return v_[i];
+        }
+
+        return Foam::pTraits<bool>::zero;
+    }
+}
+
 
 template<class T>
 inline T& Foam::UList<T>::operator[](const label i)
@@ -206,23 +252,6 @@ inline T& Foam::UList<T>::operator[](const label i)
     return v_[i];
 }
 
-namespace Foam
-{
-    // Template specialization for bool
-    template<>
-    inline const bool& Foam::UList<bool>::operator[](const label i) const
-    {
-        // lazy evaluation - return false for out-of-range
-        if (i < size_)
-        {
-            return v_[i];
-        }
-        else
-        {
-            return Foam::pTraits<bool>::zero;
-        }
-    }
-}
 
 template<class T>
 inline const T& Foam::UList<T>::operator[](const label i) const
@@ -268,63 +297,63 @@ template<class T>
 inline typename Foam::UList<T>::iterator
 Foam::UList<T>::end()
 {
-    return &v_[size_];
+    return (v_ + size_);
 }
 
 template<class T>
 inline typename Foam::UList<T>::const_iterator
 Foam::UList<T>::end() const
 {
-    return &v_[size_];
+    return (v_ + size_);
 }
 
 template<class T>
 inline typename Foam::UList<T>::const_iterator
 Foam::UList<T>::cend() const
 {
-    return &v_[size_];
+    return (v_ + size_);
 }
 
 template<class T>
 inline typename Foam::UList<T>::reverse_iterator
 Foam::UList<T>::rbegin()
 {
-    return reverse_iterator(&v_[size_-1]);
+    return reverse_iterator(end());
 }
 
 template<class T>
 inline typename Foam::UList<T>::const_reverse_iterator
 Foam::UList<T>::rbegin() const
 {
-    return const_reverse_iterator(&v_[size_-1]);
+    return const_reverse_iterator(end());
 }
 
 template<class T>
 inline typename Foam::UList<T>::const_reverse_iterator
 Foam::UList<T>::crbegin() const
 {
-    return const_reverse_iterator(&v_[size_-1]);
+    return const_reverse_iterator(end());
 }
 
 template<class T>
 inline typename Foam::UList<T>::reverse_iterator
 Foam::UList<T>::rend()
 {
-    return reverse_iterator(&v_[-1]);
+    return reverse_iterator(begin());
 }
 
 template<class T>
 inline typename Foam::UList<T>::const_reverse_iterator
 Foam::UList<T>::rend() const
 {
-    return const_reverse_iterator(&v_[-1]);
+    return const_reverse_iterator(begin());
 }
 
 template<class T>
 inline typename Foam::UList<T>::const_reverse_iterator
 Foam::UList<T>::crend() const
 {
-    return const_reverse_iterator(&v_[-1]);
+    return const_reverse_iterator(begin());
 }
 
 
@@ -357,29 +386,29 @@ inline bool Foam::UList<T>::empty() const
 
 
 template<class T>
-inline void Foam::UList<T>::swap(UList<T>& lst)
+inline void Foam::UList<T>::swap(UList<T>& list)
 {
-    Foam::Swap(size_, lst.size_);
-    Foam::Swap(v_, lst.v_);
+    Foam::Swap(size_, list.size_);
+    Foam::Swap(v_, list.v_);
 }
 
 
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
 template<class T>
-inline void Foam::reverse(UList<T>& lst, const label n)
+inline void Foam::reverse(UList<T>& list, const label n)
 {
-    for (int i=0; i<n/2; ++i)
+    for (label i=0; i<n/2; ++i)
     {
-        Foam::Swap(lst[i], lst[n-1-i]);
+        Foam::Swap(list[i], list[n-1-i]);
     }
 }
 
 
 template<class T>
-inline void Foam::reverse(UList<T>& lst)
+inline void Foam::reverse(UList<T>& list)
 {
-    reverse(lst, lst.size());
+    reverse(list, list.size());
 }
 
 

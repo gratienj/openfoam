@@ -35,7 +35,7 @@ Description
     There are many versions and developments of the EDC model, 4 of which are
     currently supported in this implementation: v1981, v1996, v2005 and
     v2016.  The model variant is selected using the optional \c version entry in
-    the \c EDCCoeffs dictionary, \eg
+    the \c EDCCoeffs dictionary, e.g.
 
     \verbatim
         EDCCoeffs
@@ -128,10 +128,10 @@ const scalar EDCexp2[] = {3, 3, 2, 2};
                             Class EDC Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class Type>
+template<class ReactionThermo>
 class EDC
 :
-    public laminar<Type>
+    public laminar<ReactionThermo>
 {
     // Private data
 
@@ -151,11 +151,11 @@ class EDC
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        EDC(const EDC&);
+        //- No copy construct
+        EDC(const EDC&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const EDC&);
+        //- No copy assignment
+        void operator=(const EDC&) = delete;
 
 
 public:
@@ -170,9 +170,9 @@ public:
         EDC
         (
             const word& modelType,
-            const fvMesh& mesh,
-            const word& combustionProperties,
-            const word& phaseName
+            ReactionThermo& type,
+            const compressibleTurbulenceModel& turb,
+            const word& combustionProperties
         );
 
 

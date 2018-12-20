@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -206,7 +206,7 @@ Foam::triSurface Foam::triSurfaceTools::doRefine
             }
 
             // Now we have new mid edge vertices for all edges on face
-            // so create triangles for RED rerfinement.
+            // so create triangles for RED refinement.
 
             const edgeList& edges = surf.edges();
 
@@ -315,11 +315,8 @@ Foam::scalar Foam::triSurfaceTools::faceCosAngle
     const vector base0(pLeft - pStart);
     const vector base1(pRight - pStart);
 
-    vector n0(common ^ base0);
-    n0 /= Foam::mag(n0);
-
-    vector n1(base1 ^ common);
-    n1 /= Foam::mag(n1);
+    const vector n0 = normalised(common ^ base0);
+    const vector n1 = normalised(base1 ^ common);
 
     return n0 & n1;
 }
@@ -384,11 +381,7 @@ Foam::labelHashSet Foam::triSurfaceTools::getCollapsedFaces
     const labelList& myFaces = surf.edgeFaces()[edgeI];
 
     labelHashSet facesToBeCollapsed(2*myFaces.size());
-
-    forAll(myFaces, myFacei)
-    {
-        facesToBeCollapsed.insert(myFaces[myFacei]);
-    }
+    facesToBeCollapsed.insert(myFaces);
 
     // From faces using v1 check if they share an edge with faces
     // using v2.
@@ -451,8 +444,8 @@ void Foam::triSurfaceTools::getMergedEdges
     const triSurface& surf,
     const label edgeI,
     const labelHashSet& collapsedFaces,
-    HashTable<label, label, Hash<label>>& edgeToEdge,
-    HashTable<label, label, Hash<label>>& edgeToFace
+    Map<label>& edgeToEdge,
+    Map<label>& edgeToFace
 )
 {
     const edge& e = surf.edges()[edgeI];
@@ -534,8 +527,8 @@ Foam::scalar Foam::triSurfaceTools::edgeCosAngle
     const label v1,
     const point& pt,
     const labelHashSet& collapsedFaces,
-    const HashTable<label, label, Hash<label>>& edgeToEdge,
-    const HashTable<label, label, Hash<label>>& edgeToFace,
+    const Map<label>& edgeToEdge,
+    const Map<label>& edgeToFace,
     const label facei,
     const label edgeI
 )
@@ -630,8 +623,8 @@ Foam::scalar Foam::triSurfaceTools::collapseMinCosAngle
     const label v1,
     const point& pt,
     const labelHashSet& collapsedFaces,
-    const HashTable<label, label, Hash<label>>& edgeToEdge,
-    const HashTable<label, label, Hash<label>>& edgeToFace
+    const Map<label>& edgeToEdge,
+    const Map<label>& edgeToFace
 )
 {
     const labelList& v1Faces = surf.pointFaces()[v1];
@@ -684,8 +677,8 @@ bool Foam::triSurfaceTools::collapseCreatesFold
     const label v1,
     const point& pt,
     const labelHashSet& collapsedFaces,
-    const HashTable<label, label, Hash<label>>& edgeToEdge,
-    const HashTable<label, label, Hash<label>>& edgeToFace,
+    const Map<label>& edgeToEdge,
+    const Map<label>& edgeToFace,
     const scalar minCos
 )
 {
@@ -749,7 +742,7 @@ bool Foam::triSurfaceTools::collapseCreatesFold
 //    // neighbours actually contains the
 //    // edge with which triangle connects to collapsedFaces.
 //
-//    HashTable<label, label, Hash<label>> neighbours;
+//    Map<label> neighbours;
 //
 //    labelList collapsed = collapsedFaces.toc();
 //
@@ -859,7 +852,7 @@ Foam::surfaceLocation Foam::triSurfaceTools::cutEdge
     scalar norm = 0;
     forAll(d, fp)
     {
-        d[fp] = (points[f[fp]]-cutPlane.refPoint()) & cutPlane.normal();
+        d[fp] = cutPlane.signedDistance(points[f[fp]]);
         norm += mag(d[fp]);
     }
 
@@ -1235,7 +1228,7 @@ Foam::surfaceLocation Foam::triSurfaceTools::visitFaces
     if (nearest.triangle() == -1)
     {
         // Did not move from edge. Give warning? Return something special?
-        // For now responsability of caller to make sure that nothing has
+        // For now responsibility of caller to make sure that nothing has
         // moved.
     }
 
@@ -2072,11 +2065,11 @@ Foam::vector Foam::triSurfaceTools::surfaceNormal
 
         vector edgeNormal(Zero);
 
-        forAll(eFaces, i)
+        for (const label facei : eFaces)
         {
-            edgeNormal += surf.faceNormals()[eFaces[i]];
+            edgeNormal += surf.faceNormals()[facei];
         }
-        return edgeNormal/(mag(edgeNormal) + VSMALL);
+        return normalised(edgeNormal);
     }
     else
     {
@@ -2280,7 +2273,6 @@ Foam::triSurfaceTools::sideType Foam::triSurfaceTools::surfaceSide
 }
 
 
-// triangulation of boundaryMesh
 Foam::triSurface Foam::triSurfaceTools::triangulate
 (
     const polyBoundaryMesh& bMesh,
@@ -2291,10 +2283,85 @@ Foam::triSurface Foam::triSurfaceTools::triangulate
     const polyMesh& mesh = bMesh.mesh();
 
     // Storage for surfaceMesh. Size estimate.
-    DynamicList<labelledTri> triangles
+    DynamicList<labelledTri> triangles(mesh.nBoundaryFaces());
+
+    label newPatchi = 0;
+
+    for (const label patchi : includePatches)
+    {
+        const polyPatch& patch = bMesh[patchi];
+        const pointField& points = patch.points();
+
+        label nTriTotal = 0;
+
+        for (const face& f :  patch)
+        {
+            faceList triFaces(f.nTriangles(points));
+
+            label nTri = 0;
+
+            f.triangles(points, nTri, triFaces);
+
+            for (const face& f :  triFaces)
+            {
+                triangles.append(labelledTri(f[0], f[1], f[2], newPatchi));
+
+                ++nTriTotal;
+            }
+        }
+
+        if (verbose)
+        {
+            Pout<< patch.name() << " : generated " << nTriTotal
+                << " triangles from " << patch.size() << " faces with"
+                << " new patchid " << newPatchi << endl;
+        }
+
+        newPatchi++;
+    }
+    triangles.shrink();
+
+    // Create globally numbered tri surface
+    triSurface rawSurface(triangles, mesh.points());
+
+    // Create locally numbered tri surface
+    triSurface surface
     (
-        mesh.nFaces() - mesh.nInternalFaces()
+        rawSurface.localFaces(),
+        rawSurface.localPoints()
     );
+
+    // Add patch names to surface
+    surface.patches().setSize(newPatchi);
+
+    newPatchi = 0;
+
+    for (const label patchi : includePatches)
+    {
+        const polyPatch& patch = bMesh[patchi];
+
+        surface.patches()[newPatchi].name() = patch.name();
+        surface.patches()[newPatchi].geometricType() = patch.type();
+
+        newPatchi++;
+    }
+
+    return surface;
+}
+
+
+Foam::triSurface Foam::triSurfaceTools::triangulate
+(
+    const polyBoundaryMesh& bMesh,
+    const labelHashSet& includePatches,
+    const boundBox& bBox,
+    const bool verbose
+)
+{
+    const polyMesh& mesh = bMesh.mesh();
+
+    // Storage for surfaceMesh. Size estimate.
+    DynamicList<labelledTri> triangles(mesh.nBoundaryFaces());
 
     label newPatchi = 0;
 
@@ -2310,19 +2377,22 @@ Foam::triSurface Foam::triSurfaceTools::triangulate
         {
             const face& f = patch[patchFacei];
 
-            faceList triFaces(f.nTriangles(points));
-
-            label nTri = 0;
-
-            f.triangles(points, nTri, triFaces);
-
-            forAll(triFaces, triFacei)
+            if (bBox.containsAny(points, f))
             {
-                const face& f = triFaces[triFacei];
+                faceList triFaces(f.nTriangles(points));
 
-                triangles.append(labelledTri(f[0], f[1], f[2], newPatchi));
+                label nTri = 0;
 
-                nTriTotal++;
+                f.triangles(points, nTri, triFaces);
+
+                forAll(triFaces, triFacei)
+                {
+                    const face& f = triFaces[triFacei];
+
+                    triangles.append(labelledTri(f[0], f[1], f[2], newPatchi));
+
+                    nTriTotal++;
+                }
             }
         }
 
@@ -2396,16 +2466,12 @@ Foam::triSurface Foam::triSurfaceTools::triangulateFaceCentre
 
 
     // Count number of faces.
-    DynamicList<labelledTri> triangles
-    (
-        mesh.nFaces() - mesh.nInternalFaces()
-    );
+    DynamicList<labelledTri> triangles(mesh.nBoundaryFaces());
 
     label newPatchi = 0;
 
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchi : includePatches)
     {
-        const label patchi = iter.key();
         const polyPatch& patch = bMesh[patchi];
 
         label nTriTotal = 0;
@@ -2455,9 +2521,8 @@ Foam::triSurface Foam::triSurfaceTools::triangulateFaceCentre
 
     newPatchi = 0;
 
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchi : includePatches)
     {
-        const label patchi = iter.key();
         const polyPatch& patch = bMesh[patchi];
 
         surface.patches()[newPatchi].name() = patch.name();
@@ -2549,14 +2614,13 @@ void Foam::triSurfaceTools::calcInterpolationWeights
     edge[1] = tri.a()-tri.c();
     edge[2] = tri.b()-tri.a();
 
-    vector triangleFaceNormal = edge[1] ^ edge[2];
+    const vector triangleFaceNormal = edge[1] ^ edge[2];
 
     // calculate edge normal (pointing inwards)
     FixedList<vector, 3> normal;
     for (label i=0; i<3; i++)
     {
-        normal[i] = triangleFaceNormal ^ edge[i];
-        normal[i] /= mag(normal[i]) + VSMALL;
+        normal[i] = normalised(triangleFaceNormal ^ edge[i]);
     }
 
     weights[0] = ((p-tri.b()) & normal[0]) / max(VSMALL, normal[0] & edge[1]);
@@ -2699,7 +2763,8 @@ void Foam::triSurfaceTools::calcInterpolationWeights
 bool Foam::triSurfaceTools::validTri
 (
     const triSurface& surf,
-    const label facei
+    const label facei,
+    const bool verbose
 )
 {
     typedef labelledTri FaceType;
@@ -2710,22 +2775,26 @@ bool Foam::triSurfaceTools::validTri
     {
         if (f[fp] < 0 || f[fp] >= surf.points().size())
         {
-            WarningInFunction
-                << "triangle " << facei << " vertices " << f
-                << " uses point indices outside point range 0.."
-                << surf.points().size()-1
-                << endl;
+            if (verbose)
+            {
+                WarningInFunction
+                    << "triangle " << facei << " vertices " << f
+                    << " uses point indices outside point range 0.."
+                    << surf.points().size()-1 << endl;
+            }
             return false;
         }
     }
 
     if (f[0] == f[1] || f[0] == f[2] || f[1] == f[2])
     {
-        WarningInFunction
-            << "triangle " << facei
-            << " uses non-unique vertices " << f
-            << " coords:" << f.points(surf.points())
-            << endl;
+        if (verbose)
+        {
+            WarningInFunction
+                << "triangle " << facei
+                << " uses non-unique vertices " << f
+                << " coords:" << f.points(surf.points()) << endl;
+        }
         return false;
     }
 
@@ -2755,12 +2824,14 @@ bool Foam::triSurfaceTools::validTri
          && (f[2] == nbrF[0] || f[2] == nbrF[1] || f[2] == nbrF[2])
         )
         {
-            WarningInFunction
-                << "triangle " << facei << " vertices " << f
-                << " has the same vertices as triangle " << nbrFacei
-                << " vertices " << nbrF
-                << " coords:" << f.points(surf.points())
-                << endl;
+            if (verbose)
+            {
+                WarningInFunction
+                    << "triangle " << facei << " vertices " << f
+                    << " has the same vertices as triangle " << nbrFacei
+                    << " vertices " << nbrF
+                    << " coords:" << f.points(surf.points()) << endl;
+            }
 
             return false;
         }
@@ -2773,7 +2844,8 @@ bool Foam::triSurfaceTools::validTri
 bool Foam::triSurfaceTools::validTri
 (
     const MeshedSurface<face>& surf,
-    const label facei
+    const label facei,
+    const bool verbose
 )
 {
     typedef face FaceType;
@@ -2781,11 +2853,13 @@ bool Foam::triSurfaceTools::validTri
 
     if (f.size() != 3)
     {
-        WarningInFunction
-            << "face " << facei
-            << " is not a triangle, it has " << f.size()
-            << " indices"
-            << endl;
+        if (verbose)
+        {
+            WarningInFunction
+                << "face " << facei
+                << " is not a triangle, it has " << f.size()
+                << " indices" << endl;
+        }
         return false;
     }
 
@@ -2794,22 +2868,26 @@ bool Foam::triSurfaceTools::validTri
     {
         if (f[fp] < 0 || f[fp] >= surf.points().size())
         {
-            WarningInFunction
-                << "triangle " << facei << " vertices " << f
-                << " uses point indices outside point range 0.."
-                << surf.points().size()-1
-                << endl;
+            if (verbose)
+            {
+                WarningInFunction
+                    << "triangle " << facei << " vertices " << f
+                    << " uses point indices outside point range 0.."
+                    << surf.points().size()-1 << endl;
+            }
             return false;
         }
     }
 
     if (f[0] == f[1] || f[0] == f[2] || f[1] == f[2])
     {
-        WarningInFunction
-            << "triangle " << facei
-            << " uses non-unique vertices " << f
-            << " coords:" << f.points(surf.points())
-            << endl;
+        if (verbose)
+        {
+            WarningInFunction
+                << "triangle " << facei
+                << " uses non-unique vertices " << f
+                << " coords:" << f.points(surf.points()) << endl;
+        }
         return false;
     }
 
@@ -2839,13 +2917,14 @@ bool Foam::triSurfaceTools::validTri
          && (f[2] == nbrF[0] || f[2] == nbrF[1] || f[2] == nbrF[2])
         )
         {
-            WarningInFunction
-                << "triangle " << facei << " vertices " << f
-                << " has the same vertices as triangle " << nbrFacei
-                << " vertices " << nbrF
-                << " coords:" << f.points(surf.points())
-                << endl;
-
+            if (verbose)
+            {
+                WarningInFunction
+                    << "triangle " << facei << " vertices " << f
+                    << " has the same vertices as triangle " << nbrFacei
+                    << " vertices " << nbrF
+                    << " coords:" << f.points(surf.points()) << endl;
+            }
             return false;
         }
     }
@@ -2926,7 +3005,7 @@ Foam::surfaceLocation Foam::triSurfaceTools::trackToEdge
             // Start point is inside triangle. Trivial cases already handled
             // above.
 
-            // end point is on edge or point so cross currrent triangle to
+            // end point is on edge or point so cross current triangle to
             // see which edge is cut.
 
             nearest = cutEdge

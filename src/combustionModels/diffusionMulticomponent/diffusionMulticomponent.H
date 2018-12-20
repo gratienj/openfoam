@@ -72,6 +72,7 @@ SourceFiles
 #ifndef diffusionMulticomponent_H
 #define diffusionMulticomponent_H
 
+#include "ChemistryCombustion.H"
 #include "scalarList.H"
 #include "tmp.H"
 #include "Reaction.H"
@@ -87,10 +88,10 @@ namespace combustionModels
                     Class diffusionMulticomponent Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 class diffusionMulticomponent
 :
-    public CombThermoType
+    public ChemistryCombustion<ReactionThermo>
 {
     // Private data
 
@@ -121,22 +122,22 @@ class diffusionMulticomponent
         //- Stoichiometric oxygen-fuel mass ratio
         scalarList s_;
 
-        //- Oxydaser sream mass concentrations
+        //- Oxidizer stream mass concentrations
         scalarList YoxStream_;
 
         //- Fuel stream mass concentrations
         scalarList YfStream_;
 
-        //- Mean distribution for gaussian probabililty
+        //- Mean distribution for gaussian probability
         scalarList sigma_;
 
-        //- Residual oxydaser
+        //- Residual oxidizer
         scalarList oxidantRes_;
 
-        //- ft stochiometric correction
+        //- ft stoichiometric correction
         scalarList ftCorr_;
 
-        //- Relaxatnio factor on total source
+        //- Relaxation factor on total source
         scalar alpha_;
 
         //- Switch on to laminar combustion for ignition
@@ -151,11 +152,11 @@ class diffusionMulticomponent
         //- Initialize
         void init();
 
-        //- Disallow copy construct
-        diffusionMulticomponent(const diffusionMulticomponent&);
+        //- No copy construct
+        diffusionMulticomponent(const diffusionMulticomponent&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const diffusionMulticomponent&);
+        //- No copy assignment
+        void operator=(const diffusionMulticomponent&) = delete;
 
 
 public:
@@ -170,14 +171,14 @@ public:
         diffusionMulticomponent
         (
             const word& modelType,
-            const fvMesh& mesh,
-            const word& combustionProperties,
-            const word& phaseName
+            ReactionThermo& thermo,
+            const compressibleTurbulenceModel& turb,
+            const word& combustionProperties
         );
 
 
     //- Destructor
-    virtual ~diffusionMulticomponent();
+    virtual ~diffusionMulticomponent() = default;
 
 
     // Member Functions

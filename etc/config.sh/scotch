@@ -11,10 +11,10 @@
 #
 # File
 #     etc/config.sh/scotch
+#     - sourced during wmake process only.
 #
 # Description
 #     Setup for SCOTCH include/libraries (usually ThirdParty installation).
-#     Sourced during wmake process only.
 #
 #     To disable its use:               SCOTCH_VERSION=scotch-none
 #     For system-wide installations:    SCOTCH_VERSION=scotch-system
@@ -31,7 +31,7 @@
 #------------------------------------------------------------------------------
 # USER EDITABLE PART: Changes made here may be lost with the next upgrade
 
-SCOTCH_VERSION=scotch_6.0.3
+SCOTCH_VERSION=scotch_6.0.6
 export SCOTCH_ARCH_PATH=$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER$WM_PRECISION_OPTION$WM_LABEL_OPTION/$SCOTCH_VERSION
 
 # END OF (NORMAL) USER EDITABLE PART

@@ -35,7 +35,7 @@ SourceFiles
 #ifndef patchToPoly2DMesh_H
 #define patchToPoly2DMesh_H
 
-#include "EdgeMap.H"
+#include "edgeHashes.H"
 #include "MeshedSurface.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -85,11 +85,11 @@ class patchToPoly2DMesh
 
         void createPolyMeshComponents();
 
-        //- Disallow default bitwise copy construct
-        patchToPoly2DMesh(const patchToPoly2DMesh&);
+        //- No copy construct
+        patchToPoly2DMesh(const patchToPoly2DMesh&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const patchToPoly2DMesh&);
+        //- No copy assignment
+        void operator=(const patchToPoly2DMesh&) = delete;
 
 
 public:

@@ -51,7 +51,7 @@ void Foam::binaryTree<CompType, ThermoType>::insertNode
 
     }
 
-    // if we reach this point, there is an issue with the adressing
+    // if we reach this point, there is an issue with the addressing
     FatalErrorInFunction
         << "trying to insert a node with a wrong pointer to a chemPoint"
         << exit(FatalError);
@@ -122,7 +122,7 @@ bool Foam::binaryTree<CompType, ThermoType>::inSubTree
         }
         else
         {
-            // on right side (symetric of above)
+            // on right side (symmetric of above)
 
             if (y->nodeRight() == nullptr)
             {
@@ -358,7 +358,7 @@ Foam::binaryTree<CompType, ThermoType>::binaryTree
 :
     chemistry_(chemistry),
     root_(nullptr),
-    maxNLeafs_(readLabel(coeffsDict.lookup("maxNLeafs"))),
+    maxNLeafs_(coeffsDict.get<label>("maxNLeafs")),
     size_(0),
     n2ndSearch_(0),
     max2ndSearch_(coeffsDict.lookupOrDefault("max2ndSearch",0)),

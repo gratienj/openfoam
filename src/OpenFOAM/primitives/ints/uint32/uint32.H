@@ -54,22 +54,21 @@ class Ostream;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-//- Return a word representation of a uint32
+//- A word representation of uint32 value
 inline word name(const uint32_t val)
 {
-    // No stripping required
-    return word(std::to_string(val), false);
+    return word(std::to_string(val), false); // Needs no stripping
 }
 
-
-//- Return a word representation of a uint32, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const char* fmt, const uint32_t);
-
-
-//- Return a word representation of a uint32, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const std::string& fmt, const uint32_t);
+//- A word representation of uint32 value
+template<>
+struct nameOp<uint32_t>
+{
+    inline word operator()(const uint32_t val) const
+    {
+        return word(std::to_string(val), false); // Needs no stripping
+    }
+};
 
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
@@ -155,22 +154,22 @@ public:
 
     // Constructors
 
-        //- Construct from primitive
+        //- Copy construct from primitive
         explicit pTraits(const uint32_t& val);
 
-        //- Construct from Istream
+        //- Read construct from Istream
         pTraits(Istream& is);
 
 
     // Member Functions
 
-        //- Access to the uint32_t value
+        //- Access to the value
         operator uint32_t() const
         {
             return p_;
         }
 
-        //- Access to the uint32_t value
+        //- Access to the value
         operator uint32_t&()
         {
             return p_;

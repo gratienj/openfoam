@@ -71,11 +71,11 @@ class tetherPotentialList
             const List<word>& tetherSiteIdList
         );
 
-        //- Disallow default bitwise assignment
-        void operator=(const tetherPotentialList&);
+        //- No copy construct
+        tetherPotentialList(const tetherPotentialList&) = delete;
 
-        //- Disallow default bitwise copy construct
-        tetherPotentialList(const tetherPotentialList&);
+        //- No copy assignment
+        void operator=(const tetherPotentialList&) = delete;
 
 
 public:
@@ -84,7 +84,7 @@ public:
 
         tetherPotentialList();
 
-        //- Construct from siteIdList and potental dictionaries
+        //- Construct from siteIdList and potential dictionaries
         tetherPotentialList
         (
             const List<word>& siteIdList,

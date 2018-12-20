@@ -54,6 +54,23 @@ inline Foam::cellShape::cellShape
 
 inline Foam::cellShape::cellShape
 (
+    const cellModel& model,
+    labelUList&& labels,
+    const bool doCollapse
+)
+:
+    labelList(std::move(labels)),
+    m(&model)
+{
+    if (doCollapse)
+    {
+        collapse();
+    }
+}
+
+
+inline Foam::cellShape::cellShape
+(
     const word& modelName,
     const labelUList& labels,
     const bool doCollapse
@@ -77,7 +94,7 @@ inline Foam::cellShape::cellShape(Istream& is)
 
 inline Foam::autoPtr<Foam::cellShape> Foam::cellShape::clone() const
 {
-    return autoPtr<cellShape>(new cellShape(*this));
+    return autoPtr<cellShape>::New(*this);
 }
 
 

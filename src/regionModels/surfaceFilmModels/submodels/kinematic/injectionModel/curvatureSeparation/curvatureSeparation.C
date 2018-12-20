@@ -204,7 +204,7 @@ tmp<scalarField> curvatureSeparation::calcCosAngle
                 IOobject::NO_READ
             ),
             mesh,
-            dimensionedScalar("zero", dimless, 0.0),
+            dimensionedScalar(dimless, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
         volCosAngle.primitiveFieldRef() = cosAngle;
@@ -212,7 +212,7 @@ tmp<scalarField> curvatureSeparation::calcCosAngle
         volCosAngle.write();
     }
 
-    return max(min(cosAngle, scalar(1.0)), scalar(-1.0));
+    return max(min(cosAngle, scalar(1)), scalar(-1));
 }
 
 
@@ -249,7 +249,7 @@ curvatureSeparation::curvatureSeparation
 
     forAllReverse(prIn, i)
     {
-        labelList patchIDs = findStrings(prIn[i].first(), allPatchNames);
+        labelList patchIDs = findIndices(allPatchNames, prIn[i].first());
         forAll(patchIDs, j)
         {
             const label patchi = patchIDs[j];
@@ -346,7 +346,7 @@ void curvatureSeparation::correct
                 IOobject::NO_READ
             ),
             mesh,
-            dimensionedScalar("zero", dimForce, 0.0),
+            dimensionedScalar(dimForce, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
         volFnet.primitiveFieldRef() = Fnet;

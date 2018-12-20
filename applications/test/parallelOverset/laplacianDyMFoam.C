@@ -73,21 +73,17 @@ int main(int argc, char *argv[])
 
     Info<< "\nCorrecting boundary conditions on " << T.name() << nl << endl;
 
-    runTime++;
+    ++runTime;
 
     Info<< "Time = " << runTime.timeName() << nl << endl;
 
-    Info<< "Reading : ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-        << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
+    Info<< "Reading : ";
+    runTime.printExecutionTime(Info);
 
     mesh.update();
 
-    Info<< "Overset calculation : ExecutionTime = "
-        << runTime.elapsedCpuTime() << " s"
-        << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
-
+    Info<< "Overset calculation : ";
+    runTime.printExecutionTime(Info);
 
     if (false)
     {
@@ -110,11 +106,7 @@ int main(int argc, char *argv[])
 
     runTime.write();
 
-
-
-    Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-        << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
+    runTime.printExecutionTime(Info);
 
     Info<< "End\n" << endl;
 

@@ -64,11 +64,11 @@ class cyclicACMIGAMGInterface
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        cyclicACMIGAMGInterface(const cyclicACMIGAMGInterface&);
+        //- No copy construct
+        cyclicACMIGAMGInterface(const cyclicACMIGAMGInterface&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const cyclicACMIGAMGInterface&);
+        //- No copy assignment
+        void operator=(const cyclicACMIGAMGInterface&) = delete;
 
 
 public:
@@ -111,7 +111,7 @@ public:
 
         //- Cyclic interface functions
 
-            //- Return neigbour processor number
+            //- Return neighbour processor number
             virtual label neighbPatchID() const
             {
                 return fineCyclicACMIInterface_.neighbPatchID();
@@ -132,7 +132,7 @@ public:
 
             virtual const AMIPatchToPatchInterpolation& AMI() const
             {
-                return amiPtr_();
+                return *amiPtr_;
             }
 
             //- Return face transformation tensor

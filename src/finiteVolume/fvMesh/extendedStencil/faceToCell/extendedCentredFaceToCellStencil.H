@@ -53,7 +53,7 @@ class extendedCentredFaceToCellStencil
 {
     // Private data
 
-        //- Swap map for getting neigbouring data
+        //- Swap map for getting neighbouring data
         autoPtr<mapDistribute> mapPtr_;
 
         //- Per face the stencil.
@@ -62,14 +62,14 @@ class extendedCentredFaceToCellStencil
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         extendedCentredFaceToCellStencil
         (
             const extendedCentredFaceToCellStencil&
-        );
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const extendedCentredFaceToCellStencil&);
+        //- No copy assignment
+        void operator=(const extendedCentredFaceToCellStencil&) = delete;
 
 
 public:
@@ -85,7 +85,7 @@ public:
         //- Return reference to the parallel distribution map
         const mapDistribute& map() const
         {
-            return mapPtr_();
+            return *mapPtr_;
         }
 
         //- Return reference to the stencil

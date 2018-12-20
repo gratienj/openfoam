@@ -67,11 +67,11 @@ class gaussLaplacianScheme
             const GeometricField<Type, fvPatchField, volMesh>&
         );
 
-        //- Disallow default bitwise copy construct
-        gaussLaplacianScheme(const gaussLaplacianScheme&);
+        //- No copy construct
+        gaussLaplacianScheme(const gaussLaplacianScheme&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const gaussLaplacianScheme&);
+        //- No copy assignment
+        void operator=(const gaussLaplacianScheme&) = delete;
 
 
 public:
@@ -139,7 +139,7 @@ public:
 };
 
 
-// Use macros to emulate partial-specialisation of the the Laplacian functions
+// Use macros to emulate partial-specialisation of the Laplacian functions
 // for scalar diffusivity gamma
 
 #define defineFvmLaplacianScalarGamma(Type)                                    \

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,55 +23,79 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-inline std::string::size_type Foam::string::find_ext() const
+inline std::string::size_type Foam::string::find_ext(const std::string& str)
 {
-    const size_type i = find_last_of("./");
+    const auto i = str.find_last_of("./");
 
-    if (i == npos || i == 0 || operator[](i) == '/')
+    if (i == npos || i == 0 || str[i] == '/')
     {
         return npos;
     }
-    else
-    {
-        return i;
-    }
+
+    return i;
+}
+
+
+inline std::string::size_type Foam::string::find_ext() const
+{
+    return find_ext(*this);
+}
+
+
+inline bool Foam::string::hasPath() const
+{
+    return (npos != find('/'));
 }
 
 
 inline bool Foam::string::hasExt() const
 {
-    return (find_ext() != npos);
+    return (npos != find_ext());
+}
+
+
+inline bool Foam::string::removePath()
+{
+    const auto i = rfind('/');
+
+    if (npos == i)
+    {
+        return false;
+    }
+
+    this->erase(0, i+1);
+    return true;
 }
 
 
 inline bool Foam::string::removeExt()
 {
-    const size_type i = find_ext();
+    const auto i = find_ext();
 
-    if (i == npos)
+    if (npos == i)
     {
         return false;
     }
-    else
-    {
-        this->resize(i);
-        return true;
-    }
+
+    this->resize(i);
+    return true;
 }
+
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-inline Foam::string::string()
-{}
-
-
 inline Foam::string::string(const std::string& str)
 :
     std::string(str)
+{}
+
+
+inline Foam::string::string(std::string&& str)
+:
+    std::string(std::move(str))
 {}
 
 
@@ -96,12 +120,6 @@ inline Foam::string::string(const char c)
 inline Foam::string::string(const size_type len, const char c)
 :
     std::string(len, c)
-{}
-
-
-inline Foam::string::string(std::string&& str)
-:
-    std::string(std::move(str))
 {}
 
 
@@ -219,17 +237,18 @@ inline String Foam::string::validate(const std::string& str)
     String out;
     out.resize(str.size());
 
-    size_type count = 0;
+    size_type len = 0;
     for (auto iter = str.cbegin(); iter != str.cend(); ++iter)
     {
         const char c = *iter;
         if (String::valid(c))
         {
-            out[count++] = c;
+            out[len] = c;
+            ++len;
         }
     }
 
-    out.resize(count);
+    out.resize(len);
 
     return out;
 }
@@ -251,7 +270,7 @@ inline bool Foam::string::operator()(const std::string& text) const
 
 inline unsigned Foam::string::hash::operator()
 (
-    const string& str,
+    const std::string& str,
     unsigned seed
 ) const
 {

@@ -64,7 +64,7 @@ class rigidBodyMeshMotionSolver
         const label bodyID_;
 
         //- List of mesh patches associated with this body
-        const wordReList patches_;
+        const wordRes patches_;
 
         //- Patches to integrate forces
         const labelHashSet patchSet_;
@@ -93,9 +93,8 @@ class rigidBodyMeshMotionSolver
         //  weighting for each body
         PtrList<bodyMesh> bodyMeshes_;
 
-        //- Switch for test-mode in which only the
-        //  gravitational body-force is applied
-        Switch test_;
+        //- Test-mode in which only the gravitational body-force is applied
+        bool test_;
 
         //- Reference density required by the forces object for
         //  incompressible calculations, required if rho == rhoInf
@@ -116,14 +115,14 @@ class rigidBodyMeshMotionSolver
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         rigidBodyMeshMotionSolver
         (
             const rigidBodyMeshMotionSolver&
-        );
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const rigidBodyMeshMotionSolver&);
+        //- No copy assignment
+        void operator=(const rigidBodyMeshMotionSolver&) = delete;
 
 
 public:
@@ -143,7 +142,7 @@ public:
 
 
     //- Destructor
-    ~rigidBodyMeshMotionSolver();
+    ~rigidBodyMeshMotionSolver() = default;
 
 
     // Member Functions

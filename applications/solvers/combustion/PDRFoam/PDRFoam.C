@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -78,7 +78,6 @@ Description
 #include "XiModel.H"
 #include "PDRDragModel.H"
 #include "ignition.H"
-#include "Switch.H"
 #include "bound.H"
 #include "pimpleControl.H"
 #include "fvOptions.H"
@@ -87,9 +86,16 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for compressible premixed/partially-premixed combustion with"
+        " turbulence modelling."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
@@ -97,7 +103,6 @@ int main(int argc, char *argv[])
     #include "readGravitationalAcceleration.H"
     #include "createFields.H"
     #include "createFieldRefs.H"
-    #include "createFvOptions.H"
     #include "initContinuityErrs.H"
     #include "createTimeControls.H"
     #include "compressibleCourantNo.H"
@@ -116,7 +121,7 @@ int main(int argc, char *argv[])
         #include "compressibleCourantNo.H"
         #include "setDeltaT.H"
 
-        runTime++;
+        ++runTime;
         Info<< "\n\nTime = " << runTime.timeName() << endl;
 
         #include "rhoEqn.H"
@@ -150,9 +155,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "\nExecutionTime = "
-             << runTime.elapsedCpuTime()
-             << " s\n" << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "\n end\n";

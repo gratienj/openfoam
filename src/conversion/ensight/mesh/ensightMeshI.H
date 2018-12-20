@@ -49,6 +49,12 @@ inline bool Foam::ensightMesh::useInternalMesh() const
 }
 
 
+inline bool Foam::ensightMesh::useBoundaryMesh() const
+{
+    return options_->useBoundaryMesh();
+}
+
+
 inline const Foam::ensightCells& Foam::ensightMesh::meshCells() const
 {
     return meshCells_;
@@ -77,7 +83,7 @@ Foam::ensightMesh::faceZoneFaces() const
 
 inline void Foam::ensightMesh::write(autoPtr<ensightGeoFile>& os) const
 {
-    write(os.rawRef());
+    write(os.ref());
 }
 
 

@@ -41,7 +41,7 @@ void Foam::fileFormats::X3DsurfaceFormat<Face>::write
     const UList<label>&  faceMap = surf.faceMap();
 
     // for no zones, suppress the group name
-    const UList<surfZone>& zones =
+    const surfZoneList zones =
     (
         surf.surfZones().empty()
       ? surfaceFormatsCore::oneZone(faceLst, word::null)
@@ -84,9 +84,9 @@ void Foam::fileFormats::X3DsurfaceFormat<Face>::write
             {
                 const Face& f = faceLst[faceMap[faceIndex++]];
 
-                forAll(f, fp)
+                for (const label vrti : f)
                 {
-                    os << f[fp] << ' ';
+                    os << vrti << ' ';
                 }
                 os << "-1\n";
             }
@@ -97,9 +97,9 @@ void Foam::fileFormats::X3DsurfaceFormat<Face>::write
             {
                 const Face& f = faceLst[faceIndex++];
 
-                forAll(f, fp)
+                for (const label vrti : f)
                 {
-                    os << f[fp] << ' ';
+                    os << vrti << ' ';
                 }
                 os << "-1\n";
             }
@@ -110,9 +110,9 @@ void Foam::fileFormats::X3DsurfaceFormat<Face>::write
         "' >\n"
         "    <Coordinate point='\n";
 
-    for (const point& pt : pointLst)
+    for (const point& p : pointLst)
     {
-        os  << pt.x() << ' ' << pt.y() << ' ' << pt.z() << nl;
+        os  << p.x() << ' ' << p.y() << ' ' << p.z() << nl;
     }
 
     os  <<

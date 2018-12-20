@@ -56,7 +56,7 @@ solidification::solidification
 )
 :
     phaseChangeModel(typeName, film, dict),
-    T0_(readScalar(coeffDict_.lookup("T0"))),
+    T0_(coeffDict_.get<scalar>("T0")),
     maxSolidificationFrac_
     (
         coeffDict_.lookupOrDefault("maxSolidificationFrac", 0.2)
@@ -82,7 +82,7 @@ solidification::solidification
             IOobject::AUTO_WRITE
         ),
         film.regionMesh(),
-        dimensionedScalar("zero", dimMass, 0.0),
+        dimensionedScalar(dimMass, Zero),
         zeroGradientFvPatchScalarField::typeName
     ),
     thickness_
@@ -96,7 +96,7 @@ solidification::solidification
             IOobject::AUTO_WRITE
         ),
         film.regionMesh(),
-        dimensionedScalar("zero", dimLength, 0.0),
+        dimensionedScalar(dimLength, Zero),
         zeroGradientFvPatchScalarField::typeName
     )
 {}

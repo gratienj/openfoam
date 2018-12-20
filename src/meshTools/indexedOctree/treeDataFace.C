@@ -47,10 +47,7 @@ Foam::treeBoundBox Foam::treeDataFace::calcBb(const label facei) const
 
 void Foam::treeDataFace::update()
 {
-    forAll(faceLabels_, i)
-    {
-        isTreeFace_.set(faceLabels_[i], 1);
-    }
+    isTreeFace_.set(faceLabels_);
 
     if (cacheBb_)
     {
@@ -75,7 +72,7 @@ Foam::treeDataFace::treeDataFace
 :
     mesh_(mesh),
     faceLabels_(faceLabels),
-    isTreeFace_(mesh.nFaces(), 0),
+    isTreeFace_(mesh.nFaces(), false),
     cacheBb_(cacheBb)
 {
     update();
@@ -86,12 +83,12 @@ Foam::treeDataFace::treeDataFace
 (
     const bool cacheBb,
     const primitiveMesh& mesh,
-    const Xfer<labelList>& faceLabels
+    labelList&& faceLabels
 )
 :
     mesh_(mesh),
-    faceLabels_(faceLabels),
-    isTreeFace_(mesh.nFaces(), 0),
+    faceLabels_(std::move(faceLabels)),
+    isTreeFace_(mesh.nFaces(), false),
     cacheBb_(cacheBb)
 {
     update();
@@ -106,7 +103,7 @@ Foam::treeDataFace::treeDataFace
 :
     mesh_(mesh),
     faceLabels_(identity(mesh_.nFaces())),
-    isTreeFace_(mesh.nFaces(), 0),
+    isTreeFace_(mesh.nFaces(), false),
     cacheBb_(cacheBb)
 {
     update();
@@ -122,10 +119,9 @@ Foam::treeDataFace::treeDataFace
     mesh_(patch.boundaryMesh().mesh()),
     faceLabels_
     (
-        identity(patch.size())
-      + patch.start()
+        identity(patch.size(), patch.start())
     ),
-    isTreeFace_(mesh_.nFaces(), 0),
+    isTreeFace_(mesh_.nFaces(), false),
     cacheBb_(cacheBb)
 {
     update();
@@ -254,14 +250,11 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
 
             vector pointNormal(Zero);
 
-            forAll(pFaces, i)
+            for (const label facei : pFaces)
             {
-                if (isTreeFace_.get(pFaces[i]) == 1)
+                if (isTreeFace_.test(facei))
                 {
-                    vector n = mesh_.faceAreas()[pFaces[i]];
-                    n /= mag(n) + VSMALL;
-
-                    pointNormal += n;
+                    pointNormal += normalised(mesh_.faceAreas()[facei]);
                 }
             }
 
@@ -323,14 +316,11 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
 
             vector edgeNormal(Zero);
 
-            forAll(eFaces, i)
+            for (const label facei : eFaces)
             {
-                if (isTreeFace_.get(eFaces[i]) == 1)
+                if (isTreeFace_.test(facei))
                 {
-                    vector n = mesh_.faceAreas()[eFaces[i]];
-                    n /= mag(n) + VSMALL;
-
-                    edgeNormal += n;
+                    edgeNormal += normalised(mesh_.faceAreas()[facei]);
                 }
             }
 
@@ -373,11 +363,8 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
             vector ePrev = points[f[f.rcIndex(fp)]] - fc;
             vector eNext = points[f[f.fcIndex(fp)]] - fc;
 
-            vector nLeft = ePrev ^ e;
-            nLeft /= mag(nLeft) + VSMALL;
-
-            vector nRight = e ^ eNext;
-            nRight /= mag(nRight) + VSMALL;
+            vector nLeft = normalised(ePrev ^ e);
+            vector nRight = normalised(e ^ eNext);
 
             if (debug & 2)
             {

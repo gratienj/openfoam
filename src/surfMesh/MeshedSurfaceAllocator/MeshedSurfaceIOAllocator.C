@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,7 +27,7 @@ License
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
+Foam::Detail::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
 (
     const IOobject& ioPoints,
     const IOobject& ioFaces,
@@ -40,14 +40,11 @@ Foam::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
 {}
 
 
-Foam::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
+Foam::Detail::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
 (
-    const IOobject& ioPoints,
-    const pointField& points,
-    const IOobject& ioFaces,
-    const faceList& faces,
-    const IOobject& ioZones,
-    const surfZoneList& zones
+    const IOobject& ioPoints, const pointField& points,
+    const IOobject& ioFaces,  const faceList& faces,
+    const IOobject& ioZones,  const surfZoneList& zones
 )
 :
     points_(ioPoints, points),
@@ -56,25 +53,22 @@ Foam::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
 {}
 
 
-Foam::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
+Foam::Detail::MeshedSurfaceIOAllocator::MeshedSurfaceIOAllocator
 (
-    const IOobject& ioPoints,
-    const Xfer<pointField>& points,
-    const IOobject& ioFaces,
-    const Xfer<faceList>& faces,
-    const IOobject& ioZones,
-    const Xfer<surfZoneList>& zones
+    const IOobject& ioPoints, pointField&& points,
+    const IOobject& ioFaces,  faceList&& faces,
+    const IOobject& ioZones,  surfZoneList&& zones
 )
 :
-    points_(ioPoints, points),
-    faces_(ioFaces, faces),
-    zones_(ioZones, zones)
+    points_(ioPoints, std::move(points)),
+    faces_(ioFaces, std::move(faces)),
+    zones_(ioZones, std::move(zones))
 {}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::MeshedSurfaceIOAllocator::~MeshedSurfaceIOAllocator()
+Foam::Detail::MeshedSurfaceIOAllocator::~MeshedSurfaceIOAllocator()
 {
     clear();
 }
@@ -82,7 +76,10 @@ Foam::MeshedSurfaceIOAllocator::~MeshedSurfaceIOAllocator()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::MeshedSurfaceIOAllocator::setInstance(const fileName& inst)
+void Foam::Detail::MeshedSurfaceIOAllocator::setInstance
+(
+    const fileName& inst
+)
 {
     points_.instance() = inst;
     faces_.instance()  = inst;
@@ -90,15 +87,18 @@ void Foam::MeshedSurfaceIOAllocator::setInstance(const fileName& inst)
 }
 
 
-void Foam::MeshedSurfaceIOAllocator::setWriteOption(IOobject::writeOption w)
+void Foam::Detail::MeshedSurfaceIOAllocator::setWriteOption
+(
+    IOobject::writeOption wOpt
+)
 {
-    points_.writeOpt() = w;
-    faces_.writeOpt()  = w;
-    zones_.writeOpt()  = w;
+    points_.writeOpt() = wOpt;
+    faces_.writeOpt()  = wOpt;
+    zones_.writeOpt()  = wOpt;
 }
 
 
-void Foam::MeshedSurfaceIOAllocator::clear()
+void Foam::Detail::MeshedSurfaceIOAllocator::clear()
 {
     points_.clear();
     faces_.clear();
@@ -106,61 +106,7 @@ void Foam::MeshedSurfaceIOAllocator::clear()
 }
 
 
-void Foam::MeshedSurfaceIOAllocator::resetFaces
-(
-    const Xfer<List<face>>& faces,
-    const Xfer<surfZoneList>& zones
-)
-{
-    if (notNull(faces))
-    {
-        faces_.transfer(faces());
-    }
-
-    if (notNull(zones))
-    {
-        zones_.transfer(zones());
-    }
-}
-
-
-void Foam::MeshedSurfaceIOAllocator::reset
-(
-    const Xfer<pointField>& points,
-    const Xfer<faceList>& faces,
-    const Xfer<surfZoneList>& zones
-)
-{
-    // Take over new primitive data.
-    // Optimized to avoid overwriting data at all
-    if (notNull(points))
-    {
-        points_.transfer(points());
-    }
-
-    resetFaces(faces, zones);
-}
-
-
-void Foam::MeshedSurfaceIOAllocator::reset
-(
-    const Xfer<List<point>>& points,
-    const Xfer<faceList>& faces,
-    const Xfer<surfZoneList>& zones
-)
-{
-    // Take over new primitive data.
-    // Optimized to avoid overwriting data at all
-    if (notNull(points))
-    {
-        points_.transfer(points());
-    }
-
-    resetFaces(faces, zones);
-}
-
-
-bool Foam::MeshedSurfaceIOAllocator::writeObject
+bool Foam::Detail::MeshedSurfaceIOAllocator::writeObject
 (
     IOstream::streamFormat fmt,
     IOstream::versionNumber ver,

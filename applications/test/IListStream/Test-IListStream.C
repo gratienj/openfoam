@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -56,6 +56,15 @@ void printInfo(const BufType& buf)
 }
 
 
+template<>
+void printInfo(const List<char>& buf)
+{
+    Info<< nl << "=========================" << endl;
+    toString(Info, buf);
+    Info<< nl << "=========================" << endl;
+}
+
+
 void printTokens(Istream& is)
 {
     label count = 0;
@@ -93,7 +102,14 @@ int main(int argc, char *argv[])
 
     Info<< "transfer contents to a List" << endl;
 
-    IListStream ibuf(obuf.xfer());
+    IListStream ibuf;
+
+    // Reclaim data storage from OListStream -> IListStream
+    {
+        List<char> data;
+        obuf.swap(data);
+        ibuf.swap(data);
+    }
 
     Info<< nl;
     Info<< nl << "input string:";
@@ -126,21 +142,22 @@ int main(int argc, char *argv[])
     Info<<nl << "directly written:";
     printInfo(ibuf);
 
-    // But cannot easily swap in/out an entirely new list storage:
-    //
-    // List<char> newvalues(52);
-    // {
-    //     for (int i=0; i<26; ++i)
-    //     {
-    //         newvalues[2*i+0] = char('a' + i);
-    //         newvalues[2*i+1] = char('A' + i);
-    //     }
-    // }
-    // ibuf.swap(newvalues);
-    //
-    // Info<<nl << "after swap:";
-    // printInfo(ibuf);
+    // Swap in/out an entirely new list storage:
+    List<char> newvalues(52);
+    {
+        for (int i=0; i<26; ++i)
+        {
+            newvalues[2*i+0] = char('a' + i);
+            newvalues[2*i+1] = char('A' + i);
+        }
+    }
+    ibuf.swap(newvalues);
 
+    Info<<nl << "after swap:";
+    printInfo(ibuf);
+
+    Info<<nl << "swapped out:";
+    printInfo(newvalues);
 
     Info<< "\nEnd\n" << endl;
 

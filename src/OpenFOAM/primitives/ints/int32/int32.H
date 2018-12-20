@@ -54,22 +54,22 @@ class Ostream;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-//- Return a word representation of an int32
+//- A word representation of int32 value
 inline word name(const int32_t val)
 {
-    // No stripping required
-    return word(std::to_string(val), false);
+    return word(std::to_string(val), false); // Needs no stripping
 }
 
 
-//- Return a word representation of an int32, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const char* fmt, const int32_t val);
-
-
-//- Return a word representation of an int32, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const std::string& fmt, const int32_t val);
+//- A word representation of int32 value
+template<>
+struct nameOp<int32_t>
+{
+    inline word operator()(const int32_t val) const
+    {
+        return word(std::to_string(val), false); // Needs no stripping
+    }
+};
 
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
@@ -117,9 +117,8 @@ inline bool read(const std::string& str, int32_t& val)
 Istream& operator>>(Istream& is, int32_t& val);
 Ostream& operator<<(Ostream& os, const int32_t val);
 
-// On 32bit OSs long is not unambiguously int32_t (or int64_t) causing problems
-// for IO operator resolution.
-// This problem is avoided by explicitly defining the following operators:
+// 32bit OS: long is not unambiguously (int32_t | int64_t)
+// - resolve explicitly for input and output
 #if WM_ARCH_OPTION == 32
     Istream& operator>>(Istream& is, long& val);
     Ostream& operator<<(Ostream& os, const long val);
@@ -164,22 +163,22 @@ public:
 
     // Constructors
 
-        //- Construct from primitive
+        //- Copy construct from primitive
         explicit pTraits(const int32_t& val);
 
-        //- Construct from Istream
+        //- Read construct from Istream
         pTraits(Istream& is);
 
 
     // Member Functions
 
-        //- Access to the int32_t value
+        //- Access to the value
         operator int32_t() const
         {
             return p_;
         }
 
-        //- Access to the int value
+        //- Access to the value
         operator int32_t&()
         {
             return p_;

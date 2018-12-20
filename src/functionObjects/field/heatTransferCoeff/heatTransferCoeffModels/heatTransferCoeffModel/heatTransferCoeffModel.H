@@ -64,10 +64,10 @@ class heatTransferCoeffModel
 
     // Private Member Functions
 
-        //- Disallow copy construct
+        //- No copy construct
         heatTransferCoeffModel(const heatTransferCoeffModel&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const heatTransferCoeffModel&) = delete;
 
 
@@ -113,7 +113,7 @@ public:
 
     // Selectors
 
-        //- Return a reference to the selected heat transfer coefficicent model
+        //- Return a reference to the selected heat transfer coefficient model
         static autoPtr<heatTransferCoeffModel> New
         (
             const dictionary& dict,

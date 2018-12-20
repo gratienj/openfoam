@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                 isoAdvector | Copyright (C) 2016-2017 DHI
+              Modified work | Copyright (C) 2018 Johan Roenby
 -------------------------------------------------------------------------------
 
 License
@@ -338,6 +339,152 @@ void Foam::isoCutFace::clearStorage()
 }
 
 
+Foam::scalar Foam::isoCutFace::timeIntegratedFaceFlux
+(
+    const label facei,
+    const vector& x0,
+    const vector& n0,
+    const scalar Un0,
+    const scalar f0,
+    const scalar dt,
+    const scalar phi,
+    const scalar magSf
+)
+{
+/* Temporarily taken out
+    // Treating rare cases where isoface normal is not calculated properly
+    if (mag(n0) < 0.5)
+    {
+        scalar alphaf = 0;
+        scalar waterInUpwindCell = 0;
+
+        if (phi > 10*SMALL || !mesh_.isInternalFace(facei))
+        {
+            const label upwindCell = mesh_.faceOwner()[facei];
+            alphaf = alpha1In_[upwindCell];
+            waterInUpwindCell = alphaf*mesh_.cellVolumes()[upwindCell];
+        }
+        else
+        {
+            const label upwindCell = mesh_.faceNeighbour()[facei];
+            alphaf = alpha1In_[upwindCell];
+            waterInUpwindCell = alphaf*mesh_.cellVolumes()[upwindCell];
+        }
+
+        if (debug)
+        {
+            WarningInFunction
+                << "mag(n0) = " << mag(n0)
+                << " so timeIntegratedFlux calculates dVf from upwind"
+                << " cell alpha value: " << alphaf << endl;
+        }
+
+        return min(alphaf*phi*dt, waterInUpwindCell);
+    }
+*/
+
+    // Find sorted list of times where the isoFace will arrive at face points
+    // given initial position x0 and velocity Un0*n0
+
+    // Get points for this face
+    const face& f = mesh_.faces()[facei];
+    const pointField fPts(f.points(mesh_.points()));
+    const label nPoints = fPts.size();
+
+    scalarField pTimes(fPts.size());
+    if (mag(Un0) > 10*SMALL) // Note: tolerances
+    {
+        // Here we estimate time of arrival to the face points from their normal
+        // distance to the initial surface and the surface normal velocity
+
+        pTimes = ((fPts - x0) & n0)/Un0;
+
+        scalar dVf = 0;
+
+        // Check if pTimes changes direction more than twice when looping face
+        label nShifts = 0;
+        forAll(pTimes, pi)
+        {
+            const label oldEdgeSign =
+                sign(pTimes[(pi + 1) % nPoints] - pTimes[pi]);
+            const label newEdgeSign =
+                sign(pTimes[(pi + 2) % nPoints] - pTimes[(pi + 1) % nPoints]);
+
+            if (newEdgeSign != oldEdgeSign)
+            {
+                nShifts++;
+            }
+        }
+
+        if (nShifts == 2)
+        {
+            dVf = phi/magSf*timeIntegratedArea(fPts, pTimes, dt, magSf, Un0);
+        }
+        else if (nShifts > 2)
+        {
+            // Triangle decompose the face
+            pointField fPts_tri(3);
+            scalarField pTimes_tri(3);
+            fPts_tri[0] = mesh_.faceCentres()[facei];
+            pTimes_tri[0] = ((fPts_tri[0] - x0) & n0)/Un0;
+            for (label pi = 0; pi < nPoints; pi++)
+            {
+                fPts_tri[1] = fPts[pi];
+                pTimes_tri[1] = pTimes[pi];
+                fPts_tri[2] = fPts[(pi + 1) % nPoints];
+                pTimes_tri[2] = pTimes[(pi + 1) % nPoints];
+                const scalar magSf_tri =
+                    mag
+                    (
+                        0.5
+                       *(fPts_tri[2] - fPts_tri[0])
+                       ^(fPts_tri[1] - fPts_tri[0])
+                    );
+                const scalar phi_tri = phi*magSf_tri/magSf;
+                dVf += phi_tri/magSf_tri
+                   *timeIntegratedArea
+                    (
+                        fPts_tri,
+                        pTimes_tri,
+                        dt,
+                        magSf_tri,
+                        Un0
+                    );
+            }
+        }
+        else
+        {
+            if (debug)
+            {
+                WarningInFunction
+                    << "Warning: nShifts = " << nShifts << " on face " << facei
+                    << " with pTimes = " << pTimes << " owned by cell "
+                    << mesh_.faceOwner()[facei] << endl;
+            }
+        }
+
+        return dVf;
+    }
+    else
+    {
+        // Un0 is almost zero and isoFace is treated as stationary
+        calcSubFace(facei, f0);
+        const scalar alphaf = mag(subFaceArea()/magSf);
+
+        if (debug)
+        {
+            WarningInFunction
+                << "Un0 is almost zero (" << Un0
+                << ") - calculating dVf on face " << facei
+                << " using subFaceFraction giving alphaf = " << alphaf
+                << endl;
+        }
+
+        return phi*dt*alphaf;
+    }
+}
+
+
 Foam::scalar Foam::isoCutFace::timeIntegratedArea
 (
     const pointField& fPts,
@@ -362,7 +509,7 @@ Foam::scalar Foam::isoCutFace::timeIntegratedArea
     {
         // If all face cuttings were in the past and cell is filling up (Un0>0)
         // then face must be full during whole time interval
-        tIntArea = magSf*dt*pos(Un0);
+        tIntArea = magSf*dt*pos0(Un0);
         return tIntArea;
     }
 
@@ -373,7 +520,7 @@ Foam::scalar Foam::isoCutFace::timeIntegratedArea
         // If all cuttings are in the future but non of them within [0,dt] then
         // if cell is filling up (Un0 > 0) face must be empty during whole time
         // interval
-        tIntArea = magSf*dt*(1 - pos(Un0));
+        tIntArea = magSf*dt*(1 - pos0(Un0));
         return tIntArea;
     }
 
@@ -398,7 +545,7 @@ Foam::scalar Foam::isoCutFace::timeIntegratedArea
         // If Un0 > 0 cell is filling up and it must initially be empty.
         // If Un0 < 0 cell must initially be full(y immersed in fluid A).
         time = firstTime;
-        initialArea = magSf*(1.0 - pos(Un0));
+        initialArea = magSf*(1.0 - pos0(Un0));
         tIntArea = initialArea*time;
         cutPoints(fPts, pTimes, time, FIIL);
     }
@@ -470,7 +617,7 @@ Foam::scalar Foam::isoCutFace::timeIntegratedArea
     {
         // FIIL will leave the face at lastTime and face will be fully in fluid
         // A or fluid B in the time interval from lastTime to dt.
-        tIntArea += magSf*(dt - lastTime)*pos(Un0);
+        tIntArea += magSf*(dt - lastTime)*pos0(Un0);
     }
 
     return tIntArea;
@@ -588,12 +735,12 @@ void Foam::isoCutFace::quadAreaCoeffs
         if (Bx > 10*SMALL)
         {
             // If |AB| > 0 ABCD we use AB to define xhat
-            xhat = (B - A)/mag(B - A);
+            xhat = normalised(B - A);
         }
         else if (mag(C - D) > 10*SMALL)
         {
             // If |AB| ~ 0 ABCD is a triangle ACD and we use CD for xhat
-            xhat = (C - D)/mag(C - D);
+            xhat = normalised(C - D);
         }
         else
         {

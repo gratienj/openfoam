@@ -59,13 +59,13 @@ defineTypeNameAndDebug(snappySnapDriver, 0);
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-// Calculate geometrically collocated points, Requires PackedList to be
-// sized and initalised!
+// Calculate geometrically collocated points, Requires bitSet to be
+// sized and initialised!
 Foam::label Foam::snappySnapDriver::getCollocatedPoints
 (
     const scalar tol,
     const pointField& points,
-    PackedBoolList& isCollocatedPoint
+    bitSet& isCollocatedPoint
 )
 {
     labelList pointMap;
@@ -101,16 +101,16 @@ Foam::label Foam::snappySnapDriver::getCollocatedPoints
         else if (firstOldPoint[newPointi] == -2)
         {
             // Third or more reference of oldPointi -> non-manifold
-            isCollocatedPoint.set(oldPointi, 1u);
+            isCollocatedPoint.set(oldPointi);
             nCollocated++;
         }
         else
         {
             // Second reference of oldPointi -> non-manifold
-            isCollocatedPoint.set(firstOldPoint[newPointi], 1u);
+            isCollocatedPoint.set(firstOldPoint[newPointi]);
             nCollocated++;
 
-            isCollocatedPoint.set(oldPointi, 1u);
+            isCollocatedPoint.set(oldPointi);
             nCollocated++;
 
             // Mark with special value to save checking next time round
@@ -136,37 +136,27 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothInternalDisplacement
 
 
     // Get the faces on the boundary
-    PackedBoolList isFront(mesh.nFaces());
-    forAll(pp.addressing(), i)
-    {
-        isFront[pp.addressing()[i]] = true;
-    }
+    bitSet isFront(mesh.nFaces(), pp.addressing());
 
     // Walk out from the surface a bit. Poor man's FaceCellWave.
     // Commented out for now - not sure if needed and if so how much
     //for (label iter = 0; iter < 2; iter++)
     //{
-    //    PackedBoolList newIsFront(mesh.nFaces());
+    //    bitSet newIsFront(mesh.nFaces());
     //
     //    forAll(isFront, facei)
     //    {
-    //        if (isFront[facei])
+    //        if (isFront.test(facei))
     //        {
     //            label own = mesh.faceOwner()[facei];
     //            const cell& ownFaces = mesh.cells()[own];
-    //            forAll(ownFaces, i)
-    //            {
-    //                newIsFront[ownFaces[i]] = true;
-    //            }
+    //            newIsFront.set(ownFaces);
     //
     //            if (mesh.isInternalFace(facei))
     //            {
     //                label nei = mesh.faceNeighbour()[facei];
     //                const cell& neiFaces = mesh.cells()[nei];
-    //                forAll(neiFaces, i)
-    //                {
-    //                    newIsFront[neiFaces[i]] = true;
-    //                }
+    //                newIsFront.set(neiFaces);
     //            }
     //        }
     //    }
@@ -184,7 +174,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothInternalDisplacement
     // Mark all points on faces
     //  - not on the boundary
     //  - inbetween differing refinement levels
-    PackedBoolList isMovingPoint(mesh.nPoints());
+    bitSet isMovingPoint(mesh.nPoints());
 
     label nInterface = 0;
 
@@ -193,15 +183,12 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothInternalDisplacement
         label ownLevel = cellLevel[mesh.faceOwner()[facei]];
         label neiLevel = cellLevel[mesh.faceNeighbour()[facei]];
 
-        if (!isFront[facei] && ownLevel != neiLevel)
+        if (!isFront.test(facei) && ownLevel != neiLevel)
         {
             const face& f = mesh.faces()[facei];
-            forAll(f, fp)
-            {
-                isMovingPoint[f[fp]] = true;
-            }
+            isMovingPoint.set(f);
 
-            nInterface++;
+            ++nInterface;
         }
     }
 
@@ -213,15 +200,12 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothInternalDisplacement
         label ownLevel = cellLevel[mesh.faceOwner()[facei]];
         label neiLevel = neiCellLevel[facei-mesh.nInternalFaces()];
 
-        if (!isFront[facei] && ownLevel != neiLevel)
+        if (!isFront.test(facei) && ownLevel != neiLevel)
         {
             const face& f = mesh.faces()[facei];
-            forAll(f, fp)
-            {
-                isMovingPoint[f[fp]] = true;
-            }
+            isMovingPoint.set(f);
 
-            nInterface++;
+            ++nInterface;
         }
     }
 
@@ -241,7 +225,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothInternalDisplacement
     // face-cell wave we might have coupled points not being unmarked.
     forAll(pp.meshPoints(), pointi)
     {
-        isMovingPoint[pp.meshPoints()[pointi]] = false;
+        isMovingPoint.unset(pp.meshPoints()[pointi]);
     }
 
     // Make sure that points that are coupled to meshPoints but not on a patch
@@ -255,7 +239,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothInternalDisplacement
 
     forAll(isMovingPoint, pointi)
     {
-        if (isMovingPoint[pointi])
+        if (isMovingPoint.test(pointi))
         {
             const labelList& pCells = mesh.pointCells(pointi);
 
@@ -310,7 +294,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothPatchDisplacement
     const indirectPrimitivePatch& pp = meshMover.patch();
 
     // Calculate geometrically non-manifold points on the patch to be moved.
-    PackedBoolList nonManifoldPoint(pp.nPoints());
+    bitSet nonManifoldPoint(pp.nPoints());
     label nNonManifoldPoints = getCollocatedPoints
     (
         SMALL,
@@ -340,7 +324,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothPatchDisplacement
     const polyMesh& mesh = meshMover.mesh();
 
     // Get labels of faces to count (master of coupled faces and baffle pairs)
-    PackedBoolList isMasterFace(syncTools::getMasterFaces(mesh));
+    bitSet isMasterFace(syncTools::getMasterFaces(mesh));
 
     {
         forAll(baffles, i)
@@ -348,12 +332,12 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothPatchDisplacement
             label f0 = baffles[i].first();
             label f1 = baffles[i].second();
 
-            if (isMasterFace.get(f0))
+            if (isMasterFace.test(f0))
             {
                 // Make f1 a slave
                 isMasterFace.unset(f1);
             }
-            else if (isMasterFace.get(f1))
+            else if (isMasterFace.test(f1))
             {
                 isMasterFace.unset(f0);
             }
@@ -382,7 +366,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothPatchDisplacement
         {
             label facei = pFaces[pfi];
 
-            if (isMasterFace.get(pp.addressing()[facei]))
+            if (isMasterFace.test(pp.addressing()[facei]))
             {
                 avgBoundary[patchPointi] += pp[facei].centre(points);
                 nBoundary[patchPointi]++;
@@ -539,7 +523,7 @@ Foam::tmp<Foam::pointField> Foam::snappySnapDriver::smoothPatchDisplacement
 
         point newPos;
 
-        if (!nonManifoldPoint.get(i))
+        if (!nonManifoldPoint.test(i))
         {
             // Points that are manifold. Weight the internal and boundary
             // by their number of faces and blend with
@@ -1117,9 +1101,7 @@ void Foam::snappySnapDriver::detectNearSurfaces
     //// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     //
     //{
-    //    const scalar cos45 = Foam::cos(degToRad(45.0));
-    //    vector n(cos45, cos45, cos45);
-    //    n /= mag(n);
+    //    const vector n = normalised(vector::one);
     //
     //    pointField start(14*pp.nPoints());
     //    pointField end(start.size());
@@ -1417,7 +1399,7 @@ void Foam::snappySnapDriver::detectNearSurfaces
     }
 
 
-    const PackedBoolList isPatchMasterPoint
+    const bitSet isPatchMasterPoint
     (
         meshRefinement::getMasterPoints
         (
@@ -2031,17 +2013,28 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurface
         {
             if (snapSurf[pointi] == -1)
             {
-                WarningInFunction
-                    << "For point:" << pointi
-                    << " coordinate:" << localPoints[pointi]
-                    << " did not find any surface within:"
-                    << minSnapDist[pointi]
-                    << " metre." << endl;
+                static label nWarn = 0;
+
+                if (nWarn < 100)
+                {
+                    WarningInFunction
+                        << "For point:" << pointi
+                        << " coordinate:" << localPoints[pointi]
+                        << " did not find any surface within:"
+                        << minSnapDist[pointi] << " metre." << endl;
+                    nWarn++;
+                    if (nWarn == 100)
+                    {
+                        WarningInFunction
+                            << "Reached warning limit " << nWarn
+                            << ". Suppressing further warnings." << endl;
+                    }
+                }
             }
         }
 
         {
-            const PackedBoolList isPatchMasterPoint
+            const bitSet isPatchMasterPoint
             (
                 meshRefinement::getMasterPoints
                 (
@@ -2261,14 +2254,14 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::snappySnapDriver::repatchToSurface
 
 
     // Faces that do not move
-    PackedBoolList isZonedFace(mesh.nFaces());
+    bitSet isZonedFace(mesh.nFaces());
     {
         // 1. Preserve faces in preserveFaces list
         forAll(preserveFaces, facei)
         {
             if (preserveFaces[facei] != -1)
             {
-                isZonedFace.set(facei, 1);
+                isZonedFace.set(facei);
             }
         }
 
@@ -2281,10 +2274,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::snappySnapDriver::repatchToSurface
             const label zoneSurfi = zonedSurfaces[i];
             const faceZone& fZone = fZones[surfZones[zoneSurfi].faceZoneName()];
 
-            forAll(fZone, i)
-            {
-                isZonedFace.set(fZone[i], 1);
-            }
+            isZonedFace.set(fZone);
         }
     }
 
@@ -2345,7 +2335,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::snappySnapDriver::repatchToSurface
         {
             label facei = pp.addressing()[i];
 
-            if (hitSurface[i] != -1 && !isZonedFace.get(facei))
+            if (hitSurface[i] != -1 && !isZonedFace.test(facei))
             {
                 closestPatch[i] = globalToMasterPatch_
                 [
@@ -2466,10 +2456,11 @@ void Foam::snappySnapDriver::detectWarpedFaces
                     //Info<< "Splitting face:" << f << " into f0:" << f0
                     //    << " f1:" << f1 << endl;
 
-                    vector n0 = f0.normal(localPoints);
-                    scalar n0Mag = mag(n0);
-                    vector n1 = f1.normal(localPoints);
-                    scalar n1Mag = mag(n1);
+                    const vector n0 = f0.areaNormal(localPoints);
+                    const scalar n0Mag = mag(n0);
+
+                    const vector n1 = f1.areaNormal(localPoints);
+                    const scalar n1Mag = mag(n1);
 
                     if (n0Mag > ROOTVSMALL && n1Mag > ROOTVSMALL)
                     {
@@ -2851,7 +2842,7 @@ void Foam::snappySnapDriver::doSnap
             if (!meshOk)
             {
                 WarningInFunction
-                    << "Did not succesfully snap mesh."
+                    << "Did not successfully snap mesh."
                     << " Continuing to snap to resolve easy" << nl
                     << "    surfaces but the"
                     << " resulting mesh will not satisfy your quality"
@@ -2897,8 +2888,8 @@ void Foam::snappySnapDriver::doSnap
                 labelList duplicateFace(getInternalOrBaffleDuplicateFace());
 
                 {
-                    labelList oldSplitFaces(splitFaces.xfer());
-                    List<labelPair> oldSplits(splits.xfer());
+                    labelList oldSplitFaces(std::move(splitFaces));
+                    List<labelPair> oldSplits(std::move(splits));
                     forAll(oldSplitFaces, i)
                     {
                         if (duplicateFace[oldSplitFaces[i]] == -1)

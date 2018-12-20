@@ -32,36 +32,36 @@ Description
 #include "IOobject.H"
 #include "IOstreams.H"
 #include "IFstream.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include <climits>
 
 
 using namespace Foam;
 
-template<unsigned nBits>
+template<unsigned Width>
 inline void reportInfo()
 {
-    const unsigned offset = PackedList<nBits>::packing();
+    const unsigned offset = PackedList<Width>::elem_per_block;
 
-    unsigned useSHL = ((1u << (nBits * offset)) - 1);
-    unsigned useSHR = (~0u >> (sizeof(unsigned)*CHAR_BIT - nBits * offset));
+    unsigned useSHL = ((1u << (Width * offset)) - 1);
+    unsigned useSHR = (~0u >> (sizeof(unsigned)*CHAR_BIT - Width * offset));
 
     Info<< nl
-        << "PackedList<" << nBits << ">" << nl
-        << " max_value: " << PackedList<nBits>::max_value() << nl
-        << " packing: " << PackedList<nBits>::packing() << nl
-        << " utilization: " << (nBits * offset) << nl;
+        << "PackedList<" << Width << ">" << nl
+        << " max_value: " << PackedList<Width>::max_value << nl
+        << " packing: " << PackedList<Width>::elem_per_block << nl
+        << " utilization: " << (Width * offset) << nl;
 
     Info<< " Masking:" << nl
         << "  shift << "
-        << unsigned(nBits * offset) << nl
+        << unsigned(Width * offset) << nl
         << "  shift >> "
-        << unsigned((sizeof(unsigned)*CHAR_BIT) - nBits * offset)
+        << unsigned((sizeof(unsigned)*CHAR_BIT) - Width * offset)
         << nl;
 
     hex(Info);
     Info<< "   maskLower: "
-        << PackedList<nBits>::maskLower(PackedList<nBits>::packing())
+        << PackedList<Width>::mask_lower(PackedList<Width>::elem_per_block)
         << nl
         << "      useSHL: " << useSHL << nl
         << "      useSHR: " << useSHR << nl;
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     argList args(argc, argv, false, true);
 
 
-    if (args.optionFound("mask"))
+    if (args.found("mask"))
     {
         Info<< "bit width: " << unsigned(sizeof(unsigned)*CHAR_BIT) << endl;
         reportInfo<1>();
@@ -131,11 +131,11 @@ int main(int argc, char *argv[])
         IFstream ifs(srcFile);
         List<label> rawLst(ifs);
 
-        PackedBoolList packLst(rawLst);
+        bitSet packLst(rawLst);
 
         Info<< "size: " << packLst.size() << nl;
 
-        if (args.optionFound("count"))
+        if (args.found("count"))
         {
             unsigned int rawCount = 0;
             forAll(rawLst, elemI)
@@ -149,9 +149,9 @@ int main(int argc, char *argv[])
                 << "packed count: " << packLst.count() << nl;
         }
 
-        if (args.optionFound("info"))
+        if (args.found("info"))
         {
-            packLst.printInfo(Info);
+            Info<< packLst.info();
         }
 
         Info<< nl;

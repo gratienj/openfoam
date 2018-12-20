@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2014-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -79,6 +79,9 @@ Foam::Istream& Foam::operator>>(Istream& is, uint64_t& val)
 
     if (!t.good())
     {
+        FatalIOErrorInFunction(is)
+            << "Bad token - could not get uint64"
+            << exit(FatalIOError);
         is.setBad();
         return is;
     }
@@ -89,11 +92,11 @@ Foam::Istream& Foam::operator>>(Istream& is, uint64_t& val)
     }
     else
     {
-        is.setBad();
         FatalIOErrorInFunction(is)
-            << "wrong token type - expected uint64_t, found " << t.info()
+            << "Wrong token type - expected label (uint64), found "
+            << t.info()
             << exit(FatalIOError);
-
+        is.setBad();
         return is;
     }
 
@@ -117,6 +120,15 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const uint64_t val)
     os.check(FUNCTION_NAME);
     return os;
 }
+
+
+#ifdef darwin
+Foam::Ostream& Foam::operator<<(Ostream& os, const unsigned long val)
+{
+    os << uint64_t(val);
+    return os;
+}
+#endif
 
 
 // ************************************************************************* //

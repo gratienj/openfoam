@@ -45,14 +45,14 @@ Foam::COxidationMurphyShaddix<CloudType>::COxidationMurphyShaddix
 )
 :
     SurfaceReactionModel<CloudType>(dict, owner, typeName),
-    D0_(readScalar(this->coeffDict().lookup("D0"))),
-    rho0_(readScalar(this->coeffDict().lookup("rho0"))),
-    T0_(readScalar(this->coeffDict().lookup("T0"))),
-    Dn_(readScalar(this->coeffDict().lookup("Dn"))),
-    A_(readScalar(this->coeffDict().lookup("A"))),
-    E_(readScalar(this->coeffDict().lookup("E"))),
-    n_(readScalar(this->coeffDict().lookup("n"))),
-    WVol_(readScalar(this->coeffDict().lookup("WVol"))),
+    D0_(this->coeffDict().getScalar("D0")),
+    rho0_(this->coeffDict().getScalar("rho0")),
+    T0_(this->coeffDict().getScalar("T0")),
+    Dn_(this->coeffDict().getScalar("Dn")),
+    A_(this->coeffDict().getScalar("A")),
+    E_(this->coeffDict().getScalar("E")),
+    n_(this->coeffDict().getScalar("n")),
+    WVol_(this->coeffDict().getScalar("WVol")),
     CsLocalId_(-1),
     O2GlobalId_(owner.composition().carrierId("O2")),
     CO2GlobalId_(owner.composition().carrierId("CO2")),
@@ -155,7 +155,7 @@ Foam::scalar Foam::COxidationMurphyShaddix<CloudType>::calculate
     // Particle surface area [m^2]
     const scalar Ap = constant::mathematical::pi*sqr(d);
 
-    // Calculate diffision constant at continuous phase temperature
+    // Calculate diffusion constant at continuous phase temperature
     // and density [m^2/s]
     const scalar D = D0_*(rho0_/rhoc)*pow(Tc/T0_, Dn_);
 

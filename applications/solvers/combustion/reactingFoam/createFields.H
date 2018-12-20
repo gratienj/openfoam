@@ -1,25 +1,19 @@
 #include "createRDeltaT.H"
 
-Info<< "Creating reaction model\n" << endl;
-
-autoPtr<combustionModels::psiCombustionModel> reaction
-(
-    combustionModels::psiCombustionModel::New(mesh)
-);
-
-psiReactionThermo& thermo = reaction->thermo();
+Info<< "Reading thermophysical properties\n" << endl;
+autoPtr<psiReactionThermo> pThermo(psiReactionThermo::New(mesh));
+psiReactionThermo& thermo = pThermo();
 thermo.validate(args.executable(), "h", "e");
 
-basicMultiComponentMixture& composition = thermo.composition();
+basicSpecieMixture& composition = thermo.composition();
 PtrList<volScalarField>& Y = composition.Y();
 
-const word inertSpecie(thermo.lookup("inertSpecie"));
+const word inertSpecie(thermo.get<word>("inertSpecie"));
 if (!composition.species().found(inertSpecie))
 {
     FatalIOErrorIn(args.executable().c_str(), thermo)
         << "Inert specie " << inertSpecie << " not found in available species "
-        << composition.species()
-        << exit(FatalIOError);
+        << composition.species() << exit(FatalIOError);
 }
 
 volScalarField rho
@@ -47,7 +41,6 @@ volVectorField U
     mesh
 );
 
-
 volScalarField& p = thermo.p();
 
 #include "compressibleCreatePhi.H"
@@ -68,8 +61,11 @@ autoPtr<compressible::turbulenceModel> turbulence
     )
 );
 
-// Set the turbulence into the reaction model
-reaction->setTurbulence(turbulence());
+Info<< "Creating reaction model\n" << endl;
+autoPtr<CombustionModel<psiReactionThermo>> reaction
+(
+    CombustionModel<psiReactionThermo>::New(thermo, turbulence())
+);
 
 multivariateSurfaceInterpolationScheme<scalar>::fieldTable fields;
 
@@ -90,7 +86,7 @@ volScalarField Qdot
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Qdot", dimEnergy/dimVolume/dimTime, 0.0)
+    dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
 );
 
 #include "createDpdt.H"
@@ -98,3 +94,4 @@ volScalarField Qdot
 #include "createK.H"
 
 #include "createMRF.H"
+#include "createFvOptions.H"

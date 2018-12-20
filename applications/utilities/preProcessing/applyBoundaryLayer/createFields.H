@@ -49,7 +49,7 @@ volScalarField y
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", dimLength, 0.0),
+    dimensionedScalar(dimLength, Zero),
     zeroGradientFvPatchScalarField::typeName
 );
 y.primitiveFieldRef() = wallDist::New(mesh).y().primitiveField();
@@ -57,17 +57,17 @@ y.correctBoundaryConditions();
 
 
 // Set the mean boundary-layer thickness
-dimensionedScalar ybl("ybl", dimLength, 0);
+dimensionedScalar ybl("ybl", dimLength, Zero);
 
-if (args.optionFound("ybl"))
+if (args.found("ybl"))
 {
     // If the boundary-layer thickness is provided use it
-    ybl.value() = args.optionRead<scalar>("ybl");
+    ybl.value() = args.opt<scalar>("ybl");
 }
-else if (args.optionFound("Cbl"))
+else if (args.found("Cbl"))
 {
     // Calculate boundary layer thickness as Cbl*mean distance to wall
-    ybl.value() = gAverage(y)*args.optionRead<scalar>("Cbl");
+    ybl.value() = gAverage(y)*args.opt<scalar>("Cbl");
 }
 
 Info<< "\nCreating boundary-layer for U of thickness "
@@ -85,7 +85,7 @@ volScalarField mask
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", dimless, 0.0),
+    dimensionedScalar(dimless, Zero),
     zeroGradientFvPatchScalarField::typeName
 );
 

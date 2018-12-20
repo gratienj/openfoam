@@ -90,7 +90,7 @@ public:
         //- Construct null
         C12H26();
 
-        //- Construct from conponents
+        //- Construct from components
         C12H26
         (
             const liquidProperties& l,
@@ -115,7 +115,7 @@ public:
         //- Construct and return clone
         virtual autoPtr<liquidProperties> clone() const
         {
-            return autoPtr<liquidProperties>(new C12H26(*this));
+            return autoPtr<liquidProperties>::NewFrom<C12H26>(*this);
         }
 
 
@@ -157,10 +157,10 @@ public:
         //- Surface tension [N/m]
         inline scalar sigma(scalar p, scalar T) const;
 
-        //- Vapour diffussivity [m2/s]
+        //- Vapour diffusivity [m2/s]
         inline scalar D(scalar p, scalar T) const;
 
-        //- Vapour diffussivity [m2/s] with specified binary pair
+        //- Vapour diffusivity [m2/s] with specified binary pair
         inline scalar D(scalar p, scalar T, scalar Wb) const;
 
 

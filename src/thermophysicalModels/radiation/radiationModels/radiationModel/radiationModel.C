@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -198,7 +198,7 @@ bool Foam::radiation::radiationModel::read()
 {
     if (regIOobject::read())
     {
-        lookup("radiation") >> radiation_;
+        readEntry("radiation", radiation_);
         coeffs_ = subOrEmptyDict(type() + "Coeffs");
 
         solverFreq_ = lookupOrDefault<label>("solverFreq", 1);
@@ -206,10 +206,8 @@ bool Foam::radiation::radiationModel::read()
 
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 
@@ -265,6 +263,33 @@ Foam::tmp<Foam::fvScalarMatrix> Foam::radiation::radiationModel::ST
 }
 
 
+Foam::tmp<Foam::fvScalarMatrix> Foam::radiation::radiationModel::ST
+(
+    tmp<volScalarField> rhoCp,
+    volScalarField& T
+) const
+{
+    return
+    (
+        Ru()/rhoCp.ref()
+      - fvm::Sp(Rp()*pow3(T)/rhoCp.ref(), T)
+    );
+}
+
+
+Foam::tmp<Foam::fvScalarMatrix> Foam::radiation::radiationModel::ST
+(
+    volScalarField& T
+) const
+{
+    return
+    (
+        Ru()
+      - fvm::Sp(Rp()*pow3(T), T)
+    );
+}
+
+
 const Foam::radiation::absorptionEmissionModel&
 Foam::radiation::radiationModel::absorptionEmission() const
 {
@@ -275,7 +300,7 @@ Foam::radiation::radiationModel::absorptionEmission() const
             << "not activate" << abort(FatalError);
     }
 
-    return absorptionEmission_();
+    return *absorptionEmission_;
 }
 
 
@@ -289,7 +314,7 @@ Foam::radiation::radiationModel::soot() const
             << "not activate" << abort(FatalError);
     }
 
-    return soot_();
+    return *soot_;
 }
 
 
@@ -303,7 +328,7 @@ Foam::radiation::radiationModel::transmissivity() const
             << "not activate" << abort(FatalError);
     }
 
-    return transmissivity_();
+    return *transmissivity_;
 }
 
 

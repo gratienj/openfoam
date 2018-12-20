@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,59 +40,87 @@ License
 #include "foamVersion.H"
 #include "stringOps.H"
 #include "CStringList.H"
-#include "uncollatedFileOperation.H"
-#include "masterUncollatedFileOperation.H"
+#include "stringListOps.H"
+#include "fileOperation.H"
+#include "fileOperationInitialise.H"
 
 #include <cctype>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 bool Foam::argList::argsMandatory_ = true;
-bool Foam::argList::bannerEnabled_ = true;
 bool Foam::argList::checkProcessorDirectories_ = true;
+
 Foam::SLList<Foam::string>    Foam::argList::validArgs;
+Foam::HashSet<Foam::string>   Foam::argList::advancedOptions;
 Foam::HashTable<Foam::string> Foam::argList::validOptions;
 Foam::HashTable<Foam::string> Foam::argList::validParOptions;
+Foam::HashTable<Foam::string, Foam::label, Foam::Hash<Foam::label>>
+    Foam::argList::argUsage;
 Foam::HashTable<Foam::string> Foam::argList::optionUsage;
 Foam::HashTable<std::pair<Foam::word,int>> Foam::argList::validOptionsCompat;
+Foam::HashTable<std::pair<bool,int>> Foam::argList::ignoreOptionsCompat;
 Foam::SLList<Foam::string>    Foam::argList::notes;
-Foam::string::size_type Foam::argList::usageMin = 20;
-Foam::string::size_type Foam::argList::usageMax = 80;
 Foam::word Foam::argList::postProcessOptionName("postProcess");
+
+std::string::size_type Foam::argList::usageMin = 20;
+std::string::size_type Foam::argList::usageMax = 80;
 
 Foam::argList::initValidTables::initValidTables()
 {
     argList::addOption
     (
-        "case", "dir",
-        "specify alternate case directory, default is the cwd"
+        "case",
+        "dir",
+        "Specify case directory to use (instead of the cwd)"
     );
-    argList::addBoolOption("parallel", "run in parallel");
+    argList::addBoolOption("parallel", "Run in parallel");
     validParOptions.set("parallel", "");
     argList::addOption
     (
-        "roots", "(dir1 .. dirN)",
-        "slave root directories for distributed running"
+        "roots",
+        "(dir1 .. dirN)",
+        "Slave root directories for distributed running",
+        true  // advanced option
     );
-    validParOptions.set("roots", "(dir1 .. dirN)");
+    validParOptions.set
+    (
+        "roots",
+        "(dir1 .. dirN)"
+    );
 
     argList::addOption
     (
-        "decomposeParDict", "file",
-        "read decomposePar dictionary from specified location"
+        "decomposeParDict",
+        "file",
+        "Use specified file for decomposePar dictionary"
+    );
+    argList::addOption
+    (
+        "hostRoots",
+        "(((host1 dir1) .. (hostN dirN))",
+        "slave root directories (per host) for distributed running. "
+        "The host specification can use a regex.",
+        true  // advanced option
+    );
+    validParOptions.set
+    (
+        "hostRoots",
+        "((host1 dir1) .. (hostN dirN))"
     );
 
     argList::addBoolOption
     (
         "noFunctionObjects",
-        "do not execute function objects"
+        "Do not execute function objects"
     );
 
     argList::addOption
     (
         "fileHandler",
         "handler",
-        "override the file handler type"
+        "Override the file handler type",
+        true  // advanced option
     );
 
     // Some standard option aliases (with or without version warnings)
@@ -104,10 +132,25 @@ Foam::argList::initValidTables::initValidTables()
     Pstream::addValidParOptions(validParOptions);
 }
 
-
 Foam::argList::initValidTables dummyInitValidTables;
 
+
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+
+namespace
+{
+
+// Should issue warning if there is +ve versioning (+ve version number)
+// and the this version number is older than the current OpenFOAM version
+// as conveyed by the OPENFOAM compiler define.
+
+static inline constexpr bool shouldWarnVersion(const int version)
+{
+    return (version > 0 && version < OPENFOAM);
+}
+
+} // End anonymous namespace
+
 
 namespace Foam
 {
@@ -152,83 +195,163 @@ static void printHostsSubscription(const UList<string>& slaveProcs)
     Info<< ")" << nl;
 }
 
-
-// Print information about version, build, arch
-static void printBuildInfo(const bool full=true)
-{
-    Info<<"Using: OpenFOAM-" << Foam::FOAMversion
-        << " (see www.OpenFOAM.com)" << nl
-        << "Build: " << Foam::FOAMbuild << nl;
-
-    if (full)
-    {
-        Info << "Arch:  " << Foam::FOAMbuildArch << nl;
-    }
-}
-
 } // End namespace Foam
 
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
-void Foam::argList::addArgument(const string& argumentName)
+void Foam::argList::checkITstream(const ITstream& is, const label index)
 {
-    validArgs.append(argumentName);
+    const label remaining = is.nRemainingTokens();
+
+    if (remaining)
+    {
+        std::cerr
+            << nl
+            << "--> FOAM WARNING:" << nl
+            << "Argument " << index << " has "
+            << remaining << " excess tokens" << nl << nl;
+    }
+    else if (!is.size())
+    {
+        std::cerr
+            << nl
+            << "--> FOAM WARNING:" << nl
+            << "Argument " << index << " had no tokens" << nl << nl;
+    }
+}
+
+
+void Foam::argList::checkITstream(const ITstream& is, const word& optName)
+{
+    const label remaining = is.nRemainingTokens();
+
+    if (remaining)
+    {
+        std::cerr
+            << nl
+            << "--> FOAM WARNING:" << nl
+            << "Option -" << optName << " has "
+            << remaining << " excess tokens" << nl << nl;
+    }
+    else if (!is.size())
+    {
+        std::cerr
+            << nl
+            << "--> FOAM WARNING:" << nl
+            << "Option -" << optName << " had no tokens" << nl << nl;
+    }
+}
+
+
+void Foam::argList::addArgument
+(
+    const string& argName,
+    const string& usage
+)
+{
+    validArgs.append(argName);
+
+    // The first program argument starts at 1 - obtain index after the append
+
+    const label index = validArgs.size();
+
+    if (usage.empty())
+    {
+        argUsage.erase(index);
+    }
+    else
+    {
+        argUsage.set(index, usage);
+    }
 }
 
 
 void Foam::argList::addBoolOption
 (
-    const word& optionName,
-    const string& usage
+    const word& optName,
+    const string& usage,
+    bool advanced
 )
 {
-    addOption(optionName, "", usage);
+    addOption(optName, "", usage, advanced);
 }
 
 
 void Foam::argList::addOption
 (
-    const word& optionName,
+    const word& optName,
     const string& param,
-    const string& usage
+    const string& usage,
+    bool advanced
 )
 {
-    validOptions.set(optionName, param);
+    validOptions.set(optName, param);
     if (!usage.empty())
     {
-        optionUsage.set(optionName, usage);
+        optionUsage.set(optName, usage);
+    }
+    if (advanced)
+    {
+        advancedOptions.set(optName);
+    }
+}
+
+
+void Foam::argList::setAdvanced(const word& optName, bool advanced)
+{
+    if (advanced && validOptions.found(optName))
+    {
+        advancedOptions.set(optName);
+    }
+    else
+    {
+        advancedOptions.erase(optName);
     }
 }
 
 
 void Foam::argList::addOptionCompat
 (
-    const word& optionName,
+    const word& optName,
     std::pair<const char*,int> compat
 )
 {
     validOptionsCompat.insert
     (
         compat.first,
-        std::pair<word,int>(optionName, compat.second)
+        std::pair<word,int>(optName, compat.second)
+    );
+}
+
+
+void Foam::argList::ignoreOptionCompat
+(
+    std::pair<const char*,int> compat,
+    bool expectArg
+)
+{
+    ignoreOptionsCompat.insert
+    (
+        compat.first,
+        std::pair<bool,int>(expectArg, compat.second)
     );
 }
 
 
 void Foam::argList::addUsage
 (
-    const word& optionName,
+    const word& optName,
     const string& usage
 )
 {
     if (usage.empty())
     {
-        optionUsage.erase(optionName);
+        optionUsage.erase(optName);
     }
     else
     {
-        optionUsage.set(optionName, usage);
+        optionUsage.set(optName, usage);
     }
 }
 
@@ -242,28 +365,35 @@ void Foam::argList::addNote(const string& note)
 }
 
 
-void Foam::argList::removeOption(const word& optionName)
+void Foam::argList::removeOption(const word& optName)
 {
-    validOptions.erase(optionName);
-    optionUsage.erase(optionName);
+    validOptions.erase(optName);
+    optionUsage.erase(optName);
+    advancedOptions.erase(optName);
 }
 
 
-void Foam::argList::nonMandatoryArgs()
+void Foam::argList::noMandatoryArgs()
 {
     argsMandatory_ = false;
 }
 
 
+bool Foam::argList::argsMandatory()
+{
+    return argsMandatory_;
+}
+
+
 void Foam::argList::noBanner()
 {
-    bannerEnabled_ = false;
+    ::Foam::infoDetailLevel = 0;
 }
 
 
 bool Foam::argList::bannerEnabled()
 {
-    return bannerEnabled_;
+    return (::Foam::infoDetailLevel > 0);
 }
 
 
@@ -271,12 +401,16 @@ void Foam::argList::noFunctionObjects(bool addWithOption)
 {
     removeOption("noFunctionObjects");
 
+    // Ignore this bool option without warning
+    // - cannot tie to any particular version anyhow
+    ignoreOptionCompat({"noFunctionObjects", 0}, false);
+
     if (addWithOption)
     {
         addBoolOption
         (
             "withFunctionObjects",
-            "execute functionObjects"
+            "Execute functionObjects"
         );
     }
 }
@@ -288,11 +422,23 @@ void Foam::argList::noJobInfo()
 }
 
 
+void Foam::argList::noLibs()
+{
+    addBoolOption
+    (
+        "no-libs",
+        "Disable use of the controlDict libs entry",
+        true  // advanced
+    );
+}
+
+
 void Foam::argList::noParallel()
 {
     removeOption("parallel");
     removeOption("roots");
     removeOption("decomposeParDict");
+    removeOption("hostRoots");
     validParOptions.clear();
 }
 
@@ -300,106 +446,6 @@ void Foam::argList::noParallel()
 void Foam::argList::noCheckProcessorDirectories()
 {
     checkProcessorDirectories_ = false;
-}
-
-
-void Foam::argList::printOptionUsage
-(
-    const label location,
-    const string& str
-)
-{
-    const string::size_type textWidth = usageMax - usageMin;
-    const string::size_type strLen = str.size();
-
-    if (strLen)
-    {
-        // Minimum of 2 spaces between option and usage:
-        if (string::size_type(location) + 2 <= usageMin)
-        {
-            for (string::size_type i = location; i < usageMin; ++i)
-            {
-                Info<<' ';
-            }
-        }
-        else
-        {
-            // or start a new line
-            Info<< nl;
-            for (string::size_type i = 0; i < usageMin; ++i)
-            {
-                Info<<' ';
-            }
-        }
-
-        // Text wrap
-        string::size_type pos = 0;
-        while (pos != string::npos && pos + textWidth < strLen)
-        {
-            // Potential end point and next point
-            string::size_type curr = pos + textWidth - 1;
-            string::size_type next = string::npos;
-
-            if (isspace(str[curr]))
-            {
-                // We were lucky: ended on a space
-                next = str.find_first_not_of(" \t\n", curr);
-            }
-            else if (isspace(str[curr+1]))
-            {
-                // The next one is a space - so we are okay
-                curr++;  // otherwise the length is wrong
-                next = str.find_first_not_of(" \t\n", curr);
-            }
-            else
-            {
-                // Search for end of a previous word break
-                string::size_type prev = str.find_last_of(" \t\n", curr);
-
-                // Reposition to the end of previous word if possible
-                if (prev != string::npos && prev > pos)
-                {
-                    curr = prev;
-                }
-            }
-
-            if (next == string::npos)
-            {
-                next = curr + 1;
-            }
-
-            // Indent following lines (not the first one)
-            if (pos)
-            {
-                for (string::size_type i = 0; i < usageMin; ++i)
-                {
-                    Info<<' ';
-                }
-            }
-
-            Info<< str.substr(pos, (curr - pos)).c_str() << nl;
-            pos = next;
-        }
-
-        // Output the remainder of the string
-        if (pos != string::npos)
-        {
-            // Indent following lines (not the first one)
-            if (pos)
-            {
-                for (string::size_type i = 0; i < usageMin; ++i)
-                {
-                    Info<<' ';
-                }
-            }
-
-            Info<< str.substr(pos).c_str() << nl;
-        }
-    }
-    else
-    {
-        Info<< nl;
-    }
 }
 
 
@@ -417,36 +463,35 @@ bool Foam::argList::postProcess(int argc, char *argv[])
 }
 
 
+// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+
+Foam::fileName Foam::argList::envGlobalPath()
+{
+    return Foam::getEnv("FOAM_CASE");
+}
+
+
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-Foam::word Foam::argList::optionCompat(const word& optionName)
+Foam::word Foam::argList::optionCompat(const word& optName)
 {
+    // NB: optName includes the leading '-' so that the return value
+    // can be used directly
+
     if (!validOptionsCompat.empty())
     {
-        auto canonical = validOptionsCompat.cfind(optionName.substr(1));
+        const auto fnd = validOptionsCompat.cfind(optName.substr(1));
 
-        if (canonical.found())
+        if (fnd.found())
         {
-            const auto& iter = *canonical;
+            const auto& iter = *fnd;
 
-            // Emit warning if there is versioning (non-zero) and it is not
-            // tagged as future change (ie, ThisVersion > version).
-
-            if
-            (
-                iter.second
-             &&
-                (
-                    (OPENFOAM_PLUS > 1700)  // Guard against bad #define value
-                  ? (OPENFOAM_PLUS > iter.second)
-                  : true
-                )
-            )
+            if (shouldWarnVersion(iter.second))
             {
                 std::cerr
                     << "--> FOAM IOWarning :" << nl
                     << "    Found [v" << iter.second << "] '"
-                    << optionName << "' instead of '-"
+                    << optName << "' instead of '-"
                     << iter.first << "' option"
                     << nl
                     << std::endl;
@@ -459,13 +504,51 @@ Foam::word Foam::argList::optionCompat(const word& optionName)
     }
 
     // Nothing found - pass through the original input
-    return optionName;
+    return optName;
+}
+
+
+int Foam::argList::optionIgnore(const word& optName)
+{
+    // NB: optName is without the leading '-'
+
+    if (!ignoreOptionsCompat.empty())
+    {
+        const auto fnd = ignoreOptionsCompat.cfind(optName);
+
+        if (fnd.found())
+        {
+            const auto& iter = *fnd;
+
+            // Number to skip (including the option itself)
+            // '-option ARG' or '-option'
+            const int nskip = (iter.first ? 2 : 1);
+
+            if (shouldWarnVersion(iter.second))
+            {
+                std::cerr
+                    << "--> FOAM IOWarning :" << nl
+                    << "    Ignoring [v" << iter.second << "] '-"
+                    << optName << (nskip > 1 ? " ARG" : "")
+                    << "' option"
+                    << nl
+                    << std::endl;
+
+                error::warnAboutAge("option", iter.second);
+            }
+
+            return nskip;
+        }
+    }
+
+    return 0; // Do not skip
 }
 
 
 bool Foam::argList::regroupArgv(int& argc, char**& argv)
 {
     int nArgs = 1;
+    int ignore = 0;
     unsigned depth = 0;
     string group;  // For grouping ( ... ) arguments
 
@@ -507,12 +590,20 @@ bool Foam::argList::regroupArgv(int& argc, char**& argv)
         else if (argv[argi][0] == '-')
         {
             // Appears to be an option
-            const char *optionName = &argv[argi][1];
+            const char *optName = &argv[argi][1];
 
-            if (validOptions.found(optionName))
+            if (validOptions.found(optName))
             {
                 // Known option name
                 args_[nArgs++] = argv[argi];
+            }
+            else if ((ignore = optionIgnore(optName)) > 0)
+            {
+                // Option to be ignored (with/without an argument)
+                if (ignore > 1)
+                {
+                    ++argi;
+                }
             }
             else
             {
@@ -532,75 +623,61 @@ bool Foam::argList::regroupArgv(int& argc, char**& argv)
         args_[nArgs++] = group;
     }
 
-    args_.setSize(nArgs);
+    args_.resize(nArgs);
 
     std::string::size_type len = (nArgs-1); // Spaces between args
-    forAll(args_, argi)
+    for (const auto& s : args_)
     {
-        len += args_[argi].size();
+        len += s.length();
     }
 
     // Length needed for regrouped command-line
-    argListStr_.reserve(len);
+    commandLine_.reserve(len);
 
     return nArgs < argc;
 }
 
 
-void Foam::argList::getRootCase()
+void Foam::argList::setCasePaths()
 {
-    fileName casePath;
+    fileName caseDir;
 
-    // [-case dir] specified
-    auto optIter = options_.cfind("case");
+    const auto optIter = options_.cfind("case");  // [-case dir] specified?
 
     if (optIter.found())
     {
-        casePath = optIter.object();
-        casePath.clean();
+        caseDir = optIter.object();
+        caseDir.clean();
 
-        if (casePath.empty() || casePath == ".")
+        if (caseDir.empty() || caseDir == ".")
         {
-            // Handle degenerate form and '-case .' like no -case specified
-            casePath = cwd();
+            // Treat "", "." and "./" as if -case was not specified
+            caseDir = cwd();
             options_.erase("case");
         }
-        else if (!casePath.isAbsolute() && casePath.name() == "..")
+        else
         {
-            // Avoid relative cases ending in '..' - makes for very ugly names
-            casePath = cwd()/casePath;
-            casePath.clean();
+            caseDir.toAbsolute();
         }
     }
     else
     {
         // Nothing specified, use the current dir
-        casePath = cwd();
+        caseDir = cwd();
     }
 
-    rootPath_   = casePath.path();
-    globalCase_ = casePath.name();
-    case_       = globalCase_;
+    // The caseDir is a cleaned, absolute path
 
-    // The name of the executable, unless already present in the environment
+    rootPath_   = caseDir.path();
+    globalCase_ = caseDir.name();
+    case_       = globalCase_;  // The (processor) local case name
+
+    // Global case (directory) and case-name as environment variables
+    setEnv("FOAM_CASE", caseDir, true);
+    setEnv("FOAM_CASENAME", globalCase_, true);
+
+    // Executable name, unless already present in the environment
     setEnv("FOAM_EXECUTABLE", executable_, false);
-
-    // Set the case and case-name as an environment variable
-    if (rootPath_.isAbsolute())
-    {
-        // Absolute path - use as-is
-        setEnv("FOAM_CASE", rootPath_/globalCase_, true);
-        setEnv("FOAM_CASENAME", globalCase_, true);
-    }
-    else
-    {
-        // Qualify relative path
-        casePath = cwd()/rootPath_/globalCase_;
-        casePath.clean();
-
-        setEnv("FOAM_CASE", casePath, true);
-        setEnv("FOAM_CASENAME", casePath.name(), true);
-    }
 }
 
 
@@ -612,24 +689,52 @@ Foam::argList::argList
     char**& argv,
     bool checkArgs,
     bool checkOpts,
-    const bool initialise
+    bool initialise
 )
 :
     args_(argc),
-    options_(argc),
-    distributed_(false)
+    options_(argc)
 {
+    // Check for -fileHandler, which requires an argument.
+    word handlerType(getEnv("FOAM_FILEHANDLER"));
+    for (int argi = argc-2; argi > 0; --argi)
+    {
+        if (argv[argi][0] == '-')
+        {
+            const char *optName = &argv[argi][1];
+
+            if (strcmp(optName, "fileHandler") == 0)
+            {
+                handlerType = argv[argi+1];
+                break;
+            }
+        }
+    }
+    if (handlerType.empty())
+    {
+        handlerType = fileOperation::defaultFileHandler;
+    }
+
+    // Detect any parallel options
+    bool needsThread = fileOperations::fileOperationInitialise::New
+    (
+        handlerType,
+        argc,
+        argv
+    )().needsThreading();
+
+
     // Check if this run is a parallel run by searching for any parallel option
     // If found call runPar which might filter argv
     for (int argi = 1; argi < argc; ++argi)
     {
         if (argv[argi][0] == '-')
         {
-            const char *optionName = &argv[argi][1];
+            const char *optName = &argv[argi][1];
 
-            if (validParOptions.found(optionName))
+            if (validParOptions.found(optName))
             {
-                parRunControl_.runPar(argc, argv);
+                parRunControl_.runPar(argc, argv, needsThread);
                 break;
             }
         }
@@ -637,38 +742,31 @@ Foam::argList::argList
 
     // Convert argv -> args_ and capture ( ... ) lists
     regroupArgv(argc, argv);
-    argListStr_ += args_[0];
+    commandLine_ += args_[0];
 
     // Set executable name immediately - useful when emitting errors.
     executable_ = fileName(args_[0]).name();
 
     // Check arguments and options, argv[0] was already handled
     int nArgs = 1;
-    HashTable<string>::const_iterator optIter;
     for (int argi = 1; argi < args_.size(); ++argi)
     {
-        argListStr_ += ' ';
-        argListStr_ += args_[argi];
+        commandLine_ += ' ';
+        commandLine_ += args_[argi];
 
         if (args_[argi][0] == '-')
         {
-            const char *optionName = &args_[argi][1];
+            const char *optName = &args_[argi][1];
 
-            if (!*optionName)
+            if (!*optName)
             {
                 Warning
                     <<"Ignoring lone '-' on the command-line" << endl;
             }
             else if
             (
-                (
-                    (optIter = validOptions.cfind(optionName)).found()
-                 && !optIter.object().empty()
-                )
-             || (
-                    (optIter = validParOptions.cfind(optionName)).found()
-                 && !optIter.object().empty()
-                )
+                validOptions.lookup(optName, "").size()
+             || validParOptions.lookup(optName, "").size()
             )
             {
                 // If the option is known to require an argument,
@@ -677,10 +775,10 @@ Foam::argList::argList
                 ++argi;
                 if (argi >= args_.size())
                 {
-                    printBuildInfo(false);
+                    foamVersion::printBuildInfo(false);
 
                     Info<<nl
-                        <<"Error: option '-" << optionName
+                        <<"Error: option '-" << optName
                         << "' requires an argument" << nl << nl
                         << "See '" << executable_ << " -help' for usage"
                         << nl << nl;
@@ -688,17 +786,17 @@ Foam::argList::argList
                     Pstream::exit(1); // works for serial and parallel
                 }
 
-                argListStr_ += ' ';
-                argListStr_ += args_[argi];
+                commandLine_ += ' ';
+                commandLine_ += args_[argi];
                 // Handle duplicates by taking the last -option specified
-                options_.set(optionName, args_[argi]);
+                options_.set(optName, args_[argi]);
             }
             else
             {
                 // All other options (including unknown ones) are simply
                 // registered as existing.
 
-                options_.insert(optionName, "");
+                options_.insert(optName, "");
             }
         }
         else
@@ -711,7 +809,7 @@ Foam::argList::argList
         }
     }
 
-    args_.setSize(nArgs);
+    args_.resize(nArgs);
 
     parse(checkArgs, checkOpts, initialise);
 }
@@ -733,7 +831,7 @@ Foam::argList::argList
     rootPath_(args.rootPath_),
     globalCase_(args.globalCase_),
     case_(args.case_),
-    argListStr_(args.argListStr_)
+    commandLine_(args.commandLine_)
 {
     parse(checkArgs, checkOpts, initialise);
 }
@@ -747,25 +845,15 @@ void Foam::argList::parse
 )
 {
     // Help/documentation options:
-    //   -help        print the usage
-    //   -help-full   print the full usage
-    //   -doc         display application documentation in browser
-    //   -doc-source  display source code in browser
+    //   -doc         Display documentation in browser
+    //   -doc-source  Display source code in browser
+    //   -help        Display short help and exit
+    //   -help-compat Display compatibility options
+    //   -help-full   Display full help and exit
     {
         bool quickExit = false;
 
-        if (options_.found("help-full"))
-        {
-            printUsage(true);
-            quickExit = true;
-        }
-        else if (options_.found("help"))
-        {
-            printUsage(false);
-            quickExit = true;
-        }
-
-        // Only display one or the other
+        // Display either application or source documentation, not both
         if (options_.found("doc"))
         {
             displayDoc(false);
@@ -781,6 +869,30 @@ void Foam::argList::parse
             quickExit = true;
         }
 
+        // Display either short or full help, not both
+        if (options_.found("help-full"))
+        {
+            printUsage(true);
+            quickExit = true;
+        }
+        else if (options_.found("help"))
+        {
+            printUsage(false);
+            quickExit = true;
+        }
+        else if (options_.found("help-man"))
+        {
+            printMan();
+            quickExit = true;
+        }
+
+        // Allow independent display of compatibility information
+        if (options_.found("help-compat"))
+        {
+            printCompat();
+            quickExit = true;
+        }
+
         if (quickExit)
         {
             ::exit(0);
@@ -790,7 +902,7 @@ void Foam::argList::parse
     // Print the collected error messages and exit if check fails
     if (!check(checkArgs, checkOpts))
     {
-        printBuildInfo(false);
+        foamVersion::printBuildInfo(false);
         FatalError.write(Info, false);
 
         Pstream::exit(1); // works for serial and parallel
@@ -802,32 +914,47 @@ void Foam::argList::parse
         const string timeString = clock::clockTime();
 
         // Print the banner once only for parallel runs
-        if (Pstream::master() && bannerEnabled_)
+        if (Pstream::master() && bannerEnabled())
         {
             IOobject::writeBanner(Info, true)
-                << "Build  : " << Foam::FOAMbuild << nl
-                << "Arch   : " << Foam::FOAMbuildArch << nl
-                << "Exec   : " << argListStr_.c_str() << nl
+                << "Build  : ";
+
+            if (foamVersion::build.size())
+            {
+                Info<< foamVersion::build.c_str() << ' ';
+            }
+
+            Info<< "OPENFOAM=" << foamVersion::api;
+
+            if (foamVersion::patched())
+            {
+                // Patch-level, when defined
+                Info<< " patch=" << foamVersion::patch.c_str();
+            }
+
+            Info<< nl
+                << "Arch   : " << foamVersion::buildArch << nl
+                << "Exec   : " << commandLine_.c_str() << nl
                 << "Date   : " << dateString.c_str() << nl
                 << "Time   : " << timeString.c_str() << nl
-                << "Host   : " << hostName() << nl
+                << "Host   : " << hostName().c_str() << nl
                 << "PID    : " << pid() << endl;
         }
 
         jobInfo.add("startDate", dateString);
         jobInfo.add("startTime", timeString);
         jobInfo.add("userName", userName());
-        jobInfo.add("foamVersion", word(Foam::FOAMversion));
+        jobInfo.add("foamVersion", word(foamVersion::version));
         jobInfo.add("code", executable_);
-        jobInfo.add("argList", argListStr_);
+        jobInfo.add("argList", commandLine_);
         jobInfo.add("currentDir", cwd());
         jobInfo.add("PPID", ppid());
         jobInfo.add("PGID", pgid());
 
         // Add build information - only use the first word
         {
-            std::string build(Foam::FOAMbuild);
-            std::string::size_type space = build.find(' ');
+            std::string build(foamVersion::build);
+            const auto space = build.find(' ');
             if (space != std::string::npos)
             {
                 build.resize(space);
@@ -845,26 +972,69 @@ void Foam::argList::parse
     // 5. '-fileHandler' commmand-line option
 
     {
-        word handlerType
-        (
-            options_.lookup("fileHandler", getEnv("FOAM_FILEHANDLER"))
-        );
+        word fileHandlerName =
+            options_.lookup("fileHandler", getEnv("FOAM_FILEHANDLER"));
 
-        if (handlerType.empty())
+        if (fileHandlerName.empty())
         {
-            handlerType = fileOperation::defaultFileHandler;
+            fileHandlerName = fileOperation::defaultFileHandler;
         }
 
-        autoPtr<fileOperation> handler
-        (
-            fileOperation::New
-            (
-                handlerType,
-                bannerEnabled_
-            )
-        );
+        auto handler = fileOperation::New(fileHandlerName, bannerEnabled());
         Foam::fileHandler(handler);
     }
+
+
+    stringList slaveProcs;
+    stringList slaveMachine;
+    const int writeHostsSwitch = debug::infoSwitch("writeHosts", 1);
+
+    // Collect slave machine/pid, and check that the build is identical
+    if (parRunControl_.parRun())
+    {
+        if (Pstream::master())
+        {
+            slaveProcs.resize(Pstream::nProcs()-1);
+            slaveMachine.resize(Pstream::nProcs()-1);
+            label proci = 0;
+            for
+            (
+                int slave = Pstream::firstSlave();
+                slave <= Pstream::lastSlave();
+                slave++
+            )
+            {
+                IPstream fromSlave(Pstream::commsTypes::scheduled, slave);
+
+                string slaveBuild;
+                label slavePid;
+                fromSlave >> slaveBuild >> slaveMachine[proci] >> slavePid;
+
+                slaveProcs[proci] = slaveMachine[proci] + "." + name(slavePid);
+                proci++;
+
+                // Verify that all processors are running the same build
+                if (slaveBuild != foamVersion::build)
+                {
+                    FatalErrorIn(executable())
+                        << "Master is running version " << foamVersion::build
+                        << "; slave " << proci << " is running version "
+                        << slaveBuild
+                        << exit(FatalError);
+                }
+            }
+        }
+        else
+        {
+            OPstream toMaster
+            (
+                Pstream::commsTypes::scheduled,
+                Pstream::masterNo()
+            );
+            toMaster << foamVersion::build << hostName() << pid();
+        }
+    }
+
 
     // Case is a single processor run unless it is running parallel
     int nProcs = 1;
@@ -879,7 +1049,7 @@ void Foam::argList::parse
         if (Pstream::master())
         {
             // Establish rootPath_/globalCase_/case_ for master
-            getRootCase();
+            setCasePaths();
 
             // Establish location of decomposeParDict, allow override with
             // the -decomposeParDict option.
@@ -891,7 +1061,7 @@ void Foam::argList::parse
                 source = options_["decomposeParDict"];
                 if (isDir(source))
                 {
-                    source = source/"decomposeParDict";
+                    source /= "decomposeParDict";
                     adjustOpt = true;
                 }
 
@@ -912,22 +1082,55 @@ void Foam::argList::parse
 
             // If running distributed (different roots for different procs)
             label dictNProcs = -1;
-            if (options_.found("roots"))
+            if (this->readListIfPresent("roots", roots))
             {
-                distributed_ = true;
+                parRunControl_.distributed(true);
                 source = "-roots";
-                ITstream is("roots", options_["roots"]);
-
-                if (is.size() == 1)
+                if (roots.size() != 1)
                 {
-                    // Single token - treated like list with one entry
-                    roots.setSize(1);
-
-                    is >> roots[0];
+                    dictNProcs = roots.size()+1;
                 }
-                else
+            }
+            else if (options_.found("hostRoots"))
+            {
+                roots.resize(Pstream::nProcs()-1, fileName::null);
+
+                source = "-hostRoots";
+                ITstream is(source, options_["hostRoots"]);
+
+                List<Tuple2<wordRe, fileName>> hostRoots(is);
+                checkITstream(is, "hostRoots");
+
+                for (const auto& hostRoot : hostRoots)
                 {
-                    is >> roots;
+                    labelList matched
+                    (
+                        findStrings(hostRoot.first(), slaveMachine)
+                    );
+                    for (const label slavei : matched)
+                    {
+                        if (!roots[slavei].empty())
+                        {
+                            FatalErrorInFunction
+                                << "Slave " << slaveMachine[slavei]
+                                << " has multiple matching roots in "
+                                << hostRoots << exit(FatalError);
+                        }
+
+                        roots[slavei] = hostRoot.second();
+                    }
+                }
+
+                // Check
+                forAll(roots, slavei)
+                {
+                    if (roots[slavei].empty())
+                    {
+                        FatalErrorInFunction
+                            << "Slave " << slaveMachine[slavei]
+                            << " has no matching roots in "
+                            << hostRoots << exit(FatalError);
+                    }
                 }
 
                 if (roots.size() != 1)
@@ -952,15 +1155,12 @@ void Foam::argList::parse
 
                 dictionary decompDict(decompDictStream);
 
-                dictNProcs = readLabel
-                (
-                    decompDict.lookup("numberOfSubdomains")
-                );
+                decompDict.readEntry("numberOfSubdomains", dictNProcs);
 
                 if (decompDict.lookupOrDefault("distributed", false))
                 {
-                    distributed_ = true;
-                    decompDict.lookup("roots") >> roots;
+                    parRunControl_.distributed(true);
+                    decompDict.readEntry("roots", roots);
                 }
             }
 
@@ -969,7 +1169,7 @@ void Foam::argList::parse
             if (roots.size() == 1)
             {
                 const fileName rootName(roots[0]);
-                roots.setSize(Pstream::nProcs()-1, rootName);
+                roots.resize(Pstream::nProcs()-1, rootName);
 
                 // adjust dictNProcs for command-line '-roots' option
                 if (dictNProcs < 0)
@@ -1012,9 +1212,9 @@ void Foam::argList::parse
                         << exit(FatalError);
                 }
 
-                forAll(roots, i)
+                for (fileName& dir : roots)
                 {
-                    roots[i].expand();
+                    dir.expand();
                 }
 
                 // Distribute the master's argument list (with new root)
@@ -1054,8 +1254,8 @@ void Foam::argList::parse
                     (
                         isDir
                         (
-                            rootPath_/globalCase_/"processor"
-                          + name(++nProcDirs)
+                            rootPath_/globalCase_
+                          / ("processor" + Foam::name(++nProcDirs))
                         )
                     )
                     {}
@@ -1087,75 +1287,31 @@ void Foam::argList::parse
         else
         {
             // Collect the master's argument list
+            label nroots;
+
             IPstream fromMaster
             (
                 Pstream::commsTypes::scheduled,
                 Pstream::masterNo()
             );
-            fromMaster >> args_ >> options_ >> distributed_;
+            fromMaster >> args_ >> options_ >> nroots;
+
+            parRunControl_.distributed(nroots);
 
             // Establish rootPath_/globalCase_/case_ for slave
-            getRootCase();
+            setCasePaths();
         }
 
         nProcs = Pstream::nProcs();
-        case_ = globalCase_/(word("processor") + name(Pstream::myProcNo()));
+        case_ = globalCase_/("processor" + Foam::name(Pstream::myProcNo()));
     }
     else
     {
         // Establish rootPath_/globalCase_/case_
-        getRootCase();
-        case_ = globalCase_;
+        setCasePaths();
+        case_ = globalCase_;   // Redundant, but extra safety?
     }
 
-    stringList slaveProcs;
-    const int writeHostsSwitch = debug::infoSwitch("writeHosts", 1);
-
-    // Collect slave machine/pid, and check that the build is identical
-    if (parRunControl_.parRun())
-    {
-        if (Pstream::master())
-        {
-            slaveProcs.setSize(Pstream::nProcs() - 1);
-            label proci = 0;
-            for
-            (
-                int slave = Pstream::firstSlave();
-                slave <= Pstream::lastSlave();
-                slave++
-            )
-            {
-                IPstream fromSlave(Pstream::commsTypes::scheduled, slave);
-
-                string slaveBuild;
-                string slaveMachine;
-                label slavePid;
-                fromSlave >> slaveBuild >> slaveMachine >> slavePid;
-
-                slaveProcs[proci++] = slaveMachine + "." + name(slavePid);
-
-                // Check build string to make sure all processors are running
-                // the same build
-                if (slaveBuild != Foam::FOAMbuild)
-                {
-                    FatalErrorIn(executable())
-                        << "Master is running version " << Foam::FOAMbuild
-                        << "; slave " << proci << " is running version "
-                        << slaveBuild
-                        << exit(FatalError);
-                }
-            }
-        }
-        else
-        {
-            OPstream toMaster
-            (
-                Pstream::commsTypes::scheduled,
-                Pstream::masterNo()
-            );
-            toMaster << string(Foam::FOAMbuild) << hostName() << pid();
-        }
-    }
 
     // Keep or discard slave and root information for reporting:
     if (Pstream::master() && parRunControl_.parRun())
@@ -1171,7 +1327,7 @@ void Foam::argList::parse
         }
     }
 
-    if (Pstream::master() && bannerEnabled_)
+    if (Pstream::master() && bannerEnabled())
     {
         Info<< "Case   : " << (rootPath_/globalCase_).c_str() << nl
             << "nProcs : " << nProcs << endl;
@@ -1222,12 +1378,12 @@ void Foam::argList::parse
 
         // Switch on signal trapping. We have to wait until after Pstream::init
         // since this sets up its own ones.
-        sigFpe::set(bannerEnabled_);
-        sigInt::set(bannerEnabled_);
-        sigQuit::set(bannerEnabled_);
-        sigSegv::set(bannerEnabled_);
+        sigFpe::set(bannerEnabled());
+        sigInt::set(bannerEnabled());
+        sigQuit::set(bannerEnabled());
+        sigSegv::set(bannerEnabled());
 
-        if (Pstream::master() && bannerEnabled_)
+        if (Pstream::master() && bannerEnabled())
         {
             Info<< "fileModificationChecking : "
                 << "Monitoring run-time modified files using "
@@ -1283,7 +1439,7 @@ Foam::argList::~argList()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::label Foam::argList::optionCount(const UList<word>& optionNames) const
+Foam::label Foam::argList::count(const UList<word>& optionNames) const
 {
     label n = 0;
     for (const word& optName : optionNames)
@@ -1297,7 +1453,7 @@ Foam::label Foam::argList::optionCount(const UList<word>& optionNames) const
 }
 
 
-Foam::label Foam::argList::optionCount
+Foam::label Foam::argList::count
 (
     std::initializer_list<word> optionNames
 ) const
@@ -1314,30 +1470,25 @@ Foam::label Foam::argList::optionCount
 }
 
 
-bool Foam::argList::setOption(const word& optionName, const string& param)
+bool Foam::argList::setOption(const word& optName, const string& param)
 {
     // Some options are always protected
     if
     (
-        optionName == "case"
-     || optionName == "parallel"
-     || optionName == "roots"
+        optName == "case"
+     || optName == "parallel"
+     || optName == "roots"
     )
     {
         FatalErrorInFunction
-            <<"Option: '" << optionName << "' is protected" << nl
+            <<"Option: '" << optName << "' is protected" << nl
             << exit(FatalError);
         return false;
     }
 
-    if
-    (
-        options_.found(optionName)
-      ? (options_[optionName] != param)
-      : true
-    )
+    if (options_.found(optName) ? (options_[optName] != param) : true)
     {
-        options_.set(optionName, param);
+        options_.set(optName, param);
         return true;
     }
 
@@ -1345,134 +1496,33 @@ bool Foam::argList::setOption(const word& optionName, const string& param)
 }
 
 
-bool Foam::argList::unsetOption(const word& optionName)
+bool Foam::argList::unsetOption(const word& optName)
 {
     // Some options are always protected
     if
     (
-        optionName == "case"
-     || optionName == "parallel"
-     || optionName == "roots"
+        optName == "case"
+     || optName == "parallel"
+     || optName == "roots"
+     || optName == "hostRoots"
     )
     {
         FatalErrorInFunction
-            <<"Option: '" << optionName << "' is protected" << nl
+            <<"Option: '" << optName << "' is protected" << nl
             << exit(FatalError);
         return false;
     }
 
     // Remove the option, return true if state changed
-    return options_.erase(optionName);
-}
-
-
-void Foam::argList::printNotes() const
-{
-    // Output notes directly - no automatic text wrapping
-    if (!notes.empty())
-    {
-        Info<< nl;
-        forAllConstIters(notes, iter)
-        {
-            Info<< iter().c_str() << nl;
-        }
-    }
-}
-
-
-void Foam::argList::printUsage(bool full) const
-{
-    Info<< "\nUsage: " << executable_ << " [OPTIONS]";
-
-    if (validArgs.size())
-    {
-        Info<< ' ';
-
-        if (!argsMandatory_)
-        {
-            Info<< '[';
-        }
-
-        label i = 0;
-        forAllConstIters(validArgs, iter)
-        {
-            if (i++) Info<< ' ';
-            Info<< '<' << iter().c_str() << '>';
-        }
-
-        if (!argsMandatory_)
-        {
-            Info<< ']';
-        }
-    }
-
-    Info<< "\noptions:\n";
-
-    const wordList opts = validOptions.sortedToc();
-    for (const word& optionName : opts)
-    {
-        if (!full)
-        {
-            // Adhoc filtering of some options to suppress
-            if
-            (
-                optionName.startsWith("list")
-             && optionName != "list"
-            )
-            {
-                continue;
-            }
-        }
-
-        Info<< "  -" << optionName;
-        label len = optionName.size() + 3;  // Length includes leading '  -'
-
-        auto optIter = validOptions.cfind(optionName);
-
-        if (optIter().size())
-        {
-            // Length includes space between option/param and '<>'
-            len += optIter().size() + 3;
-            Info<< " <" << optIter().c_str() << '>';
-        }
-
-        auto usageIter = optionUsage.cfind(optionName);
-
-        if (usageIter.found())
-        {
-            printOptionUsage(len, usageIter());
-        }
-        else
-        {
-            Info<< nl;
-        }
-    }
-
-    // Place documentation/help options at the end
-    Info<< "  -doc";
-    printOptionUsage(6, "display application documentation in browser");
-
-    Info<< "  -doc-source";
-    printOptionUsage(13, "display source code in browser" );
-
-    Info<< "  -help";
-    printOptionUsage(7, "print usage information and exit");
-    Info<< "  -help-full";
-    printOptionUsage(12, "print full usage information and exit");
-
-    printNotes();
-
-    Info<< nl;
-    printBuildInfo();
-    Info<< endl;
+    return options_.erase(optName);
 }
 
 
 void Foam::argList::displayDoc(bool source) const
 {
     const dictionary& docDict = debug::controlDict().subDict("Documentation");
-    List<fileName> docDirs(docDict.lookup("doxyDocDirs"));
-    fileName docExt(docDict.lookup("doxySourceFileExt"));
+    fileNameList docDirs(docDict.get<fileNameList>("doxyDocDirs"));
+    fileName docExt(docDict.get<fileName>("doxySourceFileExt"));
 
     // For source code: change xxx_8C.html to xxx_8C_source.html
     if (source)
@@ -1517,7 +1567,7 @@ void Foam::argList::displayDoc(bool source) const
     string docBrowser = getEnv("FOAM_DOC_BROWSER");
     if (docBrowser.empty())
     {
-        docDict.lookup("docBrowser") >> docBrowser;
+        docDict.readEntry("docBrowser", docBrowser);
     }
 
     // Can use FOAM_DOC_BROWSER='application file://%f' if required
@@ -1534,7 +1584,8 @@ void Foam::argList::displayDoc(bool source) const
 
     CStringList command(stringOps::splitSpace(docBrowser));
 
-    Info<<"OpenFOAM-" << Foam::FOAMversion << " documentation:" << nl
+    Info
+        << "OpenFOAM " << foamVersion::api << " documentation:" << nl
         << "    " << command << nl << endl;
 
     Foam::system(command, true);
@@ -1560,15 +1611,15 @@ bool Foam::argList::check(bool checkArgs, bool checkOpts) const
         {
             forAllConstIters(options_, iter)
             {
-                const word& optionName = iter.key();
+                const word& optName = iter.key();
                 if
                 (
-                    !validOptions.found(optionName)
-                 && !validParOptions.found(optionName)
+                    !validOptions.found(optName)
+                 && !validParOptions.found(optName)
                 )
                 {
                     FatalError
-                        << "Invalid option: -" << optionName << endl;
+                        << "Invalid option: -" << optName << endl;
                     ok = false;
                 }
             }
@@ -1599,7 +1650,7 @@ bool Foam::argList::checkRootCase() const
         return false;
     }
 
-    fileName pathDir(fileHandler().filePath(path()));
+    const fileName pathDir(fileHandler().filePath(path()));
 
     if (checkProcessorDirectories_ && pathDir.empty() && Pstream::master())
     {

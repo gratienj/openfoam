@@ -50,7 +50,9 @@ class uncollatedFileOperation
 :
     public fileOperation
 {
-    // Private Member Functions
+protected:
+
+    // Protected Member Functions
 
         //- Search for an object.
         //    checkGlobal : also check undecomposed case
@@ -63,6 +65,13 @@ class uncollatedFileOperation
             const bool search
         ) const;
 
+        //- Lookup name of processorsDDD using cache. Return empty fileName
+        //  if not found. Do not use any parallel synchronisation
+        virtual tmpNrc<dirIndexList> lookupProcessorsPath
+        (
+            const fileName&
+        ) const;
+
 
 public:
 
@@ -73,7 +82,7 @@ public:
     // Constructors
 
         //- Construct null
-        uncollatedFileOperation(const bool verbose);
+        uncollatedFileOperation(bool verbose);
 
 
     //- Destructor
@@ -191,7 +200,7 @@ public:
             //- Remove a file, returning true if successful otherwise false
             virtual bool rm(const fileName&) const;
 
-            //- Remove a dirctory and its contents
+            //- Remove a directory and its contents
             virtual bool rmDir
             (
                 const fileName& dir,
@@ -207,7 +216,7 @@ public:
 //            ) const;
 
 
-        // (reg)IOobject functinality
+        // (reg)IOobject functionality
 
             //- Search for an object. checkGlobal : also check undecomposed case
             virtual fileName filePath

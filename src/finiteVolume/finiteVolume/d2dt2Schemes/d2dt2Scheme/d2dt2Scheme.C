@@ -21,9 +21,6 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Description
-    Abstract base class for finite volume calculus d2dt2 schemes.
-
 \*---------------------------------------------------------------------------*/
 
 #include "fv.H"
@@ -55,10 +52,8 @@ tmp<d2dt2Scheme<Type>> d2dt2Scheme<Type>::New
 
     if (schemeData.eof())
     {
-        FatalIOErrorInFunction
-        (
-            schemeData
-        )   << "D2dt2 scheme not specified" << endl << endl
+        FatalIOErrorInFunction(schemeData)
+            << "D2dt2 scheme not specified" << endl << endl
             << "Valid d2dt2 schemes are :" << endl
             << IstreamConstructorTablePtr_->sortedToc()
             << exit(FatalIOError);
@@ -70,10 +65,8 @@ tmp<d2dt2Scheme<Type>> d2dt2Scheme<Type>::New
 
     if (!cstrIter.found())
     {
-        FatalIOErrorInFunction
-        (
-            schemeData
-        )   << "Unknown d2dt2 scheme "
+        FatalIOErrorInFunction(schemeData)
+            << "Unknown d2dt2 scheme "
             << schemeName << nl << nl
             << "Valid d2dt2 schemes are :" << endl
             << IstreamConstructorTablePtr_->sortedToc()
@@ -82,13 +75,6 @@ tmp<d2dt2Scheme<Type>> d2dt2Scheme<Type>::New
 
     return cstrIter()(mesh, schemeData);
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class Type>
-d2dt2Scheme<Type>::~d2dt2Scheme()
-{}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

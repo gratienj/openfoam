@@ -58,11 +58,11 @@ class surfaceFilmRegionModel
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        surfaceFilmRegionModel(const surfaceFilmRegionModel&);
+        //- No copy construct
+        surfaceFilmRegionModel(const surfaceFilmRegionModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const surfaceFilmRegionModel&);
+        //- No copy assignment
+        void operator=(const surfaceFilmRegionModel&) = delete;
 
 
 protected:
@@ -105,7 +105,7 @@ public:
 
         // Access
 
-            //- Return the accleration due to gravity
+            //- Return the acceleration due to gravity
             inline const dimensionedVector& g() const;
 
             //- External hook to add sources to the film

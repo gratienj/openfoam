@@ -81,9 +81,9 @@ constantRadiation::constantRadiation
         film.regionMesh(),
         dimensionedScalar("one", dimless, 1.0)
     ),
-    absorptivity_(readScalar(coeffDict_.lookup("absorptivity"))),
-    timeStart_(readScalar(coeffDict_.lookup("timeStart"))),
-    duration_(readScalar(coeffDict_.lookup("duration")))
+    absorptivity_(coeffDict_.get<scalar>("absorptivity")),
+    timeStart_(coeffDict_.get<scalar>("timeStart")),
+    duration_(coeffDict_.get<scalar>("duration"))
 {
     mask_ = pos0(mask_);
 }
@@ -116,7 +116,7 @@ tmp<volScalarField> constantRadiation::Shs()
                 IOobject::NO_WRITE
             ),
             film().regionMesh(),
-            dimensionedScalar("zero", dimMass/pow3(dimTime), 0.0)
+            dimensionedScalar(dimMass/pow3(dimTime), Zero)
         )
     );
 

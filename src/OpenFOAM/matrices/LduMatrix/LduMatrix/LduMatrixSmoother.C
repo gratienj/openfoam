@@ -36,7 +36,7 @@ Foam::LduMatrix<Type, DType, LUType>::smoother::New
     const dictionary& smootherDict
 )
 {
-    word smootherName = smootherDict.lookup("smoother");
+    const word smootherName(smootherDict.get<word>("smoother"));
 
     if (matrix.symmetric())
     {
@@ -84,17 +84,12 @@ Foam::LduMatrix<Type, DType, LUType>::smoother::New
             )
         );
     }
-    else
-    {
-        FatalIOErrorInFunction(smootherDict)
-            << "cannot solve incomplete matrix, no off-diagonal coefficients"
-            << exit(FatalIOError);
 
-        return autoPtr<typename LduMatrix<Type, DType, LUType>::smoother>
-        (
-            nullptr
-        );
-    }
+    FatalIOErrorInFunction(smootherDict)
+        << "cannot solve incomplete matrix, no off-diagonal coefficients"
+        << exit(FatalIOError);
+
+    return nullptr;
 }
 
 

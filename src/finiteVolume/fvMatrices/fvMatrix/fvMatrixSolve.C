@@ -96,10 +96,8 @@ Foam::SolverPerformance<Type> Foam::fvMatrix<Type>::solveSegregatedOrCoupled
     }
     else
     {
-        FatalIOErrorInFunction
-        (
-            solverControls
-        )   << "Unknown type " << type
+        FatalIOErrorInFunction(solverControls)
+            << "Unknown type " << type
             << "; currently supported solver types are segregated and coupled"
             << exit(FatalIOError);
 
@@ -137,7 +135,7 @@ Foam::SolverPerformance<Type> Foam::fvMatrix<Type>::solveSegregated
     Field<Type> source(source_);
 
     // At this point include the boundary source from the coupled boundaries.
-    // This is corrected for the implict part by updateMatrixInterfaces within
+    // This is corrected for the implicit part by updateMatrixInterfaces within
     // the component loop.
     addBoundarySource(source);
 

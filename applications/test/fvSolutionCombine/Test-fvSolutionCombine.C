@@ -50,22 +50,17 @@ bool checkDictionaryContent(const dictionary& dict1, const dictionary& dict2)
     }
 
 
-    forAllConstIter(dictionary, dict1, iter1)
+    for (const entry& entry1 : dict1)
     {
-        const entry* entryPtr = dict2.lookupEntryPtr
-        (
-            iter1().keyword(),
-            false,
-            false
-        );
+        const entry* eptr =
+            dict2.findEntry(entry1.keyword(), keyType::LITERAL);
 
-        if (!entryPtr)
+        if (!eptr)
         {
             return false;
         }
 
-        const entry& entry1 = iter1();
-        const entry& entry2 = *entryPtr;
+        const entry& entry2 = *eptr;
 
         bool ok = false;
         if (entry1.isDict())
@@ -106,8 +101,8 @@ int main(int argc, char *argv[])
 
     const word dictName("fvSolution");
 
-    bool optRewrite = args.optionFound("rewrite");
-    bool optShow = args.optionFound("show");
+    bool optRewrite = args.found("rewrite");
+    bool optShow = args.found("show");
 
     IOdictionary solutionDict
     (

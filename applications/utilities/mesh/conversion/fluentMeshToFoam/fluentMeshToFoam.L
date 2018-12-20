@@ -28,7 +28,7 @@ Group
     grpMeshConversionUtilities
 
 Description
-    Converts a Fluent mesh to OpenFOAM format
+    Convert a Fluent mesh to OpenFOAM format,
     including multiple region and region boundary handling.
 
 \*---------------------------------------------------------------------------*/
@@ -58,15 +58,14 @@ Description
 #include "cellShapeRecognition.H"
 #include "repatchPolyTopoChanger.H"
 
+// Flex may use register, which is deprecated and incompatible with C++17
+#pragma clang diagnostic ignored "-Wdeprecated-register"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 using namespace Foam;
 
 const scalar convertToMeters = 1.0;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 
 label dimensionOfGrid = 0;
 
@@ -866,29 +865,34 @@ label findFace(const primitiveMesh& mesh, const face& f)
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Convert a Fluent mesh to OpenFOAM format,"
+        " including multiple region and region boundary handling"
+    );
     argList::noParallel();
     argList::addArgument("Fluent mesh file");
     argList::addOption
     (
         "scale",
         "factor",
-        "geometry scaling factor - default is 1"
+        "Geometry scaling factor - default is 1"
     );
     argList::addOption
     (
         "2D",
         "thickness",
-        "use when converting a 2-D mesh (applied before scale)"
+        "Use when converting a 2-D mesh (applied before scale)"
     );
     argList::addBoolOption
     (
         "writeSets",
-        "write cell zones and patches as sets"
+        "Write cell zones and patches as sets"
     );
     argList::addBoolOption
     (
         "writeZones",
-        "write cell zones as zones"
+        "Write cell zones as zones"
     );
 
     argList args(argc, argv);
@@ -898,10 +902,10 @@ int main(int argc, char *argv[])
         FatalError.exit();
     }
 
-    const scalar scaleFactor = args.optionLookupOrDefault("scale", 1.0);
+    const scalar scaleFactor = args.opt<scalar>("scale", 1);
 
-    const bool writeSets  = args.optionFound("writeSets");
-    const bool writeZones = args.optionFound("writeZones");
+    const bool writeSets  = args.found("writeSets");
+    const bool writeZones = args.found("writeZones");
 
     #include "createTime.H"
 
@@ -975,7 +979,7 @@ int main(int argc, char *argv[])
 
         scalar twoDThickness = 1.0;
 
-        if (!args.optionReadIfPresent("2D", twoDThickness))
+        if (!args.readIfPresent("2D", twoDThickness))
         {
             const scalar extrusionFactor = 0.02; //0.01 in each direction
             boundBox box(points);
@@ -1176,7 +1180,7 @@ int main(int argc, char *argv[])
             runTime.constant(),
             runTime
         ),
-        xferMove(points),
+        std::move(points),
         cellShapes,
         patches,
         patchNames,
@@ -1387,7 +1391,7 @@ int main(int argc, char *argv[])
     DynamicList<polyPatch*> newPatches(nPatches);
 
     // For every boundary face the old patch.
-    labelList facePatchID(pShapeMesh.nFaces()-pShapeMesh.nInternalFaces(), -1);
+    labelList facePatchID(pShapeMesh.nBoundaryFaces(), -1);
     label cMeshFace = pShapeMesh.nInternalFaces();
     label nBoundaries = 0;
 
@@ -1621,14 +1625,14 @@ int main(int argc, char *argv[])
             labelList cls(end() - start() + 1);
 
             // Mark zone cells, used for finding faces
-            boolList zoneCell(pShapeMesh.nCells(), false);
+            bitSet zoneCell(pShapeMesh.nCells(), false);
 
             // shift cell indizes by 1
             label nr=0;
             for (label celli = (start() - 1); celli < end(); celli++)
             {
                 cls[nr]=celli;
-                zoneCell[celli] = true;
+                zoneCell.set(celli);
                 nr++;
             }
 
@@ -1647,7 +1651,7 @@ int main(int argc, char *argv[])
                 label own = pShapeMesh.faceOwner()[facei];
                 if (nei != -1)
                 {
-                    if (zoneCell[nei] && zoneCell[own])
+                    if (zoneCell.test(nei) && zoneCell.test(own))
                     {
                         zoneFaces.append(facei);
                     }
@@ -1670,7 +1674,7 @@ int main(int argc, char *argv[])
                 const labelList& faceCells = bPatches[pI].faceCells();
                 forAll(faceCells, fcI)
                 {
-                    if (zoneCell[faceCells[fcI] ])
+                    if (zoneCell.test(faceCells[fcI]))
                     {
                         boundaryZones[pI].append(name);
                         break;

@@ -53,6 +53,12 @@ protected:
 
     // Protected data
 
+        //- Wave height / [m]
+        scalar waveHeight_;
+
+        //- Wave angle / [rad]  (read in degrees)
+        scalar waveAngle_;
+
         //-
         const scalarField& x_;
 
@@ -81,7 +87,7 @@ public:
     );
 
     //- Destructor
-    virtual ~solitaryWaveModel();
+    virtual ~solitaryWaveModel() = default;
 
 
     // Public Member Functions

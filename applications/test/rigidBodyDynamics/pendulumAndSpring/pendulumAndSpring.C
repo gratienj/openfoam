@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,6 +37,8 @@ Description
 #include "rigidBodyModelState.H"
 #include "Fstream.H"
 #include "constants.H"
+#include "argList.H"
+#include "Time.H"
 
 using namespace Foam;
 using namespace RBD;
@@ -46,12 +48,14 @@ using namespace Foam::constant::mathematical;
 
 int main(int argc, char *argv[])
 {
+    #include "setRootCase.H"
+    #include "createTime.H"
     dictionary pendulumAndSpringDict(IFstream("pendulumAndSpring")());
 
     // Create the pendulumAndSpring model from dictionary
-    rigidBodyMotion pendulumAndSpring(pendulumAndSpringDict);
+    rigidBodyMotion pendulumAndSpring(runTime, pendulumAndSpringDict);
 
-    label nIter(readLabel(pendulumAndSpringDict.lookup("nIter")));
+    label nIter(pendulumAndSpringDict.get<label>("nIter"));
 
     Info<< pendulumAndSpring << endl;
     Info<< "// Joint state " << endl;
@@ -74,7 +78,7 @@ int main(int argc, char *argv[])
 
         for (label i=0; i<nIter; i++)
         {
-            pendulumAndSpring.solve(deltaT, tau, fx);
+            pendulumAndSpring.solve(t + deltaT, deltaT, tau, fx);
         }
 
         // Write the results for graph generation

@@ -41,7 +41,7 @@ SourceFiles
 #include "IOField.H"
 #include "CompactIOField.H"
 #include "polyMesh.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -82,7 +82,7 @@ class Cloud
         mutable DynamicList<label> labels_;
 
         //- Does the cell have wall faces
-        mutable autoPtr<PackedBoolList> cellWallFacesPtr_;
+        mutable autoPtr<bitSet> cellWallFacesPtr_;
 
         //- Temporary storage for the global particle positions
         mutable autoPtr<vectorField> globalPositionsPtr_;
@@ -109,7 +109,7 @@ class Cloud
 protected:
 
         //- Geometry type
-        typename IOPosition<Cloud<ParticleType>>::geometryType geometryType_;
+        cloud::geometryType geometryType_;
 
 
 public:

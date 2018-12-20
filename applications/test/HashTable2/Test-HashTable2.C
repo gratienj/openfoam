@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     Info<< "table3: " << table3 << nl
         << "toc: " << table3.toc() << endl;
 
-    Map<label> table4(table3.xfer());
+    Map<label> table4(std::move(table3));
 
     Info<< "table3: " << table3 << nl
         << "toc: " << table3.toc() << endl;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         << "toc: " << table4.toc() << endl;
 
     HashPtrTable<label, Foam::string> ptable1(0);
-    ptable1.insert("kjhkjh", new label(10));
+    ptable1.insert("kjhkjh", autoPtr<label>::New(10));
 
     Info<< "PtrTable toc: " << ptable1.toc() << endl;
 

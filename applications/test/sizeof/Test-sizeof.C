@@ -32,6 +32,9 @@ Description
 #include "dictionary.H"
 #include "nil.H"
 #include "IOstreams.H"
+#include "PstreamBuffers.H"
+#include "argList.H"
+#include "Time.H"
 
 namespace Foam
 {
@@ -60,6 +63,13 @@ int main(int argc, char *argv[])
     {
         nil x;
         cout<<"nil:" << sizeof(x) << nl;
+    }
+    {
+        argList x(argc, argv);
+        cout<<"argList:" << sizeof(x) << nl;
+
+        TimePaths y(x);
+        cout<<"TimePaths:" << sizeof(y) << nl;
     }
     {
         zero x;
@@ -101,6 +111,9 @@ int main(int argc, char *argv[])
         cout<<"string:" << sizeof(Foam::string) << nl;
     }
 
+    cout<<"IOstream:" << sizeof(Foam::IOstream) << nl;
+    cout<<"PstreamBuffers:" << sizeof(Foam::PstreamBuffers) << nl;
+    cout<<"Time:" << sizeof(Foam::Time) << nl;
 
     Info << "---\nEnd\n" << endl;
 

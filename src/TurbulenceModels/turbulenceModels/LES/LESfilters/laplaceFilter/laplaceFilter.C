@@ -53,7 +53,7 @@ Foam::laplaceFilter::laplaceFilter(const fvMesh& mesh, scalar widthCoeff)
             mesh
         ),
         mesh,
-        dimensionedScalar("zero", dimLength*dimLength, 0),
+        dimensionedScalar(dimLength*dimLength, Zero),
         calculatedFvPatchScalarField::typeName
     )
 {
@@ -66,7 +66,7 @@ Foam::laplaceFilter::laplaceFilter(const fvMesh& mesh, const dictionary& bd)
     LESfilter(mesh),
     widthCoeff_
     (
-        readScalar(bd.optionalSubDict(type() + "Coeffs").lookup("widthCoeff"))
+        bd.optionalSubDict(type() + "Coeffs").get<scalar>("widthCoeff")
     ),
     coeff_
     (
@@ -77,7 +77,7 @@ Foam::laplaceFilter::laplaceFilter(const fvMesh& mesh, const dictionary& bd)
             mesh
         ),
         mesh,
-        dimensionedScalar("zero", dimLength*dimLength, 0),
+        dimensionedScalar(dimLength*dimLength, Zero),
         calculatedFvPatchScalarField::typeName
     )
 {
@@ -89,7 +89,7 @@ Foam::laplaceFilter::laplaceFilter(const fvMesh& mesh, const dictionary& bd)
 
 void Foam::laplaceFilter::read(const dictionary& bd)
 {
-    bd.optionalSubDict(type() + "Coeffs").lookup("widthCoeff") >> widthCoeff_;
+    bd.optionalSubDict(type() + "Coeffs").readEntry("widthCoeff", widthCoeff_);
 }
 
 

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,17 +48,18 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
-
+// Forward declarations
 template<class Type, class GeoMesh> class DimensionedField;
 
-template<class Type, class GeoMesh> Ostream& operator<<
+template<class Type, class GeoMesh>
+Ostream& operator<<
 (
     Ostream& os,
     const DimensionedField<Type, GeoMesh>& df
 );
 
-template<class Type, class GeoMesh> Ostream& operator<<
+template<class Type, class GeoMesh>
+Ostream& operator<<
 (
     Ostream& os,
     const tmp<DimensionedField<Type, GeoMesh>>& tdf
@@ -75,10 +76,9 @@ class DimensionedField
     public regIOobject,
     public Field<Type>
 {
-
 public:
 
-    // Public typedefs
+    // Public Typedefs
 
         //- Type of mesh on which this DimensionedField is instantiated
         typedef typename GeoMesh::Mesh Mesh;
@@ -120,7 +120,7 @@ public:
 
     // Static Member Functions
 
-        //- Return a null DimensionedField
+        //- Return a NullObjectRef DimensionedField
         inline static const DimensionedField<Type, GeoMesh>& null();
 
 
@@ -135,25 +135,35 @@ public:
             const Field<Type>& field
         );
 
-        //- Construct from components, transferring the initial field content
+        //- Construct from components, transferring initial field content
         DimensionedField
         (
             const IOobject& io,
             const Mesh& mesh,
             const dimensionSet& dims,
-            const Xfer<Field<Type>>& field
+            Field<Type>&& field
         );
 
-        //- Construct from components, transferring the initial field content
+        //- Construct from components, transferring initial field content
         DimensionedField
         (
             const IOobject& io,
             const Mesh& mesh,
             const dimensionSet& dims,
-            const Xfer<List<Type>>& field
+            List<Type>&& field
         );
 
-        //- Construct from components
+        //- Construct from components, copy or transfer tmp content
+        DimensionedField
+        (
+            const IOobject& io,
+            const Mesh& mesh,
+            const dimensionSet& dims,
+            const tmp<Field<Type>>& tfield
+        );
+
+        //- Construct from components, setting the initial size and assigning
+        //- the dimensions, but not initialising any field values.
         //  Used for temporary fields which are initialised after construction
         DimensionedField
         (
@@ -163,7 +173,9 @@ public:
             const bool checkIOFlags = true
         );
 
-        //- Construct from components
+        //- Construct from components, setting the initial size and assigning
+        //- both dimensions and values.
+        //  The internal name for the dimensioned\<Type\> has no influence.
         DimensionedField
         (
             const IOobject& io,
@@ -172,7 +184,7 @@ public:
             const bool checkIOFlags = true
         );
 
-        //- Construct from Istream
+        //- Construct from Istream.
         DimensionedField
         (
             const IOobject& io,
@@ -189,26 +201,16 @@ public:
             const word& fieldDictEntry = "value"
         );
 
-        //- Construct as copy
-        DimensionedField
-        (
-            const DimensionedField<Type, GeoMesh>& df
-        );
+        //- Copy construct
+        DimensionedField(const DimensionedField<Type, GeoMesh>& df);
 
-        //- Construct as copy or re-use as specified.
-        DimensionedField
-        (
-            DimensionedField<Type, GeoMesh>& df,
-            bool reuse
-        );
+        //- Move construct
+        DimensionedField(DimensionedField<Type, GeoMesh>&& df);
 
-        //- Construct by transferring the DimensionedField
-        DimensionedField
-        (
-            const Xfer<DimensionedField<Type, GeoMesh>>& df
-        );
+        //- Copy construct or reuse (move) as specified.
+        DimensionedField(DimensionedField<Type, GeoMesh>& df, bool reuse);
 
-        //- Construct as copy of tmp<DimensionedField> deleting argument
+        //- Construct from tmp\<DimensionedField\> deleting argument
         #ifndef NoConstructFromTmp
         DimensionedField
         (
@@ -216,14 +218,21 @@ public:
         );
         #endif
 
-        //- Construct as copy resetting IO parameters
+        //- Copy construct, resetting IO parameters
         DimensionedField
         (
             const IOobject& io,
             const DimensionedField<Type, GeoMesh>& df
         );
 
-        //- Construct as copy resetting IO parameters and re-use as specified.
+        //- Move construct, resetting IO parameters
+        DimensionedField
+        (
+            const IOobject& io,
+            DimensionedField<Type, GeoMesh>&& df
+        );
+
+        //- Copy or move construct, resetting IO parameters.
         DimensionedField
         (
             const IOobject& io,
@@ -231,14 +240,31 @@ public:
             bool reuse
         );
 
-        //- Construct as copy resetting name
+        //- Construct from tmp\<DimensionedField\> deleting argument,
+        //- resetting IO parameters.
+        #ifndef NoConstructFromTmp
+        DimensionedField
+        (
+            const IOobject& io,
+            const tmp<DimensionedField<Type, GeoMesh>>& tdf
+        );
+        #endif
+
+        //- Copy construct with a new name
         DimensionedField
         (
             const word& newName,
             const DimensionedField<Type, GeoMesh>& df
         );
 
-        //- Construct as copy resetting name and re-use as specified.
+        //- Move construct with a new name
+        DimensionedField
+        (
+            const word& newName,
+            DimensionedField<Type, GeoMesh>&& df
+        );
+
+        //- Copy or move construct, resetting name.
         DimensionedField
         (
             const word& newName,
@@ -246,14 +272,7 @@ public:
             bool reuse
         );
 
-        //- Construct by transferring the DimensionedField with a new name
-        DimensionedField
-        (
-            const word& newName,
-            const Xfer<DimensionedField<Type, GeoMesh>>& df
-        );
-
-        //- Construct as copy resetting name
+        //- Construct with a new name from tmp\<DimensionedField\>
         #ifndef NoConstructFromTmp
         DimensionedField
         (
@@ -267,7 +286,7 @@ public:
 
 
     //- Destructor
-    virtual ~DimensionedField();
+    virtual ~DimensionedField() = default;
 
 
     // Member Functions
@@ -352,6 +371,8 @@ public:
 
         void operator=(const DimensionedField<Type, GeoMesh>& df);
         void operator=(const tmp<DimensionedField<Type, GeoMesh>>& tdf);
+
+        //- Assign dimensions and value.
         void operator=(const dimensioned<Type>& dt);
 
         void operator+=(const DimensionedField<Type, GeoMesh>& df);

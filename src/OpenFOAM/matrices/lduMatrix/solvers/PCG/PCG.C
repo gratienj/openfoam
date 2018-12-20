@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -96,6 +96,8 @@ Foam::solverPerformance Foam::PCG::solve
     scalarField rA(source - wA);
     scalar* __restrict__ rAPtr = rA.begin();
 
+    matrix().setResidualField(rA, fieldName_, true);
+
     // --- Calculate normalisation factor
     scalar normFactor = this->normFactor(psi, source, wA, pA);
 
@@ -119,11 +121,11 @@ Foam::solverPerformance Foam::PCG::solve
     {
         // --- Select and construct the preconditioner
         autoPtr<lduMatrix::preconditioner> preconPtr =
-        lduMatrix::preconditioner::New
-        (
-            *this,
-            controlDict_
-        );
+            lduMatrix::preconditioner::New
+            (
+                *this,
+                controlDict_
+            );
 
         // --- Solver iteration
         do
@@ -182,12 +184,14 @@ Foam::solverPerformance Foam::PCG::solve
         } while
         (
             (
-                solverPerf.nIterations()++ < maxIter_
+              ++solverPerf.nIterations() < maxIter_
             && !solverPerf.checkConvergence(tolerance_, relTol_)
             )
          || solverPerf.nIterations() < minIter_
         );
     }
+
+    matrix().setResidualField(rA, fieldName_, false);
 
     return solverPerf;
 }

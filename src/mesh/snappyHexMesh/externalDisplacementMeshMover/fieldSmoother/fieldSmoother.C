@@ -52,8 +52,8 @@ Foam::fieldSmoother::~fieldSmoother()
 void Foam::fieldSmoother::smoothNormals
 (
     const label nIter,
-    const PackedBoolList& isMeshMasterPoint,
-    const PackedBoolList& isMeshMasterEdge,
+    const bitSet& isMeshMasterPoint,
+    const bitSet& isMeshMasterEdge,
     const labelList& fixedPoints,
     pointVectorField& normals
 ) const
@@ -65,13 +65,13 @@ void Foam::fieldSmoother::smoothNormals
     const edgeList& edges = mesh_.edges();
 
     // Points that do not change.
-    PackedBoolList isFixedPoint(mesh_.nPoints());
+    bitSet isFixedPoint(mesh_.nPoints());
 
     // Internal points that are fixed
     forAll(fixedPoints, i)
     {
         label meshPointI = fixedPoints[i];
-        isFixedPoint.set(meshPointI, 1);
+        isFixedPoint.set(meshPointI);
     }
 
     // Make sure that points that are coupled to meshPoints but not on a patch
@@ -125,12 +125,11 @@ void Foam::fieldSmoother::smoothNormals
         // Transfer to normals vector field
         forAll(average, pointI)
         {
-            if (isFixedPoint.get(pointI) == 0)
+            if (!isFixedPoint.test(pointI))
             {
                 //full smoothing neighbours + point value
                 average[pointI] = 0.5*(normals[pointI]+average[pointI]);
-                normals[pointI] = average[pointI];
-                normals[pointI] /= mag(normals[pointI]) + VSMALL;
+                normals[pointI] = normalised(average[pointI]);
             }
         }
     }
@@ -140,8 +139,8 @@ void Foam::fieldSmoother::smoothNormals
 void Foam::fieldSmoother::smoothPatchNormals
 (
     const label nIter,
-    const PackedBoolList& isPatchMasterPoint,
-    const PackedBoolList& isPatchMasterEdge,
+    const bitSet& isPatchMasterPoint,
+    const bitSet& isPatchMasterEdge,
     const indirectPrimitivePatch& adaptPatch,
     pointField& normals
 ) const
@@ -196,8 +195,7 @@ void Foam::fieldSmoother::smoothPatchNormals
         {
             // full smoothing neighbours + point value
             average[pointI] = 0.5*(normals[pointI]+average[pointI]);
-            normals[pointI] = average[pointI];
-            normals[pointI] /= mag(normals[pointI]) + VSMALL;
+            normals[pointI] = normalised(average[pointI]);
         }
     }
 }
@@ -206,9 +204,9 @@ void Foam::fieldSmoother::smoothPatchNormals
 void Foam::fieldSmoother::smoothLambdaMuDisplacement
 (
     const label nIter,
-    const PackedBoolList& isMeshMasterPoint,
-    const PackedBoolList& isMeshMasterEdge,
-    const PackedBoolList& isToBeSmoothed,
+    const bitSet& isMeshMasterPoint,
+    const bitSet& isMeshMasterEdge,
+    const bitSet& isToBeSmoothed,
     vectorField& displacement
 ) const
 {
@@ -254,7 +252,7 @@ void Foam::fieldSmoother::smoothLambdaMuDisplacement
 
         forAll(displacement, i)
         {
-            if (isToBeSmoothed[i])
+            if (isToBeSmoothed.test(i))
             {
                 displacement[i] = (1-lambda)*displacement[i]+lambda*average[i];
             }
@@ -275,7 +273,7 @@ void Foam::fieldSmoother::smoothLambdaMuDisplacement
 
         forAll(displacement, i)
         {
-            if (isToBeSmoothed[i])
+            if (isToBeSmoothed.test(i))
             {
                 displacement[i] = (1-mu)*displacement[i]+mu*average[i];
             }

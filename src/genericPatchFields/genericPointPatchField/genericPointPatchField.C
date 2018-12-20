@@ -50,20 +50,22 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
 )
 :
     calculatedPointPatchField<Type>(p, iF, dict),
-    actualTypeName_(dict.lookup("type")),
+    actualTypeName_(dict.get<word>("type")),
     dict_(dict)
 {
-    forAllConstIter(dictionary, dict_, iter)
+    for (const entry& dEntry : dict_)
     {
-        if (iter().keyword() != "type")
+        const keyType& key = dEntry.keyword();
+
+        if (key != "type")
         {
             if
             (
-                iter().isStream()
-             && iter().stream().size()
+                dEntry.isStream()
+             && dEntry.stream().size()
             )
             {
-                ITstream& is = iter().stream();
+                ITstream& is = dEntry.stream();
 
                 // Read first token
                 token firstToken(is);
@@ -86,17 +88,15 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                         {
                             scalarFields_.insert
                             (
-                                iter().keyword(),
-                                new scalarField(0)
+                                key,
+                                autoPtr<scalarField>::New()
                             );
                         }
                         else
                         {
-                            FatalIOErrorInFunction
-                            (
-                                dict
-                            )   << "\n    token following 'nonuniform' "
-                                  "is not a compound"
+                            FatalIOErrorInFunction(dict)
+                                << "\n    token following 'nonuniform' "
+                                   "is not a compound"
                                 << "\n    on patch " << this->patch().name()
                                 << " of field "
                                 << this->internalField().name()
@@ -111,7 +111,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                      == token::Compound<List<scalar>>::typeName
                     )
                     {
-                        scalarField* fPtr = new scalarField;
+                        auto fPtr = autoPtr<scalarField>::New();
+
                         fPtr->transfer
                         (
                             dynamicCast<token::Compound<List<scalar>>>
@@ -122,10 +123,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
 
                         if (fPtr->size() != this->size())
                         {
-                            FatalIOErrorInFunction
-                            (
-                                dict
-                            )   << "\n    size of field " << iter().keyword()
+                            FatalIOErrorInFunction(dict)
+                                << "\n    size of field " << key
                                 << " (" << fPtr->size() << ')'
                                 << " is not the same size as the patch ("
                                 << this->size() << ')'
@@ -137,7 +136,7 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                                 << exit(FatalIOError);
                         }
 
-                        scalarFields_.insert(iter().keyword(), fPtr);
+                        scalarFields_.insert(key, fPtr);
                     }
                     else if
                     (
@@ -145,7 +144,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                      == token::Compound<List<vector>>::typeName
                     )
                     {
-                        vectorField* fPtr = new vectorField;
+                        auto fPtr = autoPtr<vectorField>::New();
+
                         fPtr->transfer
                         (
                             dynamicCast<token::Compound<List<vector>>>
@@ -156,10 +156,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
 
                         if (fPtr->size() != this->size())
                         {
-                            FatalIOErrorInFunction
-                            (
-                                dict
-                            )   << "\n    size of field " << iter().keyword()
+                            FatalIOErrorInFunction(dict)
+                                << "\n    size of field " << key
                                 << " (" << fPtr->size() << ')'
                                 << " is not the same size as the patch ("
                                 << this->size() << ')'
@@ -171,7 +169,7 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                                 << exit(FatalIOError);
                         }
 
-                        vectorFields_.insert(iter().keyword(), fPtr);
+                        vectorFields_.insert(key, fPtr);
                     }
                     else if
                     (
@@ -179,7 +177,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                      == token::Compound<List<sphericalTensor>>::typeName
                     )
                     {
-                        sphericalTensorField* fPtr = new sphericalTensorField;
+                        auto fPtr = autoPtr<sphericalTensorField>::New();
+
                         fPtr->transfer
                         (
                             dynamicCast
@@ -193,10 +192,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
 
                         if (fPtr->size() != this->size())
                         {
-                            FatalIOErrorInFunction
-                            (
-                                dict
-                            )   << "\n    size of field " << iter().keyword()
+                            FatalIOErrorInFunction(dict)
+                                << "\n    size of field " << key
                                 << " (" << fPtr->size() << ')'
                                 << " is not the same size as the patch ("
                                 << this->size() << ')'
@@ -208,7 +205,7 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                                 << exit(FatalIOError);
                         }
 
-                        sphericalTensorFields_.insert(iter().keyword(), fPtr);
+                        sphericalTensorFields_.insert(key, fPtr);
                     }
                     else if
                     (
@@ -216,7 +213,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                      == token::Compound<List<symmTensor>>::typeName
                     )
                     {
-                        symmTensorField* fPtr = new symmTensorField;
+                        auto fPtr = autoPtr<symmTensorField>::New();
+
                         fPtr->transfer
                         (
                             dynamicCast
@@ -230,10 +228,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
 
                         if (fPtr->size() != this->size())
                         {
-                            FatalIOErrorInFunction
-                            (
-                                dict
-                            )   << "\n    size of field " << iter().keyword()
+                            FatalIOErrorInFunction(dict)
+                                << "\n    size of field " << key
                                 << " (" << fPtr->size() << ')'
                                 << " is not the same size as the patch ("
                                 << this->size() << ')'
@@ -245,7 +241,7 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                                 << exit(FatalIOError);
                         }
 
-                        symmTensorFields_.insert(iter().keyword(), fPtr);
+                        symmTensorFields_.insert(key, fPtr);
                     }
                     else if
                     (
@@ -253,7 +249,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                      == token::Compound<List<tensor>>::typeName
                     )
                     {
-                        tensorField* fPtr = new tensorField;
+                        auto fPtr = autoPtr<tensorField>::New();
+
                         fPtr->transfer
                         (
                             dynamicCast<token::Compound<List<tensor>>>
@@ -264,10 +261,8 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
 
                         if (fPtr->size() != this->size())
                         {
-                            FatalIOErrorInFunction
-                            (
-                                dict
-                            )   << "\n    size of field " << iter().keyword()
+                            FatalIOErrorInFunction(dict)
+                                << "\n    size of field " << key
                                 << " (" << fPtr->size() << ')'
                                 << " is not the same size as the patch ("
                                 << this->size() << ')'
@@ -279,14 +274,12 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
                                 << exit(FatalIOError);
                         }
 
-                        tensorFields_.insert(iter().keyword(), fPtr);
+                        tensorFields_.insert(key, fPtr);
                     }
                     else
                     {
-                        FatalIOErrorInFunction
-                        (
-                            dict
-                        )   << "\n    compound " << fieldToken.compoundToken()
+                        FatalIOErrorInFunction(dict)
+                            << "\n    compound " << fieldToken.compoundToken()
                             << " not supported"
                             << "\n    on patch " << this->patch().name()
                             << " of field "
@@ -315,73 +308,48 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
     actualTypeName_(ptf.actualTypeName_),
     dict_(ptf.dict_)
 {
-    forAllConstIter
-    (
-        HashPtrTable<scalarField>,
-        ptf.scalarFields_,
-        iter
-    )
+    forAllConstIters(ptf.scalarFields_, iter)
     {
         scalarFields_.insert
         (
             iter.key(),
-            new scalarField(*iter(), mapper)
+            autoPtr<scalarField>::New(*iter(), mapper)
         );
     }
 
-    forAllConstIter
-    (
-        HashPtrTable<vectorField>,
-        ptf.vectorFields_,
-        iter
-    )
+    forAllConstIters(ptf.vectorFields_, iter)
     {
         vectorFields_.insert
         (
             iter.key(),
-            new vectorField(*iter(), mapper)
+            autoPtr<vectorField>::New(*iter(), mapper)
         );
     }
 
-    forAllConstIter
-    (
-        HashPtrTable<sphericalTensorField>,
-        ptf.sphericalTensorFields_,
-        iter
-    )
+    forAllConstIters(ptf.sphericalTensorFields_, iter)
     {
         sphericalTensorFields_.insert
         (
             iter.key(),
-            new sphericalTensorField(*iter(), mapper)
+            autoPtr<sphericalTensorField>::New(*iter(), mapper)
         );
     }
 
-    forAllConstIter
-    (
-        HashPtrTable<symmTensorField>,
-        ptf.symmTensorFields_,
-        iter
-    )
+    forAllConstIters(ptf.symmTensorFields_, iter)
     {
         symmTensorFields_.insert
         (
             iter.key(),
-            new symmTensorField(*iter(), mapper)
+            autoPtr<symmTensorField>::New(*iter(), mapper)
         );
     }
 
-    forAllConstIter
-    (
-        HashPtrTable<tensorField>,
-        ptf.tensorFields_,
-        iter
-    )
+    forAllConstIters(ptf.tensorFields_, iter)
     {
         tensorFields_.insert
         (
             iter.key(),
-            new tensorField(*iter(), mapper)
+            autoPtr<tensorField>::New(*iter(), mapper)
         );
     }
 }
@@ -413,52 +381,27 @@ void Foam::genericPointPatchField<Type>::autoMap
     const pointPatchFieldMapper& m
 )
 {
-    forAllIter
-    (
-        HashPtrTable<scalarField>,
-        scalarFields_,
-        iter
-    )
+    forAllIters(scalarFields_, iter)
     {
         iter()->autoMap(m);
     }
 
-    forAllIter
-    (
-        HashPtrTable<vectorField>,
-        vectorFields_,
-        iter
-    )
+    forAllIters(vectorFields_, iter)
     {
         iter()->autoMap(m);
     }
 
-    forAllIter
-    (
-        HashPtrTable<sphericalTensorField>,
-        sphericalTensorFields_,
-        iter
-    )
+    forAllIters(sphericalTensorFields_, iter)
     {
         iter()->autoMap(m);
     }
 
-    forAllIter
-    (
-        HashPtrTable<symmTensorField>,
-        symmTensorFields_,
-        iter
-    )
+    forAllIters(symmTensorFields_, iter)
     {
         iter()->autoMap(m);
     }
 
-    forAllIter
-    (
-        HashPtrTable<tensorField>,
-        tensorFields_,
-        iter
-    )
+    forAllIters(tensorFields_, iter)
     {
         iter()->autoMap(m);
     }
@@ -475,76 +418,51 @@ void Foam::genericPointPatchField<Type>::rmap
     const genericPointPatchField<Type>& dptf =
         refCast<const genericPointPatchField<Type>>(ptf);
 
-    forAllIter
-    (
-        HashPtrTable<scalarField>,
-        scalarFields_,
-        iter
-    )
+    forAllIters(scalarFields_, iter)
     {
         HashPtrTable<scalarField>::const_iterator dptfIter =
             dptf.scalarFields_.find(iter.key());
 
-        if (dptfIter != scalarFields_.end())
+        if (dptfIter.found())
         {
             iter()->rmap(*dptfIter(), addr);
         }
     }
 
-    forAllIter
-    (
-        HashPtrTable<vectorField>,
-        vectorFields_,
-        iter
-    )
+    forAllIters(vectorFields_, iter)
     {
         HashPtrTable<vectorField>::const_iterator dptfIter =
             dptf.vectorFields_.find(iter.key());
 
-        if (dptfIter != vectorFields_.end())
+        if (dptfIter.found())
         {
             iter()->rmap(*dptfIter(), addr);
         }
     }
 
-    forAllIter
-    (
-        HashPtrTable<sphericalTensorField>,
-        sphericalTensorFields_,
-        iter
-    )
+    forAllIters(sphericalTensorFields_, iter)
     {
         HashPtrTable<sphericalTensorField>::const_iterator dptfIter =
             dptf.sphericalTensorFields_.find(iter.key());
 
-        if (dptfIter != sphericalTensorFields_.end())
+        if (dptfIter.found())
         {
             iter()->rmap(*dptfIter(), addr);
         }
     }
 
-    forAllIter
-    (
-        HashPtrTable<symmTensorField>,
-        symmTensorFields_,
-        iter
-    )
+    forAllIters(symmTensorFields_, iter)
     {
         HashPtrTable<symmTensorField>::const_iterator dptfIter =
             dptf.symmTensorFields_.find(iter.key());
 
-        if (dptfIter != symmTensorFields_.end())
+        if (dptfIter.found())
         {
             iter()->rmap(*dptfIter(), addr);
         }
     }
 
-    forAllIter
-    (
-        HashPtrTable<tensorField>,
-        tensorFields_,
-        iter
-    )
+    forAllIters(tensorFields_, iter)
     {
         HashPtrTable<tensorField>::const_iterator dptfIter =
             dptf.tensorFields_.find(iter.key());
@@ -569,47 +487,44 @@ void Foam::genericPointPatchField<Type>::write(Ostream& os) const
 {
     os.writeEntry("type", actualTypeName_);
 
-    forAllConstIter(dictionary, dict_, iter)
+    for (const entry& dEntry : dict_)
     {
-        if (iter().keyword() != "type")
+        const keyType& key = dEntry.keyword();
+
+        if (key != "type")
         {
             if
             (
-                iter().isStream()
-             && iter().stream().size()
-             && iter().stream()[0].isWord()
-             && iter().stream()[0].wordToken() == "nonuniform"
+                dEntry.isStream()
+             && dEntry.stream().size()
+             && dEntry.stream()[0].isWord()
+             && dEntry.stream()[0].wordToken() == "nonuniform"
             )
             {
-                if (scalarFields_.found(iter().keyword()))
+                if (scalarFields_.found(key))
                 {
-                    scalarFields_.find(iter().keyword())()
-                        ->writeEntry(iter().keyword(), os);
+                    scalarFields_.find(key)()->writeEntry(key, os);
                 }
-                else if (vectorFields_.found(iter().keyword()))
+                else if (vectorFields_.found(key))
                 {
-                    vectorFields_.find(iter().keyword())()
-                        ->writeEntry(iter().keyword(), os);
+                    vectorFields_.find(key)()->writeEntry(key, os);
                 }
-                else if (sphericalTensorFields_.found(iter().keyword()))
+                else if (sphericalTensorFields_.found(key))
                 {
-                    sphericalTensorFields_.find(iter().keyword())()
-                        ->writeEntry(iter().keyword(), os);
+                    sphericalTensorFields_.find(key)()->writeEntry(key, os);
                 }
-                else if (symmTensorFields_.found(iter().keyword()))
+                else if (symmTensorFields_.found(key))
                 {
-                    symmTensorFields_.find(iter().keyword())()
-                        ->writeEntry(iter().keyword(), os);
+                    symmTensorFields_.find(key)()->writeEntry(key, os);
                 }
-                else if (tensorFields_.found(iter().keyword()))
+                else if (tensorFields_.found(key))
                 {
-                    tensorFields_.find(iter().keyword())()
-                        ->writeEntry(iter().keyword(), os);
+                    tensorFields_.find(key)()->writeEntry(key, os);
                 }
             }
             else
             {
-               iter().write(os);
+                dEntry.write(os);
             }
         }
     }

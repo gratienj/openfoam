@@ -4,7 +4,7 @@
  \\      /   F ield          | OpenFOAM: The Open Source CFD Toolbox
   \\    /    O peration      |
    \\  /     A nd            | Copyright (C) 2011-2016 OpenFOAM Foundation
-    \\/      M anipulation   | Copyright (C) 2017 OpenCFD Ltd.
+    \\/      M anipulation   | Copyright (C) 2017-2018 OpenCFD Ltd.
 ------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,7 @@ Description
     which makes this faster than cpp.
 
 Usage
-    wmkdep [-Idir..] [-iheader...] [-eENV...] [-oFile] [-q] filename
+    wmkdep [-Idir..] [-iheader...] [-eENV...] [-oFile] [-q] [-v] filename
 
 \*---------------------------------------------------------------------------*/
 /* With cpp:
@@ -265,6 +265,7 @@ static void print_fileName(const char* fileName)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 int optQuiet = 0;
+int optVerbose = 0;
 int nDirectories = 0;
 char** directories = NULL;
 char* sourceFile = NULL;
@@ -315,13 +316,14 @@ int main(int argc, char* argv[])
                 fputs
                 (
                     "\nUsage: " EXENAME
-                    " [-Idir...] [-iheader...] [-eENV...] [-oFile] [-q]"
+                    " [-Idir...] [-iheader...] [-eENV...] [-oFile] [-q] [-v]"
                     " filename\n\n"
                     "  -Idir     Directories to be searched for headers.\n"
                     "  -iheader  Headers to be ignored.\n"
                     "  -eENV     Environment variable path substitutions.\n"
                     "  -oFile    Write output to File.\n"
                     "  -q        Suppress 'No such file' warnings.\n"
+                    "  -v        Report each include file to stderr.\n"
                     "\nDependency list generator, similar to 'cpp -M'\n\n",
                     stderr
                 );
@@ -330,6 +332,10 @@ int main(int argc, char* argv[])
 
             case 'q':           /* Option: -q (quiet) */
                 ++optQuiet;
+                break;
+
+            case 'v':           /* Option: -v (verbose) */
+                ++optVerbose;
                 break;
 
             case 'I':           /* Option: -Idir */
@@ -471,6 +477,17 @@ static FILE* fopen_file(const char* dirName, const char* fileName)
 
         file = fopen(fullName, "r");
 
+        if (!file && errno == EMFILE)
+        {
+            fprintf
+            (
+                stderr,
+                EXENAME ": too many open files while opening '%s'\n"
+                "Please change your open descriptor limit\n",
+                fullName
+            );
+        }
+
         if (file)
         {
             print_fileName(fullName);
@@ -482,10 +499,27 @@ static FILE* fopen_file(const char* dirName, const char* fileName)
     {
         file = fopen(fileName, "r");
 
+        if (!file && errno == EMFILE)
+        {
+            fprintf
+            (
+                stderr,
+                EXENAME ": too many open files while opening '%s'\n"
+                "Please change your open descriptor limit\n",
+                fileName
+            );
+        }
+
         if (file)
         {
             print_fileName(fileName);
         }
+    }
+
+    if (file && optVerbose)
+    {
+        fputs(fileName, stderr);
+        fputs("\n", stderr);
     }
 
     return file;

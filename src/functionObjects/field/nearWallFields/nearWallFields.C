@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,9 +48,8 @@ void Foam::functionObjects::nearWallFields::calcAddressing()
 {
     // Count number of faces
     label nPatchFaces = 0;
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        label patchi = iter.key();
         nPatchFaces += mesh_.boundary()[patchi].size();
     }
 
@@ -70,9 +69,8 @@ void Foam::functionObjects::nearWallFields::calcAddressing()
     // Add particles to track to sample locations
     nPatchFaces = 0;
 
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        label patchi = iter.key();
         const fvPatch& patch = mesh_.boundary()[patchi];
 
         vectorField nf(patch.nf());
@@ -262,10 +260,9 @@ bool Foam::functionObjects::nearWallFields::read(const dictionary& dict)
 {
     fvMeshFunctionObject::read(dict);
 
-    dict.lookup("fields") >> fieldSet_;
-    patchSet_ =
-        mesh_.boundaryMesh().patchSet(wordReList(dict.lookup("patches")));
-    distance_ = readScalar(dict.lookup("distance"));
+    dict.readEntry("fields", fieldSet_);
+    dict.readEntry("distance", distance_);
+    patchSet_ = mesh_.boundaryMesh().patchSet(dict.get<wordRes>("patches"));
 
 
     // Clear out any previously loaded fields

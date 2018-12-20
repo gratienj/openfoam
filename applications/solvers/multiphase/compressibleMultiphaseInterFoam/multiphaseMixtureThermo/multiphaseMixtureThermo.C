@@ -85,7 +85,7 @@ Foam::multiphaseMixtureThermo::multiphaseMixtureThermo
             IOobject::NO_WRITE
         ),
         mesh_,
-        dimensionedScalar("rhoPhi", dimMass/dimTime, 0.0)
+        dimensionedScalar(dimMass/dimTime, Zero)
     ),
 
     alphas_
@@ -99,7 +99,7 @@ Foam::multiphaseMixtureThermo::multiphaseMixtureThermo
             IOobject::AUTO_WRITE
         ),
         mesh_,
-        dimensionedScalar("alphas", dimless, 0.0)
+        dimensionedScalar(dimless, Zero)
     ),
 
     sigmas_(lookup("sigmas")),
@@ -147,6 +147,21 @@ void Foam::multiphaseMixtureThermo::correctRho(const volScalarField& dp)
     {
         phasei().thermo().rho() +=  phasei().thermo().psi()*dp;
     }
+}
+
+
+Foam::word Foam::multiphaseMixtureThermo::thermoName() const
+{
+    PtrDictionary<phaseModel>::const_iterator phasei = phases_.begin();
+
+    word name = phasei().thermo().thermoName();
+
+    for (++ phasei; phasei != phases_.end(); ++ phasei)
+    {
+        name += ',' + phasei().thermo().thermoName();
+    }
+
+    return name;
 }
 
 
@@ -519,6 +534,21 @@ Foam::tmp<Foam::scalarField> Foam::multiphaseMixtureThermo::CpByCpv
 }
 
 
+Foam::tmp<Foam::volScalarField> Foam::multiphaseMixtureThermo::W() const
+{
+    PtrDictionary<phaseModel>::const_iterator phasei = phases_.begin();
+
+    tmp<volScalarField> tW(phasei()*phasei().thermo().W());
+
+    for (++phasei; phasei != phases_.end(); ++phasei)
+    {
+        tW.ref() += phasei()*phasei().thermo().W();
+    }
+
+    return tW;
+}
+
+
 Foam::tmp<Foam::volScalarField> Foam::multiphaseMixtureThermo::nu() const
 {
     return mu()/rho();
@@ -686,12 +716,7 @@ Foam::multiphaseMixtureThermo::surfaceTensionForce() const
                 mesh_
             ),
             mesh_,
-            dimensionedScalar
-            (
-                "surfaceTensionForce",
-                dimensionSet(1, -2, -2, 0, 0),
-                0.0
-            )
+            dimensionedScalar(dimensionSet(1, -2, -2, 0, 0), Zero)
         )
     );
 
@@ -738,8 +763,8 @@ void Foam::multiphaseMixtureThermo::solve()
     const Time& runTime = mesh_.time();
 
     const dictionary& alphaControls = mesh_.solverDict("alpha");
-    label nAlphaSubCycles(readLabel(alphaControls.lookup("nAlphaSubCycles")));
-    scalar cAlpha(readScalar(alphaControls.lookup("cAlpha")));
+    label nAlphaSubCycles(alphaControls.get<label>("nAlphaSubCycles"));
+    scalar cAlpha(alphaControls.get<scalar>("cAlpha"));
 
     volScalarField& alpha = phases_.first();
 
@@ -943,7 +968,7 @@ Foam::multiphaseMixtureThermo::nearInterface() const
                 mesh_
             ),
             mesh_,
-            dimensionedScalar("nearInterface", dimless, 0.0)
+            dimensionedScalar(dimless, Zero)
         )
     );
 
@@ -1030,7 +1055,7 @@ void Foam::multiphaseMixtureThermo::solveAlphas
 
     MULES::limitSum(alphaPhiCorrs);
 
-    rhoPhi_ = dimensionedScalar("0", dimensionSet(1, 0, -1, 0, 0), 0);
+    rhoPhi_ = dimensionedScalar(dimensionSet(1, 0, -1, 0, 0), Zero);
 
     volScalarField sumAlpha
     (
@@ -1041,7 +1066,7 @@ void Foam::multiphaseMixtureThermo::solveAlphas
             mesh_
         ),
         mesh_,
-        dimensionedScalar("sumAlpha", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     );
 
 
@@ -1066,7 +1091,7 @@ void Foam::multiphaseMixtureThermo::solveAlphas
                 mesh_
             ),
             mesh_,
-            dimensionedScalar("Sp", alpha.dgdt().dimensions(), 0.0)
+            dimensionedScalar(alpha.dgdt().dimensions(), Zero)
         );
 
         volScalarField::Internal Su

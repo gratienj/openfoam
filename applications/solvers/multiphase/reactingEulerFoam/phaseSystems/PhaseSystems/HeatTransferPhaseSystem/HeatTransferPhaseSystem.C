@@ -74,23 +74,20 @@ Foam::HeatTransferPhaseSystem<BasePhaseSystem>::dmdt
     const phasePairKey& key
 ) const
 {
-    return tmp<volScalarField>
+    return tmp<volScalarField>::New
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
+            IOobject::groupName
             (
-                IOobject::groupName
-                (
-                    "dmdt",
-                    this->phasePairs_[key]->name()
+                "dmdt",
+                this->phasePairs_[key]->name()
                 ),
-                this->mesh().time().timeName(),
-                this->mesh().time()
-            ),
-            this->mesh(),
-            dimensionedScalar("zero", dimDensity/dimTime, 0)
-        )
+            this->mesh().time().timeName(),
+            this->mesh().time()
+        ),
+        this->mesh(),
+        dimensionedScalar(dimDensity/dimTime, Zero)
     );
 }
 
@@ -110,34 +107,24 @@ template<class BasePhaseSystem>
 Foam::autoPtr<Foam::phaseSystem::heatTransferTable>
 Foam::HeatTransferPhaseSystem<BasePhaseSystem>::heatTransfer() const
 {
-    autoPtr<phaseSystem::heatTransferTable> eqnsPtr
-    (
-        new phaseSystem::heatTransferTable()
-    );
+    auto eqnsPtr = autoPtr<phaseSystem::heatTransferTable>::New();
+    auto& eqns = *eqnsPtr;
 
-    phaseSystem::heatTransferTable& eqns = eqnsPtr();
-
-    forAll(this->phaseModels_, phasei)
+    for (const phaseModel& phase : this->phaseModels_)
     {
-        const phaseModel& phase = this->phaseModels_[phasei];
-
-        eqns.insert
+        eqns.set
         (
             phase.name(),
             new fvScalarMatrix(phase.thermo().he(), dimEnergy/dimTime)
         );
     }
 
-    forAllConstIter
-    (
-        heatTransferModelTable,
-        heatTransferModels_,
-        heatTransferModelIter
-    )
+    forAllConstIters(heatTransferModels_, heatTransferModelIter)
     {
-        const volScalarField K(heatTransferModelIter()->K());
+        const phasePair& pair =
+            *(this->phasePairs_[heatTransferModelIter.key()]);
 
-        const phasePair& pair(this->phasePairs_[heatTransferModelIter.key()]);
+        const volScalarField K(heatTransferModelIter()->K());
 
         const phaseModel* phase = &pair.phase1();
         const phaseModel* otherPhase = &pair.phase2();

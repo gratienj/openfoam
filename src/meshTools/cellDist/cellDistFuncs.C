@@ -69,7 +69,7 @@ Foam::cellDistFuncs::cellDistFuncs(const polyMesh& mesh)
 
 Foam::labelHashSet Foam::cellDistFuncs::getPatchIDs
 (
-    const wordReList& patchNames
+    const UList<wordRe>& patchNames
 ) const
 {
     return mesh().boundaryMesh().patchSet(patchNames, false);
@@ -172,11 +172,7 @@ Foam::label Foam::cellDistFuncs::getPointNeighbours
         forAll(f, fp)
         {
             const labelList& pointNbs = patch.pointFaces()[f[fp]];
-
-            forAll(pointNbs, i)
-            {
-                nbs.insert(pointNbs[i]);
-            }
+            nbs.insert(pointNbs);
         }
 
         // Subtract ours.
@@ -206,7 +202,7 @@ Foam::label Foam::cellDistFuncs::getPointNeighbours
 
                 FatalErrorInFunction
                     << "Problem: fast pointNeighbours routine included " << nb
-                    << " which is not in proper neigbour list " << nbs.toc()
+                    << " which is not in proper neighbour list " << nbs.toc()
                     << abort(FatalError);
             }
             nbs.erase(nb);

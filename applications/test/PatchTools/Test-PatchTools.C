@@ -35,6 +35,7 @@ Description
 #include "volFields.H"
 #include "Time.H"
 #include "OBJstream.H"
+#include "fvCFD.H"
 
 using namespace Foam;
 
@@ -205,7 +206,7 @@ int main(int argc, char *argv[])
     #include "setRootCase.H"
     #include "createTime.H"
 
-    #include "createMesh.H"
+    #include "createPolyMesh.H"
 
     const word patchName = args[1];
     label patchi = mesh.boundaryMesh().findPatchID(patchName);
@@ -218,7 +219,7 @@ int main(int argc, char *argv[])
 
         labelList patchEdges;
         labelList coupledEdges;
-        PackedBoolList sameEdgeOrientation;
+        bitSet sameEdgeOrientation;
         PatchTools::matchEdges
         (
             pp,
@@ -261,7 +262,7 @@ int main(int argc, char *argv[])
 //            (
 //                mesh,
 //                pp,
-//                identity(pp.size())+pp.start()
+//                identity(pp.size(), pp.start())
 //            )
 //        );
 //        forAll(pn, pointi)
@@ -278,7 +279,7 @@ int main(int argc, char *argv[])
 //            (
 //                mesh,
 //                pp,
-//                identity(pp.size())+pp.start()
+//                identity(pp.size(), pp.start())
 //            )
 //        );
 //        forAll(pn, pointi)

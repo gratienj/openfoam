@@ -31,33 +31,33 @@ Description
     Generates the extendedFeatureEdgeMesh for the interface between a boolean
     operation on two surfaces.
 
-    Assumes that the orientation of the surfaces iscorrect:
+    Assumes that the orientation of the surfaces is correct:
     - if the operation is union or intersection, that both surface's normals
-      (n) have the same orientation with respect to a point, i.e. surfaces and b
-      are orientated the same with respect to point x:
+      (n) have the same orientation with respect to a point, i.e. surfaces
+      A and B are orientated the same with respect to point x:
 
     \verbatim
        _______
       |       |--> n
       |    ___|___             x
-      |a  |   |   |--> n
-      |___|___|  b|
+      |A  |   |   |--> n
+      |___|___|  B|
           |       |
           |_______|
 
     \endverbatim
 
     - if the operation is a subtraction, the surfaces should be oppositely
-    oriented with respect to a point, i.e. for (a - b), then b's orientation
-    should be such that x is "inside", and a's orientation such that x is
+    oriented with respect to a point, i.e. for (A - B), then B's orientation
+    should be such that x is "inside", and A's orientation such that x is
     "outside"
 
     \verbatim
        _______
       |       |--> n
       |    ___|___             x
-      |a  |   |   |
-      |___|___|  b|
+      |A  |   |   |
+      |___|___|  B|
           |  n <--|
           |_______|
 
@@ -65,8 +65,8 @@ Description
 
     When the operation is peformed - for union, all of the edges generates where
     one surfaces cuts another are all "internal" for union, and "external" for
-    intersection, b - a and a - b.  This has been assumed, formal (dis)proof is
-    invited.
+    intersection, (B - A) and (A - B).
+    This has been assumed, formal (dis)proof is invited.
 
 \*---------------------------------------------------------------------------*/
 
@@ -317,11 +317,9 @@ label calcNormalDirection
     const vector& pointOnEdge
 )
 {
-    vector cross = (normal ^ edgeDir);
-    cross /= mag(cross);
+    const vector cross = normalised(normal ^ edgeDir);
 
-    vector fC0tofE0 = faceCentre - pointOnEdge;
-    fC0tofE0 /= mag(fC0tofE0);
+    const vector fC0tofE0 = normalised(faceCentre - pointOnEdge);
 
     label nDir = ((cross & fC0tofE0) > 0.0 ? 1 : -1);
 
@@ -1480,42 +1478,49 @@ autoPtr<extendedFeatureEdgeMesh> createEdgeMesh
 
     //calcFeaturePoints(inter.cutPoints(), inter.cutEdges());
 
-    return autoPtr<extendedFeatureEdgeMesh>
+    return autoPtr<extendedFeatureEdgeMesh>::New
     (
-        new extendedFeatureEdgeMesh
-        (
-            io,
-            inter.cutPoints(),
-            inter.cutEdges(),
+        io,
+        inter.cutPoints(),
+        inter.cutEdges(),
 
-            0,                  // concaveStart,
-            0,                  // mixedStart,
-            0,                  // nonFeatureStart,
+        0,                  // concaveStart,
+        0,                  // mixedStart,
+        0,                  // nonFeatureStart,
 
-            internalStart,      // internalStart,
-            nIntOrExt,           // flatStart,
-            nIntOrExt + nFlat,   // openStart,
-            nIntOrExt + nFlat + nOpen,   // multipleStart,
+        internalStart,      // internalStart,
+        nIntOrExt,          // flatStart,
+        nIntOrExt + nFlat,  // openStart,
+        nIntOrExt + nFlat + nOpen,   // multipleStart,
 
-            normalsTmp,
-            normalVolumeTypesTmp,
-            edgeDirections,
-            normalDirectionsTmp,
-            edgeNormalsTmp,
+        normalsTmp,
+        normalVolumeTypesTmp,
+        edgeDirections,
+        normalDirectionsTmp,
+        edgeNormalsTmp,
 
-            labelListList(0),   // featurePointNormals,
-            labelListList(0),   // featurePointEdges,
-            labelList(0)        // regionEdges
-        )
+        labelListList(),    // featurePointNormals,
+        labelListList(),    // featurePointEdges,
+        labelList()         // regionEdges
     );
 }
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Generates the extendedFeatureEdgeMesh for the interface created by"
+        " a boolean operation on two surfaces."
+    );
+
     argList::noParallel();
-    argList::addArgument("action");
-    argList::addArgument("surfaceFile1");
-    argList::addArgument("surfaceFile2");
+    argList::addArgument
+    (
+        "action",
+        "One of (intersection | union | difference)"
+    );
+    argList::addArgument("surface1", "The input surface file 1");
+    argList::addArgument("surface2", "The input surface file 2");
 
     argList::addOption
     (
@@ -1544,7 +1549,7 @@ int main(int argc, char *argv[])
     argList::addBoolOption
     (
         "invertedSpace",
-        "do the surfaces have inverted space orientation, "
+        "Do the surfaces have inverted space orientation, "
         "i.e. a point at infinity is considered inside. "
         "This is only sensible for union and intersection."
     );
@@ -1558,12 +1563,6 @@ int main(int argc, char *argv[])
         ", 'outside' (keep (parts of) edges that are outside) or"
         " 'mixed' (keep all)"
     );
-
-    argList::addNote
-    (
-        "Valid actions: \"intersection\", \"union\", \"difference\""
-    );
-
 
     #include "setRootCase.H"
     #include "createTime.H"
@@ -1587,15 +1586,14 @@ int main(int argc, char *argv[])
 
 
     List<Pair<word>> surfaceAndSide;
-    if (args.optionReadIfPresent("trim", surfaceAndSide))
+    if (args.readIfPresent("trim", surfaceAndSide))
     {
         Info<< "Trimming edges with " << surfaceAndSide << endl;
     }
 
 
     // Scale factor for both surfaces:
-    const scalar scaleFactor
-        = args.optionLookupOrDefault<scalar>("scale", -1);
+    const scalar scaleFactor = args.opt<scalar>("scale", -1);
 
     const word surf1Name(args[2]);
     Info<< "Reading surface " << surf1Name << endl;
@@ -1641,13 +1639,13 @@ int main(int argc, char *argv[])
     surf2.writeStats(Info);
     Info<< endl;
 
-    const bool surf1Baffle = args.optionFound("surf1Baffle");
-    const bool surf2Baffle = args.optionFound("surf2Baffle");
+    const bool surf1Baffle = args.found("surf1Baffle");
+    const bool surf2Baffle = args.found("surf2Baffle");
 
     edgeIntersections edgeCuts1;
     edgeIntersections edgeCuts2;
 
-    const bool invertedSpace = args.optionFound("invertedSpace");
+    const bool invertedSpace = args.found("invertedSpace");
 
     if (invertedSpace && validActions[action] == booleanSurface::DIFFERENCE)
     {
@@ -1663,7 +1661,7 @@ int main(int argc, char *argv[])
     (
         surf1,
         surf2,
-        args.optionFound("perturb"),
+        args.found("perturb"),
         edgeCuts1,
         edgeCuts2
     );
@@ -1673,7 +1671,7 @@ int main(int argc, char *argv[])
     (
         surf1,
         surf2,
-        args.optionFound("perturb"),
+        args.found("perturb"),
         edgeCuts1,
         edgeCuts2
     );

@@ -63,14 +63,9 @@ Description
             // use the global coordinate system
             coordinateSystem
             {
-                type    cartesian;
                 origin  (0 0 0);
-                coordinateRotation
-                {
-                    type    axesRotation;
-                    e1      (1 0 0);
-                    e2      (0 1 0);
-                }
+                e1      (1 0 0);
+                e2      (0 1 0);
             }
         }
     \endverbatim
@@ -159,11 +154,11 @@ class solidification
             const volVectorField& U
         ) const;
 
-        //- Disallow default bitwise copy construct
-        solidification(const solidification&);
+        //- No copy construct
+        solidification(const solidification&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const solidification&);
+        //- No copy assignment
+        void operator=(const solidification&) = delete;
 
 
 public:

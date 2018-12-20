@@ -114,11 +114,11 @@ class cellCoBlended
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        cellCoBlended(const cellCoBlended&);
+        //- No copy construct
+        cellCoBlended(const cellCoBlended&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const cellCoBlended&);
+        //- No copy assignment
+        void operator=(const cellCoBlended&) = delete;
 
 
 public:
@@ -232,7 +232,7 @@ public:
                     mesh
                 ),
                 mesh,
-                dimensionedScalar("Co", dimless, 0),
+                dimensionedScalar(dimless, Zero),
                 extrapolatedCalculatedFvPatchScalarField::typeName
             );
 
@@ -276,7 +276,7 @@ public:
 
             return
                 bf*tScheme1_().weights(vf)
-              + (scalar(1.0) - bf)*tScheme2_().weights(vf);
+              + (scalar(1) - bf)*tScheme2_().weights(vf);
         }
 
 
@@ -292,7 +292,7 @@ public:
 
             return
                 bf*tScheme1_().interpolate(vf)
-              + (scalar(1.0) - bf)*tScheme2_().interpolate(vf);
+              + (scalar(1) - bf)*tScheme2_().interpolate(vf);
         }
 
 
@@ -321,7 +321,7 @@ public:
                     (
                         bf
                       * tScheme1_().correction(vf)
-                      + (scalar(1.0) - bf)
+                      + (scalar(1) - bf)
                       * tScheme2_().correction(vf)
                     );
                 }
@@ -338,7 +338,7 @@ public:
             {
                 return
                 (
-                    (scalar(1.0) - bf)
+                    (scalar(1) - bf)
                   * tScheme2_().correction(vf)
                 );
             }

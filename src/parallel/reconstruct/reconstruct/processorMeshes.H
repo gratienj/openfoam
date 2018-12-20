@@ -45,7 +45,6 @@ SourceFiles
 namespace Foam
 {
 
-
 /*---------------------------------------------------------------------------*\
                      Class processorMeshes Declaration
 \*---------------------------------------------------------------------------*/
@@ -80,11 +79,11 @@ class processorMeshes
         //- Read all meshes
         void read();
 
-        //- Disallow default bitwise copy construct
-        processorMeshes(const processorMeshes&);
+        //- No copy construct
+        processorMeshes(const processorMeshes&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const processorMeshes&);
+        //- No copy assignment
+        void operator=(const processorMeshes&) = delete;
 
 
 public:

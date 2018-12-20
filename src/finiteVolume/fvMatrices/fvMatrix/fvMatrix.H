@@ -114,7 +114,7 @@ template<class T> class UIndirectList;
 template<class Type>
 class fvMatrix
 :
-    public tmp<fvMatrix<Type>>::refCount,
+    public refCount,
     public lduMatrix
 {
     // Private data
@@ -371,7 +371,15 @@ public:
             //- Set references level for solution
             void setReferences
             (
-                const labelList& cells,
+                const labelUList& cells,
+                const Type& value,
+                const bool forceReference = false
+            );
+
+            //- Set references level for solution
+            void setReferences
+            (
+                const labelUList& cells,
                 const UList<Type>& values,
                 const bool forceReference = false
             );

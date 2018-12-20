@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -10,7 +10,6 @@ FoamFile
     version     2.0;
     format      ascii;
     class       volScalarField;
-    location    "0";
     object      k;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -21,22 +20,24 @@ internalField   uniform 1;
 
 boundaryField
 {
-    Default_Boundary_Region
-    {
-        type            kqRWallFunction;
-        value           uniform 1;
-    }
     inlet
     {
         type            turbulentIntensityKineticEnergyInlet;
         intensity       0.05;
-        value           uniform 1;
+        value           $internalField;
     }
+
     outlet
     {
         type            inletOutlet;
-        inletValue      uniform 1;
-        value           uniform 1;
+        value           $internalField;
+        inletValue      $internalField;
+    }
+
+    "(?i).*walls"
+    {
+        type            kqRWallFunction;
+        value           $internalField;
     }
 }
 

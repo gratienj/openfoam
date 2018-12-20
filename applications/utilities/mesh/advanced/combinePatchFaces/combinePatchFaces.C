@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,7 @@ Group
     grpMeshAdvancedUtilities
 
 Description
-    Checks for multiple patch faces on same cell and combines them.
+    Checks for multiple patch faces on the same cell and combines them.
     Multiple patch faces can result from e.g. removal of refined
     neighbouring cells, leaving 4 exposed faces with same owner.
 
@@ -92,12 +92,12 @@ label mergePatchFaces
     {
         // Store the faces of the face sets
         List<faceList> allFaceSetsFaces(allFaceSets.size());
-        forAll(allFaceSets, setI)
+        forAll(allFaceSets, seti)
         {
-            allFaceSetsFaces[setI] = UIndirectList<face>
+            allFaceSetsFaces[seti] = UIndirectList<face>
             (
                 mesh.faces(),
-                allFaceSets[setI]
+                allFaceSets[seti]
             );
         }
 
@@ -113,7 +113,7 @@ label mergePatchFaces
             map = meshMod.changeMesh(mesh, false, true);
 
             // Update fields
-            mesh.updateMesh(map);
+            mesh.updateMesh(map());
 
             // Move mesh (since morphing does not do this)
             if (map().hasMotionPoints())
@@ -146,13 +146,13 @@ label mergePatchFaces
         // Sets where the master is in error
         labelHashSet errorSets;
 
-        forAll(allFaceSets, setI)
+        forAll(allFaceSets, seti)
         {
-            label newMasterI = map().reverseFaceMap()[allFaceSets[setI][0]];
+            label newMasterI = map().reverseFaceMap()[allFaceSets[seti][0]];
 
             if (errorFaces.found(newMasterI))
             {
-                errorSets.insert(setI);
+                errorSets.insert(seti);
             }
         }
         label nErrorSets = returnReduce(errorSets.size(), sumOp<label>());
@@ -162,14 +162,12 @@ label mergePatchFaces
             << " These will be restored to their original faces."
             << endl;
 
-        if (nErrorSets > 0)
+        if (nErrorSets)
         {
             // Renumber stored faces to new vertex numbering.
-            forAllConstIter(labelHashSet, errorSets, iter)
+            for (const label seti : errorSets)
             {
-                label setI = iter.key();
-
-                faceList& setFaceVerts = allFaceSetsFaces[setI];
+                faceList& setFaceVerts = allFaceSetsFaces[seti];
 
                 forAll(setFaceVerts, i)
                 {
@@ -183,8 +181,8 @@ label mergePatchFaces
                         if (newVertI < 0)
                         {
                             FatalErrorInFunction
-                                << "In set:" << setI << " old face labels:"
-                                << allFaceSets[setI] << " new face vertices:"
+                                << "In set:" << seti << " old face labels:"
+                                << allFaceSets[seti] << " new face vertices:"
                                 << setFaceVerts[i] << " are unmapped vertices!"
                                 << abort(FatalError);
                         }
@@ -198,12 +196,10 @@ label mergePatchFaces
 
 
             // Restore faces
-            forAllConstIter(labelHashSet, errorSets, iter)
+            for (const label seti : errorSets)
             {
-                label setI = iter.key();
-
-                const labelList& setFaces = allFaceSets[setI];
-                const faceList& setFaceVerts = allFaceSetsFaces[setI];
+                const labelList& setFaces = allFaceSets[seti];
+                const faceList& setFaceVerts = allFaceSetsFaces[seti];
 
                 label newMasterI = map().reverseFaceMap()[setFaces[0]];
 
@@ -241,7 +237,7 @@ label mergePatchFaces
 
 
                 // Add the previously removed faces
-                for (label i = 1; i < setFaces.size(); i++)
+                for (label i = 1; i < setFaces.size(); ++i)
                 {
                     Pout<< "Restoring removed face " << setFaces[i]
                         << " with vertices " << setFaceVerts[i] << endl;
@@ -269,7 +265,7 @@ label mergePatchFaces
             map = meshMod.changeMesh(mesh, false, true);
 
             // Update fields
-            mesh.updateMesh(map);
+            mesh.updateMesh(map());
 
             // Move mesh (since morphing does not do this)
             if (map().hasMotionPoints())
@@ -322,7 +318,7 @@ label mergeEdges(const scalar minCos, polyMesh& mesh)
         autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false, true);
 
         // Update fields
-        mesh.updateMesh(map);
+        mesh.updateMesh(map());
 
         // Move mesh (since morphing does not do this)
         if (map().hasMotionPoints())
@@ -347,37 +343,49 @@ label mergeEdges(const scalar minCos, polyMesh& mesh)
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Checks for multiple patch faces on the same cell and combines them."
+    );
+
     #include "addOverwriteOption.H"
 
-    argList::addArgument("featureAngle [0..180]");
+    argList::addArgument
+    (
+        "featureAngle",
+        "in degrees [0-180]"
+    );
     argList::addOption
     (
         "concaveAngle",
         "degrees",
-        "specify concave angle [0..180] (default: 30 degrees)"
+        "Specify concave angle [0..180] (default: 30 degrees)"
     );
     argList::addBoolOption
     (
         "meshQuality",
-        "read user-defined mesh quality criterions from system/meshQualityDict"
+        "Read user-defined mesh quality criteria from system/meshQualityDict"
     );
+
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
     #include "createPolyMesh.H"
+
     const word oldInstance = mesh.pointsInstance();
 
-    const scalar featureAngle = args.argRead<scalar>(1);
+    const scalar featureAngle = args.get<scalar>(1);
     const scalar minCos = Foam::cos(degToRad(featureAngle));
 
     // Sin of angle between two consecutive edges on a face.
     // If sin(angle) larger than this the face will be considered concave.
-    scalar concaveAngle = args.optionLookupOrDefault("concaveAngle", 30.0);
-    scalar concaveSin = Foam::sin(degToRad(concaveAngle));
+    const scalar concaveAngle = args.opt<scalar>("concaveAngle", 30);
 
-    const bool overwrite = args.optionFound("overwrite");
-    const bool meshQuality = args.optionFound("meshQuality");
+    const scalar concaveSin = Foam::sin(degToRad(concaveAngle));
+
+    const bool overwrite = args.found("overwrite");
+    const bool meshQuality = args.found("meshQuality");
 
     Info<< "Merging all faces of a cell" << nl
         << "    - which are on the same patch" << nl
@@ -406,14 +414,14 @@ int main(int argc, char *argv[])
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE
                 )
-           )
+            )
         );
     }
 
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
 
 

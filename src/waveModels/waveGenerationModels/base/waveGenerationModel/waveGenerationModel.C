@@ -24,9 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "waveGenerationModel.H"
-#include "mathematicalConstants.H"
-
-using namespace Foam::constant;
+#include "unitConversion.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -36,6 +34,29 @@ namespace waveModels
 {
     defineTypeNameAndDebug(waveGenerationModel, 0);
 }
+}
+
+
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+
+Foam::scalar Foam::waveModels::waveGenerationModel::readWaveHeight() const
+{
+    const scalar h(get<scalar>("waveHeight"));
+    if (h < 0)
+    {
+        FatalIOErrorInFunction(*this)
+            << "Wave height must be greater than zero.  Supplied"
+            << " value waveHeight = " << h
+            << exit(FatalIOError);
+    }
+
+    return h;
+}
+
+
+Foam::scalar Foam::waveModels::waveGenerationModel::readWaveAngle() const
+{
+    return degToRad(get<scalar>("waveAngle"));
 }
 
 
@@ -49,21 +70,13 @@ Foam::waveModels::waveGenerationModel::waveGenerationModel
     const bool readFields
 )
 :
-    waveModel(dict, mesh, patch, false),
-    waveHeight_(0),
-    waveAngle_(0)
+    waveModel(dict, mesh, patch, false)
 {
     if (readFields)
     {
         readDict(dict);
     }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::waveModels::waveGenerationModel::~waveGenerationModel()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -75,19 +88,7 @@ bool Foam::waveModels::waveGenerationModel::readDict
 {
     if (waveModel::readDict(overrideDict))
     {
-        lookup("activeAbsorption") >> activeAbsorption_;
-
-        lookup("waveHeight") >> waveHeight_;
-        if (waveHeight_ < 0)
-        {
-            FatalIOErrorInFunction(*this)
-                << "Wave height must be greater than zero.  Supplied"
-                << " value waveHeight = " << waveHeight_
-                << exit(FatalIOError);
-        }
-
-        lookup("waveAngle") >> waveAngle_;
-        waveAngle_ *= mathematical::pi/180;
+        readEntry("activeAbsorption", activeAbsorption_);
 
         return true;
     }
@@ -99,9 +100,6 @@ bool Foam::waveModels::waveGenerationModel::readDict
 void Foam::waveModels::waveGenerationModel::info(Ostream& os) const
 {
     waveModel::info(os);
-
-    os  << "    Wave height : " << waveHeight_ << nl
-        << "    Wave angle  : " << 180/mathematical::pi*waveAngle_ << nl;
 }
 
 

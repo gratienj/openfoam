@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,9 +42,17 @@ Usage
     }
     \endverbatim
 
+    Where the entries comprise:
+    \table
+        Property     | Description               | Required    | Default value
+        type         | Type name: residua  ls    | yes         |
+        fields       | List of fields to process | yes         |
+        writeFields  | Write the residual fields | no          | no
+    \endtable
+
     Output data is written to the dir postProcessing/residuals/\<timeDir\>/
     For vector/tensor fields, e.g. U, where an equation is solved for each
-    component, the largest residual of each component is written out.
+    component, the largest residual of each component is written.
 
 See also
     Foam::functionObject
@@ -87,17 +95,33 @@ protected:
         //- Fields to write residuals
         solverFieldSelection fieldSet_;
 
+        //- Flag to write the residual as a vol field
+        bool writeFields_;
+
+        //- Initialisation flag
+        bool initialised_;
+
 
     // Protected Member Functions
 
         //- Output file header information
         void writeFileHeader(Ostream& os);
 
+        //- Create and store a residual field on the mesh database
+        void createField(const word& fieldName);
+
+        //- Write a residual field
+        void writeField(const word& fieldName) const;
+
         //- Output file header information per primitive type value
         template<class Type>
         void writeFileHeader(Ostream& os, const word& fileName) const;
 
-        //- Calculate the field min/max
+        //- Initialise a residual field
+        template<class Type>
+        void initialiseField(const word& fieldName);
+
+        //- Calculate the residual
         template<class Type>
         void writeResidual(const word& fieldName);
 
@@ -106,10 +130,10 @@ private:
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         residuals(const residuals&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const residuals&) = delete;
 
 

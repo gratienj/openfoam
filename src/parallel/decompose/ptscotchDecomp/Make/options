@@ -1,26 +1,29 @@
+/*
+ * NB: mplib PINC must appear after the SCOTCH_ARCH_PATH/include/FOAM_MPI
+ * to ensure we do not accidentally get a ptscotch header from the
+ * mpi distribution.
+ */
 sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
-sinclude $(RULES)/mplib$(WM_MPLIB)
+sinclude $(DEFAULT_RULES)/mplib$(WM_MPLIB)
 
 EXE_INC = \
-    $(PFLAGS) $(PINC) \
     -I$(SCOTCH_ARCH_PATH)/include/$(FOAM_MPI) \
-    -I$(SCOTCH_ARCH_PATH)/include \
-    -I/usr/include/scotch \
+    -I$(SCOTCH_INC_DIR) \
+    $(PFLAGS) $(PINC) \
     -I../decompositionMethods/lnInclude
 
 /*
  * The '-lscotch' is a slight hack:
  * ptscotch 6 requires scotch linked in, but does not declare the dependency
- *
- * The $(SCOTCH_ARCH_PATH)/lib$WM_COMPILER_LIB_ARCH path is provided
- * to support central, non-thirdparty installations
  */
 LIB_LIBS = \
-    -L$(SCOTCH_ARCH_PATH)/lib \
-    -L$(SCOTCH_ARCH_PATH)/lib$(WM_COMPILER_LIB_ARCH) \
-    -L$(FOAM_EXT_LIBBIN) \
+    -L$(SCOTCH_LIB_DIR) \
     -L$(FOAM_EXT_LIBBIN)/$(FOAM_MPI) \
-    -lptscotch \
-    -lptscotcherrexit \
-    -lscotch \
-    -lrt
+    -L$(FOAM_EXT_LIBBIN) \
+    -lptscotch -lptscotcherrexit \
+    -lscotch
+
+/* May require librt, but scotch does not declare the dependency */
+ifeq ("$(SO)","so")
+    LIB_LIBS += -lrt
+endif

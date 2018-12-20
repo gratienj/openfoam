@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,10 +41,10 @@ Foam::List<T>::List(Istream& is)
 
 
 template<class T>
-Foam::Istream& Foam::operator>>(Istream& is, List<T>& L)
+Foam::Istream& Foam::operator>>(Istream& is, List<T>& list)
 {
     // Anull list
-    L.setSize(0);
+    list.resize(0);
 
     is.fatalCheck(FUNCTION_NAME);
 
@@ -52,22 +52,28 @@ Foam::Istream& Foam::operator>>(Istream& is, List<T>& L)
 
     is.fatalCheck(FUNCTION_NAME);
 
+    // Compound: simply transfer contents
     if (firstToken.isCompound())
     {
-        L.transfer
+        list.transfer
         (
             dynamicCast<token::Compound<List<T>>>
             (
                 firstToken.transferCompoundToken(is)
             )
         );
-    }
-    else if (firstToken.isLabel())
-    {
-        const label sz = firstToken.labelToken();
 
-        // Set list length to that read
-        L.setSize(sz);
+        return is;
+    }
+
+
+    // Label: could be int(..), int{...} or just a plain '0'
+    if (firstToken.isLabel())
+    {
+        const label len = firstToken.labelToken();
+
+        // Resize to length read
+        list.resize(len);
 
         // Read list contents depending on data format
 
@@ -76,17 +82,18 @@ Foam::Istream& Foam::operator>>(Istream& is, List<T>& L)
             // Read beginning of contents
             const char delimiter = is.readBeginList("List");
 
-            if (sz)
+            if (len)
             {
                 if (delimiter == token::BEGIN_LIST)
                 {
-                    for (label i=0; i<sz; ++i)
+                    for (label i=0; i<len; ++i)
                     {
-                        is >> L[i];
+                        is >> list[i];
 
                         is.fatalCheck
                         (
-                            "operator>>(Istream&, List<T>&) : reading entry"
+                            "operator>>(Istream&, List<T>&) : "
+                            "reading entry"
                         );
                     }
                 }
@@ -103,9 +110,9 @@ Foam::Istream& Foam::operator>>(Istream& is, List<T>& L)
                         "reading the single entry"
                     );
 
-                    for (label i=0; i<sz; ++i)
+                    for (label i=0; i<len; ++i)
                     {
-                        L[i] = element;
+                        list[i] = element;  // Copy the value
                     }
                 }
             }
@@ -113,22 +120,25 @@ Foam::Istream& Foam::operator>>(Istream& is, List<T>& L)
             // Read end of contents
             is.readEndList("List");
         }
-        else
+        else if (len)
         {
-            // Contents are binary and contiguous
+            // Non-empty, binary, contiguous
 
-            if (sz)
-            {
-                is.read(reinterpret_cast<char*>(L.data()), sz*sizeof(T));
+            is.read(reinterpret_cast<char*>(list.data()), len*sizeof(T));
 
-                is.fatalCheck
-                (
-                    "operator>>(Istream&, List<T>&) : reading the binary block"
-                );
-            }
+            is.fatalCheck
+            (
+                "operator>>(Istream&, List<T>&) : "
+                "reading the binary block"
+            );
         }
+
+        return is;
     }
-    else if (firstToken.isPunctuation())
+
+
+    // "(...)" : read as SLList and transfer contents
+    if (firstToken.isPunctuation())
     {
         if (firstToken.pToken() != token::BEGIN_LIST)
         {
@@ -138,22 +148,21 @@ Foam::Istream& Foam::operator>>(Istream& is, List<T>& L)
                 << exit(FatalIOError);
         }
 
-        // Putback the opening bracket
-        is.putBack(firstToken);
+        is.putBack(firstToken); // Putback the opening bracket
 
-        // Read as a singly-linked list
-        SLList<T> sll(is);
+        SLList<T> sll(is);      // Read as singly-linked list
 
-        // Convert the singly-linked list to this list
-        L = sll;
+        // Reallocate and move assign list elements
+        list = std::move(sll);
+
+        return is;
     }
-    else
-    {
-        FatalIOErrorInFunction(is)
-            << "incorrect first token, expected <int> or '(', found "
-            << firstToken.info()
-            << exit(FatalIOError);
-    }
+
+
+    FatalIOErrorInFunction(is)
+        << "incorrect first token, expected <int> or '(', found "
+        << firstToken.info()
+        << exit(FatalIOError);
 
     return is;
 }

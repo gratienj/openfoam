@@ -46,10 +46,8 @@ void Foam::directAMI<SourcePatch, TargetPatch>::appendToDirectSeeds
 
     const vectorField& srcCf = this->srcPatch_.faceCentres();
 
-    forAll(srcNbr, i)
+    for (const label srcI : srcNbr)
     {
-        label srcI = srcNbr[i];
-
         if ((mapFlag[srcI] == 0) && (srcTgtSeed[srcI] == -1))
         {
             // first attempt: match by comparing face centres
@@ -69,9 +67,8 @@ void Foam::directAMI<SourcePatch, TargetPatch>::appendToDirectSeeds
             tol = max(SMALL, 0.0001*sqrt(tol));
 
             bool found = false;
-            forAll(tgtNbr, j)
+            for (const label tgtI : tgtNbr)
             {
-                label tgtI = tgtNbr[j];
                 const face& tgtF = this->tgtPatch_[tgtI];
                 const point tgtC = tgtF.centre(tgtPoints);
 
@@ -90,11 +87,10 @@ void Foam::directAMI<SourcePatch, TargetPatch>::appendToDirectSeeds
             // second attempt: match by shooting a ray into the tgt face
             if (!found)
             {
-                const vector srcN = srcF.normal(srcPoints);
+                const vector srcN = srcF.areaNormal(srcPoints);
 
-                forAll(tgtNbr, j)
+                for (const label tgtI : tgtNbr)
                 {
-                    label tgtI = tgtNbr[j];
                     const face& tgtF = this->tgtPatch_[tgtI];
                     pointHit ray = tgtF.ray(srcCf[srcI], srcN, tgtPoints);
 
@@ -121,19 +117,18 @@ void Foam::directAMI<SourcePatch, TargetPatch>::appendToDirectSeeds
                 {
                     Pout<< "source face not found: id=" << srcI
                         << " centre=" << srcCf[srcI]
-                        << " normal=" << srcF.normal(srcPoints)
+                        << " normal=" << srcF.areaNormal(srcPoints)
                         << " points=" << srcF.points(srcPoints)
                         << endl;
 
                     Pout<< "target neighbours:" << nl;
-                    forAll(tgtNbr, j)
+                    for (const label tgtI : tgtNbr)
                     {
-                        label tgtI = tgtNbr[j];
                         const face& tgtF = this->tgtPatch_[tgtI];
 
                         Pout<< "face id: " << tgtI
                             << " centre=" << tgtF.centre(tgtPoints)
-                            << " normal=" << tgtF.normal(tgtPoints)
+                            << " normal=" << tgtF.areaNormal(tgtPoints)
                             << " points=" << tgtF.points(tgtPoints)
                             << endl;
                     }
@@ -192,8 +187,6 @@ Foam::directAMI<SourcePatch, TargetPatch>::directAMI
 (
     const SourcePatch& srcPatch,
     const TargetPatch& tgtPatch,
-    const scalarField& srcMagSf,
-    const scalarField& tgtMagSf,
     const faceAreaIntersect::triangulationMode& triMode,
     const bool reverseTarget,
     const bool requireMatch
@@ -203,8 +196,6 @@ Foam::directAMI<SourcePatch, TargetPatch>::directAMI
     (
         srcPatch,
         tgtPatch,
-        srcMagSf,
-        tgtMagSf,
         triMode,
         reverseTarget,
         requireMatch
@@ -319,6 +310,20 @@ void Foam::directAMI<SourcePatch, TargetPatch>::calculate
         tgtAddress[i].transfer(tgtAddr[i]);
         tgtWeights[i] = scalarList(1, magSf);
     }
+}
+
+
+template<class SourcePatch, class TargetPatch>
+void Foam::directAMI<SourcePatch, TargetPatch>::setMagSf
+(
+    const TargetPatch& tgtPatch,
+    const mapDistribute& map,
+    scalarList& srcMagSf,
+    scalarList& tgtMagSf
+) const
+{
+    srcMagSf = std::move(this->srcMagSf_);
+    tgtMagSf = scalarList(tgtPatch.size(), 1.0);
 }
 
 

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,26 +50,62 @@ Foam::entry* Foam::dictionary::set(const keyType& k, const T& v)
 
 
 template<class T>
-T Foam::dictionary::lookupType
+T Foam::dictionary::get
 (
     const word& keyword,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    const const_searcher finder(csearch(keyword, recursive, patternMatch));
+    T val;
+    readEntry<T>(keyword, val, matchOpt);
+    return val;
+}
 
-    if (!finder.found())
+
+template<class T>
+T Foam::dictionary::getCompat
+(
+    const word& keyword,
+    std::initializer_list<std::pair<const char*,int>> compat,
+    enum keyType::option matchOpt
+) const
+{
+    T val;
+    readCompat<T>(keyword, compat, val, matchOpt);
+    return val;
+}
+
+
+template<class T>
+bool Foam::dictionary::readCompat
+(
+    const word& keyword,
+    std::initializer_list<std::pair<const char*,int>> compat,
+    T& val,
+    enum keyType::option matchOpt,
+    bool mandatory
+) const
+{
+    const const_searcher finder(csearchCompat(keyword, compat, matchOpt));
+
+    if (finder.found())
     {
-        FatalIOErrorInFunction
-        (
-            *this
-        )   << "keyword " << keyword << " is undefined in dictionary "
+        ITstream& is = finder.ptr()->stream();
+        is >> val;
+
+        checkITstream(is, keyword);
+
+        return true;
+    }
+    else if (mandatory)
+    {
+        FatalIOErrorInFunction(*this)
+            << "Entry '" << keyword << "' not found in dictionary "
             << name()
             << exit(FatalIOError);
     }
 
-    return pTraits<T>(finder.ptr()->stream());
+    return false;
 }
 
 
@@ -78,23 +114,28 @@ T Foam::dictionary::lookupOrDefault
 (
     const word& keyword,
     const T& deflt,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    const const_searcher finder(csearch(keyword, recursive, patternMatch));
+    const const_searcher finder(csearch(keyword, matchOpt));
 
     if (finder.found())
     {
-        return pTraits<T>(finder.ptr()->stream());
-    }
+        T val;
 
-    if (writeOptionalEntries)
+        ITstream& is = finder.ptr()->stream();
+        is >> val;
+
+        checkITstream(is, keyword);
+
+        return val;
+    }
+    else if (writeOptionalEntries)
     {
         IOInfoInFunction(*this)
-            << "Optional entry '" << keyword << "' is not present,"
-            << " returning the default value '" << deflt << "'"
-            << endl;
+            << "Optional entry '" << keyword
+            << "' not found, using default value '" << deflt << "'"
+            << nl;
     }
 
     return deflt;
@@ -106,23 +147,28 @@ T Foam::dictionary::lookupOrAddDefault
 (
     const word& keyword,
     const T& deflt,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 )
 {
-    const const_searcher finder(csearch(keyword, recursive, patternMatch));
+    const const_searcher finder(csearch(keyword, matchOpt));
 
     if (finder.found())
     {
-        return pTraits<T>(finder.ptr()->stream());
-    }
+        T val;
 
-    if (writeOptionalEntries)
+        ITstream& is = finder.ptr()->stream();
+        is >> val;
+
+        checkITstream(is, keyword);
+
+        return val;
+    }
+    else if (writeOptionalEntries)
     {
         IOInfoInFunction(*this)
-            << "Optional entry '" << keyword << "' is not present,"
-            << " adding and returning the default value '" << deflt << "'"
-            << endl;
+            << "Optional entry '" << keyword
+            << "' not found, adding default value '" << deflt << "'"
+            << nl;
     }
 
     add(new primitiveEntry(keyword, deflt));
@@ -131,31 +177,47 @@ T Foam::dictionary::lookupOrAddDefault
 
 
 template<class T>
+bool Foam::dictionary::readEntry
+(
+    const word& keyword,
+    T& val,
+    enum keyType::option matchOpt,
+    bool mandatory
+) const
+{
+    const const_searcher finder(csearch(keyword, matchOpt));
+
+    if (finder.found())
+    {
+        ITstream& is = finder.ptr()->stream();
+        is >> val;
+
+        checkITstream(is, keyword);
+
+        return true;
+    }
+    else if (mandatory)
+    {
+        FatalIOErrorInFunction(*this)
+            << "Entry '" << keyword << "' not found in dictionary "
+            << name()
+            << exit(FatalIOError);
+    }
+
+    return false;
+}
+
+
+template<class T>
 bool Foam::dictionary::readIfPresent
 (
     const word& keyword,
     T& val,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    const const_searcher finder(csearch(keyword, recursive, patternMatch));
-
-    if (finder.found())
-    {
-        finder.ptr()->stream() >> val;
-        return true;
-    }
-
-    if (writeOptionalEntries)
-    {
-        IOInfoInFunction(*this)
-            << "Optional entry '" << keyword << "' is not present,"
-            << " the default value '" << val << "' will be used."
-            << endl;
-    }
-
-    return false;
+    // Read is non-mandatory
+    return readEntry<T>(keyword, val, matchOpt, false);
 }
 
 
@@ -165,24 +227,28 @@ T Foam::dictionary::lookupOrDefaultCompat
     const word& keyword,
     std::initializer_list<std::pair<const char*,int>> compat,
     const T& deflt,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    const const_searcher
-        finder(csearchCompat(keyword, compat, recursive, patternMatch));
+    const const_searcher finder(csearchCompat(keyword, compat, matchOpt));
 
     if (finder.found())
     {
-        return pTraits<T>(finder.ptr()->stream());
-    }
+        T val;
 
-    if (writeOptionalEntries)
+        ITstream& is = finder.ptr()->stream();
+        is >> val;
+
+        checkITstream(is, keyword);
+
+        return val;
+    }
+    else if (writeOptionalEntries)
     {
         IOInfoInFunction(*this)
-            << "Optional entry '" << keyword << "' is not present,"
-            << " returning the default value '" << deflt << "'"
-            << endl;
+            << "Optional entry '" << keyword << "' not found,"
+            << " using default value '" << deflt << "'"
+            << nl;
     }
 
     return deflt;
@@ -195,28 +261,11 @@ bool Foam::dictionary::readIfPresentCompat
     const word& keyword,
     std::initializer_list<std::pair<const char*,int>> compat,
     T& val,
-    bool recursive,
-    bool patternMatch
+    enum keyType::option matchOpt
 ) const
 {
-    const const_searcher
-        finder(csearchCompat(keyword, compat, recursive, patternMatch));
-
-    if (finder.found())
-    {
-        finder.ptr()->stream() >> val;
-        return true;
-    }
-
-    if (writeOptionalEntries)
-    {
-        IOInfoInFunction(*this)
-            << "Optional entry '" << keyword << "' is not present,"
-            << " the default value '" << val << "' will be used."
-            << endl;
-    }
-
-    return false;
+    // Read is non-mandatory
+    return readCompat<T>(keyword, compat, val, matchOpt, false);
 }
 
 

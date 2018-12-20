@@ -71,7 +71,8 @@ Foam::autoPtr<Foam::mapAddedPolyMesh> Foam::fvMeshAdder::add
     fvMesh& mesh0,
     const fvMesh& mesh1,
     const faceCoupleInfo& coupleInfo,
-    const bool validBoundary
+    const bool validBoundary,
+    const bool fullyMapped
 )
 {
     mesh0.clearOut();
@@ -87,6 +88,7 @@ Foam::autoPtr<Foam::mapAddedPolyMesh> Foam::fvMeshAdder::add
             validBoundary
         )
     );
+    mapAddedPolyMesh& map = *mapPtr;
 
     // Adjust the fvMesh part.
     const polyBoundaryMesh& patches = mesh0.boundaryMesh();
@@ -100,23 +102,26 @@ Foam::autoPtr<Foam::mapAddedPolyMesh> Foam::fvMeshAdder::add
 
     // Do the mapping of the stored fields
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    fvMeshAdder::MapVolFields<scalar>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapVolFields<vector>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapVolFields<sphericalTensor>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapVolFields<symmTensor>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapVolFields<tensor>(mapPtr, mesh0, mesh1);
+    fvMeshAdder::MapVolFields<scalar>(map, mesh0, mesh1, fullyMapped);
+    fvMeshAdder::MapVolFields<vector>(map, mesh0, mesh1, fullyMapped);
+    fvMeshAdder::MapVolFields<sphericalTensor>(map, mesh0, mesh1, fullyMapped);
+    fvMeshAdder::MapVolFields<symmTensor>(map, mesh0, mesh1, fullyMapped);
+    fvMeshAdder::MapVolFields<tensor>(map, mesh0, mesh1, fullyMapped);
 
-    fvMeshAdder::MapSurfaceFields<scalar>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapSurfaceFields<vector>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapSurfaceFields<sphericalTensor>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapSurfaceFields<symmTensor>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapSurfaceFields<tensor>(mapPtr, mesh0, mesh1);
+    fvMeshAdder::MapSurfaceFields<scalar>(map, mesh0, mesh1, fullyMapped);
+    fvMeshAdder::MapSurfaceFields<vector>(map, mesh0, mesh1, fullyMapped);
+    fvMeshAdder::MapSurfaceFields<sphericalTensor>
+    (
+        map, mesh0, mesh1, fullyMapped
+    );
+    fvMeshAdder::MapSurfaceFields<symmTensor>(map, mesh0, mesh1, fullyMapped);
+    fvMeshAdder::MapSurfaceFields<tensor>(map, mesh0, mesh1, fullyMapped);
 
-    fvMeshAdder::MapDimFields<scalar>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapDimFields<vector>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapDimFields<sphericalTensor>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapDimFields<symmTensor>(mapPtr, mesh0, mesh1);
-    fvMeshAdder::MapDimFields<tensor>(mapPtr, mesh0, mesh1);
+    fvMeshAdder::MapDimFields<scalar>(map, mesh0, mesh1);
+    fvMeshAdder::MapDimFields<vector>(map, mesh0, mesh1);
+    fvMeshAdder::MapDimFields<sphericalTensor>(map, mesh0, mesh1);
+    fvMeshAdder::MapDimFields<symmTensor>(map, mesh0, mesh1);
+    fvMeshAdder::MapDimFields<tensor>(map, mesh0, mesh1);
 
     return mapPtr;
 }

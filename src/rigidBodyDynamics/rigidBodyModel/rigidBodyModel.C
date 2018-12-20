@@ -92,17 +92,17 @@ void Foam::RBD::rigidBodyModel::addRestraints
 
         restraints_.setSize(restraintDict.size());
 
-        forAllConstIter(IDLList<entry>, restraintDict, iter)
+        for (const entry& dEntry : restraintDict)
         {
-            if (iter().isDict())
+            if (dEntry.isDict())
             {
                 restraints_.set
                 (
                     i++,
                     restraint::New
                     (
-                        iter().keyword(),
-                        iter().dict(),
+                        dEntry.keyword(),
+                        dEntry.dict(),
                         *this
                     )
                 );
@@ -163,43 +163,50 @@ Foam::label Foam::RBD::rigidBodyModel::join_
 
 // * * * * * * * * * * * * * * * * Constructors * * * * * * * * * * * * * * * //
 
-Foam::RBD::rigidBodyModel::rigidBodyModel()
+Foam::RBD::rigidBodyModel::rigidBodyModel(const Time& time)
 :
+    time_(time),
     g_(Zero)
 {
     initializeRootBody();
 }
 
 
-Foam::RBD::rigidBodyModel::rigidBodyModel(const dictionary& dict)
+Foam::RBD::rigidBodyModel::rigidBodyModel
+(
+    const Time& time,
+    const dictionary& dict
+)
 :
+    time_(time),
     g_(Zero)
 {
     initializeRootBody();
 
     const dictionary& bodiesDict = dict.subDict("bodies");
 
-    forAllConstIter(IDLList<entry>, bodiesDict, iter)
+    for (const entry& dEntry : bodiesDict)
     {
-        const dictionary& bodyDict = iter().dict();
+        const keyType& key = dEntry.keyword();
+        const dictionary& bodyDict = dEntry.dict();
 
         if (bodyDict.found("mergeWith"))
         {
             merge
             (
-                bodyID(bodyDict.lookup("mergeWith")),
+                bodyID(bodyDict.get<word>("mergeWith")),
                 bodyDict.lookup("transform"),
-                rigidBody::New(iter().keyword(), bodyDict)
+                rigidBody::New(key, bodyDict)
             );
         }
         else
         {
             join
             (
-                bodyID(bodyDict.lookup("parent")),
+                bodyID(bodyDict.get<word>("parent")),
                 bodyDict.lookup("transform"),
                 joint::New(bodyDict.subDict("joint")),
-                rigidBody::New(iter().keyword(), bodyDict)
+                rigidBody::New(key, bodyDict)
             );
         }
     }
@@ -429,7 +436,7 @@ void Foam::RBD::rigidBodyModel::write(Ostream& os) const
 
         forAll(restraints_, ri)
         {
-            const word& restraintType(restraints_[ri].type());
+            // const word& restraintType(restraints_[ri].type());
 
             os.beginBlock(restraints_[ri].name());
 

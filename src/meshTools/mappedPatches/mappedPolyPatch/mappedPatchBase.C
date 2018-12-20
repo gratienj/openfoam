@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,14 +56,14 @@ const Foam::Enum
     Foam::mappedPatchBase::sampleMode
 >
 Foam::mappedPatchBase::sampleModeNames_
-{
+({
     { sampleMode::NEARESTCELL, "nearestCell" },
     { sampleMode::NEARESTPATCHFACE, "nearestPatchFace" },
     { sampleMode::NEARESTPATCHFACEAMI, "nearestPatchFaceAMI" },
     { sampleMode::NEARESTPATCHPOINT, "nearestPatchPoint" },
     { sampleMode::NEARESTFACE, "nearestFace" },
     { sampleMode::NEARESTONLYCELL, "nearestOnlyCell" },
-};
+});
 
 
 const Foam::Enum
@@ -71,11 +71,11 @@ const Foam::Enum
     Foam::mappedPatchBase::offsetMode
 >
 Foam::mappedPatchBase::offsetModeNames_
-{
+({
     { offsetMode::UNIFORM, "uniform" },
     { offsetMode::NONUNIFORM, "nonuniform" },
     { offsetMode::NORMAL, "normal" },
-};
+});
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -281,7 +281,7 @@ void Foam::mappedPatchBase::findSamples
             else
             {
                 // patch faces
-                const labelList patchFaces(identity(pp.size()) + pp.start());
+                const labelList patchFaces(identity(pp.size(), pp.start()));
 
                 treeBoundBox patchBb
                 (
@@ -716,7 +716,7 @@ void Foam::mappedPatchBase::calcMapping() const
     if (debug)
     {
         // Check that all elements get a value.
-        PackedBoolList used(patch_.size());
+        bitSet used(patch_.size());
         forAll(constructMap, proci)
         {
             const labelList& map = constructMap[proci];
@@ -725,11 +725,7 @@ void Foam::mappedPatchBase::calcMapping() const
             {
                 label facei = map[i];
 
-                if (used[facei] == 0)
-                {
-                    used[facei] = 1;
-                }
-                else
+                if (used.test(facei))
                 {
                     FatalErrorInFunction
                         << "On patch " << patch_.name()
@@ -737,11 +733,15 @@ void Foam::mappedPatchBase::calcMapping() const
                         << " is assigned to more than once."
                         << abort(FatalError);
                 }
+                else
+                {
+                    used.set(facei);
+                }
             }
         }
         forAll(used, facei)
         {
-            if (used[facei] == 0)
+            if (!used.test(facei))
             {
                 FatalErrorInFunction
                     << "On patch " << patch_.name()
@@ -875,38 +875,29 @@ Foam::tmp<Foam::pointField> Foam::mappedPatchBase::readListOrField
                 is >> static_cast<List<vector>&>(fld);
                 if (fld.size() != size)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        dict
-                    )   << "size " << fld.size()
+                    FatalIOErrorInFunction(dict)
+                        << "size " << fld.size()
                         << " is not equal to the given value of " << size
                         << exit(FatalIOError);
                 }
             }
             else
             {
-                FatalIOErrorInFunction
-                (
-                    dict
-                )   << "expected keyword 'uniform' or 'nonuniform', found "
+                FatalIOErrorInFunction(dict)
+                    << "Expected keyword 'uniform' or 'nonuniform', found "
                     << firstToken.wordToken()
                     << exit(FatalIOError);
             }
         }
-        else
+        else if (is.version() == IOstream::versionNumber(2,0))
         {
-            if (is.version() == 2.0)
-            {
-                IOWarningInFunction
-                (
-                    dict
-                )   << "expected keyword 'uniform' or 'nonuniform', "
-                       "assuming List format for backwards compatibility."
-                       "Foam version 2.0." << endl;
+            IOWarningInFunction(dict)
+                << "Expected keyword 'uniform' or 'nonuniform', "
+                   "assuming List format for backwards compatibility."
+                   "Foam version 2.0." << endl;
 
-                is.putBack(firstToken);
-                is >> static_cast<List<vector>&>(fld);
-            }
+            is.putBack(firstToken);
+            is >> static_cast<List<vector>&>(fld);
         }
     }
     return tfld;
@@ -1027,7 +1018,7 @@ Foam::mappedPatchBase::mappedPatchBase
 :
     patch_(pp),
     sampleRegion_(dict.lookupOrDefault<word>("sampleRegion", "")),
-    mode_(sampleModeNames_.lookup("sampleMode", dict)),
+    mode_(sampleModeNames_.get("sampleMode", dict)),
     samplePatch_(dict.lookupOrDefault<word>("samplePatch", "")),
     coupleGroup_(dict),
     offsetMode_(UNIFORM),
@@ -1037,7 +1028,7 @@ Foam::mappedPatchBase::mappedPatchBase
     sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
-    AMIReverse_(dict.lookupOrDefault<bool>("flipNormals", false)),
+    AMIReverse_(dict.lookupOrDefault("flipNormals", false)),
     surfPtr_(nullptr),
     surfDict_(dict.subOrEmptyDict("surface"))
 {
@@ -1051,15 +1042,13 @@ Foam::mappedPatchBase::mappedPatchBase
         }
     }
 
-    if (dict.found("offsetMode"))
+    if (offsetModeNames_.readIfPresent("offsetMode", dict, offsetMode_))
     {
-        offsetMode_ = offsetModeNames_.lookup("offsetMode", dict);
-
         switch (offsetMode_)
         {
             case UNIFORM:
             {
-                offset_ = point(dict.lookup("offset"));
+                dict.readEntry("offset", offset_);
             }
             break;
 
@@ -1072,15 +1061,14 @@ Foam::mappedPatchBase::mappedPatchBase
 
             case NORMAL:
             {
-                distance_ = readScalar(dict.lookup("distance"));
+                dict.readEntry("distance", distance_);
             }
             break;
         }
     }
-    else if (dict.found("offset"))
+    else if (dict.readIfPresent("offset", offset_))
     {
         offsetMode_ = UNIFORM;
-        offset_ = point(dict.lookup("offset"));
     }
     else if (dict.found("offsets"))
     {
@@ -1090,10 +1078,8 @@ Foam::mappedPatchBase::mappedPatchBase
     }
     else if (mode_ != NEARESTPATCHFACE && mode_ != NEARESTPATCHFACEAMI)
     {
-        FatalIOErrorInFunction
-        (
-            dict
-        )   << "Please supply the offsetMode as one of "
+        FatalIOErrorInFunction(dict)
+            << "Please supply the offsetMode as one of "
             << offsetModeNames_
             << exit(FatalIOError);
     }
@@ -1119,16 +1105,14 @@ Foam::mappedPatchBase::mappedPatchBase
     sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
-    AMIReverse_(dict.lookupOrDefault<bool>("flipNormals", false)),
+    AMIReverse_(dict.lookupOrDefault("flipNormals", false)),
     surfPtr_(nullptr),
     surfDict_(dict.subOrEmptyDict("surface"))
 {
     if (mode != NEARESTPATCHFACE && mode != NEARESTPATCHFACEAMI)
     {
-        FatalIOErrorInFunction
-        (
-            dict
-        )   << "Construct from sampleMode and dictionary only applicable for "
+        FatalIOErrorInFunction(dict)
+            << "Construct from sampleMode and dictionary only applicable for "
             << " collocated patches in modes "
             << sampleModeNames_[NEARESTPATCHFACE] << ','
             << sampleModeNames_[NEARESTPATCHFACEAMI]
@@ -1222,9 +1206,13 @@ void Foam::mappedPatchBase::clearOut()
 
 const Foam::polyMesh& Foam::mappedPatchBase::sampleMesh() const
 {
-    return patch_.boundaryMesh().mesh().time().lookupObject<polyMesh>
+    const polyMesh& thisMesh = patch_.boundaryMesh().mesh();
+
+    return
     (
-        sampleRegion()
+        sameRegion_
+      ? thisMesh
+      : thisMesh.time().lookupObject<polyMesh>(sampleRegion())
     );
 }
 

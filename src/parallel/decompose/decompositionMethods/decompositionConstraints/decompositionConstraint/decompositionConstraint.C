@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,15 +37,38 @@ namespace Foam
 
 Foam::decompositionConstraint::decompositionConstraint
 (
-    const dictionary& constraintsDict,
-    const word& type
+    const dictionary& constraintDict
 )
 :
-    coeffDict_(constraintsDict)
+    coeffDict_(constraintDict)
+{}
+
+
+Foam::decompositionConstraint::decompositionConstraint
+(
+    const dictionary& constraintDict,
+    const word&
+)
+:
+    coeffDict_(constraintDict)
 {}
 
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
+
+Foam::autoPtr<Foam::decompositionConstraint>
+Foam::decompositionConstraint::New
+(
+    const dictionary& dict
+)
+{
+    return decompositionConstraint::New
+    (
+        dict,
+        dict.get<word>("type")
+    );
+}
+
 
 Foam::autoPtr<Foam::decompositionConstraint>
 Foam::decompositionConstraint::New
@@ -61,24 +84,15 @@ Foam::decompositionConstraint::New
     if (!cstrIter.found())
     {
         FatalIOErrorInFunction(dict)
-            << "Unknown decompositionConstraint type "
+            << "Unknown decompositionConstraint: "
             << modelType << nl << nl
-            << "Valid decompositionConstraint types :" << endl
+            << "Valid types:" << nl
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalIOError);
     }
 
-    return autoPtr<decompositionConstraint>
-    (
-        cstrIter()(dict, modelType)
-    );
+    return autoPtr<decompositionConstraint>(cstrIter()(dict));
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::decompositionConstraint::~decompositionConstraint()
-{}
 
 
 // ************************************************************************* //

@@ -47,7 +47,7 @@ if (mesh.changing())
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionedScalar("pcorr", p.dimensions(), 0.0),
+        dimensionedScalar(p.dimensions(), Zero),
         pcorrTypes
     );
 
@@ -101,7 +101,7 @@ if (mesh.changing())
             pcorrEqn.setReferences
             (
                 validCells,
-                scalarList(validCells.size(), 0.0),
+                scalar(0),
                 true
             );
         }

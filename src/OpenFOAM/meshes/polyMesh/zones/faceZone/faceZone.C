@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -266,7 +266,7 @@ Foam::faceZone::faceZone
 (
     const word& name,
     const labelUList& addr,
-    const boolList& fm,
+    const boolUList& fm,
     const label index,
     const faceZoneMesh& zm
 )
@@ -286,14 +286,14 @@ Foam::faceZone::faceZone
 Foam::faceZone::faceZone
 (
     const word& name,
-    const Xfer<labelList>& addr,
-    const Xfer<boolList>& fm,
+    labelList&& addr,
+    boolList&& fm,
     const label index,
     const faceZoneMesh& zm
 )
 :
-    zone(name, addr, index),
-    flipMap_(fm),
+    zone(name, std::move(addr), index),
+    flipMap_(std::move(fm)),
     zoneMesh_(zm),
     patchPtr_(nullptr),
     masterCellsPtr_(nullptr),
@@ -328,7 +328,7 @@ Foam::faceZone::faceZone
 (
     const faceZone& origZone,
     const labelUList& addr,
-    const boolList& fm,
+    const boolUList& fm,
     const label index,
     const faceZoneMesh& zm
 )
@@ -348,14 +348,14 @@ Foam::faceZone::faceZone
 Foam::faceZone::faceZone
 (
     const faceZone& origZone,
-    const Xfer<labelList>& addr,
-    const Xfer<boolList>& fm,
+    labelList&& addr,
+    boolList&& fm,
     const label index,
     const faceZoneMesh& zm
 )
 :
-    zone(origZone, addr, index),
-    flipMap_(fm),
+    zone(origZone, std::move(addr), index),
+    flipMap_(std::move(fm)),
     zoneMesh_(zm),
     patchPtr_(nullptr),
     masterCellsPtr_(nullptr),
@@ -468,7 +468,7 @@ void Foam::faceZone::resetAddressing
 void Foam::faceZone::resetAddressing
 (
     const labelUList& addr,
-    const boolList& flipMap
+    const boolUList& flipMap
 )
 {
     clearAddressing();
@@ -479,12 +479,12 @@ void Foam::faceZone::resetAddressing
 
 void Foam::faceZone::resetAddressing
 (
-    const Xfer<labelList>& addr,
+    labelList&& addr,
     const bool flipMapValue
 )
 {
     clearAddressing();
-    labelList::operator=(addr);
+    labelList::transfer(addr);
     setFlipMap(flipMapValue);
 }
 
@@ -537,8 +537,8 @@ bool Foam::faceZone::checkParallelSync(const bool report) const
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     {
-        boolList neiZoneFace(mesh.nFaces()-mesh.nInternalFaces(), false);
-        boolList neiZoneFlip(mesh.nFaces()-mesh.nInternalFaces(), false);
+        boolList neiZoneFace(mesh.nBoundaryFaces(), false);
+        boolList neiZoneFlip(mesh.nBoundaryFaces(), false);
         forAll(*this, i)
         {
             const label facei = operator[](i);

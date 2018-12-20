@@ -402,7 +402,7 @@ Foam::labelList Foam::fvMeshTools::removeEmptyPatches
 
     newToOld.setSize(newI);
 
-    // Move all deleteable patches to the end
+    // Move all deletable patches to the end
     forAll(oldToNew, patchI)
     {
         if (oldToNew[patchI] == -1)
@@ -532,18 +532,8 @@ Foam::autoPtr<Foam::fvMesh> Foam::fvMeshTools::newMesh
         regIOobject::fileModificationChecking;
     regIOobject::fileModificationChecking = regIOobject::timeStamp;
 
-    autoPtr<fvMesh> meshPtr
-    (
-        new fvMesh
-        (
-            meshIO,
-            xferCopy(pointField()),
-            xferCopy(faceList()),
-            xferCopy(labelList()),
-            xferCopy(labelList())
-        )
-    );
-    fvMesh& mesh = meshPtr();
+    auto meshPtr = autoPtr<fvMesh>::New(meshIO, Zero);
+    fvMesh& mesh = *meshPtr;
 
     regIOobject::fileModificationChecking = oldCheckType;
 
@@ -578,7 +568,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::fvMeshTools::newMesh
             forAll(patchEntries, patchI)
             {
                 const entry& e = patchEntries[patchI];
-                const word type(e.dict().lookup("type"));
+                const word type(e.dict().get<word>("type"));
 
                 if
                 (

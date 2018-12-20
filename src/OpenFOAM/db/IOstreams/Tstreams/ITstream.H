@@ -98,13 +98,13 @@ public:
         ITstream
         (
             const string& name,
-            const Xfer<List<token>>& tokens,
+            List<token>&& tokens,
             streamFormat format=ASCII,
             versionNumber version=currentVersion
         )
         :
             Istream(format, version),
-            tokenList(tokens),
+            tokenList(std::move(tokens)),
             name_(name),
             tokenIndex_(0)
         {
@@ -160,8 +160,7 @@ public:
 
 
         //- Destructor
-        virtual ~ITstream()
-        {}
+        virtual ~ITstream() = default;
 
 
     // Static Functions

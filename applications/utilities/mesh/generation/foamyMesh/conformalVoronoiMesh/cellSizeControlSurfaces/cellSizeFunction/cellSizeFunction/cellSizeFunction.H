@@ -106,15 +106,13 @@ protected:
         label priority_;
 
 
-private:
+    // Protected Member Functions
 
-    // Private Member Functions
+        //- No copy construct
+        cellSizeFunction(const cellSizeFunction&) = delete;
 
-        //- Disallow default bitwise copy construct
-        cellSizeFunction(const cellSizeFunction&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const cellSizeFunction&);
+        //- No copy assignment
+        void operator=(const cellSizeFunction&) = delete;
 
 
 public:

@@ -151,7 +151,7 @@ Foam::regionCoupledBase::regionCoupledBase
     nbrRegionName_(dict.lookup("neighbourRegion")),
     sameRegion_(nbrRegionName_ == patch_.boundaryMesh().mesh().name()),
     AMIPtr_(nullptr),
-    AMIReverse_(dict.lookupOrDefault<bool>("flipNormals", false)),
+    AMIReverse_(dict.lookupOrDefault("flipNormals", false)),
     surfPtr_(nullptr),
     surfDict_(dict.subOrEmptyDict("surface"))
 {}
@@ -187,19 +187,15 @@ Foam::label Foam::regionCoupledBase::neighbPatchID() const
 {
     if (nbrPatchID_ == -1)
     {
-        if
-        (
-            patch_.boundaryMesh().mesh().time().foundObject<polyMesh>
+        const polyMesh* meshPtr =
+            patch_.boundaryMesh().mesh().time().findObject<polyMesh>
             (
                 nbrRegionName_
-            )
-        )
+            );
+
+        if (meshPtr)
         {
-            const polyMesh& mesh =
-                patch_.boundaryMesh().mesh().time().lookupObject<polyMesh>
-                (
-                    nbrRegionName_
-                );
+            const polyMesh& mesh = *meshPtr;
 
             nbrPatchID_ = mesh.boundaryMesh().findPatchID(nbrPatchName_);
 
@@ -293,7 +289,7 @@ const Foam::AMIPatchToPatchInterpolation& Foam::regionCoupledBase::AMI() const
         resetAMI();
     }
 
-    return AMIPtr_();
+    return *AMIPtr_;
 }
 
 

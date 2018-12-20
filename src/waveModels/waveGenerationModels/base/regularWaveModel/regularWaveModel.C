@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  | Copyright (C) 2015 IH-Cantabria
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "regularWaveModel.H"
-#include "mathematicalConstants.H"
+#include "unitConversion.H"
 
 using namespace Foam::constant;
 
@@ -40,15 +40,6 @@ namespace waveModels
 
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
-Foam::scalar Foam::waveModels::regularWaveModel::timeCoeff
-(
-    const scalar t
-) const
-{
-    return max(0, min(t/rampTime_, 1));
-}
-
 
 Foam::word Foam::waveModels::regularWaveModel::waveType() const
 {
@@ -78,8 +69,9 @@ Foam::waveModels::regularWaveModel::regularWaveModel
     const bool readFields
 )
 :
-    waveGenerationModel(dict, mesh, patch, false),
-    rampTime_(VSMALL),
+    irregularWaveModel(dict, mesh, patch, false),
+    waveHeight_(0),
+    waveAngle_(0),
     wavePeriod_(0),
     waveLength_(0),
     wavePhase_(1.5*mathematical::pi)
@@ -91,12 +83,6 @@ Foam::waveModels::regularWaveModel::regularWaveModel
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::waveModels::regularWaveModel::~regularWaveModel()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::waveModels::regularWaveModel::readDict
@@ -104,11 +90,13 @@ bool Foam::waveModels::regularWaveModel::readDict
     const dictionary& overrideDict
 )
 {
-    if (waveGenerationModel::readDict(overrideDict))
+    if (irregularWaveModel::readDict(overrideDict))
     {
-        lookup("rampTime") >> rampTime_;
+        waveHeight_ = readWaveHeight();
+        waveAngle_ = readWaveAngle();
 
-        lookup("wavePeriod") >> wavePeriod_;
+        readEntry("wavePeriod", wavePeriod_);
+
         if (wavePeriod_ < 0)
         {
             FatalIOErrorInFunction(*this)
@@ -130,9 +118,10 @@ bool Foam::waveModels::regularWaveModel::readDict
 
 void Foam::waveModels::regularWaveModel::info(Ostream& os) const
 {
-    waveGenerationModel::info(os);
+    irregularWaveModel::info(os);
 
-    os  << "    Ramp time : " << rampTime_ << nl
+    os  << "    Wave height : " << waveHeight_ << nl
+        << "    Wave angle  : " << radToDeg(waveAngle_) << nl
         << "    Wave period : " << wavePeriod_ << nl
         << "    Wave length : " << waveLength_ << nl
         << "    Wave phase : " << wavePhase_ << nl;

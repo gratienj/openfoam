@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,13 +49,11 @@ Foam::label Foam::meshRefinement::mergePatchFaces
     const polyBoundaryMesh& patches = mesh_.boundaryMesh();
 
     // Pick up all candidate cells on boundary
-    labelHashSet boundaryCells(mesh_.nFaces()-mesh_.nInternalFaces());
+    labelHashSet boundaryCells(mesh_.nBoundaryFaces());
 
-    forAll(patchIDs, i)
+    for (const label patchi : patchIDs)
     {
-        label patchI = patchIDs[i];
-
-        const polyPatch& patch = patches[patchI];
+        const polyPatch& patch = patches[patchi];
 
         if (!patch.coupled())
         {
@@ -106,15 +104,16 @@ Foam::label Foam::meshRefinement::mergePatchFaces
         faceCombiner.setRefinement(mergeSets, meshMod);
 
         // Change the mesh (no inflation)
-        autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
+        autoPtr<mapPolyMesh> mapPtr = meshMod.changeMesh(mesh_, false, true);
+        mapPolyMesh& map = *mapPtr;
 
         // Update fields
         mesh_.updateMesh(map);
 
         // Move mesh (since morphing does not do this)
-        if (map().hasMotionPoints())
+        if (map.hasMotionPoints())
         {
-            mesh_.movePoints(map().preMotionPoints());
+            mesh_.movePoints(map.preMotionPoints());
         }
         else
         {
@@ -135,7 +134,7 @@ Foam::label Foam::meshRefinement::mergePatchFaces
         forAll(mergeSets, setI)
         {
             label oldMasterI = mergeSets[setI][0];
-            retestFaces.insert(map().reverseFaceMap()[oldMasterI]);
+            retestFaces.insert(map.reverseFaceMap()[oldMasterI]);
         }
         updateMesh(map, growFaceCellFace(retestFaces));
     }
@@ -143,8 +142,7 @@ Foam::label Foam::meshRefinement::mergePatchFaces
     return nFaceSets;
 }
 
-//
-//
+
 //// Remove points not used by any face or points used by only two faces where
 //// the edges are in line
 //Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::mergeEdges
@@ -221,25 +219,19 @@ Foam::label Foam::meshRefinement::mergePatchFaces
 //
 //        const cellList& cells = mesh_.cells();
 //
-//        forAllConstIter(labelHashSet, retestOldFaces, iter)
+//        for (const label oldFacei : retestOldFaces)
 //        {
-//            label faceI = map().reverseFaceMap()[iter.key()];
+//            const label facei = map().reverseFaceMap()[oldFacei];
 //
-//            const cell& ownFaces = cells[mesh_.faceOwner()[faceI]];
+//            const cell& ownFaces = cells[mesh_.faceOwner()[facei]];
 //
-//            forAll(ownFaces, i)
+//            retestFaces.insert(ownFaces);
+//
+//            if (mesh_.isInternalFace(facei))
 //            {
-//                retestFaces.insert(ownFaces[i]);
-//            }
+//                const cell& neiFaces = cells[mesh_.faceNeighbour()[facei]];
 //
-//            if (mesh_.isInternalFace(faceI))
-//            {
-//                const cell& neiFaces = cells[mesh_.faceNeighbour()[faceI]];
-//
-//                forAll(neiFaces, i)
-//                {
-//                    retestFaces.insert(neiFaces[i]);
-//                }
+//                retestFaces.insert(neiFaces);
 //            }
 //        }
 //        updateMesh(map, retestFaces.toc());
@@ -262,16 +254,14 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
     combineFaces faceCombiner(mesh_, true);
 
     // Pick up all candidate cells on boundary
-    labelHashSet boundaryCells(mesh_.nFaces()-mesh_.nInternalFaces());
+    labelHashSet boundaryCells(mesh_.nBoundaryFaces());
 
     {
         const polyBoundaryMesh& patches = mesh_.boundaryMesh();
 
-        forAll(patchIDs, i)
+        for (const label patchi : patchIDs)
         {
-            label patchI = patchIDs[i];
-
-            const polyPatch& patch = patches[patchI];
+            const polyPatch& patch = patches[patchi];
 
             if (!patch.coupled())
             {
@@ -337,10 +327,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
             faceSet allSets(mesh_, "allFaceSets", allFaceSets.size());
             forAll(allFaceSets, setI)
             {
-                forAll(allFaceSets[setI], i)
-                {
-                    allSets.insert(allFaceSets[setI][i]);
-                }
+                allSets.insert(allFaceSets[setI]);
             }
             Pout<< "Writing all faces to be merged to set "
                 << allSets.objectPath() << endl;
@@ -369,7 +356,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
         autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
 
         // Update fields
-        mesh_.updateMesh(map);
+        mesh_.updateMesh(map());
 
         // Move mesh (since morphing does not do this)
         if (map().hasMotionPoints())
@@ -385,7 +372,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
         // Reset the instance for if in overwrite mode
         mesh_.setInstance(timeName());
 
-        faceCombiner.updateMesh(map);
+        faceCombiner.updateMesh(map());
 
         // Get the kept faces that need to be recalculated.
         // Merging two boundary faces might shift the cell centre
@@ -397,7 +384,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
             label oldMasterI = allFaceSets[setI][0];
             retestFaces.insert(map().reverseFaceMap()[oldMasterI]);
         }
-        updateMesh(map, growFaceCellFace(retestFaces));
+        updateMesh(map(), growFaceCellFace(retestFaces));
 
         if (debug&meshRefinement::MESH)
         {
@@ -421,12 +408,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
             // Check mesh for errors
             // ~~~~~~~~~~~~~~~~~~~~~
 
-            faceSet errorFaces
-            (
-                mesh_,
-                "errorFaces",
-                mesh_.nFaces()-mesh_.nInternalFaces()
-            );
+            faceSet errorFaces(mesh_, "errorFaces", mesh_.nBoundaryFaces());
             bool hasErrors = motionSmoother::checkMesh
             (
                 false,  // report
@@ -558,7 +540,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
             autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
 
             // Update fields
-            mesh_.updateMesh(map);
+            mesh_.updateMesh(map());
 
             // Move mesh (since morphing does not do this)
             if (map().hasMotionPoints())
@@ -575,7 +557,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
             // Reset the instance for if in overwrite mode
             mesh_.setInstance(timeName());
 
-            faceCombiner.updateMesh(map);
+            faceCombiner.updateMesh(map());
 
             // Renumber restore maps
             inplaceMapKey(map().reversePointMap(), restoredPoints);
@@ -588,7 +570,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
             // (unless the faces are absolutely planar)
             labelHashSet retestFaces(2*restoredFaces.size());
 
-            forAllConstIter(Map<label>, restoredFaces, iter)
+            forAllConstIters(restoredFaces, iter)
             {
                 retestFaces.insert(iter.key());
             }
@@ -596,7 +578,7 @@ Foam::label Foam::meshRefinement::mergePatchFacesUndo
             // Experimental:restore all points/face/cells in maps
             updateMesh
             (
-                map,
+                map(),
                 growFaceCellFace(retestFaces),
                 restoredPoints,
                 restoredFaces,
@@ -640,15 +622,16 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRemovePoints
     pointRemover.setRefinement(pointCanBeDeleted, meshMod);
 
     // Change the mesh (no inflation)
-    autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
+    autoPtr<mapPolyMesh> mapPtr = meshMod.changeMesh(mesh_, false, true);
+    mapPolyMesh& map = *mapPtr;
 
     // Update fields
     mesh_.updateMesh(map);
 
     // Move mesh (since morphing does not do this)
-    if (map().hasMotionPoints())
+    if (map.hasMotionPoints())
     {
-        mesh_.movePoints(map().preMotionPoints());
+        mesh_.movePoints(map.preMotionPoints());
     }
     else
     {
@@ -664,12 +647,11 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRemovePoints
 
     // Retest all affected faces and all the cells using them
     labelHashSet retestFaces(pointRemover.savedFaceLabels().size());
-    forAll(pointRemover.savedFaceLabels(), i)
+    for (const label facei : pointRemover.savedFaceLabels())
     {
-        label faceI = pointRemover.savedFaceLabels()[i];
-        if (faceI >= 0)
+        if (facei >= 0)
         {
-            retestFaces.insert(faceI);
+            retestFaces.insert(facei);
         }
     }
     updateMesh(map, growFaceCellFace(retestFaces));
@@ -681,7 +663,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRemovePoints
         checkData();
     }
 
-    return map;
+    return mapPtr;
 }
 
 
@@ -713,15 +695,16 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRestorePoints
     );
 
     // Change the mesh (no inflation)
-    autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false, true);
+    autoPtr<mapPolyMesh> mapPtr = meshMod.changeMesh(mesh_, false, true);
+    mapPolyMesh& map = *mapPtr;
 
     // Update fields
     mesh_.updateMesh(map);
 
     // Move mesh (since morphing does not do this)
-    if (map().hasMotionPoints())
+    if (map.hasMotionPoints())
     {
-        mesh_.movePoints(map().preMotionPoints());
+        mesh_.movePoints(map.preMotionPoints());
     }
     else
     {
@@ -737,7 +720,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRestorePoints
     labelHashSet retestFaces(2*facesToRestore.size());
     forAll(facesToRestore, i)
     {
-        label faceI = map().reverseFaceMap()[facesToRestore[i]];
+        label faceI = map.reverseFaceMap()[facesToRestore[i]];
         if (faceI >= 0)
         {
             retestFaces.insert(faceI);
@@ -753,7 +736,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::doRestorePoints
         checkData();
     }
 
-    return map;
+    return mapPtr;
 }
 
 
@@ -768,13 +751,11 @@ Foam::labelList Foam::meshRefinement::collectFaces
     // Has face been selected?
     boolList selected(mesh_.nFaces(), false);
 
-    forAll(candidateFaces, i)
+    for (const label facei : candidateFaces)
     {
-        label faceI = candidateFaces[i];
-
-        if (set.found(faceI))
+        if (set.found(facei))
         {
-            selected[faceI] = true;
+            selected[facei] = true;
         }
     }
     syncTools::syncFaceList
@@ -804,9 +785,9 @@ namespace Foam
         const label own = pMesh.faceOwner()[faceI];
 
         const cell& ownFaces = pMesh.cells()[own];
-        forAll(ownFaces, ownFaceI)
+        for (const label facei : ownFaces)
         {
-            selected[ownFaces[ownFaceI]] = true;
+            selected[facei] = true;
         }
 
         if (pMesh.isInternalFace(faceI))
@@ -831,9 +812,9 @@ Foam::labelList Foam::meshRefinement::growFaceCellFace
 {
     boolList selected(mesh_.nFaces(), false);
 
-    for (auto faceI : set)
+    for (const label facei : set)
     {
-        markGrowFaceCellFace(mesh_, faceI, selected);
+        markGrowFaceCellFace(mesh_, facei, selected);
     }
 
     syncTools::syncFaceList
@@ -854,10 +835,9 @@ Foam::labelList Foam::meshRefinement::growFaceCellFace
 {
     boolList selected(mesh_.nFaces(), false);
 
-    forAllConstIter(labelHashSet, set, iter)
+    for (const label facei : set)
     {
-        const label faceI = iter.key();
-        markGrowFaceCellFace(mesh_, faceI, selected);
+        markGrowFaceCellFace(mesh_, facei, selected);
     }
 
     syncTools::syncFaceList
@@ -912,12 +892,7 @@ Foam::label Foam::meshRefinement::mergeEdgesUndo
             // Check mesh for errors
             // ~~~~~~~~~~~~~~~~~~~~~
 
-            faceSet errorFaces
-            (
-                mesh_,
-                "errorFaces",
-                mesh_.nFaces()-mesh_.nInternalFaces()
-            );
+            faceSet errorFaces(mesh_, "errorFaces", mesh_.nBoundaryFaces());
             bool hasErrors = motionSmoother::checkMesh
             (
                 false,  // report

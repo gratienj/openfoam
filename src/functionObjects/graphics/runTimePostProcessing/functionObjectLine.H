@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,23 +56,21 @@ class functionObjectLine
     public pathline,
     public functionObjectBase
 {
-private:
-
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        functionObjectLine(const functionObjectLine&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const functionObjectLine&) = delete;
-
-
 protected:
 
-    // Protected data
+    // Protected Data
 
         //- Actor
         vtkSmartPointer<vtkActor> actor_;
+
+
+    // Protected Member Functions
+
+        //- No copy construct
+        functionObjectLine(const functionObjectLine&) = delete;
+
+        //- No copy assignment
+        void operator=(const functionObjectLine&) = delete;
 
 
 public:
@@ -88,7 +86,7 @@ public:
         (
             const runTimePostProcessing& parent,
             const dictionary& dict,
-            const HashPtrTable<Function1<vector>, word>& colours
+            const HashPtrTable<Function1<vector>>& colours
         );
 
 

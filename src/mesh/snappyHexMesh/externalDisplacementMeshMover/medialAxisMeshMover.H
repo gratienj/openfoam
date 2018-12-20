@@ -114,7 +114,8 @@ class medialAxisMeshMover
             (
                 const List<PointData<vector>>& pointWallDist,
                 const label edgeI,
-                const scalar minCos
+                const scalar minCos,
+                const bool checkWall
             ) const;
 
             //- Initialise medial axis. Uses pointDisplacement field only
@@ -144,7 +145,7 @@ class medialAxisMeshMover
             void handleFeatureAngleLayerTerminations
             (
                 const scalar minCos,
-                const PackedBoolList& isMasterPoint,
+                const bitSet& isMasterPoint,
                 const labelList& meshEdges,
                 List<snappyLayerDriver::extrudeMode>& extrudeStatus,
                 pointField& patchDisp,
@@ -158,8 +159,8 @@ class medialAxisMeshMover
             (
                 const scalar minCosLayerTermination,
                 const bool detectExtrusionIsland,
-                const PackedBoolList& isMasterPoint,
-                const PackedBoolList& isMasterEdge,
+                const bitSet& isMasterPoint,
+                const bitSet& isMasterEdge,
                 const labelList& meshEdges,
                 const scalarField& minThickness,
                 List<snappyLayerDriver::extrudeMode>& extrudeStatus,
@@ -186,11 +187,11 @@ class medialAxisMeshMover
             labelList& checkFaces
         );
 
-        //- Disallow default bitwise copy construct
-        medialAxisMeshMover(const medialAxisMeshMover&);
+        //- No copy construct
+        medialAxisMeshMover(const medialAxisMeshMover&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const medialAxisMeshMover&);
+        //- No copy assignment
+        void operator=(const medialAxisMeshMover&) = delete;
 
 
 public:
@@ -218,7 +219,7 @@ public:
     // Member Functions
 
         //- Move mesh using current pointDisplacement boundary values.
-        //  Return true if succesful (errors on checkFaces less than
+        //  Return true if successful (errors on checkFaces less than
         //  allowable). Updates pointDisplacement.
         virtual bool move
         (

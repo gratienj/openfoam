@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015-2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -43,6 +43,13 @@ Note
     }
     \endverbatim
 
+    \heading Dictionary parameters
+    \table
+        Property | Description                              | Required | Default
+        type     | subTriSurfaceMesh                        | selector |
+        surface  | Name of the underlying surface           | yes   |
+        patches  | List of surface region names or regexs   | yes   |
+    \endtable
 
 SourceFiles
     subTriSurfaceMesh.C
@@ -76,7 +83,7 @@ class subTriSurfaceMesh
         static labelList selectedRegions
         (
             const triSurface& s,
-            const wordReList& regionNames
+            const wordRes& regionNameMatcher
         );
 
         //- Subset triSurface based on regions
@@ -100,7 +107,8 @@ public:
 
 
     //- Destructor
-    virtual ~subTriSurfaceMesh();
+    virtual ~subTriSurfaceMesh() = default;
+
 };
 
 

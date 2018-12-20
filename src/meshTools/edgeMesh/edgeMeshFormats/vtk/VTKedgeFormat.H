@@ -54,11 +54,11 @@ class VTKedgeFormat
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        VTKedgeFormat(const VTKedgeFormat&);
+        //- No copy construct
+        VTKedgeFormat(const VTKedgeFormat&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const VTKedgeFormat&);
+        //- No copy assignment
+        void operator=(const VTKedgeFormat&) = delete;
 
 
 protected:
@@ -90,16 +90,12 @@ public:
         //- Read file and return surface
         static autoPtr<edgeMesh> New(const fileName& name)
         {
-            return autoPtr<edgeMesh>
-            (
-                new VTKedgeFormat(name)
-            );
+            return autoPtr<edgeMesh>::NewFrom<VTKedgeFormat>(name);
         }
 
 
     //- Destructor
-    virtual ~VTKedgeFormat()
-    {}
+    virtual ~VTKedgeFormat() = default;
 
 
     // Member Functions

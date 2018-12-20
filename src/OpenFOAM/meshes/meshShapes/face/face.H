@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +39,6 @@ SourceFiles
     faceTemplates.C
 
 \*---------------------------------------------------------------------------*/
-
 #ifndef face_H
 #define face_H
 
@@ -58,8 +57,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
-
+// Forward declarations
 class face;
 class triFace;
 
@@ -148,23 +146,20 @@ public:
         inline face();
 
         //- Construct given size, with invalid point labels (-1)
-        explicit inline face(const label sz);
+        inline explicit face(const label sz);
 
-        //- Construct from list of labels
-        explicit inline face(const labelUList& lst);
+        //- Copy construct from list of labels
+        inline explicit face(const labelUList& lst);
 
-        //- Construct from list of labels
+        //- Copy construct from list of labels
         template<unsigned Size>
-        explicit inline face(const FixedList<label, Size>& lst);
+        inline explicit face(const FixedList<label, Size>& lst);
 
-        //- Construct from an initializer list of labels
-        explicit inline face(std::initializer_list<label> lst);
+        //- Copy construct from an initializer list of labels
+        inline explicit face(std::initializer_list<label> lst);
 
-        //- Transfer (move) construct
-        explicit inline face(const Xfer<labelList>& lst);
-
-        //- Move construct
-        explicit inline face(labelList&& lst);
+        //- Move construct from list of labels
+        inline explicit face(labelList&& lst);
 
         //- Copy construct from triFace
         face(const triFace& f);
@@ -197,30 +192,40 @@ public:
             const Field<Type>& fld
         ) const;
 
+        //- The area normal - with magnitude equal to area of face
+        vector areaNormal(const UList<point>& p) const;
+
+        //- The unit normal
+        inline vector unitNormal(const UList<point>& p) const;
+
+        //- Legacy name for areaNormal()
+        //  \deprecated(2018-06) Deprecated for new use
+        inline vector normal(const UList<point>& p) const
+        {
+            return areaNormal(p); // Legacy definition
+        }
+
         //- Magnitude of face area
         inline scalar mag(const UList<point>& p) const;
-
-        //- Vector normal; magnitude is equal to area of face
-        vector normal(const UList<point>& p) const;
 
         //- Return face with reverse direction
         //  The starting points of the original and reverse face are identical.
         face reverseFace() const;
 
-        //- Navigation through face vertices
+        // Navigation through face vertices
 
-            //- Return true if the global point label is found in face.
-            inline bool found(const label globalIndex) const;
+        //- Return true if the point label is found in face.
+        inline bool found(const label pointLabel) const;
 
-            //- Which local vertex on face given a global index.
-            //  returns -1 if not found
-            label which(const label globalIndex) const;
+        //- Find local index on face for the point label,
+        //  \return position in face (0,1,2,...) or -1 if not found.
+        inline label which(const label pointLabel) const;
 
-            //- Next vertex on face
-            inline label nextLabel(const label i) const;
+        //- Next vertex on face
+        inline label nextLabel(const label i) const;
 
-            //- Previous vertex on face
-            inline label prevLabel(const label i) const;
+        //- Previous vertex on face
+        inline label prevLabel(const label i) const;
 
 
         //- Return the volume swept out by the face when its points move
@@ -292,6 +297,20 @@ public:
             const UList<point>& meshPoints,
             label& nearType,
             label& nearLabel
+        ) const;
+
+        //- The sign for the side of the face plane the point is on,
+        //- using three evenly distributed face points for the estimated normal.
+        //  Uses the supplied tolerance for rounding around zero.
+        //  \return
+        //  -  0: on plane
+        //  - +1: front-side
+        //  - -1: back-side
+        int sign
+        (
+            const point& p,
+            const UList<point>& points,
+            const scalar tol = SMALL
         ) const;
 
         //- Return contact sphere diameter
@@ -397,13 +416,23 @@ public:
 };
 
 
-//- Hash specialization to offset faces in ListListOps::combineOffset
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+//- Hash specialization for face
 template<>
-class offsetOp<face>
+struct Hash<face>
 {
+    inline unsigned operator()(const face& obj, unsigned seed=0) const
+    {
+        return Hasher(obj.cdata(), obj.size()*sizeof(label), seed);
+    }
+};
 
-public:
 
+//- Specialization to offset faces, used in ListListOps::combineOffset
+template<>
+struct offsetOp<face>
+{
     inline face operator()
     (
         const face& x,
@@ -412,25 +441,25 @@ public:
     {
         face result(x.size());
 
-        forAll(x, xI)
+        forAll(x, i)
         {
-            result[xI] = x[xI] + offset;
+            result[i] = x[i] + offset;
         }
         return result;
     }
 };
 
 
-// Global operators
+//- Deprecated(2017-04) find the longest edge on a face.
+//- Face point labels index into pts.
+//  \deprecated(2017-04) use class method instead
+label longestEdge(const face& f, const UList<point>& pts);
+
+
+// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
+
 inline bool operator==(const face& a, const face& b);
 inline bool operator!=(const face& a, const face& b);
-
-
-// Global functions
-
-//- Find the longest edge on a face. Face point labels index into pts.
-//  \deprecated use class method instead (APR-2017)
-label longestEdge(const face& f, const UList<point>& pts);
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

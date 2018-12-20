@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -169,25 +169,25 @@ Foam::functionObjects::regionSizeDistribution::findPatchRegions
     const labelHashSet patchIDs(mesh_.boundaryMesh().patchSet(patchNames_));
 
     label nPatchFaces = 0;
-    forAllConstIter(labelHashSet, patchIDs, iter)
+    for (const label patchi : patchIDs)
     {
-        nPatchFaces += mesh_.boundaryMesh()[iter.key()].size();
+        nPatchFaces += mesh_.boundaryMesh()[patchi].size();
     }
 
 
     Map<label> patchRegions(nPatchFaces);
-    forAllConstIter(labelHashSet, patchIDs, iter)
+    for (const label patchi : patchIDs)
     {
-        const polyPatch& pp = mesh_.boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh_.boundaryMesh()[patchi];
 
         // Collect all regions on the patch
         const labelList& faceCells = pp.faceCells();
 
-        forAll(faceCells, i)
+        for (const label celli : faceCells)
         {
             patchRegions.insert
             (
-                regions[faceCells[i]],
+                regions[celli],
                 Pstream::myProcNo()     // dummy value
             );
         }
@@ -209,8 +209,8 @@ Foam::functionObjects::regionSizeDistribution::divide
     const scalarField& denom
 )
 {
-    tmp<scalarField> tresult(new scalarField(num.size()));
-    scalarField& result = tresult.ref();
+    auto tresult = tmp<scalarField>::New(num.size());
+    auto& result = tresult.ref();
 
     forAll(denom, i)
     {
@@ -317,9 +317,9 @@ Foam::functionObjects::regionSizeDistribution::regionSizeDistribution
 :
     fvMeshFunctionObject(name, runTime, dict),
     writeFile(obr_, name),
-    alphaName_(dict.lookup("field")),
-    patchNames_(dict.lookup("patches")),
-    isoPlanes_(dict.lookupOrDefault<bool>("isoPlanes", false))
+    alphaName_(dict.get<word>("field")),
+    patchNames_(dict.get<wordRes>("patches")),
+    isoPlanes_(dict.lookupOrDefault("isoPlanes", false))
 {
     read(dict);
 }
@@ -338,34 +338,41 @@ bool Foam::functionObjects::regionSizeDistribution::read(const dictionary& dict)
     fvMeshFunctionObject::read(dict);
     writeFile::read(dict);
 
-    dict.lookup("field") >> alphaName_;
-    dict.lookup("patches") >> patchNames_;
-    dict.lookup("threshold") >> threshold_;
-    dict.lookup("maxDiameter") >> maxDiam_;
+    dict.readEntry("field", alphaName_);
+    dict.readEntry("patches", patchNames_);
+    dict.readEntry("threshold", threshold_);
+    dict.readEntry("maxDiameter", maxDiam_);
     minDiam_ = 0.0;
     dict.readIfPresent("minDiameter", minDiam_);
-    dict.lookup("nBins") >> nBins_;
-    dict.lookup("fields") >> fields_;
+    dict.readEntry("nBins", nBins_);
+    dict.readEntry("fields", fields_);
 
-    word format(dict.lookup("setFormat"));
+    const word format(dict.get<word>("setFormat"));
     formatterPtr_ = writer<scalar>::New(format);
 
-    if (dict.found("coordinateSystem"))
+    if (dict.found(coordinateSystem::typeName_()))
     {
-        coordSysPtr_.reset(new coordinateSystem(obr_, dict));
+        csysPtr_.reset
+        (
+            coordinateSystem::New(obr_, dict, coordinateSystem::typeName_())
+        );
 
         Info<< "Transforming all vectorFields with coordinate system "
-            << coordSysPtr_().name() << endl;
+            << csysPtr_->name() << endl;
+    }
+    else
+    {
+        csysPtr_.clear();
     }
 
     if (isoPlanes_)
     {
-         dict.lookup("origin") >> origin_;
-         dict.lookup("direction") >> direction_;
-         dict.lookup("maxDiameter") >> maxDiameter_;
-         dict.lookup("nDownstreamBins") >> nDownstreamBins_;
-         dict.lookup("maxDownstream") >> maxDownstream_;
-         direction_ /= mag(direction_);
+         dict.readEntry("origin", origin_);
+         dict.readEntry("direction", direction_);
+         dict.readEntry("maxDiameter", maxDiameter_);
+         dict.readEntry("nDownstreamBins", nDownstreamBins_);
+         dict.readEntry("maxDownstream", maxDownstream_);
+         direction_.normalise();
     }
 
     return true;
@@ -458,6 +465,7 @@ bool Foam::functionObjects::regionSizeDistribution::write()
             {
                 tmp<scalarField> townFld(fvp.patchInternalField());
                 const scalarField& ownFld = townFld();
+
                 tmp<scalarField> tnbrFld(fvp.patchNeighbourField());
                 const scalarField& nbrFld = tnbrFld();
 
@@ -502,7 +510,7 @@ bool Foam::functionObjects::regionSizeDistribution::write()
                 IOobject::NO_WRITE
             ),
             mesh_,
-            dimensionedScalar("zero", dimless, 0)
+            dimensionedScalar(dimless, Zero)
         );
         Info<< "    Dumping region as volScalarField to " << region.name()
             << endl;
@@ -581,10 +589,10 @@ bool Foam::functionObjects::regionSizeDistribution::write()
             << token::TAB << "Volume(mesh)"
             << token::TAB << "Volume(" << alpha.name() << "):"
             << endl;
-        forAllConstIter(Map<label>, patchRegions, iter)
+        forAllConstIters(patchRegions, iter)
         {
-            label regioni = iter.key();
-            Info<< "    " << token::TAB << iter.key()
+            const label regioni = iter.key();
+            Info<< "    " << token::TAB << regioni
                 << token::TAB << allRegionVolume[regioni]
                 << token::TAB << allRegionAlphaVolume[regioni] << endl;
 
@@ -896,14 +904,14 @@ bool Foam::functionObjects::regionSizeDistribution::write()
                     volVectorField
                 >(fldName).primitiveField();
 
-                if (coordSysPtr_.valid())
+                if (csysPtr_.valid())
                 {
                     Log << "Transforming vector field " << fldName
                         << " with coordinate system "
-                        << coordSysPtr_().name()
+                        << csysPtr_->name()
                         << endl;
 
-                    fld = coordSysPtr_().localVector(fld);
+                    fld = csysPtr_->localVector(fld);
                 }
 
 

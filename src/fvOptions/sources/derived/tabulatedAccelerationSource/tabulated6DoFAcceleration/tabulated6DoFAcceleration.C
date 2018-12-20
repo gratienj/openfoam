@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,12 +51,6 @@ Foam::tabulated6DoFAcceleration::tabulated6DoFAcceleration
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::tabulated6DoFAcceleration::~tabulated6DoFAcceleration()
-{}
-
-
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 Foam::tabulated6DoFAcceleration::accelerationVectors
@@ -89,8 +83,7 @@ Foam::tabulated6DoFAcceleration::acceleration() const
         values_
     );
 
-    InfoInFunction
-        << "Time = " << t << " accelerations: " << avs << endl;
+    Info << "Time = " << t << " accelerations: " << avs << endl;
 
     return avs;
 }
@@ -107,7 +100,7 @@ bool Foam::tabulated6DoFAcceleration::read
 
     fileName newTimeDataFileName
     (
-        fileName(accelerationCoeffs_.lookup("timeDataFileName")).expand()
+        accelerationCoeffs_.get<fileName>("timeDataFileName").expand()
     );
 
     if (newTimeDataFileName != timeDataFileName_)

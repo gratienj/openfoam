@@ -194,11 +194,11 @@ private:
         scalar startTime_;
 
 
-        //- Disallow default bitwise copy construct
-        solarCalculator(const solarCalculator&);
+        //- No copy construct
+        solarCalculator(const solarCalculator&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const solarCalculator&);
+        //- No copy assignment
+        void operator=(const solarCalculator&) = delete;
 
 
     // Private members
@@ -257,7 +257,7 @@ public:
                 return diffuseSolarRad_;
             }
 
-            //- Return C consntant
+            //- Return C constant
             scalar C()
             {
                 return C_;
@@ -296,7 +296,7 @@ public:
             //- Return coordinateSystem
             const coordinateSystem& coord()
             {
-                return coord_();
+                return *coord_;
             }
 
             //- Return sunTrackingUpdateInterval

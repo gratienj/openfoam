@@ -41,6 +41,11 @@ License
 #include "cellSet.H"
 #include "treeDataCell.H"
 
+#include "cellCuts.H"
+#include "refineCell.H"
+#include "hexCellLooper.H"
+#include "meshCutter.H"
+
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
@@ -125,7 +130,7 @@ Foam::labelList Foam::meshRefinement::getChangedFaces
 
     // For reporting: number of masterFaces changed
     label nMasterChanged = 0;
-    PackedBoolList isMasterFace(syncTools::getMasterFaces(mesh));
+    bitSet isMasterFace(syncTools::getMasterFaces(mesh));
 
     {
         // Mark any face on a cell which has been added or changed
@@ -142,15 +147,10 @@ Foam::labelList Foam::meshRefinement::getChangedFaces
         const label nInternalFaces = mesh.nInternalFaces();
 
         // Mark refined cells on old mesh
-        PackedBoolList oldRefineCell(map.nOldCells());
-
-        forAll(oldCellsToRefine, i)
-        {
-            oldRefineCell.set(oldCellsToRefine[i], 1u);
-        }
+        bitSet oldRefineCell(map.nOldCells(), oldCellsToRefine);
 
         // Mark refined faces
-        PackedBoolList refinedInternalFace(nInternalFaces);
+        bitSet refinedInternalFace(nInternalFaces);
 
         // 1. Internal faces
 
@@ -161,24 +161,22 @@ Foam::labelList Foam::meshRefinement::getChangedFaces
 
             if
             (
-                oldOwn >= 0
-             && oldRefineCell.get(oldOwn) == 0u
-             && oldNei >= 0
-             && oldRefineCell.get(oldNei) == 0u
+                oldOwn >= 0 && !oldRefineCell.test(oldOwn)
+             && oldNei >= 0 && !oldRefineCell.test(oldNei)
             )
             {
                 // Unaffected face since both neighbours were not refined.
             }
             else
             {
-                refinedInternalFace.set(faceI, 1u);
+                refinedInternalFace.set(faceI);
             }
         }
 
 
         // 2. Boundary faces
 
-        boolList refinedBoundaryFace(mesh.nFaces()-nInternalFaces, false);
+        boolList refinedBoundaryFace(mesh.nBoundaryFaces(), false);
 
         forAll(mesh.boundaryMesh(), patchI)
         {
@@ -190,7 +188,7 @@ Foam::labelList Foam::meshRefinement::getChangedFaces
             {
                 label oldOwn = map.cellMap()[faceOwner[faceI]];
 
-                if (oldOwn >= 0 && oldRefineCell.get(oldOwn) == 0u)
+                if (oldOwn >= 0 && !oldRefineCell.test(oldOwn))
                 {
                     // owner did exist and wasn't refined.
                 }
@@ -218,7 +216,7 @@ Foam::labelList Foam::meshRefinement::getChangedFaces
 
         forAll(refinedInternalFace, faceI)
         {
-            if (refinedInternalFace.get(faceI) == 1u)
+            if (refinedInternalFace.test(faceI))
             {
                 const cell& ownFaces = cells[faceOwner[faceI]];
                 forAll(ownFaces, ownI)
@@ -263,7 +261,7 @@ Foam::labelList Foam::meshRefinement::getChangedFaces
 
         forAll(changedFace, faceI)
         {
-            if (changedFace[faceI] && isMasterFace[faceI])
+            if (changedFace[faceI] && isMasterFace.test(faceI))
             {
                 nMasterChanged++;
             }
@@ -365,7 +363,7 @@ void Foam::meshRefinement::markFeatureCellLevel
                 label nRegions = featureMesh.regions(edgeRegion);
 
 
-                PackedBoolList regionVisited(nRegions);
+                bitSet regionVisited(nRegions);
 
 
                 // 1. Seed all 'knots' in edgeMesh
@@ -405,7 +403,7 @@ void Foam::meshRefinement::markFeatureCellLevel
                         {
                             label e0 = pointEdges[pointi][0];
                             label regioni = edgeRegion[e0];
-                            regionVisited[regioni] = 1u;
+                            regionVisited.set(regioni);
                         }
                     }
                 }
@@ -415,7 +413,7 @@ void Foam::meshRefinement::markFeatureCellLevel
                 //    only be circular regions!
                 forAll(featureMesh.edges(), edgei)
                 {
-                    if (regionVisited.set(edgeRegion[edgei], 1u))
+                    if (regionVisited.set(edgeRegion[edgei]))
                     {
                         const edge& e = featureMesh.edges()[edgei];
                         label pointi = e.start();
@@ -453,12 +451,12 @@ void Foam::meshRefinement::markFeatureCellLevel
     maxFeatureLevel = labelList(mesh_.nCells(), -1);
 
     // Whether edge has been visited.
-    List<PackedBoolList> featureEdgeVisited(features_.size());
+    List<bitSet> featureEdgeVisited(features_.size());
 
     forAll(features_, featI)
     {
         featureEdgeVisited[featI].setSize(features_[featI].edges().size());
-        featureEdgeVisited[featI] = 0u;
+        featureEdgeVisited[featI] = false;
     }
 
     // Database to pass into trackedParticle::move
@@ -488,7 +486,7 @@ void Foam::meshRefinement::markFeatureCellLevel
     maxFeatureLevel = -1;
     forAll(features_, featI)
     {
-        featureEdgeVisited[featI] = 0u;
+        featureEdgeVisited[featI] = false;
     }
 
 
@@ -519,7 +517,7 @@ void Foam::meshRefinement::markFeatureCellLevel
         {
             label edgeI = pEdges[pEdgeI];
 
-            if (featureEdgeVisited[featI].set(edgeI, 1u))
+            if (featureEdgeVisited[featI].set(edgeI))
             {
                 // Unvisited edge. Make the particle go to the other point
                 // on the edge.
@@ -581,7 +579,7 @@ void Foam::meshRefinement::markFeatureCellLevel
             {
                 label edgeI = pEdges[i];
 
-                if (featureEdgeVisited[featI].set(edgeI, 1u))
+                if (featureEdgeVisited[featI].set(edgeI))
                 {
                     // Unvisited edge. Make the particle go to the other point
                     // on the edge.
@@ -628,7 +626,7 @@ void Foam::meshRefinement::markFeatureCellLevel
     //        {
     //            Pout<< "Feature went through cell:" << cellI
     //                << " coord:" << mesh_.cellCentres()[cellI]
-    //                << " leve:" << maxFeatureLevel[cellI]
+    //                << " level:" << maxFeatureLevel[cellI]
     //                << endl;
     //        }
     //    }
@@ -1131,7 +1129,7 @@ Foam::label Foam::meshRefinement::markSurfaceCurvatureRefinement
     // on a different surface gets refined (if its current level etc.)
 
 
-    const PackedBoolList isMasterFace(syncTools::getMasterFaces(mesh_));
+    const bitSet isMasterFace(syncTools::getMasterFaces(mesh_));
 
 
     // Collect candidate faces (i.e. intersecting any surface and
@@ -1873,9 +1871,9 @@ Foam::label Foam::meshRefinement::markProximityRefinement
     // 2. Find out a measure of surface curvature and region edges.
     // Send over surface region and surface normal to neighbour cell.
 
-    labelList neiBndMaxLevel(mesh_.nFaces()-mesh_.nInternalFaces());
-    pointField neiBndMaxLocation(mesh_.nFaces()-mesh_.nInternalFaces());
-    vectorField neiBndMaxNormal(mesh_.nFaces()-mesh_.nInternalFaces());
+    labelList neiBndMaxLevel(mesh_.nBoundaryFaces());
+    pointField neiBndMaxLocation(mesh_.nBoundaryFaces());
+    vectorField neiBndMaxNormal(mesh_.nBoundaryFaces());
 
     for (label faceI = mesh_.nInternalFaces(); faceI < mesh_.nFaces(); faceI++)
     {
@@ -2080,7 +2078,7 @@ Foam::labelList Foam::meshRefinement::refineCandidates
         label nAllowRefine = labelMax / Pstream::nProcs();
 
         // Marked for refinement (>= 0) or not (-1). Actual value is the
-        // index of the surface it intersects.
+        // index of the surface it intersects / shell it is inside.
         labelList refineCell(mesh_.nCells(), -1);
         label nRefine = 0;
 
@@ -2340,15 +2338,16 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::refine
     meshCutter_.setRefinement(cellsToRefine, meshMod);
 
     // Create mesh (no inflation), return map from old to new mesh.
-    autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh_, false);
+    autoPtr<mapPolyMesh> mapPtr = meshMod.changeMesh(mesh_, false);
+    mapPolyMesh& map = *mapPtr;
 
     // Update fields
     mesh_.updateMesh(map);
 
     // Optionally inflate mesh
-    if (map().hasMotionPoints())
+    if (map.hasMotionPoints())
     {
-        mesh_.movePoints(map().preMotionPoints());
+        mesh_.movePoints(map.preMotionPoints());
     }
     else
     {
@@ -2362,7 +2361,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::refine
     // Update intersection info
     updateMesh(map, getChangedFaces(map, cellsToRefine));
 
-    return map;
+    return mapPtr;
 }
 
 
@@ -2627,6 +2626,165 @@ Foam::meshRefinement::balanceAndRefine
     printMeshInfo(debug, "After refinement " + msg);
 
     return distMap;
+}
+
+
+Foam::labelList Foam::meshRefinement::directionalRefineCandidates
+(
+    const label maxGlobalCells,
+    const label maxLocalCells,
+    const labelList& currentLevel,
+    const direction dir
+) const
+{
+    const labelList& cellLevel = meshCutter_.cellLevel();
+    const pointField& cellCentres = mesh_.cellCentres();
+
+    label totNCells = mesh_.globalData().nTotalCells();
+
+    labelList cellsToRefine;
+
+    if (totNCells >= maxGlobalCells)
+    {
+        Info<< "No cells marked for refinement since reached limit "
+            << maxGlobalCells << '.' << endl;
+    }
+    else
+    {
+        // Disable refinement shortcut. nAllowRefine is per processor limit.
+        label nAllowRefine = labelMax / Pstream::nProcs();
+
+        // Marked for refinement (>= 0) or not (-1). Actual value is the
+        // index of the surface it intersects / shell it is inside
+        labelList refineCell(mesh_.nCells(), -1);
+        label nRefine = 0;
+
+        // Find cells inside the shells with directional levels
+        labelList insideShell;
+        shells_.findDirectionalLevel
+        (
+            cellCentres,
+            cellLevel,
+            currentLevel,  // current directional level
+            dir,
+            insideShell
+        );
+
+        // Mark for refinement
+        forAll(insideShell, celli)
+        {
+            if (insideShell[celli] >= 0)
+            {
+                bool reachedLimit = !markForRefine
+                (
+                    insideShell[celli],    // mark with any positive value
+                    nAllowRefine,
+                    refineCell[celli],
+                    nRefine
+                );
+
+                if (reachedLimit)
+                {
+                    if (debug)
+                    {
+                        Pout<< "Stopped refining cells"
+                            << " since reaching my cell limit of "
+                            << mesh_.nCells()+nAllowRefine << endl;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Limit refinement
+        // ~~~~~~~~~~~~~~~~
+
+        {
+            label nUnmarked = unmarkInternalRefinement(refineCell, nRefine);
+            if (nUnmarked > 0)
+            {
+                Info<< "Unmarked for refinement due to limit shells"
+                    << "                : " << nUnmarked << " cells."  << endl;
+            }
+        }
+
+
+
+        // Pack cells-to-refine
+        // ~~~~~~~~~~~~~~~~~~~~
+
+        cellsToRefine.setSize(nRefine);
+        nRefine = 0;
+
+        forAll(refineCell, cellI)
+        {
+            if (refineCell[cellI] != -1)
+            {
+                cellsToRefine[nRefine++] = cellI;
+            }
+        }
+    }
+
+    return cellsToRefine;
+}
+
+
+Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::directionalRefine
+(
+    const string& msg,
+    const direction cmpt,
+    const labelList& cellsToRefine
+)
+{
+    // Set splitting direction
+    vector refDir(Zero);
+    refDir[cmpt] = 1;
+    List<refineCell> refCells(cellsToRefine.size());
+    forAll(cellsToRefine, i)
+    {
+        refCells[i] = refineCell(cellsToRefine[i], refDir);
+    }
+
+    // How to walk circumference of cells
+    hexCellLooper cellWalker(mesh_);
+
+    // Analyse cuts
+    cellCuts cuts(mesh_, cellWalker, refCells);
+
+    // Cell cutter
+    Foam::meshCutter meshRefiner(mesh_);
+
+    polyTopoChange meshMod(mesh_);
+
+    // Insert mesh refinement into polyTopoChange.
+    meshRefiner.setRefinement(cuts, meshMod);
+
+    autoPtr<mapPolyMesh> morphMap = meshMod.changeMesh(mesh_, false);
+
+    // Update fields
+    mesh_.updateMesh(morphMap);
+
+    // Move mesh (since morphing does not do this)
+    if (morphMap().hasMotionPoints())
+    {
+        mesh_.movePoints(morphMap().preMotionPoints());
+    }
+    else
+    {
+        // Delete mesh volumes.
+        mesh_.clearOut();
+    }
+
+    // Reset the instance for if in overwrite mode
+    mesh_.setInstance(timeName());
+
+    // Update stored refinement pattern
+    meshRefiner.updateMesh(morphMap);
+
+    // Update intersection info
+    updateMesh(morphMap, getChangedFaces(morphMap, cellsToRefine));
+
+    return morphMap;
 }
 
 

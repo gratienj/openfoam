@@ -32,7 +32,7 @@ Description
 
     This boundary condition can operate in four modes:
     - \c constantMass: thermal inertia only
-      - requires \c rho, \c thickness and \cp
+      - requires \c rho, \c thickness and \c cp
     - \c condensation: condensation only
       - when the wall temperature (Tw) is below the dew temperature (Tdew)
         condesation takes place and the resulting condensed mass is stored
@@ -60,21 +60,26 @@ Description
 
     The mass transfer correlation used is:
 
-    \f[ h_m = D_{ab} \frac{Sc}{L} \f]
+    \f[ h_m = D_{ab} \frac{Sh}{L} \f]
 
     where:
     \vartable
         D_{ab} | mass vapour difussivity
         L      | characteristic length
-        Sc     | Schmidt number
+        Sh     | Sherwood number
     \endvartable
 
-    The Schmidt number is calculated using:
+    The Sherwood number is calculated using:
 
     \f{eqnarray*}{
             0.664 Re^\frac{1}{2} Sc^\frac{1}{3} & Re < 5.0E+05 \\
             0.037 Re^\frac{4}{5} Sc^\frac{1}{3} & Re > 5.0E+05
     \f}
+    where:
+    \vartable
+        Re     | Reynolds number
+        Sc     | Schmidt number
+    \endvartable
 
     NOTE:
     - The correlation used to calculate Tdew is for water vapour.
@@ -105,10 +110,10 @@ Description
         // Carrier molecular weight
         carrierMolWeight           28.9;
 
-        // Characteristic lenght of the wall
+        // Characteristic length of the wall
         L               0.1;
 
-        // Vaporasation temperature
+        // Vaporisation temperature
         Tvap            273;
 
         // Liquid properties for the condensed mass
@@ -211,7 +216,7 @@ private:
             //- Name of temperature field on the neighbour region
             const word TnbrName_;
 
-            //- Name of the radiative heat flux in the neighbout region
+            //- Name of the radiative heat flux in the neighbour region
             const word qrNbrName_;
 
             //- Name of the radiative heat flux field

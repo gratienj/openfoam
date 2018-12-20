@@ -71,10 +71,10 @@ dynamicAlphaContactAngleFvPatchScalarField
 )
 :
     alphaContactAngleFvPatchScalarField(p, iF, dict),
-    theta0_(readScalar(dict.lookup("theta0"))),
-    uTheta_(readScalar(dict.lookup("uTheta"))),
-    thetaA_(readScalar(dict.lookup("thetaA"))),
-    thetaR_(readScalar(dict.lookup("thetaR")))
+    theta0_(dict.get<scalar>("theta0")),
+    uTheta_(dict.get<scalar>("uTheta")),
+    thetaA_(dict.get<scalar>("thetaA")),
+    thetaR_(dict.get<scalar>("thetaR"))
 {
     evaluate();
 }
@@ -120,7 +120,7 @@ Foam::dynamicAlphaContactAngleFvPatchScalarField::theta
 {
     if (uTheta_ < SMALL)
     {
-        return tmp<scalarField>(new scalarField(size(), theta0_));
+        return tmp<scalarField>::New(size(), theta0_);
     }
 
     const vectorField nf(patch().nf());

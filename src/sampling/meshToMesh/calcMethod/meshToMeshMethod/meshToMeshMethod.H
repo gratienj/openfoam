@@ -92,7 +92,7 @@ protected:
             const label tgtCellI
         );
 
-        //- Append target cell neihgbour cells to cellIDs list
+        //- Append target cell neighbour cells to cellIDs list
         virtual void appendNbrCells
         (
             const label tgtCelli,
@@ -114,11 +114,11 @@ private:
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        meshToMeshMethod(const meshToMeshMethod&);
+        //- No copy construct
+        meshToMeshMethod(const meshToMeshMethod&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const meshToMeshMethod&);
+        //- No copy assignment
+        void operator=(const meshToMeshMethod&) = delete;
 
 
 public:

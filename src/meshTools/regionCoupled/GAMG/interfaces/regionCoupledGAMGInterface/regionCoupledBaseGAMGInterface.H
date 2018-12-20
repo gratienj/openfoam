@@ -65,11 +65,14 @@ class regionCoupledBaseGAMGInterface
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        regionCoupledBaseGAMGInterface(const regionCoupledBaseGAMGInterface&);
+        //- No copy construct
+        regionCoupledBaseGAMGInterface
+        (
+            const regionCoupledBaseGAMGInterface&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const regionCoupledBaseGAMGInterface&);
+        //- No copy assignment
+        void operator=(const regionCoupledBaseGAMGInterface&) = delete;
 
 
 public:
@@ -109,7 +112,7 @@ public:
 
         //- Cyclic interface functions
 
-            //- Return neigbour processor number
+            //- Return neighbour processor number
             virtual label neighbPatchID() const
             {
                 return fineRegionCoupledLduInterface_.neighbPatchID();
@@ -130,7 +133,7 @@ public:
 
             //virtual const AMIPatchToPatchInterpolation& AMI() const
             //{
-            //    return amiPtr_();
+            //    return *amiPtr_;
             //}
 
             virtual const polyMesh& nbrMesh() const

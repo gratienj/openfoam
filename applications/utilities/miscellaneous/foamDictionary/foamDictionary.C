@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,7 +25,7 @@ Application
     foamDictionary
 
 Description
-    Interrogates and manipulates dictionaries.
+    Interrogate and manipulate dictionaries.
 
 Usage
     \b foamDictionary [OPTION] dictionary
@@ -50,7 +50,7 @@ Usage
         Write differences with respect to the specified dictionary
         (or sub entry if -entry specified)
 
-      - \par -diffEtc \<dictionary\>
+      - \par -diff-etc \<dictionary\>
         Write differences with respect to the specified dictionary
         (or sub entry if -entry specified)
 
@@ -59,7 +59,7 @@ Usage
         the resulting dictionary to standard output.
 
       - \par -includes
-        List the \c \#include and \c \#includeIfPresent files to standard output
+        List the \c \#include and \c \#sinclude files to standard output
 
       - \par -disableFunctionEntries
         Do not expand macros or directives (\#include etc)
@@ -94,13 +94,13 @@ Usage
 
       - Write the differences with respect to a template dictionary:
         \verbatim
-          foamDictionary 0/U -diffEtc templates/closedVolume/0/U
+          foamDictionary 0/U -diff-etc templates/closedVolume/0/U
         \endverbatim
 
       - Write the differences in boundaryField with respect to a
         template dictionary:
         \verbatim
-          foamDictionary 0/U -diffEtc templates/closedVolume/0/U \
+          foamDictionary 0/U -diff-etc templates/closedVolume/0/U \
             -entry boundaryField
         \endverbatim
 
@@ -112,6 +112,14 @@ Usage
         This uses special parsing of Lists which stores these in the
         dictionary with keyword 'entryDDD' where DDD is the position
         in the dictionary (after ignoring the FoamFile entry).
+
+    Notes:
+        - the use of '.' as the scoping symbol might conflict with
+        e.g. file extensions ('.' is not really considered
+        to be a valid word character). Instead use the '/' as a scoping
+        character e.g.
+          foamDictionary system/snappyHexMeshDict \
+            -entry /geometry/motorBike.obj -remove
 
 \*---------------------------------------------------------------------------*/
 
@@ -162,9 +170,10 @@ class dictAndKeyword
     word key_;
 
 public:
+
     dictAndKeyword(const word& scopedName)
     {
-        string::size_type i = scopedName.rfind('/');
+        auto i = scopedName.rfind('/');
         if (i == string::npos)
         {
             i = scopedName.rfind('.');
@@ -204,16 +213,14 @@ const dictionary& lookupScopedDict
         return dict;
     }
 
-    const entry* eptr = dict.lookupScopedEntryPtr(subDictName, false, false);
+    const entry* eptr = dict.findScoped(subDictName, keyType::LITERAL);
 
     if (!eptr || !eptr->isDict())
     {
         FatalIOErrorInFunction(dict)
-            << "keyword " << subDictName
-            << " is undefined in dictionary "
-            << dict.name() << " or is not a dictionary"
-            << endl
-            << "Valid keywords are " << dict.keys()
+            << "'" << subDictName << "' not found in dictionary "
+            << dict.name() << " or is not a dictionary" << nl
+            << "Known entries are " << dict.keys()
             << exit(FatalIOError);
     }
 
@@ -225,7 +232,7 @@ void removeDict(dictionary& dict, const dictionary& dictToRemove)
 {
     for (const entry& refEntry : dictToRemove)
     {
-        auto finder = dict.search(refEntry.keyword(), false, false);
+        auto finder = dict.search(refEntry.keyword(), keyType::LITERAL);
 
         bool purge = false;
 
@@ -255,13 +262,16 @@ void removeDict(dictionary& dict, const dictionary& dictToRemove)
 
 int main(int argc, char *argv[])
 {
-    argList::addNote("manipulates dictionaries");
+    argList::addNote
+    (
+        "Interrogate and manipulate dictionaries"
+    );
 
     argList::noBanner();
     argList::noJobInfo();
-    argList::addArgument("dictionary");
+    argList::addArgument("dict", "The dictionary file to process");
     argList::addBoolOption("keywords", "List keywords");
-    argList::addOption("entry", "name", "report/select the named entry");
+    argList::addOption("entry", "name", "Report/select the named entry");
     argList::addBoolOption
     (
         "value",
@@ -282,7 +292,7 @@ int main(int argc, char *argv[])
     argList::addBoolOption
     (
         "remove",
-        "Remove the entry."
+        "Remove the entry"
     );
     argList::addOption
     (
@@ -292,14 +302,16 @@ int main(int argc, char *argv[])
     );
     argList::addOption
     (
-        "diffEtc",
+        "diff-etc",
         "dict",
         "As per -diff, but locate the file as per foamEtcFile"
     );
+    argList::addOptionCompat("diff-etc", {"diffEtc", 1712});
+
     argList::addBoolOption
     (
         "includes",
-        "List the #include/#includeIfPresent files to standard output"
+        "List the #include/#sinclude files to standard output"
     );
     argList::addBoolOption
     (
@@ -316,17 +328,21 @@ int main(int argc, char *argv[])
 
     argList args(argc, argv);
 
-    const bool listIncludes = args.optionFound("includes");
+    const bool listIncludes = args.found("includes");
 
     if (listIncludes)
     {
         Foam::functionEntries::includeEntry::log = true;
     }
 
-    const bool disableEntries = args.optionFound("disableFunctionEntries");
+    const bool disableEntries = args.found("disableFunctionEntries");
     if (disableEntries)
     {
-        Info<< "Not expanding variables or dictionary directives" << endl;
+        // Report on stderr (once) to avoid polluting the output
+        if (Pstream::master())
+        {
+            Serr<< "Not expanding variables or dictionary directives" << endl;
+        }
         entry::disableFunctionEntries = true;
     }
 
@@ -345,14 +361,13 @@ int main(int argc, char *argv[])
     bool changed = false;
 
     // Read but preserve headers
-    dictionary dict;
-    dict.read(dictFile(), true);
+    dictionary dict(dictFile(), true);
 
     if (listIncludes)
     {
         return 0;
     }
-    else if (args.optionFound("expand"))
+    else if (args.found("expand"))
     {
         IOobject::writeBanner(Info)
             <<"//\n// " << dictFileName << "\n//\n";
@@ -363,14 +378,14 @@ int main(int argc, char *argv[])
     }
 
 
-    // Has "diff" or "diffEtc"
+    // Has "diff" or "diff-etc"
     bool optDiff = false;
 
-    // Reference dictionary for -diff / -diffEtc
+    // Reference dictionary for -diff / -diff-etc
     dictionary diffDict;
     {
         fileName diffFileName;
-        if (args.optionReadIfPresent("diff", diffFileName))
+        if (args.readIfPresent("diff", diffFileName))
         {
             IFstream diffFile(diffFileName);
             if (!diffFile.good())
@@ -384,7 +399,7 @@ int main(int argc, char *argv[])
             diffDict.read(diffFile, true);
             optDiff = true;
         }
-        else if (args.optionReadIfPresent("diffEtc", diffFileName))
+        else if (args.readIfPresent("diff-etc", diffFileName))
         {
             fileName foundName = findEtcFile(diffFileName);
             if (foundName.empty())
@@ -409,18 +424,18 @@ int main(int argc, char *argv[])
     }
 
     word scopedName;  // Actually fileName, since it can contain '/' scoping
-    if (args.optionReadIfPresent("entry", scopedName))
+    if (args.readIfPresent("entry", scopedName))
     {
         upgradeScope(scopedName);
 
         string newValue;
         if
         (
-            args.optionReadIfPresent("set", newValue)
-         || args.optionReadIfPresent("add", newValue)
+            args.readIfPresent("set", newValue)
+         || args.readIfPresent("add", newValue)
         )
         {
-            const bool overwrite = args.optionFound("set");
+            const bool overwrite = args.found("set");
 
             // Dictionary name and keyword
             const dictAndKeyword dAk(scopedName);
@@ -443,19 +458,14 @@ int main(int argc, char *argv[])
             changed = true;
 
             // Print the changed entry
-            const auto finder = dict.csearchScoped
-            (
-                scopedName,
-                false,
-                true  // Support wildcards
-            );
+            const auto finder = dict.csearchScoped(scopedName, keyType::REGEX);
 
             if (finder.found())
             {
                 Info<< finder.ref();
             }
         }
-        else if (args.optionFound("remove"))
+        else if (args.found("remove"))
         {
             // Dictionary name and keyword
             const dictAndKeyword dAk(scopedName);
@@ -477,8 +487,8 @@ int main(int argc, char *argv[])
                 const dictionary& d1(lookupScopedDict(dict, dAk.dict()));
                 const dictionary& d2(lookupScopedDict(diffDict, dAk.dict()));
 
-                const entry* e1Ptr = d1.lookupEntryPtr(dAk.key(), false, true);
-                const entry* e2Ptr = d2.lookupEntryPtr(dAk.key(), false, true);
+                const entry* e1Ptr = d1.findEntry(dAk.key(), keyType::REGEX);
+                const entry* e2Ptr = d2.findEntry(dAk.key(), keyType::REGEX);
 
                 if (e1Ptr && e2Ptr)
                 {
@@ -497,12 +507,7 @@ int main(int argc, char *argv[])
                 }
             }
 
-            const auto finder = dict.csearchScoped
-            (
-                scopedName,
-                false,
-                true  // Support wildcards
-            );
+            const auto finder = dict.csearchScoped(scopedName, keyType::REGEX);
 
             if (!finder.found())
             {
@@ -510,14 +515,14 @@ int main(int argc, char *argv[])
                     << "Cannot find entry " << scopedName
                     << exit(FatalIOError, 2);
             }
-            else if (args.optionFound("keywords"))
+            else if (args.found("keywords"))
             {
                 for (const entry& e : finder.dict())
                 {
                     Info<< e.keyword() << endl;
                 }
             }
-            else if (args.optionFound("value"))
+            else if (args.found("value"))
             {
                 if (finder.isDict())
                 {
@@ -543,7 +548,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    else if (args.optionFound("keywords"))
+    else if (args.found("keywords"))
     {
         for (const entry& e : dict)
         {

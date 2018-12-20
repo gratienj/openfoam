@@ -84,11 +84,11 @@ class SCOPEXiEq
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        SCOPEXiEq(const SCOPEXiEq&);
+        //- No copy construct
+        SCOPEXiEq(const SCOPEXiEq&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const SCOPEXiEq&);
+        //- No copy assignment
+        void operator=(const SCOPEXiEq&) = delete;
 
 
 public:
@@ -115,7 +115,7 @@ public:
 
     // Member Functions
 
-        //- Return the flame-wrinking XiEq
+        //- Return the flame-wrinkling XiEq
         virtual tmp<volScalarField> XiEq() const;
 
         //- Update properties from given dictionary

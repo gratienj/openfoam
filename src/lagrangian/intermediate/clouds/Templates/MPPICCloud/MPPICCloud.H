@@ -95,11 +95,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        MPPICCloud(const MPPICCloud&);
+        //- No copy construct
+        MPPICCloud(const MPPICCloud&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const MPPICCloud&);
+        //- No copy assignment
+        void operator=(const MPPICCloud&) = delete;
 
 
 protected:
@@ -193,14 +193,14 @@ public:
             //- Return a reference to the packing model
             inline PackingModel<MPPICCloud<CloudType>>& packingModel();
 
-            //- Return condt access to the damping model
+            //- Return const access to the damping model
             inline const DampingModel<MPPICCloud<CloudType>>&
                 dampingModel() const;
 
             //- Return a reference to the damping model
             inline DampingModel<MPPICCloud<CloudType>>& dampingModel();
 
-            //- Return condt access to the isotropy model
+            //- Return const access to the isotropy model
             inline const IsotropyModel<MPPICCloud<CloudType>>&
                 isotropyModel() const;
 

@@ -35,7 +35,7 @@ Foam::Rebound<CloudType>::Rebound
 )
 :
     PatchInteractionModel<CloudType>(dict, cloud, typeName),
-    UFactor_(readScalar(this->coeffDict().lookup("UFactor")))
+    UFactor_(this->coeffDict().getScalar("UFactor"))
 {}
 
 
@@ -44,13 +44,6 @@ Foam::Rebound<CloudType>::Rebound(const Rebound<CloudType>& pim)
 :
     PatchInteractionModel<CloudType>(pim),
     UFactor_(pim.UFactor_)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class CloudType>
-Foam::Rebound<CloudType>::~Rebound()
 {}
 
 

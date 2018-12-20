@@ -48,6 +48,13 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Transient solver for the coupled transport of a"
+        " single kinematic particle cloud including the effect"
+        " of the volume fraction of particles on the continuous phase.\n"
+        "With optional mesh motion and mesh topology changes."
+    );
     argList::addOption
     (
         "cloudName",
@@ -57,10 +64,10 @@ int main(int argc, char *argv[])
 
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
-    #include "createControls.H"
+    #include "createDyMControls.H"
     #include "createFields.H"
     #include "createUcf.H"
     #include "initContinuityErrs.H"
@@ -69,11 +76,11 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
-        #include "readControls.H"
+        #include "readDyMControls.H"
         #include "CourantNo.H"
         #include "setDeltaT.H"
 
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -120,12 +127,7 @@ int main(int argc, char *argv[])
                 mesh
             ),
             mesh,
-            dimensionedVector
-            (
-                "0",
-                cloudSU.dimensions()/dimVolume,
-                Zero
-            ),
+            dimensionedVector(cloudSU.dimensions()/dimVolume, Zero),
             zeroGradientFvPatchVectorField::typeName
         );
 
@@ -152,9 +154,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

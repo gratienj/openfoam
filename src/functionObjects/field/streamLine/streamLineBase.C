@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -75,7 +75,7 @@ Foam::functionObjects::streamLineBase::sampledSetPoints() const
         sampledSetAxis_ = sampledSetPtr_->axis();
     }
 
-    return sampledSetPtr_();
+    return *sampledSetPtr_;
 }
 
 
@@ -111,17 +111,14 @@ Foam::functionObjects::streamLineBase::wallPatch() const
         }
     }
 
-    return autoPtr<indirectPrimitivePatch>
+    return autoPtr<indirectPrimitivePatch>::New
     (
-        new indirectPrimitivePatch
+        IndirectList<face>
         (
-            IndirectList<face>
-            (
-                mesh_.faces(),
-                addressing
-            ),
-            mesh_.points()
-        )
+            mesh_.faces(),
+            addressing
+        ),
+        mesh_.points()
     );
 }
 
@@ -144,11 +141,11 @@ void Foam::functionObjects::streamLineBase::initInterpolations
     {
         if (foundObject<volScalarField>(fieldName))
         {
-            nScalar++;
+            ++nScalar;
         }
         else if (foundObject<volVectorField>(fieldName))
         {
-            nVector++;
+            ++nVector;
         }
         else
         {
@@ -512,114 +509,8 @@ void Foam::functionObjects::streamLineBase::trimToBox(const treeBoundBox& bb)
 }
 
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::functionObjects::streamLineBase::streamLineBase
-(
-    const word& name,
-    const Time& runTime,
-    const dictionary& dict
-)
-:
-    fvMeshFunctionObject(name, runTime, dict),
-    dict_(dict)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::functionObjects::streamLineBase::~streamLineBase()
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-bool Foam::functionObjects::streamLineBase::read(const dictionary& dict)
+bool Foam::functionObjects::streamLineBase::writeToFile()
 {
-    if (&dict_ != &dict)
-    {
-        // Update local copy of dictionary:
-        dict_ = dict;
-    }
-
-    fvMeshFunctionObject::read(dict);
-
-    Info<< type() << " " << name() << ":" << nl;
-
-    dict.lookup("fields") >> fields_;
-    UName_ = dict.lookupOrDefault<word>("U", "U");
-
-    Info<< "    Employing velocity field " << UName_ << endl;
-
-    if (!fields_.found(UName_))
-    {
-        FatalIOErrorInFunction(dict)
-            << "Velocity field for tracking " << UName_
-            << " should be present in the list of fields " << fields_
-            << exit(FatalIOError);
-    }
-
-
-    dict.lookup("trackForward") >> trackForward_;
-    dict.lookup("lifeTime") >> lifeTime_;
-    if (lifeTime_ < 1)
-    {
-        FatalErrorInFunction
-            << "Illegal value " << lifeTime_ << " for lifeTime"
-            << exit(FatalError);
-    }
-
-
-    trackLength_ = VGREAT;
-    if (dict.readIfPresent("trackLength", trackLength_))
-    {
-        Info<< type() << " : fixed track length specified : "
-            << trackLength_ << nl << endl;
-    }
-
-
-    bounds_ = boundBox::invertedBox;
-    if (dict.readIfPresent("bounds", bounds_) && !bounds_.empty())
-    {
-        Info<< "    clipping all segments to " << bounds_ << nl << endl;
-    }
-
-
-    interpolationScheme_ = dict.lookupOrDefault
-    (
-        "interpolationScheme",
-        interpolationCellPoint<scalar>::typeName
-    );
-
-    //Info<< "    using interpolation " << interpolationScheme_ << endl;
-
-    cloudName_ = dict.lookupOrDefault<word>("cloud", type());
-
-    sampledSetPtr_.clear();
-    sampledSetAxis_.clear();
-
-    scalarFormatterPtr_ = writer<scalar>::New(dict.lookup("setFormat"));
-    vectorFormatterPtr_ = writer<vector>::New(dict.lookup("setFormat"));
-
-    return true;
-}
-
-
-bool Foam::functionObjects::streamLineBase::execute()
-{
-    return true;
-}
-
-
-bool Foam::functionObjects::streamLineBase::write()
-{
-    Log << type() << " " << name() << " write:" << nl;
-
-
-    // Do all injection and tracking
-    track();
-
-
     if (Pstream::parRun())
     {
         // Append slave tracks to master ones
@@ -658,8 +549,8 @@ bool Foam::functionObjects::streamLineBase::write()
         const mapDistribute distMap
         (
             globalTrackIDs.size(),
-            sendMap.xfer(),
-            recvMap.xfer()
+            std::move(sendMap),
+            std::move(recvMap)
         );
 
 
@@ -755,9 +646,7 @@ bool Foam::functionObjects::streamLineBase::write()
 
         fileName vtkPath
         (
-            Pstream::parRun()
-          ? time_.path()/".."/"postProcessing"/"sets"/name()
-          : time_.path()/"postProcessing"/"sets"/name()
+            time_.globalPath()/functionObject::outputPrefix/"sets"/name()
         );
         if (mesh_.name() != fvMesh::defaultRegion)
         {
@@ -777,18 +666,28 @@ bool Foam::functionObjects::streamLineBase::write()
         {
             if (allTracks_[tracki].size())
             {
+                List<point>& points = allTracks_[tracki];
+                scalarList dist(points.size());
+                dist[0] = 0;
+                for (label pointi = 1; pointi < points.size(); ++pointi)
+                {
+                    dist[pointi] =
+                        dist[pointi-1] + mag(points[pointi] - points[pointi-1]);
+                }
+
                 tracks.set
                 (
                     nTracks,
                     new coordSet
                     (
                         "track" + Foam::name(nTracks),
-                        sampledSetAxis()  // "xyz"
+                        sampledSetAxis(),  // "xyz"
+                        std::move(allTracks_[tracki]),
+                        std::move(dist)
                     )
                 );
                 oldToNewTrack[tracki] = nTracks;
-                tracks[nTracks].transfer(allTracks_[tracki]);
-                nTracks++;
+                ++nTracks;
             }
         }
 
@@ -884,7 +783,11 @@ bool Foam::functionObjects::streamLineBase::write()
     for (const word& fieldName : scalarNames_)
     {
         dictionary propsDict;
-        propsDict.add("file", scalarVtkFile);
+        propsDict.add
+        (
+            "file",
+            time_.relativePath(scalarVtkFile, true)
+        );
         setProperty(fieldName, propsDict);
     }
 
@@ -892,9 +795,154 @@ bool Foam::functionObjects::streamLineBase::write()
     for (const word& fieldName : vectorNames_)
     {
         dictionary propsDict;
-        propsDict.add("file", vectorVtkFile);
+        propsDict.add
+        (
+            "file",
+            time_.relativePath(vectorVtkFile, true)
+        );
         setProperty(fieldName, propsDict);
     }
+
+    return true;
+}
+
+
+void Foam::functionObjects::streamLineBase::resetFieldNames
+(
+    const word& newUName,
+    const wordList& newFieldNames
+)
+{
+    UName_ = newUName;
+    fields_ = newFieldNames;
+}
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::functionObjects::streamLineBase::streamLineBase
+(
+    const word& name,
+    const Time& runTime,
+    const dictionary& dict
+)
+:
+    fvMeshFunctionObject(name, runTime, dict),
+    dict_(dict),
+    fields_()
+{}
+
+
+Foam::functionObjects::streamLineBase::streamLineBase
+(
+    const word& name,
+    const Time& runTime,
+    const dictionary& dict,
+    const wordList& fieldNames
+)
+:
+    fvMeshFunctionObject(name, runTime, dict),
+    dict_(dict),
+    fields_(fieldNames)
+{}
+
+
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+Foam::functionObjects::streamLineBase::~streamLineBase()
+{}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+bool Foam::functionObjects::streamLineBase::read(const dictionary& dict)
+{
+    if (&dict_ != &dict)
+    {
+        // Update local copy of dictionary:
+        dict_ = dict;
+    }
+
+    fvMeshFunctionObject::read(dict);
+
+    Info<< type() << " " << name() << ":" << nl;
+
+    UName_ = dict.lookupOrDefault<word>("U", "U");
+
+    if (fields_.empty())
+    {
+        dict.readEntry("fields", fields_);
+
+        if (!fields_.found(UName_))
+        {
+            FatalIOErrorInFunction(dict)
+                << "Velocity field for tracking " << UName_
+                << " should be present in the list of fields " << fields_
+                << exit(FatalIOError);
+        }
+    }
+
+    Info<< "    Employing velocity field " << UName_ << endl;
+
+    dict.readEntry("trackForward", trackForward_);
+    dict.readEntry("lifeTime", lifeTime_);
+    if (lifeTime_ < 1)
+    {
+        FatalErrorInFunction
+            << "Illegal value " << lifeTime_ << " for lifeTime"
+            << exit(FatalError);
+    }
+
+
+    trackLength_ = VGREAT;
+    if (dict.readIfPresent("trackLength", trackLength_))
+    {
+        Info<< type() << " : fixed track length specified : "
+            << trackLength_ << nl << endl;
+    }
+
+
+    bounds_ = boundBox::invertedBox;
+    if (dict.readIfPresent("bounds", bounds_) && !bounds_.empty())
+    {
+        Info<< "    clipping all segments to " << bounds_ << nl << endl;
+    }
+
+
+    interpolationScheme_ = dict.lookupOrDefault
+    (
+        "interpolationScheme",
+        interpolationCellPoint<scalar>::typeName
+    );
+
+    //Info<< "    using interpolation " << interpolationScheme_ << endl;
+
+    cloudName_ = dict.lookupOrDefault<word>("cloud", type());
+
+    sampledSetPtr_.clear();
+    sampledSetAxis_.clear();
+
+    scalarFormatterPtr_ = writer<scalar>::New(dict.get<word>("setFormat"));
+    vectorFormatterPtr_ = writer<vector>::New(dict.get<word>("setFormat"));
+
+    return true;
+}
+
+
+bool Foam::functionObjects::streamLineBase::execute()
+{
+    return true;
+}
+
+
+bool Foam::functionObjects::streamLineBase::write()
+{
+    Log << type() << " " << name() << " write:" << nl;
+
+    // Do all injection and tracking
+    track();
+
+    writeToFile();
 
     return true;
 }

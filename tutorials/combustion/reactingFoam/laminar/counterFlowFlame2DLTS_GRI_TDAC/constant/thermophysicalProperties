@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -29,8 +29,8 @@ thermoType
 inertSpecie N2;
 
 chemistryReader foamChemistryReader;
-foamChemistryFile "$FOAM_CASE/constant/reactionsGRI";
-foamChemistryThermoFile "$FOAM_CASE/constant/thermo.compressibleGasGRI";
+foamChemistryFile "<constant>/reactionsGRI";
+foamChemistryThermoFile "<constant>/thermo.compressibleGasGRI";
 
 
 // ************************************************************************* //

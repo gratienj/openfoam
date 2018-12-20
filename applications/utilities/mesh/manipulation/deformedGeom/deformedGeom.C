@@ -44,14 +44,20 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
-    argList::addArgument("scaling factor");
+    argList::addNote
+    (
+        "Deforms a polyMesh using a displacement field U and a scaling factor"
+        " supplied as an argument"
+    );
+
+    argList::addArgument("factor", "The deformation scaling factor");
 
     #include "setRootCase.H"
 
-    const scalar scaleFactor = args.argRead<scalar>(1);
+    const scalar scaleFactor = args.get<scalar>(1);
 
     #include "createTime.H"
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     volPointInterpolation pInterp(mesh);
 

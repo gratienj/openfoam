@@ -78,11 +78,11 @@ class oversetGAMGInterface
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        oversetGAMGInterface(const oversetGAMGInterface&);
+        //- No copy construct
+        oversetGAMGInterface(const oversetGAMGInterface&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const oversetGAMGInterface&);
+        //- No copy assignment
+        void operator=(const oversetGAMGInterface&) = delete;
 
 
 public:
@@ -152,7 +152,7 @@ public:
             //- Map for obtaining data in stencil order
             virtual const mapDistribute& cellInterpolationMap() const
             {
-                return mapPtr_();
+                return *mapPtr_;
             }
 
             //- Weights in stencil order

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,56 +27,35 @@ License
 #include "transform.H"
 #include "treeDataCell.H"
 #include "cubicEqn.H"
+#include "registerSwitch.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+namespace Foam
+{
+    defineTypeNameAndDebug(particle, 0);
+}
 
 const Foam::scalar Foam::particle::negativeSpaceDisplacementFactor = 1.01;
 
 Foam::label Foam::particle::particleCount_ = 0;
 
-namespace Foam
-{
-    defineTypeNameAndDebug(particle, 0);
-    bool particle::writeLagrangianCoordinates
-    (
-        debug::infoSwitch("writeLagrangianCoordinates", 1)
-    );
-    bool particle::writeLagrangianPositions
-    (
-        debug::infoSwitch("writeLagrangianPositions", 0)
-    );
-}
+bool Foam::particle::writeLagrangianCoordinates = true;
+
+bool Foam::particle::writeLagrangianPositions
+(
+    Foam::debug::infoSwitch("writeLagrangianPositions", 0)
+);
+
+registerInfoSwitch
+(
+    "writeLagrangianPositions",
+    bool,
+    Foam::particle::writeLagrangianPositions
+);
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
-void Foam::particle::stationaryTetGeometry
-(
-    vector& centre,
-    vector& base,
-    vector& vertex1,
-    vector& vertex2
-) const
-{
-    const triFace triIs(currentTetIndices().faceTriIs(mesh_));
-    const vectorField& ccs = mesh_.cellCentres();
-    const pointField& pts = mesh_.points();
-
-    centre = ccs[celli_];
-    base = pts[triIs[0]];
-    vertex1 = pts[triIs[1]];
-    vertex2 = pts[triIs[2]];
-}
-
-
-Foam::barycentricTensor Foam::particle::stationaryTetTransform() const
-{
-    vector centre, base, vertex1, vertex2;
-    stationaryTetGeometry(centre, base, vertex1, vertex2);
-
-    return barycentricTensor(centre, base, vertex1, vertex2);
-}
-
 
 void Foam::particle::stationaryTetReverseTransform
 (
@@ -104,61 +83,6 @@ void Foam::particle::stationaryTetReverseTransform
         ad ^ ab,
         ab ^ ac
     );
-}
-
-
-void Foam::particle::movingTetGeometry
-(
-    const scalar fraction,
-    Pair<vector>& centre,
-    Pair<vector>& base,
-    Pair<vector>& vertex1,
-    Pair<vector>& vertex2
-) const
-{
-    const triFace triIs(currentTetIndices().faceTriIs(mesh_));
-    const pointField& ptsOld = mesh_.oldPoints();
-    const pointField& ptsNew = mesh_.points();
-
-    // !!! <-- We would be better off using mesh_.cellCentres() here. However,
-    // we need to put a mesh_.oldCellCentres() method in for this to work. The
-    // values obtained from the mesh and those obtained from the cell do not
-    // necessarily match. See mantis #1993.
-    const vector ccOld = mesh_.cells()[celli_].centre(ptsOld, mesh_.faces());
-    const vector ccNew = mesh_.cells()[celli_].centre(ptsNew, mesh_.faces());
-
-    // Old and new points and cell centres are not sub-cycled. If we are sub-
-    // cycling, then we have to account for the timestep change here by
-    // modifying the fractions that we take of the old and new geometry.
-    const Pair<scalar> s = stepFractionSpan();
-    const scalar f0 = s[0] + stepFraction_*s[1], f1 = fraction*s[1];
-
-    centre[0] = ccOld + f0*(ccNew - ccOld);
-    base[0] = ptsOld[triIs[0]] + f0*(ptsNew[triIs[0]] - ptsOld[triIs[0]]);
-    vertex1[0] = ptsOld[triIs[1]] + f0*(ptsNew[triIs[1]] - ptsOld[triIs[1]]);
-    vertex2[0] = ptsOld[triIs[2]] + f0*(ptsNew[triIs[2]] - ptsOld[triIs[2]]);
-
-    centre[1] = f1*(ccNew - ccOld);
-    base[1] = f1*(ptsNew[triIs[0]] - ptsOld[triIs[0]]);
-    vertex1[1] = f1*(ptsNew[triIs[1]] - ptsOld[triIs[1]]);
-    vertex2[1] = f1*(ptsNew[triIs[2]] - ptsOld[triIs[2]]);
-}
-
-
-Foam::Pair<Foam::barycentricTensor> Foam::particle::movingTetTransform
-(
-    const scalar fraction
-) const
-{
-    Pair<vector> centre, base, vertex1, vertex2;
-    movingTetGeometry(fraction, centre, base, vertex1, vertex2);
-
-    return
-        Pair<barycentricTensor>
-        (
-            barycentricTensor(centre[0], base[0], vertex1[0], vertex2[0]),
-            barycentricTensor(centre[1], base[1], vertex1[1], vertex2[1])
-        );
 }
 
 
@@ -500,14 +424,18 @@ void Foam::particle::locate
             << exit(FatalError);
     }
 
-    // Put the particle at the cell centre and in a random tet
-    coordinates_ = barycentric(1, 0, 0, 0);
+    // Put the particle at (almost) the cell centre and in a random tet.
+    // Note perturbing the cell centre to make sure we find at least one
+    // tet containing it. With start point exactly at the cell centre very
+    // occasionally it would not get found in any of the tets
+    coordinates_ = barycentric(1-3*SMALL, SMALL, SMALL, SMALL);
     tetFacei_ = mesh_.cells()[celli_][0];
     tetPti_ = 1;
     facei_ = -1;
 
     // Track to the injection point
-    track(position - mesh_.cellCentres()[celli_], 0);
+    track(position - this->position(), 0);
+
     if (!onFace())
     {
         return;
@@ -550,7 +478,10 @@ void Foam::particle::locate
         static const label maxNWarnings = 100;
         if (nWarnings < maxNWarnings)
         {
-            WarningInFunction << boundaryMsg << endl;
+            WarningInFunction << boundaryMsg.c_str()
+                << " when tracking from centre " << mesh_.cellCentres()[celli_]
+                << " of cell " << celli_ << " to position " << position
+                << endl;
             ++nWarnings;
         }
         if (nWarnings == maxNWarnings)
@@ -610,7 +541,7 @@ Foam::particle::particle
         nullptr,
         celli,
         false,
-        "Particle initialised with a location outside of the mesh."
+        "Particle initialised with a location outside of the mesh"
     );
 }
 
@@ -643,7 +574,7 @@ Foam::particle::particle
             nullptr,
             celli,
             false,
-            "Particle initialised with a location outside of the mesh."
+            "Particle initialised with a location outside of the mesh"
         );
     }
 }
@@ -790,7 +721,7 @@ Foam::scalar Foam::particle::trackToStationaryTri
             if (debug)
             {
                 Info<< "Hit on tet face " << i << " at local coordinate "
-                    << y0 + mu*Tx1 << ", " << mu*detA*100 << "\% of the "
+                    << y0 + mu*Tx1 << ", " << mu*detA*100 << "% of the "
                     << "way along the track" << endl;
             }
 
@@ -834,7 +765,7 @@ Foam::scalar Foam::particle::trackToStationaryTri
         Info<< "End local coordinates = " << yH << endl
             << "End global coordinates = " << position() << endl
             << "Tracking displacement = " << position() - x0 << endl
-            << muH*detA*100 << "\% of the step from " << stepFraction_ << " to "
+            << muH*detA*100 << "% of the step from " << stepFraction_ << " to "
             << stepFraction_ + fraction << " completed" << endl << endl;
     }
 
@@ -1006,47 +937,6 @@ Foam::vector Foam::particle::deviationFromMeshCentre() const
 }
 
 
-void Foam::particle::patchData(vector& n, vector& U) const
-{
-    if (!onBoundaryFace())
-    {
-        FatalErrorInFunction
-            << "Patch data was requested for a particle that isn't on a patch"
-            << exit(FatalError);
-    }
-
-    if (mesh_.moving())
-    {
-        Pair<vector> centre, base, vertex1, vertex2;
-        movingTetGeometry(1, centre, base, vertex1, vertex2);
-
-        n = triPointRef(base[0], vertex1[0], vertex2[0]).normal();
-        n /= mag(n);
-
-        // Interpolate the motion of the three face vertices to the current
-        // coordinates
-        U =
-            coordinates_.b()*base[1]
-          + coordinates_.c()*vertex1[1]
-          + coordinates_.d()*vertex2[1];
-
-        // The movingTetGeometry method gives the motion as a displacement
-        // across the time-step, so we divide by the time-step to get velocity
-        U /= mesh_.time().deltaTValue();
-    }
-    else
-    {
-        vector centre, base, vertex1, vertex2;
-        stationaryTetGeometry(centre, base, vertex1, vertex2);
-
-        n = triPointRef(base, vertex1, vertex2).normal();
-        n /= mag(n);
-
-        U = Zero;
-    }
-}
-
-
 void Foam::particle::transformProperties(const tensor&)
 {}
 
@@ -1212,7 +1102,7 @@ void Foam::particle::autoMap
         nullptr,
         mapper.reverseCellMap()[celli_],
         true,
-        "Particle mapped to a location outside of the mesh."
+        "Particle mapped to a location outside of the mesh"
     );
 }
 
@@ -1225,7 +1115,7 @@ void Foam::particle::relocate(const point& position)
         nullptr,
         celli_,
         true,
-        "Particle mapped to a location outside of the mesh."
+        "Particle mapped to a location outside of the mesh"
     );
 }
 

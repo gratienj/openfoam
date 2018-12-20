@@ -261,6 +261,11 @@ void changeFrontBackPatches
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Extrude mesh from existing patch."
+    );
+
     #include "addRegionOption.H"
     #include "setRootCase.H"
     #include "createTimeExtruded.H"
@@ -268,7 +273,7 @@ int main(int argc, char *argv[])
     // Get optional regionName
     word regionName;
     word regionDir;
-    if (args.optionReadIfPresent("region", regionName))
+    if (args.readIfPresent("region", regionName))
     {
         regionDir = regionName;
         Info<< "Create mesh " << regionName << " for time = "
@@ -297,14 +302,10 @@ int main(int argc, char *argv[])
     autoPtr<extrudeModel> model(extrudeModel::New(dict));
 
     // Whether to flip normals
-    const Switch flipNormals(dict.lookup("flipNormals"));
+    const bool flipNormals(dict.get<bool>("flipNormals"));
 
     // What to extrude
-    const ExtrudeMode mode = ExtrudeModeNames.lookup
-    (
-        "constructFrom",
-        dict
-    );
+    const ExtrudeMode mode = ExtrudeModeNames.get("constructFrom", dict);
 
     // Any merging of small edges
     const scalar mergeTol(dict.lookupOrDefault<scalar>("mergeTol", 1e-4));
@@ -358,11 +359,10 @@ int main(int argc, char *argv[])
         if (Pstream::parRun())
         {
             sourceCaseDir =
-                sourceCaseDir
-               /"processor" + Foam::name(Pstream::myProcNo());
+                sourceCaseDir/("processor" + Foam::name(Pstream::myProcNo()));
         }
         wordList sourcePatches;
-        dict.lookup("sourcePatches") >> sourcePatches;
+        dict.readEntry("sourcePatches", sourcePatches);
 
         if (sourcePatches.size() == 1)
         {
@@ -380,7 +380,7 @@ int main(int argc, char *argv[])
             sourceCaseDir
         );
 
-        #include "createMesh.H"
+        #include "createNamedMesh.H"
 
         const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
@@ -433,7 +433,7 @@ int main(int argc, char *argv[])
             autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
             // Update fields
-            mesh.updateMesh(map);
+            mesh.updateMesh(map());
 
             // Move mesh (since morphing does not do this)
             if (map().hasMotionPoints())
@@ -581,7 +581,7 @@ int main(int argc, char *argv[])
         labelList exposedPatchID;
         if (mode == PATCH)
         {
-            dict.lookup("exposedPatchName") >> backPatchName;
+            dict.readEntry("exposedPatchName", backPatchName);
             exposedPatchID.setSize
             (
                 extrudePatch.size(),
@@ -788,17 +788,14 @@ int main(int argc, char *argv[])
             (
                 layerExtrude.addedCells
                 (
-                    meshFromMesh,
+                    *meshFromMesh,
                     layerExtrude.layerFaces()
                 )
             );
             forAll(addedCells, facei)
             {
                 const labelList& aCells = addedCells[facei];
-                forAll(aCells, i)
-                {
-                    addedCellsSet.insert(aCells[i]);
-                }
+                addedCellsSet.insert(aCells);
             }
         }
     }
@@ -893,7 +890,7 @@ int main(int argc, char *argv[])
         const edgeList& edges = mesh.edges();
         const pointField& points = mesh.points();
 
-        PackedBoolList collapseEdge(mesh.nEdges());
+        bitSet collapseEdge(mesh.nEdges());
         Map<point> collapsePointToLocation(mesh.nPoints());
 
         forAll(edges, edgeI)
@@ -907,7 +904,7 @@ int main(int argc, char *argv[])
                 Info<< "Merging edge " << e << " since length " << d
                     << " << " << mergeDim << nl;
 
-                collapseEdge[edgeI] = true;
+                collapseEdge.set(edgeI);
                 collapsePointToLocation.set(e[1], points[e[0]]);
             }
         }
@@ -937,7 +934,7 @@ int main(int argc, char *argv[])
             autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
             // Update fields
-            mesh.updateMesh(map);
+            mesh.updateMesh(map());
 
             // Update stored data
             updateFaceLabels(map(), frontPatchFaces);
@@ -986,8 +983,7 @@ int main(int argc, char *argv[])
     // Merging front and back patch faces
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Switch mergeFaces(dict.lookup("mergeFaces"));
-    if (mergeFaces)
+    if (dict.get<bool>("mergeFaces"))
     {
         if (mode == MESH)
         {
@@ -1010,7 +1006,6 @@ int main(int argc, char *argv[])
                 << backPatchFaces.size() << ")"
                 << exit(FatalError);
         }
-
 
 
         polyTopoChanger stitcher(mesh);
@@ -1074,7 +1069,7 @@ int main(int argc, char *argv[])
         autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
         // Update fields
-        mesh.updateMesh(map);
+        mesh.updateMesh(map());
 
         // Update local data
         updateCellSet(map(), addedCellsSet);

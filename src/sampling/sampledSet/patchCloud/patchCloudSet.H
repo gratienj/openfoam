@@ -25,8 +25,17 @@ Class
     Foam::patchCloudSet
 
 Description
-    Like cloudSet but samples nearest patch face
+    Like Foam::cloudSet but samples nearest patch face
 
+    For a dictionary specification:
+    \table
+        Property | Description                             | Required | Default
+        type     | patchCloud                              | yes      |
+        axis     | x, y, z, xyz, distance                  | yes      |
+        patches  | List of patch names or regexs           | yes      |
+        points   | List of selected locations              | yes      |
+        maxDistance | Max search distance                  | yes      |
+    \endtable
 
 SourceFiles
     patchCloudSet.C
@@ -56,7 +65,7 @@ class patchCloudSet
     // Private data
 
         //- Sampling points
-        const List<point> sampleCoords_;
+        const pointField sampleCoords_;
 
         //- Patches to sample
         const labelHashSet patchSet_;
@@ -112,7 +121,7 @@ public:
 
 
     //- Destructor
-    virtual ~patchCloudSet();
+    virtual ~patchCloudSet() = default;
 };
 
 

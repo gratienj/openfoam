@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -275,6 +275,7 @@ Foam::InjectionModel<CloudType>::InjectionModel(CloudType& owner)
     nParticleFixed_(0.0),
     time0_(0.0),
     timeStep0_(this->template getModelProperty<scalar>("timeStep0")),
+    minParticlesPerParcel_(1),
     delayedVolume_(0.0),
     injectorID_(-1)
 {}
@@ -304,6 +305,10 @@ Foam::InjectionModel<CloudType>::InjectionModel
     nParticleFixed_(0.0),
     time0_(owner.db().time().value()),
     timeStep0_(this->template getModelProperty<scalar>("timeStep0")),
+    minParticlesPerParcel_
+    (
+        this->coeffDict().lookupOrDefault("minParticlesPerParcel", scalar(1))
+    ),
     delayedVolume_(0.0),
     injectorID_(this->coeffDict().lookupOrDefault("injectorID", -1))
 {
@@ -322,8 +327,8 @@ Foam::InjectionModel<CloudType>::InjectionModel
     {
         if (owner.solution().transient())
         {
-            this->coeffDict().lookup("massTotal") >> massTotal_;
-            this->coeffDict().lookup("SOI") >> SOI_;
+            this->coeffDict().readEntry("massTotal", massTotal_);
+            this->coeffDict().readEntry("SOI", SOI_);
         }
         else
         {
@@ -335,7 +340,7 @@ Foam::InjectionModel<CloudType>::InjectionModel
 
     SOI_ = owner.db().time().userTimeToTime(SOI_);
 
-    const word parcelBasisType = this->coeffDict().lookup("parcelBasisType");
+    const word parcelBasisType(this->coeffDict().getWord("parcelBasisType"));
 
     if (parcelBasisType == "mass")
     {
@@ -348,12 +353,11 @@ Foam::InjectionModel<CloudType>::InjectionModel
     else if (parcelBasisType == "fixed")
     {
         parcelBasis_ = pbFixed;
+        this->coeffDict().readEntry("nParticle", nParticleFixed_);
 
         Info<< "    Choosing nParticle to be a fixed value, massTotal "
             << "variable now does not determine anything."
             << endl;
-
-        nParticleFixed_ = readScalar(this->coeffDict().lookup("nParticle"));
     }
     else
     {
@@ -382,6 +386,7 @@ Foam::InjectionModel<CloudType>::InjectionModel
     nParticleFixed_(im.nParticleFixed_),
     time0_(im.time0_),
     timeStep0_(im.timeStep0_),
+    minParticlesPerParcel_(im.minParticlesPerParcel_),
     delayedVolume_(im.delayedVolume_),
     injectorID_(im.injectorID_)
 {}
@@ -517,7 +522,7 @@ void Foam::InjectionModel<CloudType>::inject
                             pPtr->rho()
                         );
 
-                    if (pPtr->nParticle() >= 1.0)
+                    if (pPtr->nParticle() >= minParticlesPerParcel_)
                     {
                         parcelsAdded++;
                         massAdded += pPtr->nParticle()*pPtr->mass();

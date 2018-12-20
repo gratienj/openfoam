@@ -35,7 +35,7 @@ Description
 
 SourceFiles
     pointPatchField.C
-    newPointPatchField.C
+    pointPatchFieldNew.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -478,8 +478,8 @@ public:
 };
 
 
-// This function is added as a hack to enable simple backward compatability
-// with verions using referenceLevel in GeometicField
+// This function is added as a hack to enable simple backward compatibility
+// with versions using referenceLevel in GeometricField
 template<class Type>
 const pointPatchField<Type>& operator+
 (

@@ -323,9 +323,11 @@ public:
         {
             label comm_;
 
-            //- Disallow copy and assignment
-            communicator(const communicator&);
-            void operator=(const communicator&);
+            //- No copy construct
+            communicator(const communicator&) = delete;
+
+            //- No copy assignment
+            void operator=(const communicator&) = delete;
 
         public:
 
@@ -372,10 +374,8 @@ public:
         static void addValidParOptions(HashTable<string>& validParOptions);
 
         //- Initialisation function called from main
-        //  Spawns slave processes and initialises inter-communication.
-        //  \note warns if MPI has already been initialized.
-        //      Fatal if MPI has already been finalized.
-        static bool init(int& argc, char**& argv);
+        //  Spawns slave processes and initialises inter-communication
+        static bool init(int& argc, char**& argv, const bool needsThread);
 
         //- Special purpose initialisation function.
         //  Performs a basic MPI_Init without any other setup.

@@ -89,11 +89,11 @@ class faPatchMapper
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        faPatchMapper(const faPatchMapper&);
+        //- No copy construct
+        faPatchMapper(const faPatchMapper&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faPatchMapper&);
+        //- No copy assignment
+        void operator=(const faPatchMapper&) = delete;
 
 
         //- Calculate addressing for mapping with inserted cells
@@ -148,7 +148,7 @@ public:
         //- Return interpolated addressing
         virtual const labelListList& addressing() const;
 
-        //- Return interpolaion weights
+        //- Return interpolation weights
         virtual const scalarListList& weights() const;
 };
 

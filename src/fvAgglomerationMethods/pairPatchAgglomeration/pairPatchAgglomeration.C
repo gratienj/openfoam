@@ -25,6 +25,7 @@ License
 
 #include "pairPatchAgglomeration.H"
 #include "meshTools.H"
+#include "edgeHashes.H"
 #include "unitConversion.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -123,7 +124,7 @@ void Foam::pairPatchAgglomeration::setEdgeWeights
     const label nCoarseI =  max(fineToCoarse) + 1;
     labelListList coarseToFine(invertOneToMany(nCoarseI, fineToCoarse));
 
-    HashSet<edge, Hash<edge>> fineFeaturedFaces(coarsePatch.nEdges()/10);
+    edgeHashSet fineFeaturedFaces(coarsePatch.nEdges()/10);
 
     // Map fine faces with featured edge into coarse faces
     forAllConstIter(EdgeMap<scalar>, facePairWeight_, iter)
@@ -140,7 +141,7 @@ void Foam::pairPatchAgglomeration::setEdgeWeights
         }
     }
 
-    // Clean old weitghs
+    // Clean old weights
     facePairWeight_.clear();
     facePairWeight_.resize(coarsePatch.nEdges());
 
@@ -207,11 +208,11 @@ Foam::pairPatchAgglomeration::pairPatchAgglomeration
     maxLevels_(50),
     nFacesInCoarsestLevel_
     (
-        readLabel(controlDict.lookup("nFacesInCoarsestLevel"))
+        controlDict.get<label>("nFacesInCoarsestLevel")
     ),
     nGlobalFacesInCoarsestLevel_(labelMax),
     //(
-    //    readLabel(controlDict.lookup("nGlobalFacesInCoarsestLevel"))
+    //    controlDict.get<label>("nGlobalFacesInCoarsestLevel")
     //),
     featureAngle_
     (

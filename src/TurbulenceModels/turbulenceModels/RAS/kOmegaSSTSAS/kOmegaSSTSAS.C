@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -79,7 +79,7 @@ tmp<fvScalarMatrix> kOmegaSSTSAS<BasicTurbulenceModel>::Qsas
                     magSqr(fvc::grad(this->omega_)()())/sqr(this->omega_()),
                     magSqr(fvc::grad(this->k_)()())/sqr(this->k_())
                 ),
-                dimensionedScalar("0", dimensionSet(0, 0, -2, 0, 0), 0)
+                dimensionedScalar(dimensionSet(0, 0, -2, 0, 0), Zero)
             ),
             // Limit SAS production of omega for numerical stability,
             // particularly during start-up
@@ -167,7 +167,7 @@ kOmegaSSTSAS<BasicTurbulenceModel>::kOmegaSSTSAS
     (
         LESdelta::New
         (
-            IOobject::groupName("delta", U.group()),
+            IOobject::groupName("delta", alphaRhoPhi.group()),
             *this,
             this->coeffDict_
         )

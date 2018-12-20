@@ -4,7 +4,7 @@
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
 #   \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-#    \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+#    \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 #-------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM.
@@ -29,7 +29,10 @@
 #     Driver script to run mpi jobs with the processes in a separate XTerm
 #     or to separate log files.
 #     Requires bash on all processors.
+#
 #------------------------------------------------------------------------------
+. $WM_PROJECT_DIR/bin/tools/RunFunctions    # Run functions
+
 usage() {
     exec 1>&2
     while [ "$#" -ge 1 ]; do echo "$1"; shift; done
@@ -43,11 +46,13 @@ options:
                   (1) gdb+xterm
                   (2) gdb
                   (3) log
-                  (4) log+xterm
-                  (5) xterm+valgrind
+                  (4) log + xterm
+                  (5) valgrind + xterm
+                 (5l) valgrind + log
                   (6) gperftools(callgrind)
   -spawn=TYPE   Spawn type: (1) local (2) remote
   -log          Alias for -method=3
+  -valgrind     Alias for -method=5l (valgrind + log)
   -local        Alias for -spawn=1
   -yes          Start without additional prompt
   -help         Print the usage
@@ -70,6 +75,8 @@ esac
 unset nProcs appName appArgs
 unset method spawn optNoAsk
 
+decompDict="system/decomposeParDict"
+
 # parse options
 while [ "$#" -gt 0 ]
 do
@@ -79,7 +86,7 @@ do
         usage
         ;;
 
-    -method=[0-6])
+    -method=[0-6]* | -method=5l)
         method="${1#*=}"
         ;;
 
@@ -89,6 +96,10 @@ do
 
     -log)
         method=3
+        ;;
+
+    -valgrind)
+        method=5l
         ;;
 
     -local)
@@ -104,6 +115,11 @@ do
         shift
         ;;
 
+    -decomposeParDict)
+        decompDict=$2
+        appArgs="${appArgs}${appArgs:+ }\"$1\""
+        ;;
+
     *)
         if [ -z "$appName" ]
         then
@@ -115,6 +131,15 @@ do
     esac
     shift
 done
+
+
+# No -np specified?
+# Try guess from system/decomposeParDict or command-line -decomposeParDict
+if [ -z "$nProcs" -a -f "$decompDict" ]
+then
+    nProcs=$(getNumberOfProcessors $decompDict) || unset nProcs
+fi
+
 
 echo "nProcs=$nProcs"
 echo "exec=$appName"
@@ -139,10 +164,10 @@ echo "Constructed gdb initialization file $PWD/gdbCommands"
 # Choose method
 if [ -z "$method" ]
 then
-    $ECHO "Choose running method: 0)normal  1)gdb+xterm  2)gdb  3)log  4)log+xterm  5)xterm+valgrind  6)gperftools(callgrind): \c"
+    $ECHO "Choose running method: 0)normal  1)gdb+xterm  2)gdb  3)log  4)log+xterm  5)valgrind+xterm 5l)valgrind+log  6)gperftools(callgrind): \c"
     read method
     case "$method" in
-    0 | 1 | 2 | 3 | 4 | 5 | 6)
+    0 | 1 | 2 | 3 | 4 | 5 | 5l | 6)
         # okay
         ;;
     *)
@@ -167,15 +192,19 @@ then
 fi
 
 
-# check ~/.$WM_PROJECT/$WM_PROJECT_VERSION/
+sourceFoam=false    # Fallback command
+
+# Same as foamEtcFile -mode=uo bashrc
+#
+# check ~/.$WM_PROJECT/$WM_PROJECT_API/
 # check ~/.$WM_PROJECT/
 # check <installedProject>/etc/
 if [ -n "$WM_PROJECT" ]
 then
     for i in \
-        $HOME/.$WM_PROJECT/$WM_PROJECT_VERSION \
-        $HOME/.$WM_PROJECT \
-        $WM_PROJECT_DIR/etc \
+        "$HOME/.$WM_PROJECT/$WM_PROJECT_API" \
+        "$HOME/.$WM_PROJECT" \
+        "$WM_PROJECT_DIR/etc" \
         ;
     do
         if [ -f "$i/bashrc" ]
@@ -186,18 +215,16 @@ then
     done
 fi
 
-# Construct test string for remote execution.
 # Source OpenFOAM settings if OpenFOAM environment not set.
-# attempt to preserve the installation directory 'FOAM_INST_DIR'
 # use FOAM_SETTINGS to pass command-line settings
-if [ -n "$FOAM_INST_DIR" ]
-then
-    sourceFoam="FOAM_INST_DIR=$FOAM_INST_DIR . $sourceFoam $FOAM_SETTINGS"
-else
-    sourceFoam=". $sourceFoam $FOAM_SETTINGS"
-fi
 
-echo "**sourceFoam:$sourceFoam"
+case "$sourceFoam" in
+*/bashrc)
+    sourceFoam=". $sourceFoam $FOAM_SETTINGS"
+    ;;
+esac
+
+echo "**sourceFoam: $sourceFoam"
 
 rm -f $PWD/mpirun.schema
 touch $PWD/mpirun.schema
@@ -213,7 +240,7 @@ do
 
     unset node
     case "$WM_MPLIB" in
-    *OPENMPI)
+    *OPENMPI*)
         node="-np 1 "
         ;;
     esac
@@ -250,6 +277,10 @@ do
         echo "valgrind --leak-check=full --show-reachable=yes $exec $appArgs 2>&1 | tee $procLog"
         echo "read dummy"
         ;;
+    5l)
+        echo "${node}$procCmdFile" >> $PWD/mpirun.schema
+        echo "valgrind --leak-check=full --show-reachable=yes $exec $appArgs > $procLog 2>&1"
+        ;;
     6)
         echo "${node}$procCmdFile" >> $PWD/mpirun.schema
         echo "CPUPROFILE=log.profiler_$proc $exec $appArgs"
@@ -278,7 +309,7 @@ done
 unset cmd
 
 case "$WM_MPLIB" in
-*OPENMPI)
+*OPENMPI*)
     cmd="mpirun -app $PWD/mpirun.schema </dev/null"
     ;;
 MPICH)

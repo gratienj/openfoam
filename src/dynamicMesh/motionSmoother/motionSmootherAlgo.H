@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -79,7 +79,7 @@ SourceFiles
 
 #include "pointFields.H"
 #include "HashSet.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "indirectPrimitivePatch.H"
 #include "className.H"
 
@@ -104,7 +104,6 @@ class motionSmootherAlgo
         //  zero displacement.
         class maxMagEqOp
         {
-
         public:
 
             void operator()(vector& x, const vector& y) const
@@ -161,11 +160,11 @@ class motionSmootherAlgo
             dictionary paramDict_;
 
             //- Is mesh point on boundary or not
-            PackedBoolList isInternalPoint_;
+            bitSet isInternalPoint_;
 
             //- Is edge master (always except if on coupled boundary and on
             //  lower processor)
-            PackedBoolList isMasterEdge_;
+            bitSet isMasterEdge_;
 
 
     // Private Member Functions
@@ -178,7 +177,7 @@ class motionSmootherAlgo
             const scalarField& edgeWeight
         ) const;
 
-        //- Average postion of connected points.
+        //- Average position of connected points.
         template<class Type>
         tmp<GeometricField<Type, pointPatchField, pointMesh>> avgPositions
         (
@@ -209,9 +208,6 @@ class motionSmootherAlgo
         static void checkFld(const pointScalarField&);
 
         //- Get points used by given faces
-        labelHashSet getPoints(const labelUList& faceLabels) const;
-
-        //- Get points used by given faces
         labelHashSet getPoints(const labelHashSet& faceLabels) const;
 
         //- Calculate per-edge weight
@@ -221,7 +217,7 @@ class motionSmootherAlgo
         void minSmooth
         (
             const scalarField& edgeWeights,
-            const PackedBoolList& isAffectedPoint,
+            const bitSet& isAffectedPoint,
             const pointScalarField& fld,
             pointScalarField& newFld
         ) const;
@@ -230,7 +226,7 @@ class motionSmootherAlgo
         void minSmooth
         (
             const scalarField& edgeWeights,
-            const PackedBoolList& isAffectedPoint,
+            const bitSet& isAffectedPoint,
             const labelList& meshPoints,
             const pointScalarField& fld,
             pointScalarField& newFld
@@ -272,9 +268,6 @@ class motionSmootherAlgo
             pointScalarField&
         ) const;
 
-        //- Helper function. Is point internal?
-        bool isInternalPoint(const label pointi) const;
-
         //- Given a set of faces that cause smoothing and a number of
         //  iterations determine the maximum set of points who are affected
         //  and the accordingly affected faces.
@@ -284,14 +277,14 @@ class motionSmootherAlgo
             const faceSet& wrongFaces,
 
             labelList& affectedFaces,
-            PackedBoolList& isAffectedPoint
+            bitSet& isAffectedPoint
         ) const;
 
-        //- Disallow default bitwise copy construct
-        motionSmootherAlgo(const motionSmootherAlgo&);
+        //- No copy construct
+        motionSmootherAlgo(const motionSmootherAlgo&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const motionSmootherAlgo&);
+        //- No copy assignment
+        void operator=(const motionSmootherAlgo&) = delete;
 
 
 public:

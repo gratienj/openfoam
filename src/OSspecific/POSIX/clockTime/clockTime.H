@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,7 @@ SourceFiles
 #ifndef clockTime_H
 #define clockTime_H
 
-#include <sys/types.h>
+#include "clockValue.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -49,34 +49,32 @@ namespace Foam
 
 class clockTime
 {
-    // Private data
+    // Private Data
 
-        //- Time structure used
-        typedef struct timeval timeType;
+        //- The values being used.
+        typedef clockValue value_type;
 
-        timeType startTime_;
+        //- Start time, at the time of construction
+        value_type start_;
 
-        mutable timeType lastTime_;
-        mutable timeType newTime_;
-
-    // Private Member Functions
-
-        //- Retrieve the current time values from the system
-        static void getTime(timeType&);
-
-        //- Difference between two times
-        static double timeDifference(const timeType& beg, const timeType& end);
-
+        //- Last time when elapsedTime or timeIncrement was called
+        mutable value_type last_;
 
 public:
 
     // Constructors
 
-        //- Construct with the current clock time
+        //- Construct with the current clock time for the starting value
         clockTime();
+
+        //- Construct with the given clock value for the starting value
+        clockTime(const clockValue& clockval);
 
 
     // Member Functions
+
+        //- Reset to use the current time for the start time
+        void resetTime();
 
         //- Return time (in seconds) from the start
         double elapsedTime() const;

@@ -62,10 +62,10 @@ class base
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         base(const base&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const base&) = delete;
 
 
@@ -113,7 +113,7 @@ public:
 
       // Access
 
-        //- Explicity close the file and terminate ccmio access.
+        //- Explicitly close the file and terminate ccmio access.
         //  Return false if it was already closed.
         bool close();
 

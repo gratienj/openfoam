@@ -72,11 +72,11 @@ private:
         //- Read pyrolysis controls
         void readPyrolysisControls();
 
-        //- Disallow default bitwise copy construct
-        pyrolysisModel(const pyrolysisModel&);
+        //- No copy construct
+        pyrolysisModel(const pyrolysisModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const pyrolysisModel&);
+        //- No copy assignment
+        void operator=(const pyrolysisModel&) = delete;
 
 
 protected:
@@ -156,7 +156,7 @@ public:
         autoPtr<pyrolysisModel> clone() const
         {
             NotImplemented;
-            return autoPtr<pyrolysisModel>(nullptr);
+            return nullptr;
         }
 
 

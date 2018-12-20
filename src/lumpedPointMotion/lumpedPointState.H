@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,10 +25,31 @@ Class
     Foam::lumpedPointState
 
 Description
-    The 'state' of lumped points corresponds to positions and rotations.
+    The \a state of lumped points corresponds to positions and rotations.
 
-    Encapsulates the response from the external application.
-    Entry place for applying relaxation and sub-stepping etc.
+    This class encapsulates the response from the external application and
+    serves as the entry point for applying relaxation, sub-stepping etc.
+
+    \heading Dictionary input format
+    \table
+        Property    | Description                           | Required | Default
+        points      | List of points                        | yes |
+        angles      | List of Euler rotation angles         | yes |
+        degrees     | Rotation angles in degrees            | no  | false
+    \endtable
+
+    \heading Plain input format.
+    Blank and comment lines starting with a '#' character are ignored.
+    The angles are always in radians.
+    \verbatim
+    NumPoints
+    x0 y0 z0 eulerz0 eulerx'0 eulerz''0
+    x1 y1 z1 eulerz1 eulerx'1 eulerz''1
+    ...
+    \endverbatim
+
+SeeAlso
+    EulerCoordinateRotation
 
 SourceFiles
     lumpedPointState.C
@@ -58,7 +79,6 @@ class Ostream;
                       Class lumpedPointState Declaration
 \*---------------------------------------------------------------------------*/
 
-//- Bundling of position/rotation
 class lumpedPointState
 {
 public:
@@ -66,8 +86,8 @@ public:
     //- Input format types
     enum class inputFormatType
     {
-        PLAIN,
-        DICTIONARY
+        PLAIN,      //!< "plain" is a simple ASCII format
+        DICTIONARY  //!< "dictionary" is the OpenFOAM dictionary format
     };
 
     // Static data
@@ -143,12 +163,15 @@ public:
         //- The local-to-global transformation for each point
         inline const tensorField& rotations() const;
 
+        //- Scale points by given factor.
+        //  Zero and negative values are ignored.
+        void scalePoints(const scalar scaleFactor);
+
         //- Relax the state
         //  alpha = 1 : no relaxation
         //  alpha < 1 : relaxation
         //  alpha = 0 : do nothing
         void relax(const scalar alpha, const lumpedPointState& prev);
-
 
         //- Read input as dictionary content
         bool readData(Istream& is);

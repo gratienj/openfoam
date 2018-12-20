@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -133,7 +133,7 @@ void Foam::RBD::restraints::linearAxialAngularSpring::restrain
     }
 
     // Accumulate the force for the restrained body
-    fx[bodyIndex_] += spatialVector(moment, Zero);
+    fx[bodyIndex_] += model_.X0(bodyID_).T() & spatialVector(moment, Zero);
 }
 
 
@@ -146,7 +146,7 @@ bool Foam::RBD::restraints::linearAxialAngularSpring::read
 
     refQ_ = coeffs_.lookupOrDefault<tensor>("referenceOrientation", I);
 
-    if (mag(mag(refQ_) - sqrt(3.0)) > 1e-9)
+    if (mag(mag(refQ_) - sqrt(3.0)) > ROOTSMALL)
     {
         FatalErrorInFunction
             << "referenceOrientation " << refQ_ << " is not a rotation tensor. "
@@ -170,8 +170,8 @@ bool Foam::RBD::restraints::linearAxialAngularSpring::read
             << abort(FatalError);
     }
 
-    coeffs_.lookup("stiffness") >> stiffness_;
-    coeffs_.lookup("damping") >> damping_;
+    coeffs_.readEntry("stiffness", stiffness_);
+    coeffs_.readEntry("damping", damping_);
 
     return true;
 }

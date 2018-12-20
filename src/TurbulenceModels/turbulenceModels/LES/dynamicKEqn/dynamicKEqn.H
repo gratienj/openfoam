@@ -80,9 +80,11 @@ class dynamicKEqn
 {
     // Private Member Functions
 
-        // Disallow default bitwise copy construct and assignment
-        dynamicKEqn(const dynamicKEqn&);
-        void operator=(const dynamicKEqn&);
+        //- No copy construct
+        dynamicKEqn(const dynamicKEqn&) = delete;
+
+        //- No copy assignment
+        void operator=(const dynamicKEqn&) = delete;
 
 
 protected:
@@ -174,7 +176,7 @@ public:
             return k_;
         }
 
-        //- Return sub-grid disipation rate
+        //- Return sub-grid dissipation rate
         virtual tmp<volScalarField> epsilon() const;
 
         //- Return the effective diffusivity for k

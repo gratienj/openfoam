@@ -68,11 +68,14 @@ class cyclicACMIGAMGInterfaceField
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        cyclicACMIGAMGInterfaceField(const cyclicACMIGAMGInterfaceField&);
+        //- No copy construct
+        cyclicACMIGAMGInterfaceField
+        (
+            const cyclicACMIGAMGInterfaceField&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const cyclicACMIGAMGInterfaceField&);
+        //- No copy assignment
+        void operator=(const cyclicACMIGAMGInterfaceField&) = delete;
 
 
 public:
@@ -130,7 +133,7 @@ public:
 
         //- Cyclic interface functions
 
-            //- Does the interface field perform the transfromation
+            //- Does the interface field perform the transformation
             virtual bool doTransform() const
             {
                 return doTransform_;

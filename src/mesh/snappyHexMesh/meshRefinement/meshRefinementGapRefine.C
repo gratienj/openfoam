@@ -90,7 +90,7 @@ Foam::label Foam::meshRefinement::markSurfaceGapRefinement
 
         // Collect cells to test for inside/outside in shell
         labelList cellToCompact(mesh_.nCells(), -1);
-        labelList bFaceToCompact(mesh_.nFaces()-mesh_.nInternalFaces(), -1);
+        labelList bFaceToCompact(mesh_.nBoundaryFaces(), -1);
         List<FixedList<label, 3>> shellGapInfo;
         List<volumeType> shellGapMode;
         {
@@ -657,7 +657,7 @@ Foam::label Foam::meshRefinement::markSurfaceGapRefinement
 //    nearNormal = UIndirectList<vector>(nearNormal, map)();
 //
 //    // Exclude hits which aren't opposite enough. E.g. you might find
-//    // a point on a perpendicular wall - but this does not consistute a gap.
+//    // a point on a perpendicular wall - but this does not constitute a gap.
 //    vectorField oppositeNormal;
 //    geom.getNormal(oppositeInfo, oppositeNormal);
 //
@@ -1570,7 +1570,7 @@ Foam::label Foam::meshRefinement::markSmallFeatureRefinement
                 );
 
                 //- Option 1: use octree nearest searching inside polyMesh
-                //label cellI = mesh_.findCell(pt);
+                //label cellI = mesh_.findCell(pt, polyMesh::CELL_TETS);
 
                 //- Option 2: use octree 'inside' searching inside polyMesh. Is
                 //            much faster.

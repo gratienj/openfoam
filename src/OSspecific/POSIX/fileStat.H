@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,7 @@ Description
     Wrapper for stat() and lstat() system calls.
 
 Warning
-    on Linux (an maybe on others) a stat() of an nfs mounted (remote)
+    On Linux (an maybe on others) a stat() of an nfs mounted (remote)
     file does never timeout and cannot be interrupted!
     So e.g. Foam::ping first and hope nfs is running.
 
@@ -51,8 +51,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
-
+// Forward declarations
 class fileStat;
 
 Istream& operator>>(Istream& is, fileStat& fStat);
@@ -80,14 +79,28 @@ public:
         fileStat();
 
         //- Construct from components.
-        // \param fName \n
-        // The file name or directory name to stat.
         //
-        // \param followLink \n
-        // If it is a link, get the status of the source file/directory.
+        //  \param fName The file name or directory name to stat.
+        //  \param followLink If it is a link, get the status of the source
+        //      file/directory.
+        //  \param maxTime The timeout value.
         //
-        // \param maxTime \n
-        // The timeout value.
+        //  \note An empty filename is a no-op.
+        fileStat
+        (
+            const char* fName,
+            const bool followLink = true,
+            const unsigned int maxTime = 0
+        );
+
+        //- Construct from components.
+        //
+        //  \param fName The file name or directory name to stat.
+        //  \param followLink If it is a link, get the status of the source
+        //      file/directory.
+        //  \param maxTime The timeout value.
+        //
+        //  \note An empty filename is a no-op.
         fileStat
         (
             const fileName& fName,
@@ -101,34 +114,42 @@ public:
 
     // Member Functions
 
-        // Access
+    // Access
 
-            //- Raw status
-            const struct stat& status() const
-            {
-                return status_;
-            }
+        //- Raw status
+        const struct stat& status() const
+        {
+            return status_;
+        }
 
-            //- Was file-stat successful?
-            bool isValid() const
-            {
-                return isValid_;
-            }
+        //- Was file-stat successful?
+        bool isValid() const
+        {
+            return isValid_;
+        }
 
-            //- Size in bytes. Zero for invalid file-stat.
-            label size() const;
+        //- Size in bytes. Zero for an invalid file-stat.
+        label size() const;
+
+        //- Return the modification time in seconds.
+        //  Zero for an invalid file-stat.
+        time_t modTime() const;
+
+        //- Return the modification time in seconds (nanosecond resolution)
+        //  Zero for an invalid file-stat.
+        double dmodTime() const;
 
 
-        // Check
+    // Check
 
-            //- Compare two fileStats for same device
-            bool sameDevice(const fileStat& stat2) const;
+        //- Compare two fileStats for same device
+        bool sameDevice(const fileStat& other) const;
 
-            //- Compare two fileStats for same Inode
-            bool sameINode(const fileStat& stat2) const;
+        //- Compare two fileStats for same Inode
+        bool sameINode(const fileStat& other) const;
 
-            //- Compare state against inode
-            bool sameINode(const label iNode) const;
+        //- Compare state against inode
+        bool sameINode(const label iNode) const;
 
 
     // IOstream Operators

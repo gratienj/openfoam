@@ -48,7 +48,7 @@ void testPackedList(const polyMesh& mesh, Random& rndGen)
         PackedList<3> bits(mesh.nEdges());
         forAll(bits, i)
         {
-            bits.set(i, rndGen.integer(0,3));
+            bits.set(i, rndGen.position<label>(0,3));
         }
 
         labelList edgeValues(mesh.nEdges());
@@ -95,7 +95,7 @@ void testPackedList(const polyMesh& mesh, Random& rndGen)
         PackedList<3> bits(mesh.nPoints());
         forAll(bits, i)
         {
-            bits.set(i, rndGen.integer(0,3));
+            bits.set(i, rndGen.position<label>(0,3));
         }
 
         labelList pointValues(mesh.nPoints());
@@ -143,7 +143,7 @@ void testPackedList(const polyMesh& mesh, Random& rndGen)
         PackedList<3> bits(mesh.nFaces());
         forAll(bits, facei)
         {
-            bits.set(facei, rndGen.integer(0,3));
+            bits.set(facei, rndGen.position<label>(0,3));
         }
 
         labelList faceValues(mesh.nFaces());
@@ -195,7 +195,7 @@ void testSparseData(const polyMesh& mesh, Random& rndGen)
         SubList<face>
         (
             mesh.faces(),
-            mesh.nFaces()-mesh.nInternalFaces(),
+            mesh.nBoundaryFaces(),
             mesh.nInternalFaces()
         ),
         mesh.points()
@@ -213,7 +213,7 @@ void testSparseData(const polyMesh& mesh, Random& rndGen)
 
         forAll(localPoints, i)
         {
-            const point pt = localPoints[i] + 1e-4*rndGen.vector01();
+            const point pt = localPoints[i] + 1e-4*rndGen.sample01<vector>();
 
             label meshPointi = allBoundary.meshPoints()[i];
 
@@ -298,7 +298,8 @@ void testSparseData(const polyMesh& mesh, Random& rndGen)
         {
             const edge& e = edges[i];
 
-            const point pt = e.centre(localPoints) + 1e-4*rndGen.vector01();
+            const point pt =
+                e.centre(localPoints) + 1e-4*rndGen.sample01<vector>();
 
             label meshEdgeI = meshEdges[i];
 
@@ -405,11 +406,11 @@ void testPointSync(const polyMesh& mesh, Random& rndGen)
     {
         labelList nMasters(mesh.nPoints(), 0);
 
-        PackedBoolList isMasterPoint(syncTools::getMasterPoints(mesh));
+        bitSet isMasterPoint(syncTools::getMasterPoints(mesh));
 
         forAll(isMasterPoint, pointi)
         {
-            if (isMasterPoint[pointi])
+            if (isMasterPoint.test(pointi))
             {
                 nMasters[pointi] = 1;
             }
@@ -481,11 +482,11 @@ void testEdgeSync(const polyMesh& mesh, Random& rndGen)
     {
         labelList nMasters(edges.size(), 0);
 
-        PackedBoolList isMasterEdge(syncTools::getMasterEdges(mesh));
+        bitSet isMasterEdge(syncTools::getMasterEdges(mesh));
 
         forAll(isMasterEdge, edgeI)
         {
-            if (isMasterEdge[edgeI])
+            if (isMasterEdge.test(edgeI))
             {
                 nMasters[edgeI] = 1;
             }
@@ -550,11 +551,11 @@ void testFaceSync(const polyMesh& mesh, Random& rndGen)
     {
         labelList nMasters(mesh.nFaces(), 0);
 
-        PackedBoolList isMasterFace(syncTools::getMasterFaces(mesh));
+        bitSet isMasterFace(syncTools::getMasterFaces(mesh));
 
         forAll(isMasterFace, facei)
         {
-            if (isMasterFace[facei])
+            if (isMasterFace.test(facei))
             {
                 nMasters[facei] = 1;
             }

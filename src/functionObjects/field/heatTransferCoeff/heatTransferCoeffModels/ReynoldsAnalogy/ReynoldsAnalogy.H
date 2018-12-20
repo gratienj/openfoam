@@ -37,7 +37,7 @@ Description
     as:
 
     \f[
-        h = 0.5 \rho_\infty \C_{p,\infty} |U_{\infty}| C_f
+        h = 0.5 \rho_\infty C_{p,\infty} |U_{\infty}| C_f
     \f]
 
 Usage
@@ -97,10 +97,10 @@ class ReynoldsAnalogy
 {
     // Private Member Functions
 
-        //- Disallow copy construct
+        //- No copy construct
         ReynoldsAnalogy(const ReynoldsAnalogy&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const ReynoldsAnalogy&) = delete;
 
 

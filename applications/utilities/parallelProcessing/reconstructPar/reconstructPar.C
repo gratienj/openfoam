@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,7 +42,7 @@ Description
 #include "regionProperties.H"
 #include "fvFieldReconstructor.H"
 #include "pointFieldReconstructor.H"
-#include "reconstructLagrangian.H"
+#include "lagrangianReconstructor.H"
 
 #include "faCFD.H"
 #include "faMesh.H"
@@ -84,124 +84,110 @@ int main(int argc, char *argv[])
 
     // Enable -constant ... if someone really wants it
     // Enable -withZero to prevent accidentally trashing the initial fields
-    timeSelector::addOptions(true, true);
+    timeSelector::addOptions(true, true);  // constant(true), zero(true)
     argList::noParallel();
     #include "addRegionOption.H"
     argList::addBoolOption
     (
         "allRegions",
-        "operate on all regions in regionProperties"
+        "Operate on all regions in regionProperties"
     );
     argList::addOption
     (
         "fields",
-        "list",
-        "specify a list of fields to be reconstructed. Eg, '(U T p)' - "
-        "regular expressions not currently supported"
+        "wordRes",
+        "Specify single or multiple fields to reconstruct (all by default)."
+        " Eg, 'T' or '(p T U \"alpha.*\")'"
     );
     argList::addBoolOption
     (
         "noFields",
-        "skip reconstructing fields"
+        "Skip reconstructing fields"
     );
     argList::addOption
     (
         "lagrangianFields",
-        "list",
-        "specify a list of lagrangian fields to be reconstructed. Eg, '(U d)' -"
-        "regular expressions not currently supported, "
-        "positions always included."
+        "wordRes",
+        "Specify single or multiple lagrangian fields to reconstruct"
+        " (all by default)."
+        " Eg, '(U d)'"
+        " - Positions are always included."
     );
     argList::addBoolOption
     (
         "noLagrangian",
-        "skip reconstructing lagrangian positions and fields"
+        "Skip reconstructing lagrangian positions and fields"
     );
+
     argList::addBoolOption
     (
         "noSets",
-        "skip reconstructing cellSets, faceSets, pointSets"
+        "Skip reconstructing cellSets, faceSets, pointSets"
     );
     argList::addBoolOption
     (
         "newTimes",
-        "only reconstruct new times (i.e. that do not exist already)"
+        "Only reconstruct new times (i.e. that do not exist already)"
     );
 
     #include "setRootCase.H"
     #include "createTime.H"
 
-    wordHashSet selectedFields;
-    args.optionReadIfPresent("fields", selectedFields);
 
-    const bool noFields = args.optionFound("noFields");
+    wordRes selectedFields;
+    args.readListIfPresent<wordRe>("fields", selectedFields);
 
-    if (noFields)
+    const bool doFields = !args.found("noFields");
+
+    if (!doFields)
     {
         Info<< "Skipping reconstructing fields"
             << nl << endl;
     }
 
-    const bool noLagrangian = args.optionFound("noLagrangian");
+    wordRes selectedLagrangianFields;
+    args.readListIfPresent<wordRe>
+    (
+        "lagrangianFields", selectedLagrangianFields
+    );
 
-    if (noLagrangian)
+    const bool doLagrangian = !args.found("noLagrangian");
+
+    if (!doLagrangian)
     {
         Info<< "Skipping reconstructing lagrangian positions and fields"
             << nl << endl;
     }
 
+    const bool doReconstructSets = !args.found("noSets");
 
-    const bool noReconstructSets = args.optionFound("noSets");
-
-    if (noReconstructSets)
+    if (!doReconstructSets)
     {
         Info<< "Skipping reconstructing cellSets, faceSets and pointSets"
             << nl << endl;
     }
 
-
-    wordHashSet selectedLagrangianFields;
-    if (args.optionReadIfPresent("lagrangianFields", selectedLagrangianFields))
-    {
-        if (noLagrangian)
-        {
-            FatalErrorInFunction
-                << "Cannot specify noLagrangian and lagrangianFields "
-                << "options together."
-                << exit(FatalError);
-        }
-    }
-
-
-    const bool newTimes   = args.optionFound("newTimes");
-    const bool allRegions = args.optionFound("allRegions");
+    const bool newTimes   = args.found("newTimes");
+    const bool allRegions = args.found("allRegions");
 
     wordList regionNames;
     wordList regionDirs;
     if (allRegions)
     {
-        Info<< "Reconstructing all regions in regionProperties" << nl << endl;
-        regionProperties rp(runTime);
-
-        wordHashSet names;
-        forAllConstIters(rp, iter)
-        {
-            names.insert(iter.object());
-        }
-
-        regionNames = names.sortedToc();
+        regionNames = regionProperties(runTime).names();
         regionDirs = regionNames;
+
+        Info<< "Reconstructing all regions in regionProperties" << nl
+            << "    " << flatOutput(regionNames) << nl << endl;
     }
     else
     {
-        regionNames = {fvMesh::defaultRegion};
-        if (args.optionReadIfPresent("region", regionNames[0]))
+        regionNames.resize(1, fvMesh::defaultRegion);
+        regionDirs.resize(1, word::null);
+
+        if (args.readIfPresent("region", regionNames.first()))
         {
-            regionDirs = regionNames;
-        }
-        else
-        {
-            regionDirs = {word::null};
+            regionDirs.first() = regionNames.first();
         }
     }
 
@@ -216,6 +202,9 @@ int main(int argc, char *argv[])
             << exit(FatalError);
     }
 
+    // Warn fileHandler of number of processors
+    const_cast<fileOperation&>(fileHandler()).setNProcs(nProcs);
+
     // Create the processor databases
     PtrList<Time> databases(nProcs);
 
@@ -228,7 +217,7 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 args.rootPath(),
-                args.caseName()/fileName(word("processor") + name(proci))
+                args.caseName()/("processor" + Foam::name(proci))
             )
         );
     }
@@ -372,12 +361,12 @@ int main(int argc, char *argv[])
                 databases[0].timeName()
             );
 
-            if (!noFields)
+            if (doFields)
             {
                 // If there are any FV fields, reconstruct them
                 Info<< "Reconstructing FV fields" << nl << endl;
 
-                fvFieldReconstructor fvReconstructor
+                fvFieldReconstructor reconstructor
                 (
                     mesh,
                     procMeshes.meshes(),
@@ -386,92 +375,91 @@ int main(int argc, char *argv[])
                     procMeshes.boundaryProcAddressing()
                 );
 
-                fvReconstructor.reconstructFvVolumeInternalFields<scalar>
+                reconstructor.reconstructFvVolumeInternalFields<scalar>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvVolumeInternalFields<vector>
+                reconstructor.reconstructFvVolumeInternalFields<vector>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvVolumeInternalFields
-                <sphericalTensor>
+                reconstructor.reconstructFvVolumeInternalFields<sphericalTensor>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvVolumeInternalFields<symmTensor>
+                reconstructor.reconstructFvVolumeInternalFields<symmTensor>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvVolumeInternalFields<tensor>
-                (
-                    objects,
-                    selectedFields
-                );
-
-                fvReconstructor.reconstructFvVolumeFields<scalar>
-                (
-                    objects,
-                    selectedFields
-                );
-                fvReconstructor.reconstructFvVolumeFields<vector>
-                (
-                    objects,
-                    selectedFields
-                );
-                fvReconstructor.reconstructFvVolumeFields<sphericalTensor>
-                (
-                    objects,
-                    selectedFields
-                );
-                fvReconstructor.reconstructFvVolumeFields<symmTensor>
-                (
-                    objects,
-                    selectedFields
-                );
-                fvReconstructor.reconstructFvVolumeFields<tensor>
+                reconstructor.reconstructFvVolumeInternalFields<tensor>
                 (
                     objects,
                     selectedFields
                 );
 
-                fvReconstructor.reconstructFvSurfaceFields<scalar>
+                reconstructor.reconstructFvVolumeFields<scalar>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvSurfaceFields<vector>
+                reconstructor.reconstructFvVolumeFields<vector>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvSurfaceFields<sphericalTensor>
+                reconstructor.reconstructFvVolumeFields<sphericalTensor>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvSurfaceFields<symmTensor>
+                reconstructor.reconstructFvVolumeFields<symmTensor>
                 (
                     objects,
                     selectedFields
                 );
-                fvReconstructor.reconstructFvSurfaceFields<tensor>
+                reconstructor.reconstructFvVolumeFields<tensor>
                 (
                     objects,
                     selectedFields
                 );
 
-                if (fvReconstructor.nReconstructed() == 0)
+                reconstructor.reconstructFvSurfaceFields<scalar>
+                (
+                    objects,
+                    selectedFields
+                );
+                reconstructor.reconstructFvSurfaceFields<vector>
+                (
+                    objects,
+                    selectedFields
+                );
+                reconstructor.reconstructFvSurfaceFields<sphericalTensor>
+                (
+                    objects,
+                    selectedFields
+                );
+                reconstructor.reconstructFvSurfaceFields<symmTensor>
+                (
+                    objects,
+                    selectedFields
+                );
+                reconstructor.reconstructFvSurfaceFields<tensor>
+                (
+                    objects,
+                    selectedFields
+                );
+
+                if (reconstructor.nReconstructed() == 0)
                 {
                     Info<< "No FV fields" << nl << endl;
                 }
             }
 
-            if (!noFields)
+            if (doFields)
             {
                 Info<< "Reconstructing point fields" << nl << endl;
 
@@ -487,7 +475,7 @@ int main(int argc, char *argv[])
                     );
                 }
 
-                pointFieldReconstructor pointReconstructor
+                pointFieldReconstructor reconstructor
                 (
                     pMesh,
                     pMeshes,
@@ -495,33 +483,33 @@ int main(int argc, char *argv[])
                     procMeshes.boundaryProcAddressing()
                 );
 
-                pointReconstructor.reconstructFields<scalar>
+                reconstructor.reconstructFields<scalar>
                 (
                     objects,
                     selectedFields
                 );
-                pointReconstructor.reconstructFields<vector>
+                reconstructor.reconstructFields<vector>
                 (
                     objects,
                     selectedFields
                 );
-                pointReconstructor.reconstructFields<sphericalTensor>
+                reconstructor.reconstructFields<sphericalTensor>
                 (
                     objects,
                     selectedFields
                 );
-                pointReconstructor.reconstructFields<symmTensor>
+                reconstructor.reconstructFields<symmTensor>
                 (
                     objects,
                     selectedFields
                 );
-                pointReconstructor.reconstructFields<tensor>
+                reconstructor.reconstructFields<tensor>
                 (
                     objects,
                     selectedFields
                 );
 
-                if (pointReconstructor.nReconstructed() == 0)
+                if (reconstructor.nReconstructed() == 0)
                 {
                     Info<< "No point fields" << nl << endl;
                 }
@@ -535,9 +523,9 @@ int main(int argc, char *argv[])
             // the first processor that has them. They are in pass2 only used
             // for name and type (scalar, vector etc).
 
-            if (!noLagrangian)
+            if (doLagrangian)
             {
-                HashTable<IOobjectList> cloudObjects;
+                HashTable<IOobjectList> allCloudObjects;
 
                 forAll(databases, proci)
                 {
@@ -565,145 +553,127 @@ int main(int argc, char *argv[])
                     {
                         // Check if we already have cloud objects for this
                         // cloudname
-                        if (!cloudObjects.found(cloudDir))
+                        if (!allCloudObjects.found(cloudDir))
                         {
                             // Do local scan for valid cloud objects
-                            IOobjectList sprayObjs
+                            IOobjectList localObjs
                             (
                                 procMeshes.meshes()[proci],
                                 databases[proci].timeName(),
                                 cloud::prefix/cloudDir
                             );
 
-                            IOobject* positionsPtr =
-                                sprayObjs.lookup(word("positions"));
-                            IOobject* coordsPtr =
-                                sprayObjs.lookup(word("coordinates"));
-
-                            if (coordsPtr || positionsPtr)
+                            if
+                            (
+                                localObjs.found("coordinates")
+                             || localObjs.found("positions")
+                            )
                             {
-                                cloudObjects.insert(cloudDir, sprayObjs);
+                                allCloudObjects.insert(cloudDir, localObjs);
                             }
                         }
                     }
                 }
 
 
-                if (cloudObjects.size())
+                if (allCloudObjects.size())
                 {
+                    lagrangianReconstructor reconstructor
+                    (
+                        mesh,
+                        procMeshes.meshes(),
+                        procMeshes.faceProcAddressing(),
+                        procMeshes.cellProcAddressing()
+                    );
+
                     // Pass2: reconstruct the cloud
-                    forAllConstIter(HashTable<IOobjectList>, cloudObjects, iter)
+                    forAllConstIters(allCloudObjects, iter)
                     {
                         const word cloudName = word::validate(iter.key());
 
                         // Objects (on arbitrary processor)
-                        const IOobjectList& sprayObjs = iter.object();
+                        const IOobjectList& cloudObjs = iter.object();
 
                         Info<< "Reconstructing lagrangian fields for cloud "
                             << cloudName << nl << endl;
 
-                        reconstructLagrangianPositions
-                        (
-                            mesh,
-                            cloudName,
-                            procMeshes.meshes(),
-                            procMeshes.faceProcAddressing(),
-                            procMeshes.cellProcAddressing()
-                        );
-                        reconstructLagrangianFields<label>
+                        reconstructor.reconstructPositions(cloudName);
+
+                        reconstructor.reconstructFields<label>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFieldFields<label>
+                        reconstructor.reconstructFieldFields<label>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFields<scalar>
+
+                        reconstructor.reconstructFields<scalar>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFieldFields<scalar>
+                        reconstructor.reconstructFieldFields<scalar>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFields<vector>
+
+                        reconstructor.reconstructFields<vector>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFieldFields<vector>
+                        reconstructor.reconstructFieldFields<vector>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFields<sphericalTensor>
+
+                        reconstructor.reconstructFields<sphericalTensor>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFieldFields<sphericalTensor>
+                        reconstructor.reconstructFieldFields<sphericalTensor>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFields<symmTensor>
+
+                        reconstructor.reconstructFields<symmTensor>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFieldFields<symmTensor>
+                        reconstructor.reconstructFieldFields<symmTensor>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFields<tensor>
+
+                        reconstructor.reconstructFields<tensor>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
-                        reconstructLagrangianFieldFields<tensor>
+                        reconstructor.reconstructFieldFields<tensor>
                         (
                             cloudName,
-                            mesh,
-                            procMeshes.meshes(),
-                            sprayObjs,
+                            cloudObjs,
                             selectedLagrangianFields
                         );
                     }
@@ -728,12 +698,12 @@ int main(int argc, char *argv[])
             )
             {
                 Info << "Reconstructing FA fields" << nl << endl;
-                
+
                 faMesh aMesh(mesh);
 
                 processorFaMeshes procFaMeshes(procMeshes.meshes());
 
-                faFieldReconstructor faReconstructor
+                faFieldReconstructor reconstructor
                 (
                     aMesh,
                     procFaMeshes.meshes(),
@@ -742,21 +712,20 @@ int main(int argc, char *argv[])
                     procFaMeshes.boundaryProcAddressing()
                 );
 
-                faReconstructor.reconstructFaAreaFields<scalar>(objects);
-                faReconstructor.reconstructFaAreaFields<vector>(objects);
-                faReconstructor
-                    .reconstructFaAreaFields<sphericalTensor>(objects);
-                faReconstructor.reconstructFaAreaFields<symmTensor>(objects);
-                faReconstructor.reconstructFaAreaFields<tensor>(objects);
-                
-                faReconstructor.reconstructFaEdgeFields<scalar>(objects);
+                reconstructor.reconstructFaAreaFields<scalar>(objects);
+                reconstructor.reconstructFaAreaFields<vector>(objects);
+                reconstructor.reconstructFaAreaFields<sphericalTensor>(objects);
+                reconstructor.reconstructFaAreaFields<symmTensor>(objects);
+                reconstructor.reconstructFaAreaFields<tensor>(objects);
+
+                reconstructor.reconstructFaEdgeFields<scalar>(objects);
             }
             else
             {
                 Info << "No FA fields" << nl << endl;
             }
 
-            if (!noReconstructSets)
+            if (doReconstructSets)
             {
                 // Scan to find all sets
                 HashTable<label> cSetNames;
@@ -779,18 +748,18 @@ int main(int argc, char *argv[])
                     );
 
                     IOobjectList cSets(objects.lookupClass(cellSet::typeName));
-                    forAllConstIter(IOobjectList, cSets, iter)
+                    forAllConstIters(cSets, iter)
                     {
                         cSetNames.insert(iter.key(), cSetNames.size());
                     }
 
                     IOobjectList fSets(objects.lookupClass(faceSet::typeName));
-                    forAllConstIter(IOobjectList, fSets, iter)
+                    forAllConstIters(fSets, iter)
                     {
                         fSetNames.insert(iter.key(), fSetNames.size());
                     }
                     IOobjectList pSets(objects.lookupClass(pointSet::typeName));
-                    forAllConstIter(IOobjectList, pSets, iter)
+                    forAllConstIters(pSets, iter)
                     {
                         pSetNames.insert(iter.key(), pSetNames.size());
                     }
@@ -841,7 +810,7 @@ int main(int argc, char *argv[])
                             objects.lookupClass(cellSet::typeName)
                         );
 
-                        forAllConstIter(IOobjectList, cSets, iter)
+                        forAllConstIters(cSets, iter)
                         {
                             // Load cellSet
                             const cellSet procSet(*iter());
@@ -877,7 +846,7 @@ int main(int argc, char *argv[])
                             objects.lookupClass(faceSet::typeName)
                         );
 
-                        forAllConstIter(IOobjectList, fSets, iter)
+                        forAllConstIters(fSets, iter)
                         {
                             // Load faceSet
                             const faceSet procSet(*iter());
@@ -911,7 +880,7 @@ int main(int argc, char *argv[])
                         (
                             objects.lookupClass(pointSet::typeName)
                         );
-                        forAllConstIter(IOobjectList, pSets, iter)
+                        forAllConstIters(pSets, iter)
                         {
                             // Load pointSet
                             const pointSet propSet(*iter());

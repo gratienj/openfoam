@@ -52,11 +52,11 @@ class saturationModel
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        saturationModel(const saturationModel&);
+        //- No copy construct
+        saturationModel(const saturationModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const saturationModel&);
+        //- No copy assignment
+        void operator=(const saturationModel&) = delete;
 
 
 public:
@@ -102,7 +102,7 @@ public:
             const volScalarField& T
         ) const = 0;
 
-        //- Saturation pressure derivetive w.r.t. temperature
+        //- Saturation pressure derivative w.r.t. temperature
         virtual tmp<volScalarField> pSatPrime
         (
             const volScalarField& T

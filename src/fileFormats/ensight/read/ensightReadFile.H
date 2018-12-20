@@ -51,18 +51,18 @@ class ensightReadFile
 {
     // Private Member Functions
 
-        //- Disallow default bitwise assignment
-        void operator=(const ensightReadFile&);
+        //- No copy construct
+        ensightReadFile(const ensightReadFile&) = delete;
 
-        //- Disallow default copy constructor
-        ensightReadFile(const ensightReadFile&);
+        //- No copy assignment
+        void operator=(const ensightReadFile&) = delete;
 
 
 public:
 
     // Constructors
 
-        //- Construct from pathname
+        //- Construct from pathname. Default format is binary.
         ensightReadFile
         (
             const fileName& pathname,
@@ -71,7 +71,7 @@ public:
 
 
     //- Destructor
-    ~ensightReadFile();
+    ~ensightReadFile() = default;
 
 
     // Output

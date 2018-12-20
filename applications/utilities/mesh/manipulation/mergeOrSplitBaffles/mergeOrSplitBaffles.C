@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,7 +44,6 @@ Usage
 
       - \par -dict \<dictionary\>
         Specify a dictionary to read actions from.
-
 
 Note
     - can only handle pairwise boundary faces. So three faces using
@@ -201,10 +200,10 @@ labelList patchFaces(const polyMesh& mesh, const labelList& patchIDs)
         }
     }
 
-if (faceIDs.size() != sz)
-{
-    FatalErrorInFunction << exit(FatalError);
-}
+    if (faceIDs.size() != sz)
+    {
+        FatalErrorInFunction << exit(FatalError);
+    }
 
     return faceIDs;
 }
@@ -244,13 +243,13 @@ labelList findBaffles(const polyMesh& mesh, const labelList& boundaryFaces)
     }
 
 
-    // Write to faceSet for ease of postprocessing.
+    // Write to faceSet for ease of post-processing.
     {
         faceSet duplicateSet
         (
             mesh,
             "duplicateFaces",
-            (mesh.nFaces() - mesh.nInternalFaces())/256
+            mesh.nBoundaryFaces()/256
         );
 
         forAll(duplicates, bFacei)
@@ -288,26 +287,27 @@ int main(int argc, char *argv[])
     argList::addBoolOption
     (
         "detectOnly",
-        "find baffles only, but do not merge or split them"
+        "Find baffles only, but do not merge or split them"
     );
     argList::addBoolOption
     (
         "split",
-        "topologically split duplicate surfaces"
+        "Topologically split duplicate surfaces"
     );
+
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
     #include "createNamedMesh.H"
 
     const word oldInstance = mesh.pointsInstance();
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
-    const bool readDict   = args.optionFound("dict");
-    const bool split      = args.optionFound("split");
-    const bool overwrite  = args.optionFound("overwrite");
-    const bool detectOnly = args.optionFound("detectOnly");
+    const bool readDict   = args.found("dict");
+    const bool split      = args.found("split");
+    const bool overwrite  = args.found("overwrite");
+    const bool detectOnly = args.found("detectOnly");
 
     if (readDict && (split || detectOnly))
     {
@@ -332,8 +332,11 @@ int main(int argc, char *argv[])
 
         if (dict.found("detect"))
         {
-            wordReList patchNames(dict.subDict("detect").lookup("patches"));
-            detectPatchIDs = patches.patchSet(patchNames).sortedToc();
+            detectPatchIDs = patches.patchSet
+            (
+                dict.subDict("detect").get<wordRes>("patches")
+            ).sortedToc();
+
             Info<< "Detecting baffles on " << detectPatchIDs.size()
                 << " patches with "
                 << returnReduce(patchSize(mesh, detectPatchIDs), sumOp<label>())
@@ -341,8 +344,11 @@ int main(int argc, char *argv[])
         }
         if (dict.found("merge"))
         {
-            wordReList patchNames(dict.subDict("merge").lookup("patches"));
-            mergePatchIDs = patches.patchSet(patchNames).sortedToc();
+            mergePatchIDs = patches.patchSet
+            (
+                dict.subDict("merge").get<wordRes>("patches")
+            ).sortedToc();
+
             Info<< "Detecting baffles on " << mergePatchIDs.size()
                 << " patches with "
                 << returnReduce(patchSize(mesh, mergePatchIDs), sumOp<label>())
@@ -350,8 +356,11 @@ int main(int argc, char *argv[])
         }
         if (dict.found("split"))
         {
-            wordReList patchNames(dict.subDict("split").lookup("patches"));
-            splitPatchIDs = patches.patchSet(patchNames).sortedToc();
+            splitPatchIDs = patches.patchSet
+            (
+                dict.subDict("split").get<wordRes>("patches")
+            ).sortedToc();
+
             Info<< "Detecting baffles on " << splitPatchIDs.size()
                 << " patches with "
                 << returnReduce(patchSize(mesh, splitPatchIDs), sumOp<label>())
@@ -443,14 +452,14 @@ int main(int argc, char *argv[])
 
         if (!overwrite)
         {
-            runTime++;
+            ++runTime;
         }
 
         // Change the mesh. No inflation.
         autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
         // Update fields
-        mesh.updateMesh(map);
+        mesh.updateMesh(map());
 
         // Move mesh (since morphing does not do this)
         if (map().hasMotionPoints())
@@ -483,7 +492,7 @@ int main(int argc, char *argv[])
             }
             candidates.setCapacity(sz);
 
-            PackedBoolList isCandidate(mesh.nPoints());
+            bitSet isCandidate(mesh.nPoints());
             forAll(splitPatchIDs, i)
             {
                 const labelList& mp = patches[splitPatchIDs[i]].meshPoints();
@@ -513,14 +522,14 @@ int main(int argc, char *argv[])
 
         if (!overwrite)
         {
-            runTime++;
+            ++runTime;
         }
 
         // Change the mesh. No inflation.
         autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
         // Update fields
-        mesh.updateMesh(map);
+        mesh.updateMesh(map());
 
         // Move mesh (since morphing does not do this)
         if (map().hasMotionPoints())

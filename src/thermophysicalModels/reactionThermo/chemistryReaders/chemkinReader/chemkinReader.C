@@ -453,7 +453,7 @@ void Foam::chemkinReader::addReaction
 
 
     // Calculate the unit conversion factor for the A coefficient
-    // for the change from mol/cm^3 to kmol/m^3 concentraction units
+    // for the change from mol/cm^3 to kmol/m^3 concentration units
     const scalar concFactor = 0.001;
     scalar sumExp = 0.0;
     forAll(lhs, i)
@@ -865,19 +865,15 @@ Foam::chemkinReader::chemkinReader
         Info<< "Reading CHEMKIN thermo data in new file format" << endl;
     }
 
-    fileName chemkinFile(fileName(thermoDict.lookup("CHEMKINFile")).expand());
+    fileName chemkinFile(thermoDict.get<fileName>("CHEMKINFile"));
+    chemkinFile.expand();
 
     fileName thermoFile = fileName::null;
+    thermoDict.readIfPresent("CHEMKINThermoFile", thermoFile);
+    thermoFile.expand();
 
-    if (thermoDict.found("CHEMKINThermoFile"))
-    {
-        thermoFile = fileName(thermoDict.lookup("CHEMKINThermoFile")).expand();
-    }
-
-    fileName transportFile
-    (
-        fileName(thermoDict.lookup("CHEMKINTransportFile")).expand()
-    );
+    fileName transportFile(thermoDict.get<fileName>("CHEMKINTransportFile"));
+    transportFile.expand();
 
     // allow relative file names
     fileName relPath = thermoDict.name().path();

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,39 +23,51 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "Time.H"
 #include "ensightOutput.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class Type>
-int Foam::functionObjects::ensightWrite::writeVolField
+Foam::label Foam::functionObjects::ensightWrite::writeVolFields
 (
-    const word& inputName,
-    int& state
+    const fvMeshSubset& proxy,
+    const wordHashSet& acceptField
 )
 {
-    // State: return 0 (not-processed), -1 (skip), +1 ok
-    typedef GeometricField<Type, fvPatchField, volMesh> VolFieldType;
+    typedef GeometricField<Type, fvPatchField, volMesh> GeoField;
 
-    // Already done, or not available
-    if (state || !foundObject<VolFieldType>(inputName))
+    const fvMesh& baseMesh = proxy.baseMesh();
+
+    label count = 0;
+
+    for (const word& fieldName : baseMesh.sortedNames<GeoField>(acceptField))
     {
-        return state;
+        const auto* fieldptr = baseMesh.findObject<GeoField>(fieldName);
+
+        if (!fieldptr)
+        {
+            continue;
+        }
+
+        auto tfield = fvMeshSubsetProxy::interpolate(proxy, *fieldptr);
+        const auto& field = tfield();
+
+        autoPtr<ensightFile> os = ensCase().newData<Type>(fieldName);
+
+        ensightOutput::writeField<Type>
+        (
+            field,
+            ensMesh(),
+            os,
+            caseOpts_.nodeValues()
+        );
+
+        Log << ' ' << fieldName;
+
+        ++count;
     }
 
-    autoPtr<ensightFile> os = ensCase().newData<Type>(inputName);
-    ensightOutput::writeField<Type>
-    (
-        lookupObject<VolFieldType>(inputName),
-        ensMesh(),
-        os
-    );
-
-    Log << " " << inputName;
-
-    state = +1;
-    return state;
+    return count;
 }
 
 

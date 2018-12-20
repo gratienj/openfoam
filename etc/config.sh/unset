@@ -3,7 +3,7 @@
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
 #   \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-#    \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+#    \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -44,13 +44,13 @@ unset WM_HOSTS
 unset WM_LABEL_OPTION
 unset WM_LABEL_SIZE
 unset WM_LDFLAGS
-unset WM_LINK_LANGUAGE
 unset WM_MPLIB
 unset WM_NCOMPPROCS
 unset WM_OPTIONS
 unset WM_OSTYPE
 unset WM_PRECISION_OPTION
 unset WM_PROJECT
+unset WM_PROJECT_API
 unset WM_PROJECT_DIR
 unset WM_PROJECT_INST_DIR
 unset WM_PROJECT_SITE
@@ -93,11 +93,10 @@ unset MPI_ARCH_PATH
 unset MPI_BUFFER_SIZE
 
 # Undefine OPAL_PREFIX if set to one of the paths on foamOldDirs
-if [ -z "$($foamClean "$OPAL_PREFIX" "$foamOldDirs")" ]
+if [ -n "$foamClean" ] && [ -z "$($foamClean -env=OPAL_PREFIX $foamOldDirs)" ]
 then
     unset OPAL_PREFIX
 fi
-
 
 #------------------------------------------------------------------------------
 # Unset Ensight/ParaView-related environment variables
@@ -109,8 +108,14 @@ unset ParaView_VERSION
 unset PV_PLUGIN_PATH
 unset VTK_DIR
 
+# Undefine Qt5_DIR if set to one of the paths on foamOldDirs
+if [ -n "$foamClean" ] && [ -z "$($foamClean -env=Qt5_DIR $foamOldDirs)" ]
+then
+    unset Qt5_DIR
+fi
+
 #------------------------------------------------------------------------------
-# unset other ThirdParty environment variables
+# Unset other ThirdParty environment variables
 
 unset ADIOS_ARCH_PATH
 unset ADIOS1_ARCH_PATH
@@ -133,9 +138,9 @@ unset SCOTCH_ARCH_PATH
 
 if [ -n "$foamClean" ]
 then
-    cleaned=$($foamClean "$PATH" "$foamOldDirs") && PATH="$cleaned"
-    cleaned=$($foamClean "$LD_LIBRARY_PATH" "$foamOldDirs") && LD_LIBRARY_PATH="$cleaned"
-    cleaned=$($foamClean "$MANPATH" "$foamOldDirs") && MANPATH="$cleaned"
+    eval "$($foamClean -sh-env=PATH $foamOldDirs)"
+    eval "$($foamClean -sh-env=LD_LIBRARY_PATH $foamOldDirs)"
+    eval "$($foamClean -sh-env=MANPATH $foamOldDirs)"
 fi
 
 [ -n "$LD_LIBRARY_PATH" ] || unset LD_LIBRARY_PATH
@@ -166,9 +171,18 @@ unalias util        2>/dev/null
 unalias tut         2>/dev/null
 unalias run         2>/dev/null
 
+unalias ufoam       2>/dev/null
+unalias uapp        2>/dev/null
+unalias usol        2>/dev/null
+unalias uutil       2>/dev/null
+
 unset -f wmRefresh  2>/dev/null
+unset -f foamPwd    2>/dev/null
 unset -f foamVersion 2>/dev/null
 unset -f foamPV     2>/dev/null
+
+# NB: no good way to remove foamPwd reference in PS1.
+
 
 # Remove old completions, which look like
 #     "complete ... -F _of_complete_ APPNAME
@@ -176,7 +190,7 @@ unset -f foamPV     2>/dev/null
 foamOldDirs="$(complete 2>/dev/null | sed -ne 's/^.*-F _of_.* \(..*\)$/\1/p')"
 for cleaned in $foamOldDirs
 do
-    complete -r $cleaned 2>/dev/null
+    complete -r "$cleaned" 2>/dev/null
 done
 
 # Completion functions

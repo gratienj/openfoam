@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,10 +32,10 @@ Description
     field and derived quantities.  Alternatively, the same actions can be
     executed after the simulation using the \c -postProcess command-line option.
 
-    \subsection secFunctionObjects Using function objects
+    \section secFunctionObjects Using function objects
 
-    FunctionObjects are selected by additional entries in the
-    $FOAM_CASE/system/controlDict dictionary.  Each object is listed in the \c
+    FunctionObjects are selected by additional entries in the global case
+    system/controlDict dictionary.  Each object is listed in the \c
     functions sub-dictionary, e.g. to select the \c functionObjectType
     functionObject the following entry would be specified:
 
@@ -59,7 +59,7 @@ Description
 
     Where:
     \table
-        Property | Description                       | Required | Default value
+        Property | Description                           | Required | Default
         type     | Type of function object               | yes      |
         libs     | Libraries containing implementation   | yes      |
         region   | Name of region for multi-region cases | no       |
@@ -120,7 +120,6 @@ SourceFiles
 
 #include "typeInfo.H"
 #include "autoPtr.H"
-#include "Switch.H"
 #include "runTimeSelectionTables.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -128,7 +127,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class Time;
 class polyMesh;
 class mapPolyMesh;
@@ -145,15 +144,6 @@ class functionObject
         const word name_;
 
 
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        functionObject(const functionObject&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const functionObject&) = delete;
-
-
 protected:
 
     // Protected Member Functions
@@ -164,6 +154,9 @@ protected:
 
 public:
 
+    // Forward declarations
+    class unavailableFunctionObject;
+
     //- Runtime type information
     virtual const word& type() const = 0;
 
@@ -172,8 +165,11 @@ public:
     //- Global post-processing mode switch
     static bool postProcess;
 
+    //- Directory prefix
+    static word outputPrefix;
+
     //- Switch write log to Info
-    Switch log;
+    bool log;
 
 
     // Declare run-time constructor selection tables
@@ -197,7 +193,7 @@ public:
         autoPtr<functionObject> clone() const
         {
             NotImplemented;
-            return autoPtr<functionObject>(nullptr);
+            return nullptr;
         }
 
 
@@ -207,13 +203,13 @@ public:
         static autoPtr<functionObject> New
         (
             const word& name,
-            const Time&,
-            const dictionary&
+            const Time& runTime,
+            const dictionary& dict
         );
 
 
     //- Destructor
-    virtual ~functionObject();
+    virtual ~functionObject() = default;
 
 
     // Member Functions
@@ -241,7 +237,7 @@ public:
         virtual bool write() = 0;
 
         //- Called when Time::run() determines that the time-loop exits.
-        //  By default it simply calls execute().
+        //  The base implementation is a no-op.
         virtual bool end();
 
         //- Called at the end of Time::adjustDeltaT() if adjustTime is true
@@ -257,6 +253,37 @@ public:
         //- Update for changes of mesh
         //  The base implementation is a no-op.
         virtual void movePoints(const polyMesh& mesh);
+};
+
+
+/*---------------------------------------------------------------------------*\
+          Class functionObject::unavailableFunctionObject Declaration
+\*---------------------------------------------------------------------------*/
+
+//- Abstract functionObject to report when a real version is unavailable.
+class functionObject::unavailableFunctionObject
+:
+    public functionObject
+{
+protected:
+
+    //- Construct with name
+    unavailableFunctionObject(const word& name);
+
+    //- Report it is unavailable, emitting a FatalError for try/catch
+    //- in the caller
+    void carp(std::string message = "") const;
+
+
+public:
+
+    // Member Functions
+
+        //- No nothing
+        virtual bool execute();
+
+        //- No nothing
+        virtual bool write();
 };
 
 

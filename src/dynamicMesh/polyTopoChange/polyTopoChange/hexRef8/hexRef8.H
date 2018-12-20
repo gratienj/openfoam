@@ -42,7 +42,7 @@ SourceFiles
 #include "primitivePatch.H"
 #include "removeFaces.H"
 #include "refinementHistory.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "uniformDimensionedFields.H"
 #include "cellShapeList.H"
 
@@ -300,11 +300,16 @@ class hexRef8
         label faceConsistentRefinement
         (
             const bool maxSet,
-            PackedBoolList& refineCell
+            const labelUList& cellLevel,
+            bitSet& refineCell
         ) const;
 
         //- Check wanted refinement for 2:1 consistency
-        void checkWantedRefinementLevels(const labelList&) const;
+        void checkWantedRefinementLevels
+        (
+            const labelUList& cellLevel,
+            const labelList&
+        ) const;
 
 
         // Cellshape recognition
@@ -336,11 +341,11 @@ class hexRef8
             ) const;
 
 
-        //- Disallow default bitwise copy construct
-        hexRef8(const hexRef8&);
+        //- No copy construct
+        hexRef8(const hexRef8&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const hexRef8&);
+        //- No copy assignment
+        void operator=(const hexRef8&) = delete;
 
 
 public:
@@ -420,9 +425,24 @@ public:
             //  removes cells to refine (maxSet = false)
             labelList consistentRefinement
             (
+                const labelUList& cellLevel,
                 const labelList& cellsToRefine,
                 const bool maxSet
             ) const;
+
+            //- Given valid mesh and current cell level and proposed
+            //  cells to refine calculate any clashes (due to 2:1) and return
+            //  ok list of cells to refine.
+            //  Either adds cells to refine to set (maxSet = true) or
+            //  removes cells to refine (maxSet = false)
+            labelList consistentRefinement
+            (
+                const labelList& cellsToRefine,
+                const bool maxSet
+            ) const
+            {
+                return consistentRefinement(cellLevel_, cellsToRefine, maxSet);
+            }
 
             //- Like consistentRefinement but slower:
             //

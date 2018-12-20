@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,8 +30,10 @@ License
 #include "OBJstream.H"
 #include "PatchTools.H"
 #include "Time.H"
-//Note: cannot use vtkSurfaceWriter here - circular linkage
-//#include "vtkSurfaceWriter.H"
+// Note: cannot use vtkSurfaceWriter here - circular linkage
+// but foamVtkSurfaceWriter (vtk::surfaceWriter) would be okay.
+//
+// #include "foamVtkSurfaceWriter.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -278,7 +280,7 @@ void Foam::cyclicPeriodicAMIPolyPatch::resetAMI
         {
             const Time& runTime = boundaryMesh().mesh().time();
 
-            fileName dir(runTime.rootPath()/runTime.globalCaseName());
+            fileName dir(runTime.globalPath());
             fileName postfix("_" + runTime.timeName()+"_expanded.obj");
 
             ownStr.reset(new OBJstream(dir/name() + postfix));
@@ -482,7 +484,7 @@ void Foam::cyclicPeriodicAMIPolyPatch::resetAMI
 
 
 
-        // Average the number of transformstions
+        // Average the number of transformations
         nTransforms_ = (nTransforms_ + nTransformsOld)/2;
 
         // Check that the match is complete
@@ -547,26 +549,29 @@ void Foam::cyclicPeriodicAMIPolyPatch::resetAMI
 
         if (nFace)
         {
-            scalarField srcWghtSum(size(), 0);
-            scalarField tgtWghtSum(size(), 0);
-            forAll(*this, faceI)
+            scalarField srcWghtSum(size(), Zero);
+            forAll(srcWghtSum, faceI)
             {
                 srcWghtSum[faceI] = sum(AMIPtr_->srcWeights()[faceI]);
+            }
+            scalarField tgtWghtSum(neighbPatch().size(), Zero);
+            forAll(tgtWghtSum, faceI)
+            {
                 tgtWghtSum[faceI] = sum(AMIPtr_->tgtWeights()[faceI]);
             }
 
             Info<< indent
                 << "AMI: Patch " << name()
-                << " sum(weights) min/max/average = "
-                << gMin(srcWghtSum) << ", "
-                << gMax(srcWghtSum) << ", "
-                << gAverage(srcWghtSum) << endl;
+                << " sum(weights)"
+                << " min:" << gMin(srcWghtSum)
+                << " max:" << gMax(srcWghtSum)
+                << " average:" << gAverage(srcWghtSum) << nl;
             Info<< indent
                 << "AMI: Patch " << neighbPatch().name()
-                << " sum(weights) min/max/average = "
-                << gMin(tgtWghtSum) << ", "
-                << gMax(tgtWghtSum) << ", "
-                << gAverage(tgtWghtSum) << endl;
+                << " sum(weights)"
+                << " min:" << gMin(tgtWghtSum)
+                << " max:" << gMax(tgtWghtSum)
+                << " average:" << gAverage(tgtWghtSum) << nl;
         }
     }
 }

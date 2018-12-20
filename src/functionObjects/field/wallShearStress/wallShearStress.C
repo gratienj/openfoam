@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,10 +65,8 @@ void Foam::functionObjects::wallShearStress::calcShearStress
 {
     shearStress.dimensions().reset(Reff.dimensions());
 
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        label patchi = iter.key();
-
         vectorField& ssp = shearStress.boundaryFieldRef()[patchi];
         const vectorField& Sfp = mesh_.Sf().boundaryField()[patchi];
         const scalarField& magSfp = mesh_.magSf().boundaryField()[patchi];
@@ -109,12 +107,7 @@ Foam::functionObjects::wallShearStress::wallShearStress
                 IOobject::NO_WRITE
             ),
             mesh_,
-            dimensionedVector
-            (
-                "0",
-                sqr(dimLength)/sqr(dimTime),
-                Zero
-            )
+            dimensionedVector(sqr(dimLength)/sqr(dimTime), Zero)
         )
     );
 
@@ -161,9 +154,8 @@ bool Foam::functionObjects::wallShearStress::read(const dictionary& dict)
     {
         Info<< "    processing wall patches: " << nl;
         labelHashSet filteredPatchSet;
-        forAllConstIter(labelHashSet, patchSet_, iter)
+        for (const label patchi : patchSet_)
         {
-            label patchi = iter.key();
             if (isA<wallPolyPatch>(pbm[patchi]))
             {
                 filteredPatchSet.insert(patchi);
@@ -191,28 +183,39 @@ bool Foam::functionObjects::wallShearStress::execute()
     volVectorField& wallShearStress =
         mesh_.lookupObjectRef<volVectorField>(type());
 
-    const word& turbModelName = turbulenceModel::propertiesName;
-    auto cmpModelPtr =
-        mesh_.lookupObjectPtr<compressible::turbulenceModel>(turbModelName);
-    auto icoModelPtr =
-        mesh_.lookupObjectPtr<incompressible::turbulenceModel>(turbModelName);
+    // Compressible
+    {
+        typedef compressible::turbulenceModel turbType;
 
-    if (cmpModelPtr)
-    {
-        calcShearStress(cmpModelPtr->devRhoReff(), wallShearStress);
-    }
-    else if (icoModelPtr)
-    {
-        calcShearStress(icoModelPtr->devReff(), wallShearStress);
-    }
-    else
-    {
-        FatalErrorInFunction
-            << "Unable to find turbulence model in the "
-            << "database" << exit(FatalError);
+        const turbType* modelPtr =
+            findObject<turbType>(turbulenceModel::propertiesName);
+
+        if (modelPtr)
+        {
+            calcShearStress(modelPtr->devRhoReff(), wallShearStress);
+            return true;
+        }
     }
 
-    return true;
+    // Incompressible
+    {
+        typedef incompressible::turbulenceModel turbType;
+
+        const turbType* modelPtr =
+            findObject<turbType>(turbulenceModel::propertiesName);
+
+        if (modelPtr)
+        {
+            calcShearStress(modelPtr->devReff(), wallShearStress);
+            return true;
+        }
+    }
+
+    FatalErrorInFunction
+        << "Unable to find turbulence model in the "
+        << "database" << exit(FatalError);
+
+    return false;
 }
 
 
@@ -228,9 +231,8 @@ bool Foam::functionObjects::wallShearStress::write()
 
     const fvPatchList& patches = mesh_.boundary();
 
-    forAllConstIter(labelHashSet, patchSet_, iter)
+    for (const label patchi : patchSet_)
     {
-        label patchi = iter.key();
         const fvPatch& pp = patches[patchi];
 
         const vectorField& ssp = wallShearStress.boundaryField()[patchi];

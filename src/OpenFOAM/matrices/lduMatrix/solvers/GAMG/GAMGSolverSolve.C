@@ -59,6 +59,8 @@ Foam::solverPerformance Foam::GAMGSolver::solve
     // Calculate initial finest-grid residual field
     scalarField finestResidual(source - Apsi);
 
+    matrix().setResidualField(finestResidual, fieldName_, true);
+
     // Calculate normalised residual for convergence test
     solverPerf.initialResidual() = gSumMag
     (
@@ -143,6 +145,8 @@ Foam::solverPerformance Foam::GAMGSolver::solve
         );
     }
 
+    matrix().setResidualField(finestResidual, fieldName_, false);
+
     return solverPerf;
 }
 
@@ -183,7 +187,7 @@ void Foam::GAMGSolver::Vcycle
         if (coarseSources.set(leveli + 1))
         {
             // If the optional pre-smoothing sweeps are selected
-            // smooth the coarse-grid field for the restriced source
+            // smooth the coarse-grid field for the restricted source
             if (nPreSweeps_)
             {
                 coarseCorrFields[leveli] = 0.0;

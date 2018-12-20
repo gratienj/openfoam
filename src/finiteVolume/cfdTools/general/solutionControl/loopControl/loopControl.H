@@ -45,6 +45,7 @@ Usage
             }
         }
     }
+    \endverbatim
 
     Where the loop entries comprise:
     \table
@@ -78,7 +79,7 @@ SourceFiles
 
 #include "subLoopTime.H"
 #include "dictionary.H"
-#include "wordReList.H"
+#include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -104,11 +105,12 @@ class loopControl
         //- Execute specified function names
         bool checkConverged() const;
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         loopControl(const loopControl&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const loopControl&) = delete;
+
 
 protected:
 
@@ -124,14 +126,14 @@ protected:
         dictionary convergenceDict_;
 
         //- Function object names to fire during the loop (at executeInterval)
-        List<wordRe> onLoop_;
+        wordRes onLoop_;
 
         //- Function object names to fire on convergence
-        List<wordRe> onConverged_;
+        wordRes onConverged_;
 
         //- Function object names to fire when the loop exits without
         //- convergence
-        List<wordRe> onEnd_;
+        wordRes onEnd_;
 
         //- Convergence tests passed
         bool converged_;
@@ -206,17 +208,14 @@ public:
         //      }
         //  \endcode
         bool loop();
-
-
-    // IOstream operators
-
-        //- Write name and state (on/off, index/total) to Ostream
-        friend Ostream& operator<<(Ostream& os, const loopControl& ctrl);
-
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+//- Write name and state (on/off, index/total) to Ostream
+Ostream& operator<<(Ostream& os, const loopControl& ctrl);
+
 
 } // End namespace Foam
 

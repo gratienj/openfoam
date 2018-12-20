@@ -55,10 +55,10 @@ namespace combustionModels
                             Class PaSR Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class Type>
+template<class ReactionThermo>
 class PaSR
 :
-    public laminar<Type>
+    public laminar<ReactionThermo>
 {
     // Private data
 
@@ -71,11 +71,11 @@ class PaSR
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        PaSR(const PaSR&);
+        //- No copy construct
+        PaSR(const PaSR&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const PaSR&);
+        //- No copy assignment
+        void operator=(const PaSR&) = delete;
 
 
 public:
@@ -90,9 +90,9 @@ public:
         PaSR
         (
             const word& modelType,
-            const fvMesh& mesh,
-            const word& combustionProperties,
-            const word& phaseName
+            ReactionThermo& thermo,
+            const compressibleTurbulenceModel& turb,
+            const word& combustionProperties
         );
 
 

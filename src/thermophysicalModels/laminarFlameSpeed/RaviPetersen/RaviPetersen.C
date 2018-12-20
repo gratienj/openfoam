@@ -58,7 +58,7 @@ Foam::laminarFlameSpeedModels::RaviPetersen::RaviPetersen
     EqRPoints_(coeffsDict_.lookup("EqRPoints")),
     alpha_(coeffsDict_.lookup("alpha")),
     beta_(coeffsDict_.lookup("beta")),
-    TRef_(readScalar(coeffsDict_.lookup("TRef")))
+    TRef_(coeffsDict_.get<scalar>("TRef"))
 {
     checkPointsMonotonicity("equivalenceRatio", EqRPoints_);
     checkPointsMonotonicity("pressure", pPoints_);
@@ -85,11 +85,9 @@ void Foam::laminarFlameSpeedModels::RaviPetersen::checkPointsMonotonicity
     {
         if (x[i] <= x[i-1])
         {
-            FatalIOErrorInFunction
-            (
-                coeffsDict_
-            )   << "Data points for the " << name
-                << " do not increase monotonically" << endl
+            FatalIOErrorInFunction(coeffsDict_)
+                << "Data points for the " << name
+                << " do not increase monotonically" << nl
                 << exit(FatalIOError);
         }
     }
@@ -118,10 +116,8 @@ void Foam::laminarFlameSpeedModels::RaviPetersen::checkCoefficientArrayShape
 
     if (!ok)
     {
-        FatalIOErrorInFunction
-        (
-            coeffsDict_
-        )   << "Inconsistent size of " << name << " coefficients array" << endl
+        FatalIOErrorInFunction(coeffsDict_)
+            << "Inconsistent size of " << name << " coefficients array" << nl
             << exit(FatalIOError);
     }
 }
@@ -307,7 +303,7 @@ Foam::laminarFlameSpeedModels::RaviPetersen::operator()() const
             false
         ),
         p.mesh(),
-        dimensionedScalar("EqR", dimless, 0.0)
+        dimensionedScalar(dimless, Zero)
     );
 
     if (psiuReactionThermo_.composition().contains("ft"))
@@ -317,7 +313,7 @@ Foam::laminarFlameSpeedModels::RaviPetersen::operator()() const
         EqR =
             dimensionedScalar
             (
-                psiuReactionThermo_.lookup("stoichiometricAirFuelMassRatio")
+                "stoichiometricAirFuelMassRatio", dimless, psiuReactionThermo_
             )*ft/max(1 - ft, SMALL);
     }
     else
@@ -339,7 +335,7 @@ Foam::laminarFlameSpeedModels::RaviPetersen::operator()() const
                 false
             ),
             p.mesh(),
-            dimensionedScalar("Su0", dimVelocity, 0.0)
+            dimensionedScalar(dimVelocity, Zero)
         )
     );
 

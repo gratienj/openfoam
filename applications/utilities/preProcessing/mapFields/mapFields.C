@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,29 +51,22 @@ int readNumProcs
     const Time& runTime
 )
 {
-    const word dictName = "decomposeParDict";
-    fileName dictFile;
-    if (args.optionReadIfPresent(optionName, dictFile) && isDir(dictFile))
-    {
-        dictFile = dictFile / dictName;
-    }
-
     return decompositionMethod::nDomains
     (
         IOdictionary
         (
-            decompositionModel::selectIO
+            IOobject::selectIO
             (
                 IOobject
                 (
-                    dictName,
+                    decompositionModel::canonicalName,
                     runTime.system(),
                     runTime,
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE,
-                    false
+                    false // do not register
                 ),
-                dictFile
+                args.opt<fileName>(optionName, "")
             )
         )
     );
@@ -217,7 +210,7 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "map volume fields from one mesh to another"
+        "Map volume fields from one mesh to another"
     );
     argList::noParallel();
     argList::addArgument("sourceCase");
@@ -226,57 +219,57 @@ int main(int argc, char *argv[])
     (
         "sourceTime",
         "scalar|'latestTime'",
-        "specify the source time"
+        "Specify the source time"
     );
     argList::addOption
     (
         "sourceRegion",
         "word",
-        "specify the source region"
+        "Specify the source region"
     );
     argList::addOption
     (
         "targetRegion",
         "word",
-        "specify the target region"
+        "Specify the target region"
     );
     argList::addBoolOption
     (
         "parallelSource",
-        "the source is decomposed"
+        "The source is decomposed"
     );
     argList::addBoolOption
     (
         "parallelTarget",
-        "the target is decomposed"
+        "The target is decomposed"
     );
     argList::addBoolOption
     (
         "consistent",
-        "source and target geometry and boundary conditions identical"
+        "Source and target geometry and boundary conditions identical"
     );
     argList::addOption
     (
         "mapMethod",
         "word",
-        "specify the mapping method"
+        "Specify the mapping method"
     );
     argList::addBoolOption
     (
         "subtract",
-        "subtract mapped source from target"
+        "Subtract mapped source from target"
     );
     argList::addOption
     (
         "sourceDecomposeParDict",
         "file",
-        "read decomposePar dictionary from specified location"
+        "Read decomposePar dictionary from specified location"
     );
     argList::addOption
     (
         "targetDecomposeParDict",
         "file",
-        "read decomposePar dictionary from specified location"
+        "Read decomposePar dictionary from specified location"
     );
 
 
@@ -296,7 +289,7 @@ int main(int argc, char *argv[])
 
     Info<< "Source: " << rootDirSource << " " << caseDirSource << endl;
     word sourceRegion = fvMesh::defaultRegion;
-    if (args.optionFound("sourceRegion"))
+    if (args.found("sourceRegion"))
     {
         sourceRegion = args["sourceRegion"];
         Info<< "Source region: " << sourceRegion << endl;
@@ -304,18 +297,18 @@ int main(int argc, char *argv[])
 
     Info<< "Target: " << rootDirTarget << " " << caseDirTarget << endl;
     word targetRegion = fvMesh::defaultRegion;
-    if (args.optionFound("targetRegion"))
+    if (args.found("targetRegion"))
     {
         targetRegion = args["targetRegion"];
         Info<< "Target region: " << targetRegion << endl;
     }
 
-    const bool parallelSource = args.optionFound("parallelSource");
-    const bool parallelTarget = args.optionFound("parallelTarget");
-    const bool consistent = args.optionFound("consistent");
+    const bool parallelSource = args.found("parallelSource");
+    const bool parallelTarget = args.found("parallelTarget");
+    const bool consistent = args.found("consistent");
 
     meshToMesh0::order mapOrder = meshToMesh0::INTERPOLATE;
-    if (args.optionFound("mapMethod"))
+    if (args.found("mapMethod"))
     {
         const word mapMethod(args["mapMethod"]);
         if (mapMethod == "mapNearest")
@@ -341,7 +334,7 @@ int main(int argc, char *argv[])
         Info<< "Mapping method: " << mapMethod << endl;
     }
 
-    const bool subtract = args.optionFound("subtract");
+    const bool subtract = args.found("subtract");
     if (subtract)
     {
         Info<< "Subtracting mapped source field from target" << endl;
@@ -368,8 +361,8 @@ int main(int argc, char *argv[])
             )
         );
 
-        mapFieldsDict.lookup("patchMap") >> patchMap;
-        mapFieldsDict.lookup("cuttingPatches") >>  cuttingPatches;
+        mapFieldsDict.readEntry("patchMap", patchMap);
+        mapFieldsDict.readEntry("cuttingPatches", cuttingPatches);
     }
 
     if (parallelSource && !parallelTarget)
@@ -403,7 +396,7 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 rootDirSource,
-                caseDirSource/fileName(word("processor") + name(proci))
+                caseDirSource/("processor" + Foam::name(proci))
             );
 
             #include "setTimeIndex.H"
@@ -478,7 +471,7 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 rootDirTarget,
-                caseDirTarget/fileName(word("processor") + name(proci))
+                caseDirTarget/("processor" + Foam::name(proci))
             );
 
             fvMesh meshTarget
@@ -543,7 +536,7 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 rootDirSource,
-                caseDirSource/fileName(word("processor") + name(procISource))
+                caseDirSource/("processor" + Foam::name(procISource))
             );
 
             #include "setTimeIndex.H"
@@ -579,8 +572,7 @@ int main(int argc, char *argv[])
                     (
                         Time::controlDictName,
                         rootDirTarget,
-                        caseDirTarget/fileName(word("processor")
-                      + name(procITarget))
+                        caseDirTarget/("processor" + Foam::name(procITarget))
                     );
 
                     fvMesh meshTarget

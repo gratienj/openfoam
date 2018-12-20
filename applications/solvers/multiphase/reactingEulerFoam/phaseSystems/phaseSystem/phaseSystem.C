@@ -149,7 +149,7 @@ Foam::phaseSystem::phaseSystem
             mesh
         ),
         mesh,
-        dimensionedScalar("dpdt", dimPressure/dimTime, 0)
+        dimensionedScalar(dimPressure/dimTime, Zero)
     ),
 
     MRF_(mesh_)
@@ -157,14 +157,14 @@ Foam::phaseSystem::phaseSystem
     phi_.writeOpt() = IOobject::AUTO_WRITE;
 
     // Blending methods
-    forAllConstIter(dictionary, subDict("blending"), iter)
+    for (const entry& dEntry : subDict("blending"))
     {
         blendingMethods_.insert
         (
-            iter().dict().dictName(),
+            dEntry.dict().dictName(),
             blendingMethod::New
             (
-                iter().dict(),
+                dEntry.dict(),
                 phaseModels_.toc()
             )
         );
@@ -225,26 +225,21 @@ Foam::phaseSystem::E(const phasePairKey& key) const
     {
         return aspectRatioModels_[key]->E();
     }
-    else
-    {
-        return tmp<volScalarField>
+
+    return tmp<volScalarField>::New
+    (
+        IOobject
         (
-            new volScalarField
-            (
-                IOobject
-                (
-                    aspectRatioModel::typeName + ":E",
-                    this->mesh_.time().timeName(),
-                    this->mesh_,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE,
-                    false
-                ),
-                this->mesh_,
-                dimensionedScalar("zero", dimless, 1)
-            )
-        );
-    }
+            aspectRatioModel::typeName + ":E",
+            this->mesh_.time().timeName(),
+            this->mesh_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        this->mesh_,
+        dimensionedScalar("one", dimless, 1)
+    );
 }
 
 
@@ -255,26 +250,21 @@ Foam::phaseSystem::sigma(const phasePairKey& key) const
     {
         return surfaceTensionModels_[key]->sigma();
     }
-    else
-    {
-        return tmp<volScalarField>
+
+    return tmp<volScalarField>::New
+    (
+        IOobject
         (
-            new volScalarField
-            (
-                IOobject
-                (
-                    surfaceTensionModel::typeName + ":sigma",
-                    this->mesh_.time().timeName(),
-                    this->mesh_,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE,
-                    false
-                ),
-                this->mesh_,
-                dimensionedScalar("zero", surfaceTensionModel::dimSigma, 0)
-            )
-        );
-    }
+            surfaceTensionModel::typeName + ":sigma",
+            this->mesh_.time().timeName(),
+            this->mesh_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        this->mesh_,
+        dimensionedScalar(surfaceTensionModel::dimSigma, Zero)
+    );
 }
 
 

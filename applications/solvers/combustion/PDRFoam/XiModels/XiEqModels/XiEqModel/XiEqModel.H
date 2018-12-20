@@ -79,11 +79,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        XiEqModel(const XiEqModel&);
+        //- No copy construct
+        XiEqModel(const XiEqModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const XiEqModel&);
+        //- No copy assignment
+        void operator=(const XiEqModel&) = delete;
 
 
 public:
@@ -144,7 +144,7 @@ public:
 
     // Member Functions
 
-        //- Return the flame-wrinking XiEq
+        //- Return the flame-wrinkling XiEq
         virtual tmp<volScalarField> XiEq() const
         {
             return turbulence_.muEff();

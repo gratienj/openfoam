@@ -42,6 +42,7 @@ Description
 #include "facAverage.H"
 #include "facLnGrad.H"
 #include "facDdt.H"
+#include "facD2dt2.H"
 #include "facNGrad.H"
 #include "facNDiv.H"
 

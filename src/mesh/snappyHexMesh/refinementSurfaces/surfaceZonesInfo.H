@@ -106,8 +106,8 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise assignment
-        void operator=(const surfaceZonesInfo&);
+        //- No copy assignment
+        void operator=(const surfaceZonesInfo&) = delete;
 
 
 public:
@@ -137,7 +137,7 @@ public:
         //- Return clone
         autoPtr<surfaceZonesInfo> clone() const
         {
-            return autoPtr<surfaceZonesInfo>(new surfaceZonesInfo(*this));
+            return autoPtr<surfaceZonesInfo>::New(*this);
         }
 
 

@@ -82,7 +82,7 @@ class cyclicAMIPointPatchField
                 );
             }
 
-            return ppiPtr_();
+            return *ppiPtr_;
         }
 
         //- Neighbour side patch interpolation
@@ -99,7 +99,7 @@ class cyclicAMIPointPatchField
                 );
             }
 
-            return nbrPpiPtr_();
+            return *nbrPpiPtr_;
         }
 
 
@@ -183,7 +183,7 @@ public:
 
         // Cyclic AMI coupled interface functions
 
-            //- Does the patch field perform the transfromation
+            //- Does the patch field perform the transformation
             virtual bool doTransform() const
             {
                 return

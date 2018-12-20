@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -68,7 +68,7 @@ Foam::label Foam::globalIndexAndTransform::matchTransform
 
         // Test the difference between tensor parts to see if it is
         // less than the tolerance.  sqrt(3.0) factor used to scale
-        // differnces as this is magnitude of a rotation tensor.  If
+        // differences as this is magnitude of a rotation tensor.  If
         // neither transform has a rotation, then the test is not
         // necessary.
 
@@ -139,15 +139,19 @@ void Foam::globalIndexAndTransform::determineTransforms()
 
         // Note: special check for unordered cyclics. These are in fact
         // transform bcs and should probably be split off.
+        // Note: We don't want to be finding transforms for patches marked as
+        // coincident full match. These should have no transform by definition.
         if
         (
             isA<coupledPolyPatch>(pp)
         && !(
                 isA<cyclicPolyPatch>(pp)
-             && (
-                    refCast<const cyclicPolyPatch>(pp).transform()
-                 == cyclicPolyPatch::NOORDERING
-                )
+             && refCast<const cyclicPolyPatch>(pp).transform()
+             == cyclicPolyPatch::NOORDERING
+            )
+        && !(
+                refCast<const coupledPolyPatch>(pp).transform()
+             == coupledPolyPatch::COINCIDENTFULLMATCH
             )
         )
         {
@@ -319,15 +323,19 @@ void Foam::globalIndexAndTransform::determinePatchTransformSign()
 
         // Note: special check for unordered cyclics. These are in fact
         // transform bcs and should probably be split off.
+        // Note: We don't want to be finding transforms for patches marked as
+        // coincident full match. These should have no transform by definition.
         if
         (
             isA<coupledPolyPatch>(pp)
         && !(
                 isA<cyclicPolyPatch>(pp)
-             && (
-                    refCast<const cyclicPolyPatch>(pp).transform()
-                 == cyclicPolyPatch::NOORDERING
-                )
+             && refCast<const cyclicPolyPatch>(pp).transform()
+             == cyclicPolyPatch::NOORDERING
+            )
+        && !(
+                refCast<const coupledPolyPatch>(pp).transform()
+             == coupledPolyPatch::COINCIDENTFULLMATCH
             )
         )
         {

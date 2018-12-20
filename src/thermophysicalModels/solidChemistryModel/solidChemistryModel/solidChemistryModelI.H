@@ -80,7 +80,7 @@ Foam::solidChemistryModel<CompType, SolidThermo>::RRs() const
                 IOobject::NO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar("zero", dimMass/dimVolume/dimTime, 0.0)
+            dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
         )
     );
 
@@ -113,7 +113,7 @@ Foam::solidChemistryModel<CompType, SolidThermo>::RRsHs() const
                 IOobject::NO_WRITE
             ),
             this->mesh(),
-            dimensionedScalar("zero", dimEnergy/dimVolume/dimTime, 0.0)
+            dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
         )
     );
 
@@ -126,7 +126,7 @@ Foam::solidChemistryModel<CompType, SolidThermo>::RRsHs() const
 
         for (label i=0; i < nSolids_; i++)
         {
-            forAll (RRs, cellI)
+            forAll(RRs, cellI)
             {
                 RRs[cellI] +=
                     RRs_[i][cellI]*solidThermo_[i].Hs(p[cellI], T[cellI]);

@@ -28,7 +28,6 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "fvPatchFieldMapper.H"
 #include "momentOfInertia.H"
-#include "cartesianCS.H"
 #include "Fstream.H"
 #include "globalIndex.H"
 
@@ -190,22 +189,17 @@ Foam::turbulentDFSEMInletFvPatchVectorField::patchMapper() const
     // Initialise interpolation (2D planar interpolation by triangulation)
     if (mapperPtr_.empty())
     {
-//        vectorGlobalIOField samplePoints
-        vectorIOField samplePoints
+        // Reread values and interpolate
+        fileName samplePointsFile
         (
-            IOobject
-            (
-                "points",
-                this->db().time().caseConstant(),
-                "boundaryData"/this->patch().name(),
-                this->db(),
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE,
-                false
-            )
+            this->db().time().path()
+           /this->db().time().caseConstant()
+           /"boundaryData"
+           /this->patch().name()
+           /"points"
         );
 
-        const fileName samplePointsFile = samplePoints.filePath();
+        pointField samplePoints((IFstream(samplePointsFile)()));
 
         if (debug)
         {
@@ -235,7 +229,7 @@ Foam::turbulentDFSEMInletFvPatchVectorField::patchMapper() const
         );
     }
 
-    return mapperPtr_();
+    return *mapperPtr_;
 }
 
 
@@ -683,7 +677,7 @@ void Foam::turbulentDFSEMInletFvPatchVectorField::calcOverlappingProcEddies
         }
     }
 
-    mapDistribute map(segmentI, sendMap.xfer(), constructMap.xfer());
+    mapDistribute map(segmentI, std::move(sendMap), std::move(constructMap));
 
     PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
 
@@ -824,7 +818,7 @@ turbulentDFSEMInletFvPatchVectorField
 )
 :
     fixedValueFvPatchField<vector>(p, iF, dict),
-    delta_(readScalar(dict.lookup("delta"))),
+    delta_(dict.get<scalar>("delta")),
     d_(dict.lookupOrDefault<scalar>("d", 1)),
     kappa_(dict.lookupOrDefault<scalar>("kappa", 0.41)),
 
@@ -856,7 +850,7 @@ turbulentDFSEMInletFvPatchVectorField
     curTimeIndex_(-1),
     patchBounds_(boundBox::invertedBox),
     singleProc_(false),
-    writeEddies_(dict.lookupOrDefault<bool>("writeEddies", false))
+    writeEddies_(dict.lookupOrDefault("writeEddies", false))
 {
     eddy::debug = debug;
 
@@ -1102,7 +1096,7 @@ void Foam::turbulentDFSEMInletFvPatchVectorField::updateCoeffs()
             writeEddyOBJ();
         }
 
-        if (debug && db().time().outputTime())
+        if (debug && db().time().writeTime())
         {
             writeLumleyCoeffs();
         }

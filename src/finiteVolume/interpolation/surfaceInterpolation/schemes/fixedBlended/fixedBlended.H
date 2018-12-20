@@ -75,11 +75,11 @@ class fixedBlended
         tmp<surfaceInterpolationScheme<Type>> tScheme2_;
 
 
-        //- Disallow default bitwise copy construct
-        fixedBlended(const fixedBlended&);
+        //- No copy construct
+        fixedBlended(const fixedBlended&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const fixedBlended&);
+        //- No copy assignment
+        void operator=(const fixedBlended&) = delete;
 
 
 public:
@@ -176,7 +176,7 @@ public:
         {
             return
                 blendingFactor_*tScheme1_().weights(vf)
-              + (scalar(1.0) - blendingFactor_)*tScheme2_().weights(vf);
+              + (scalar(1) - blendingFactor_)*tScheme2_().weights(vf);
         }
 
 
@@ -190,7 +190,7 @@ public:
         {
             return
                 blendingFactor_*tScheme1_().interpolate(vf)
-              + (scalar(1.0) - blendingFactor_)*tScheme2_().interpolate(vf);
+              + (scalar(1) - blendingFactor_)*tScheme2_().interpolate(vf);
         }
 
 
@@ -217,7 +217,7 @@ public:
                     (
                         blendingFactor_
                       * tScheme1_().correction(vf)
-                      + (scalar(1.0) - blendingFactor_)
+                      + (scalar(1) - blendingFactor_)
                       * tScheme2_().correction(vf)
                     );
                 }
@@ -234,7 +234,7 @@ public:
             {
                 return
                 (
-                    (scalar(1.0) - blendingFactor_)
+                    (scalar(1) - blendingFactor_)
                   * tScheme2_().correction(vf)
                 );
             }

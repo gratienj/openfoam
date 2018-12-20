@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +32,7 @@ Description
 
 SourceFiles
     parFvFieldReconstructor.C
-    parFvFieldReconstructorReconstructFields.C
+    parFvFieldReconstructorFields.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -47,6 +47,7 @@ SourceFiles
 namespace Foam
 {
 
+// Forward declarations
 class mapDistributePolyMesh;
 class mapDistributeBase;
 class IOobjectList;
@@ -80,11 +81,11 @@ class parFvFieldReconstructor
         //- Construct per-patch addressing
         void createPatchFaceMaps();
 
-        //- Disallow default bitwise copy construct
-        parFvFieldReconstructor(const parFvFieldReconstructor&);
+        //- No copy construct
+        parFvFieldReconstructor(const parFvFieldReconstructor&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const parFvFieldReconstructor&);
+        //- No copy assignment
+        void operator=(const parFvFieldReconstructor&) = delete;
 
 
 public:
@@ -149,26 +150,26 @@ public:
 
         //- Read, reconstruct and write all/selected volume internal fields
         template<class Type>
-        void reconstructFvVolumeInternalFields
+        label reconstructFvVolumeInternalFields
         (
             const IOobjectList& objects,
-            const HashSet<word>& selectedFields
+            const wordRes& selectedFields = wordRes()
         ) const;
 
         //- Read, reconstruct and write all/selected volume fields
         template<class Type>
-        void reconstructFvVolumeFields
+        label reconstructFvVolumeFields
         (
             const IOobjectList& objects,
-            const HashSet<word>& selectedFields
+            const wordRes& selectedFields = wordRes()
         ) const;
 
         //- Read, reconstruct and write all/selected surface fields
         template<class Type>
-        void reconstructFvSurfaceFields
+        label reconstructFvSurfaceFields
         (
             const IOobjectList& objects,
-            const HashSet<word>& selectedFields
+            const wordRes& selectedFields = wordRes()
         ) const;
 
         //- Helper: reconstruct and write mesh points
@@ -184,7 +185,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "parFvFieldReconstructorReconstructFields.C"
+#   include "parFvFieldReconstructorFields.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

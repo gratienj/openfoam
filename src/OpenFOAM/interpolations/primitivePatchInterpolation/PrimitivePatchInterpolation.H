@@ -68,11 +68,14 @@ class PrimitivePatchInterpolation
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        PrimitivePatchInterpolation(const PrimitivePatchInterpolation&);
+        //- No copy construct
+        PrimitivePatchInterpolation
+        (
+            const PrimitivePatchInterpolation&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const PrimitivePatchInterpolation&);
+        //- No copy assignment
+        void operator=(const PrimitivePatchInterpolation&) = delete;
 
 
         //- Face-to-point weights
@@ -144,7 +147,7 @@ public:
             const tmp<Field<Type>>& tff
         ) const;
 
-        //- Do what is neccessary if the mesh has moved
+        //- Do what is necessary if the mesh has moved
         bool movePoints();
 };
 

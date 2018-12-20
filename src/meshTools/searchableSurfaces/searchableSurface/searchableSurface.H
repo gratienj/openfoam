@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,7 +55,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class objectRegistry;
 class mapDistribute;
 class treeBoundBox;
@@ -77,11 +77,11 @@ class searchableSurface
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        searchableSurface(const searchableSurface&);
+        //- No copy construct
+        searchableSurface(const searchableSurface&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const searchableSurface&);
+        //- No copy assignment
+        void operator=(const searchableSurface&) = delete;
 
 
 public:
@@ -139,7 +139,7 @@ public:
         virtual autoPtr<searchableSurface> clone() const
         {
             NotImplemented;
-            return autoPtr<searchableSurface>(nullptr);
+            return nullptr;
         }
 
 
@@ -155,7 +155,7 @@ public:
 
 
     //- Destructor
-    virtual ~searchableSurface();
+    virtual ~searchableSurface() = default;
 
 
     // Member Functions
@@ -188,8 +188,9 @@ public:
         //- Names of regions
         virtual const wordList& regions() const = 0;
 
-        //- Whether supports volume type below
-        virtual bool hasVolumeType() const = 0;
+        //- Whether supports volume type (below).
+        //  This is false for the base class.
+        virtual bool hasVolumeType() const;
 
         //- Range of local indices that can be returned
         virtual label size() const = 0;
@@ -335,8 +336,8 @@ public:
                 vectorField& normal
             ) const = 0;
 
-            //- Determine type (inside/outside) for point. unknown if
-            //  cannot be determined (e.g. non-manifold surface)
+            //- Determine type (inside/outside) for point.
+            //  Unknown if cannot be determined (e.g. non-manifold surface)
             virtual void getVolumeType
             (
                 const pointField&,

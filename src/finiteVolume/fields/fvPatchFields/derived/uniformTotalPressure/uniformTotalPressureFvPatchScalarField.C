@@ -61,7 +61,7 @@ uniformTotalPressureFvPatchScalarField
     phiName_(dict.lookupOrDefault<word>("phi", "phi")),
     rhoName_(dict.lookupOrDefault<word>("rho", "rho")),
     psiName_(dict.lookupOrDefault<word>("psi", "none")),
-    gamma_(psiName_ != "none" ? readScalar(dict.lookup("gamma")) : 1),
+    gamma_(psiName_ != "none" ? dict.get<scalar>("gamma") : 1),
     p0_(Function1<scalar>::New("p0", dict))
 {
     if (dict.found("value"))
@@ -94,7 +94,7 @@ uniformTotalPressureFvPatchScalarField
     rhoName_(ptf.rhoName_),
     psiName_(ptf.psiName_),
     gamma_(ptf.gamma_),
-    p0_(ptf.p0_, false)
+    p0_(ptf.p0_.clone())
 {
     patchType() = ptf.patchType();
 
@@ -117,7 +117,7 @@ uniformTotalPressureFvPatchScalarField
     rhoName_(ptf.rhoName_),
     psiName_(ptf.psiName_),
     gamma_(ptf.gamma_),
-    p0_(ptf.p0_, false)
+    p0_(ptf.p0_.clone())
 {}
 
 
@@ -134,7 +134,7 @@ uniformTotalPressureFvPatchScalarField
     rhoName_(ptf.rhoName_),
     psiName_(ptf.psiName_),
     gamma_(ptf.gamma_),
-    p0_(ptf.p0_, false)
+    p0_(ptf.p0_.clone())
 {}
 
 

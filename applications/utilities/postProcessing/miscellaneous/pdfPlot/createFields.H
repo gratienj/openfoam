@@ -10,11 +10,11 @@
         )
     );
 
-    const label nIntervals(readLabel(pdfDictionary.lookup("nIntervals")));
+    const label nIntervals(pdfDictionary.get<label>("nIntervals"));
 
-    const label nSamples(readLabel(pdfDictionary.lookup("nSamples")));
+    const label nSamples(pdfDictionary.get<label>("nSamples"));
 
-    const bool writeData(readBool(pdfDictionary.lookup("writeData")));
+    const bool writeData(pdfDictionary.get<bool>("writeData"));
 
 
     const fileName pdfPath = runTime.path()/"pdf";
@@ -34,7 +34,7 @@
     const scalar xMin = p->minValue();
     const scalar xMax = p->maxValue();
 
-    autoPtr<OFstream> filePtr(nullptr);
+    autoPtr<OFstream> filePtr;
     if (writeData)
     {
         fileName fName = pdfPath/(p->type() + ".data");

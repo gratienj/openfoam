@@ -63,10 +63,7 @@ extrudePatchMesh::extrudePatchMesh
             IOobject::NO_WRITE,
             true
         ),
-        xferCopy(pointField()),
-        xferCopy(faceList()),
-        xferCopy(labelList()),
-        xferCopy(labelList()),
+        Zero,
         false
     ),
     extrudedPatch_(patch.patch()),
@@ -95,16 +92,12 @@ extrudePatchMesh::extrudePatchMesh
             IOobject::NO_WRITE,
             true
         ),
-        xferCopy(pointField()),
-        xferCopy(faceList()),
-        xferCopy(labelList()),
-        xferCopy(labelList()),
+        Zero,
         false
     ),
     extrudedPatch_(patch.patch()),
     dict_(dict)
 {
-
     List<polyPatch*> regionPatches(3);
     List<word> patchNames(regionPatches.size());
     List<word> patchTypes(regionPatches.size());
@@ -124,8 +117,8 @@ extrudePatchMesh::extrudePatchMesh
 
     forAll(dicts, patchi)
     {
-        dicts[patchi].lookup("name") >> patchNames[patchi];
-        dicts[patchi].lookup("type") >> patchTypes[patchi];
+        dicts[patchi].readEntry("name", patchNames[patchi]);
+        dicts[patchi].readEntry("type", patchTypes[patchi]);
     }
 
     forAll(regionPatches, patchi)
@@ -145,7 +138,6 @@ extrudePatchMesh::extrudePatchMesh
     }
 
     extrudeMesh(regionPatches);
-
 }
 
 
@@ -153,14 +145,14 @@ void extrudePatchMesh::extrudeMesh(const List<polyPatch*>& regionPatches)
 {
     if (this->boundaryMesh().size() == 0)
     {
-        bool columnCells = readBool(dict_.lookup("columnCells"));
+        const bool columnCells = dict_.get<bool>("columnCells");
 
-        PackedBoolList nonManifoldEdge(extrudedPatch_.nEdges());
+        bitSet nonManifoldEdge(extrudedPatch_.nEdges());
         for (label edgeI = 0; edgeI < extrudedPatch_.nInternalEdges(); edgeI++)
         {
             if (columnCells)
             {
-                nonManifoldEdge[edgeI] = true;
+                nonManifoldEdge.set(edgeI);
             }
         }
 
@@ -281,8 +273,8 @@ void extrudePatchMesh::extrudeMesh(const List<polyPatch*>& regionPatches)
 
         forAll(dicts, patchi)
         {
-            dicts[patchi].lookup("name") >> patchNames[patchi];
-            dicts[patchi].lookup("type") >> patchTypes[patchi];
+            dicts[patchi].readEntry("name", patchNames[patchi]);
+            dicts[patchi].readEntry("type", patchTypes[patchi]);
         }
 
         forAll(regionPatches, patchi)
@@ -315,7 +307,7 @@ void extrudePatchMesh::extrudeMesh(const List<polyPatch*>& regionPatches)
         {
             const labelList& eFaces = extrudedPatch_.edgeFaces()[edgeI];
 
-            if (eFaces.size() != 2 || nonManifoldEdge[edgeI])
+            if (eFaces.size() != 2 || nonManifoldEdge.test(edgeI))
             {
                 edgePatches[edgeI].setSize(eFaces.size(), sidePatchID);
             }
@@ -341,21 +333,12 @@ void extrudePatchMesh::extrudeMesh(const List<polyPatch*>& regionPatches)
         );
 
         // Update numbering on extruder.
-        extruder.updateMesh(map);
+        extruder.updateMesh(map());
 
         this->setInstance(this->thisDb().time().constant());
         this->write();
     }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-extrudePatchMesh::~extrudePatchMesh()
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

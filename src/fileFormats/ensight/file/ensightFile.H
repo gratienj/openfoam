@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -73,11 +73,12 @@ class ensightFile
         //- Initialize by setting the ASCII output formatting
         void initialize();
 
-        //- Disallow default bitwise assignment
+        //- No copy construct
+        ensightFile(const ensightFile&) = delete;
+
+        //- No copy assignment
         void operator=(const ensightFile&) = delete;
 
-        //- Disallow default copy constructor
-        ensightFile(const ensightFile&) = delete;
 
 public:
 
@@ -111,7 +112,7 @@ public:
 
 
     //- Destructor
-    ~ensightFile();
+    ~ensightFile() = default;
 
 
     // Access
@@ -135,12 +136,13 @@ public:
 
     // Edit
 
-        static bool allowUndef(bool);
+        //- Enable/disable use of \c undef keyword and value
+        static bool allowUndef(bool enabled);
 
         //- Assign the value to represent undef in the results
         //  Returns the previous value
         //  NB: do not use values larger than floatScalarVGREAT
-        static scalar undefValue(const scalar);
+        static scalar undefValue(const scalar value);
 
 
     // Output
@@ -149,10 +151,10 @@ public:
         using Ostream::write;
 
         //- Binary write
-        virtual Ostream& write(const char*, std::streamsize count);
+        virtual Ostream& write(const char* buf, std::streamsize count);
 
         //- Write element keyword with trailing newline, optionally with undef
-        virtual Ostream& writeKeyword(const keyType&);
+        virtual Ostream& writeKeyword(const keyType& key);
 
         //- Write "C Binary" for binary files (eg, geometry/measured)
         Ostream& writeBinaryHeader();
@@ -181,7 +183,7 @@ public:
 
     // Convenience Output Methods
 
-        //- Begin a part (0-based index).
+        //- Begin a part (0-based index internally).
         void beginPart(const label index);
 
         //- Begin a "particle coordinates" block (measured data)

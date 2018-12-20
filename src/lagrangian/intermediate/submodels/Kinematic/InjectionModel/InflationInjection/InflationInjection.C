@@ -25,7 +25,7 @@ License
 
 #include "InflationInjection.H"
 #include "mathematicalConstants.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "cellSet.H"
 #include "ListListOps.H"
 
@@ -46,7 +46,7 @@ Foam::InflationInjection<CloudType>::InflationInjection
     inflationSetName_(this->coeffDict().lookup("inflationCellSet")),
     generationCells_(),
     inflationCells_(),
-    duration_(readScalar(this->coeffDict().lookup("duration"))),
+    duration_(this->coeffDict().getScalar("duration")),
     flowRateProfile_
     (
         TimeFunction1<scalar>
@@ -83,7 +83,7 @@ Foam::InflationInjection<CloudType>::InflationInjection
 
     if (selfSeed_)
     {
-        dSeed_ = readScalar(this->coeffDict().lookup("dSeed"));
+        this->coeffDict().readEntry("dSeed", dSeed_);
     }
 
     cellSet generationCells(this->owner().mesh(), generationSetName_);
@@ -140,7 +140,7 @@ Foam::InflationInjection<CloudType>::InflationInjection
     fraction_(im.fraction_),
     selfSeed_(im.selfSeed_),
     dSeed_(im.dSeed_),
-    sizeDistribution_(im.sizeDistribution_, false)
+    sizeDistribution_(im.sizeDistribution_.clone())
 {}
 
 

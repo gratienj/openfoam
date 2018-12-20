@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,20 +26,15 @@ License
 #include "faceZoneToFaceZone.H"
 #include "polyMesh.H"
 #include "faceZoneSet.H"
-
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-
-defineTypeNameAndDebug(faceZoneToFaceZone, 0);
-
-addToRunTimeSelectionTable(topoSetSource, faceZoneToFaceZone, word);
-
-addToRunTimeSelectionTable(topoSetSource, faceZoneToFaceZone, istream);
-
+    defineTypeNameAndDebug(faceZoneToFaceZone, 0);
+    addToRunTimeSelectionTable(topoSetSource, faceZoneToFaceZone, word);
+    addToRunTimeSelectionTable(topoSetSource, faceZoneToFaceZone, istream);
 }
 
 
@@ -53,7 +48,6 @@ Foam::topoSetSource::addToUsageTable Foam::faceZoneToFaceZone::usage_
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-// Construct from components
 Foam::faceZoneToFaceZone::faceZoneToFaceZone
 (
     const polyMesh& mesh,
@@ -65,7 +59,6 @@ Foam::faceZoneToFaceZone::faceZoneToFaceZone
 {}
 
 
-// Construct from dictionary
 Foam::faceZoneToFaceZone::faceZoneToFaceZone
 (
     const polyMesh& mesh,
@@ -73,11 +66,10 @@ Foam::faceZoneToFaceZone::faceZoneToFaceZone
 )
 :
     topoSetSource(mesh),
-    setName_(dict.lookup("zone"))
+    setName_(dict.get<word>("zone"))
 {}
 
 
-// Construct from Istream
 Foam::faceZoneToFaceZone::faceZoneToFaceZone
 (
     const polyMesh& mesh,
@@ -86,12 +78,6 @@ Foam::faceZoneToFaceZone::faceZoneToFaceZone
 :
     topoSetSource(mesh),
     setName_(checkIs(is))
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::faceZoneToFaceZone::~faceZoneToFaceZone()
 {}
 
 
@@ -110,53 +96,59 @@ void Foam::faceZoneToFaceZone::applyToSet
     }
     else
     {
-        faceZoneSet& fSet = refCast<faceZoneSet>(set);
+        faceZoneSet& zoneSet = refCast<faceZoneSet>(set);
 
-        if ((action == topoSetSource::NEW) || (action == topoSetSource::ADD))
+        if (action == topoSetSource::ADD || action == topoSetSource::NEW)
         {
-            Info<< "    Adding all faces from faceZone " << setName_ << " ..."
-                << endl;
+            if (verbose_)
+            {
+                Info<< "    Adding all faces from faceZone " << setName_
+                    << " ..." << endl;
+            }
 
             // Load the set
             faceZoneSet loadedSet(mesh_, setName_);
 
-            DynamicList<label> newAddressing(fSet.addressing());
-            DynamicList<bool> newFlipMap(fSet.flipMap());
+            DynamicList<label> newAddressing(zoneSet.addressing());
+            DynamicList<bool> newFlipMap(zoneSet.flipMap());
 
             forAll(loadedSet.addressing(), i)
             {
-                if (!fSet.found(loadedSet.addressing()[i]))
+                if (!zoneSet.found(loadedSet.addressing()[i]))
                 {
                     newAddressing.append(loadedSet.addressing()[i]);
                     newFlipMap.append(loadedSet.flipMap()[i]);
                 }
             }
-            fSet.addressing().transfer(newAddressing);
-            fSet.flipMap().transfer(newFlipMap);
-            fSet.updateSet();
+            zoneSet.addressing().transfer(newAddressing);
+            zoneSet.flipMap().transfer(newFlipMap);
+            zoneSet.updateSet();
         }
-        else if (action == topoSetSource::DELETE)
+        else if (action == topoSetSource::SUBTRACT)
         {
-            Info<< "    Removing all faces from faceZone " << setName_ << " ..."
-                << endl;
+            if (verbose_)
+            {
+                Info<< "    Removing all faces from faceZone " << setName_
+                    << " ..." << endl;
+            }
 
             // Load the set
             faceZoneSet loadedSet(mesh_, setName_);
 
-            DynamicList<label> newAddressing(fSet.addressing().size());
-            DynamicList<bool> newFlipMap(fSet.flipMap().size());
+            DynamicList<label> newAddressing(zoneSet.addressing().size());
+            DynamicList<bool> newFlipMap(zoneSet.flipMap().size());
 
-            forAll(fSet.addressing(), i)
+            forAll(zoneSet.addressing(), i)
             {
-                if (!loadedSet.found(fSet.addressing()[i]))
+                if (!loadedSet.found(zoneSet.addressing()[i]))
                 {
-                    newAddressing.append(fSet.addressing()[i]);
-                    newFlipMap.append(fSet.flipMap()[i]);
+                    newAddressing.append(zoneSet.addressing()[i]);
+                    newFlipMap.append(zoneSet.flipMap()[i]);
                 }
             }
-            fSet.addressing().transfer(newAddressing);
-            fSet.flipMap().transfer(newFlipMap);
-            fSet.updateSet();
+            zoneSet.addressing().transfer(newAddressing);
+            zoneSet.flipMap().transfer(newFlipMap);
+            zoneSet.updateSet();
         }
     }
 }

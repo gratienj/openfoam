@@ -64,18 +64,21 @@ private:
         volScalarField htcConvPrimary_;
 
         //- Heat transfer coefficient - film region [W/m2/K]
-        //  Assumes that the primary regtion to film region boundaries are
+        //  Assumes that the primary region to film region boundaries are
         //  described as mappedPushed types
         volScalarField htcConvFilm_;
 
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        mappedConvectiveHeatTransfer(const mappedConvectiveHeatTransfer&);
+        //- No copy construct
+        mappedConvectiveHeatTransfer
+        (
+            const mappedConvectiveHeatTransfer&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const mappedConvectiveHeatTransfer&);
+        //- No copy assignment
+        void operator=(const mappedConvectiveHeatTransfer&) = delete;
 
 
 public:

@@ -64,15 +64,14 @@ protected:
         //- Method coeffs dictionary
         dictionary coeffDict_;
 
-private:
 
-    // Private Member Functions
+    // Protected Member Functions
 
-        //- Disallow default bitwise copy construct
-        faceAreaWeightModel(const faceAreaWeightModel&);
+        //- No copy construct
+        faceAreaWeightModel(const faceAreaWeightModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faceAreaWeightModel&);
+        //- No copy assignment
+        void operator=(const faceAreaWeightModel&) = delete;
 
 
 public:
@@ -115,7 +114,7 @@ public:
 
 
     //- Destructor
-    virtual ~faceAreaWeightModel();
+    virtual ~faceAreaWeightModel() = default;
 
 
     // Member Functions

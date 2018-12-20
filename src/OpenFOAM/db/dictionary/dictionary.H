@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -85,6 +85,7 @@ SeeAlso
 #ifndef dictionary_H
 #define dictionary_H
 
+#include <type_traits>
 #include "entry.H"
 #include "IDLList.H"
 #include "DLList.H"
@@ -93,14 +94,17 @@ SeeAlso
 #include "HashTable.H"
 #include "wordList.H"
 #include "className.H"
-#include <type_traits>
+
+// Some common data types
+#include "label.H"
+#include "scalar.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 class regExp;
 class dictionary;
 class SHA1Digest;
@@ -109,69 +113,11 @@ Istream& operator>>(Istream& is, dictionary& dict);
 Ostream& operator<<(Ostream& os, const dictionary& dict);
 
 /*---------------------------------------------------------------------------*\
-                        Class dictionaryName Declaration
-\*---------------------------------------------------------------------------*/
-
-//- Holds name for a dictionary
-class dictionaryName
-{
-    // Private data
-
-        fileName name_;
-
-
-public:
-
-    // Constructors
-
-        //- Construct null
-        dictionaryName()
-        {}
-
-        //- Construct as copy of the given fileName
-        dictionaryName(const fileName& name)
-        :
-            name_(name)
-        {}
-
-
-    // Member functions
-
-        //- Return the dictionary name
-        const fileName& name() const
-        {
-            return name_;
-        }
-
-        //- Return the dictionary name
-        fileName& name()
-        {
-            return name_;
-        }
-
-        //- Return the local dictionary name (final part of scoped name)
-        const word dictName() const
-        {
-            const word scopedName = name_.name();
-            const auto i = scopedName.rfind('.');
-
-            if (i == std::string::npos)
-            {
-                return scopedName;
-            }
-
-            return scopedName.substr(i+1);
-        }
-};
-
-
-/*---------------------------------------------------------------------------*\
                          Class dictionary Declaration
 \*---------------------------------------------------------------------------*/
 
 class dictionary
 :
-    public dictionaryName,
     public IDLList<entry>
 {
 public:
@@ -246,7 +192,7 @@ public:
             {}
 
 
-            //- Entry was found.
+            //- True if entry was found
             inline bool found() const
             {
                 return eptr_;
@@ -294,6 +240,18 @@ public:
             {
                 return *reinterpret_cast<const Searcher<!Const>*>(this);
             }
+
+            //- A pointer to the entry (nullptr if not found)
+            pointer operator->() const
+            {
+                return eptr_;
+            }
+
+            //- A reference to the entry (Error if not found)
+            reference operator*() const
+            {
+                return *eptr_;
+            }
         };
 
 
@@ -322,6 +280,9 @@ private:
         //  Set/unset via an InfoSwitch
         static bool writeOptionalEntries;
 
+        //- The dictionary name
+        fileName name_;
+
         //- Parent dictionary
         const dictionary& parent_;
 
@@ -349,6 +310,21 @@ private:
 
     // Private Member Functions
 
+        //- Convert old-style (1806) boolean search specification to enum
+        //
+        //  \param recursive search parent dictionaries
+        //  \param pattern match using regular expressions as well
+        static inline enum keyType::option
+        matchOpt(bool recursive, bool pattern)
+        {
+            return
+                keyType::option
+                (
+                    (pattern ? keyType::REGEX : keyType::LITERAL)
+                  | (recursive ? keyType::RECURSIVE : 0)
+                );
+        }
+
         //- Search using a '.' for scoping.
         //  A leading dot means to use the parent dictionary.
         //  An intermediate dot separates a sub-dictionary or sub-entry.
@@ -356,16 +332,14 @@ private:
         //  The value "a.b.c.d" could be a first-level entry, a second-level
         //  entry (eg, "a" with "b.c.d", "a.b" with "c.d" etc),
         //  or just about any other combination.
-        //  The heuristic tries sucessively longer top-level entries
+        //  The heuristic tries successively longer top-level entries
         //  until there is a suitable match.
         //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
+        //  \param matchOpt the search mode
         const_searcher csearchDotScoped
         (
             const word& keyword,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option matchOpt
         ) const;
 
         //- Search using a '/' for scoping.
@@ -375,11 +349,11 @@ private:
         //  ambiguity between separator and content.
         //  No possibility or need for recursion.
         //
-        //  \param patternMatch use regular expressions
+        //  \param matchOpt the search mode. Recursive is ignored.
         const_searcher csearchSlashScoped
         (
             const word& keyword,
-            bool patternMatch
+            enum keyType::option matchOpt
         ) const;
 
 
@@ -401,37 +375,38 @@ public:
         explicit dictionary(const fileName& name);
 
         //- Construct given the entry name, parent dictionary and Istream,
-        //  reading entries until EOF
+        //- reading entries until EOF, optionally keeping the header
         dictionary
         (
             const fileName& name,
             const dictionary& parentDict,
-            Istream& is
+            Istream& is,
+            bool keepHeader = false
         );
 
         //- Construct top-level dictionary from Istream,
-        //  reading entries until EOF
+        //- reading entries until EOF. Discards the header.
         dictionary(Istream& is);
 
         //- Construct top-level dictionary from Istream,
-        //  reading entries until EOF, optionally keeping the header
+        //- reading entries until EOF, optionally keeping the header
         dictionary(Istream& is, bool keepHeader);
 
-        //- Construct as copy given the parent dictionary
+        //- Copy construct given the parent dictionary
         dictionary(const dictionary& parentDict, const dictionary& dict);
 
-        //- Construct top-level dictionary as copy
+        //- Copy construct top-level dictionary
         dictionary(const dictionary& dict);
 
         //- Construct top-level dictionary as copy from pointer to dictionary.
         //  A null pointer is treated like an empty dictionary.
-        dictionary(const dictionary* dictPtr);
+        dictionary(const dictionary* dict);
 
-        //- Construct by transferring parameter contents given parent dictionary
-        dictionary(const dictionary& parentDict, const Xfer<dictionary>& dict);
+        //- Move construct for given parent dictionary
+        dictionary(const dictionary& parentDict, dictionary&& dict);
 
-        //- Construct top-level dictionary by transferring parameter contents
-        dictionary(const Xfer<dictionary>& dict);
+        //- Move construct top-level dictionary
+        dictionary(dictionary&& dict);
 
         //- Construct and return clone
         autoPtr<dictionary> clone() const;
@@ -444,9 +419,35 @@ public:
     virtual ~dictionary();
 
 
-    // Member functions
+    // Member Functions
 
-      // Access
+    // Access
+
+        //- The dictionary name
+        const fileName& name() const
+        {
+            return name_;
+        }
+
+        //- The dictionary name for modification (use with caution).
+        fileName& name()
+        {
+            return name_;
+        }
+
+        //- The local dictionary name (final part of scoped name)
+        word dictName() const
+        {
+            word scopedName(name_.name());
+
+            const auto i = scopedName.rfind('.');
+            if (i == std::string::npos)
+            {
+                return scopedName;
+            }
+
+            return scopedName.substr(i+1);
+        }
 
         //- Return the parent dictionary
         const dictionary& parent() const
@@ -470,114 +471,156 @@ public:
         tokenList tokens() const;
 
 
-      // Search and lookup
+    // Search and lookup
 
-        //- Search dictionary for given keyword.
-        //  Default search: non-recursive with patterns.
+        //- Search for an entry (const access) with the given keyword.
         //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
+        //  \param matchOpt the default search is non-recursive with patterns
+        //
+        //  \return True if entry was found
         bool found
         (
             const word& keyword,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
-        //- Find and return an entry pointer if present, or return a nullptr.
+        //- Find for an entry (non-const access) with the given keyword.
         //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
-        const entry* lookupEntryPtr
+        //  \param matchOpt the search mode
+        //
+        //  \return the entry pointer found or a nullptr.
+        entry* findEntry
         (
             const word& keyword,
-            bool recursive,
-            bool patternMatch
-        ) const;
-
-        //- Find and return an entry pointer for manipulation if present,
-        //  or return a nullptr.
-        //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
-        entry* lookupEntryPtr
-        (
-            const word& keyword,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option matchOpt = keyType::REGEX
         );
 
-        //- Find and return an entry if present otherwise error.
+        //- Find an entry (const access) with the given keyword.
         //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
+        //  \param matchOpt the default search is non-recursive with patterns
+        //
+        //  \return the entry pointer found or a nullptr.
+        const entry* findEntry
+        (
+            const word& keyword,
+            enum keyType::option matchOpt = keyType::REGEX
+        ) const;
+
+        //- Search for a scoped entry (const access) with the given keyword.
+        //  Allows scoping using '.'.
+        //  Special handling for an absolute anchor (^) at start of the keyword
+        //  and for '..' to ascend into the parent dictionaries.
+        //
+        //  \param matchOpt the default search is non-recursive with patterns
+        //
+        //  \return the entry pointer found or a nullptr.
+        const entry* findScoped
+        (
+            const word& keyword,
+            enum keyType::option matchOpt = keyType::REGEX
+        ) const;
+
+        //- Find and return a sub-dictionary pointer if present
+        //  (and a sub-dictionary) otherwise return nullptr.
+        //
+        //  \param matchOpt the default search is non-recursive with patterns
+        dictionary* findDict
+        (
+            const word& keyword,
+            enum keyType::option matchOpt = keyType::REGEX
+        );
+
+        //- Search for an entry (const access) with the given keyword.
+        //- Find and return a sub-dictionary pointer if present
+        //  (and a sub-dictionary) otherwise return nullptr.
+        //
+        //  \param matchOpt the default search is non-recursive with patterns
+        const dictionary* findDict
+        (
+            const word& keyword,
+            enum keyType::option matchOpt = keyType::REGEX
+        ) const;
+
+        //
+        //  \param matchOpt the default search is non-recursive with patterns
+        //
+        //  \return return an entry if present, otherwise FatalIOError.
         const entry& lookupEntry
         (
             const word& keyword,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option matchOpt
+        ) const;
+
+        //- Find and return a T.
+        //- FatalIOError if not found, or if the number of tokens is incorrect.
+        //
+        //  \param matchOpt the default search is non-recursive with patterns
+        template<class T>
+        T get
+        (
+            const word& keyword,
+            enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
         //- Find and return an entry data stream.
-        //  Default search: non-recursive with patterns.
+        //- FatalIOError if not found, or if the number of tokens is incorrect.
         //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
+        //  \param matchOpt the default search is non-recursive with patterns
         ITstream& lookup
         (
             const word& keyword,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
-        //- Find and return a T. FatalError if not found.
-        //  Default search: non-recursive with patterns.
+        //- Find and return a T, or return the given default value.
+        //- FatalIOError if it is found and the number of tokens is incorrect.
         //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
-        template<class T>
-        T lookupType
-        (
-            const word& keyword,
-            bool recursive = false,
-            bool patternMatch = true
-        ) const;
-
-        //- Find and return a T, or return the given default value
-        //  Default search: non-recursive with patterns.
-        //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
+        //  \param matchOpt the default search is non-recursive with patterns
         template<class T>
         T lookupOrDefault
         (
             const word& keyword,
             const T& deflt,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
-        //- Find and return a T, if not found return the default value
-        //  and add it to dictionary.
-        //  Default search: non-recursive with patterns.
+        //- Find and return a T, or return the given default value
+        //- and add it to dictionary.
+        //- FatalIOError if it is found and the number of tokens is incorrect.
         //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
+        //  \param matchOpt the default search is non-recursive with patterns
         template<class T>
         T lookupOrAddDefault
         (
             const word& keyword,
             const T& deflt,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option matchOpt = keyType::REGEX
         );
 
+        //- Find entry and assign to T val.
+        //- FatalIOError if it is found and the number of tokens is incorrect,
+        //- or it is mandatory and not found.
+        //
+        //  \param val the value to read into
+        //  \param matchOpt the default search is non-recursive with patterns
+        //  \param mandatory the keyword is mandatory
+        //
+        //  \return true if the entry was found.
+        template<class T>
+        bool readEntry
+        (
+            const word& keyword,
+            T& val,
+            enum keyType::option matchOpt = keyType::REGEX,
+            bool mandatory = true
+        ) const;
+
         //- Find an entry if present, and assign to T val.
+        //- FatalIOError if it is found and the number of tokens is incorrect.
         //  Default search: non-recursive with patterns.
         //
-        //  \param val the value to read
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
+        //  \param val the value to read into
+        //  \param matchOpt the default search is non-recursive with patterns
         //
         //  \return true if the entry was found.
         template<class T>
@@ -585,40 +628,13 @@ public:
         (
             const word& keyword,
             T& val,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
-        //- Find and return an entry pointer if present, or return a nullptr.
-        //  Allows scoping using '.'.
-        //  Special handling for an absolute anchor (^) at start of the keyword
-        //  and for '..' to ascend into the parent dictionaries.
-        //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
-        const entry* lookupScopedEntryPtr
-        (
-            const word& keyword,
-            bool recursive,
-            bool patternMatch
-        ) const;
-
-        //- Check if entry exists and is a sub-dictionary.
+        //- Check if entry is found and and is a sub-dictionary.
         //
         //  Search type: non-recursive with patterns.
         bool isDict(const word& keyword) const;
-
-        //- Find and return a sub-dictionary pointer if present
-        //  (and a sub-dictionary) otherwise return nullptr.
-        //
-        //  Search type: non-recursive with patterns.
-        const dictionary* subDictPtr(const word& keyword) const;
-
-        //- Find and return a sub-dictionary pointer if present
-        //  (and a sub-dictionary) otherwise return nullptr.
-        //
-        //  Search type: non-recursive with patterns.
-        dictionary* subDictPtr(const word& keyword);
 
         //- Find and return a sub-dictionary.
         //  Fatal if the entry does not exist or is not a sub-dictionary.
@@ -633,14 +649,14 @@ public:
         dictionary& subDict(const word& keyword);
 
         //- Find and return a sub-dictionary as a copy, otherwise return
-        //  an empty dictionary.
+        //- an empty dictionary.
         //  Warn if the entry exists but is not a sub-dictionary.
         //
         //  Search type: non-recursive with patterns.
         dictionary subOrEmptyDict
         (
             const word& keyword,
-            const bool mustRead = false
+            const bool mandatory = false
         ) const;
 
         //- Find and return a sub-dictionary, otherwise return this dictionary.
@@ -663,7 +679,7 @@ public:
         List<keyType> keys(bool patterns = false) const;
 
 
-      // Editing
+    // Editing
 
         //- Substitute the given keyword (which is prefixed by '$')
         //  with the corresponding sub-dictionary entries
@@ -774,11 +790,13 @@ public:
         //- Transfer the contents of the argument and annul the argument.
         void transfer(dictionary& dict);
 
-        //- Transfer contents to the Xfer container
-        Xfer<dictionary> xfer();
 
+    // Read
 
-      // Read
+        //- Check after reading if the input token stream has unconsumed
+        //- tokens remaining or if there were no tokens in the first place.
+        //  Emits FatalIOError
+        void checkITstream(const ITstream& is, const word& keyword) const;
 
         //- Read dictionary from Istream
         bool read(Istream& is);
@@ -787,7 +805,7 @@ public:
         bool read(Istream& is, bool keepHeader);
 
 
-      // Write
+    // Write
 
         //- Write sub-dictionary with the keyword as its header
         void writeEntry(const keyType& keyword, Ostream& os) const;
@@ -801,7 +819,7 @@ public:
         void write(Ostream& os, const bool subDict=true) const;
 
 
-      // Searching
+    // Searching
 
         //- Search dictionary for given keyword
         //  Default search: non-recursive with patterns.
@@ -811,8 +829,7 @@ public:
         const_searcher csearch
         (
             const word& keyword,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
         ) const;
 
         //- Search dictionary for given keyword
@@ -823,8 +840,7 @@ public:
         const_searcher search
         (
             const word& keyword,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
         ) const;
 
         //- Search dictionary for given keyword
@@ -835,8 +851,7 @@ public:
         searcher search
         (
             const word& keyword,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
         );
 
         //- Search using scoping.
@@ -865,8 +880,7 @@ public:
         const_searcher csearchScoped
         (
             const word& keyword,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option
         ) const;
 
         //- Search using dot or slash scoping.
@@ -876,8 +890,7 @@ public:
         const_searcher searchScoped
         (
             const word& keyword,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option
         ) const;
 
         //- Search using dot or slash scoping.
@@ -887,25 +900,24 @@ public:
         searcher searchScoped
         (
             const word& keyword,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option
         );
 
         //- Locate a sub-dictionary using slash-scoping
         //  \return nullptr if the dictionary path does not exist
-        const dictionary* cfindScopedDictPtr(const fileName& dictPath) const;
+        const dictionary* cfindScopedDict(const fileName& dictPath) const;
 
         //- Locate a sub-dictionary using slash-scoping
         //  \return nullptr if the dictionary path does not exist
-        const dictionary* findScopedDictPtr(const fileName& dictPath) const;
+        const dictionary* findScopedDict(const fileName& dictPath) const;
 
         //- Locate a sub-dictionary using slash-scoping
         //  \return nullptr if the dictionary path does not exist
-        dictionary* findScopedDictPtr(const fileName& dictPath);
+        dictionary* findScopedDict(const fileName& dictPath);
 
         //- Locate existing or create sub-dictionary using slash-scoping
         //  \return nullptr if the dictionary path could not be created
-        dictionary* makeScopedDictPtr(const fileName& dictPath);
+        dictionary* makeScopedDict(const fileName& dictPath);
 
 
     // Compatibility helpers
@@ -924,8 +936,7 @@ public:
         (
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
         ) const;
 
         //- Search dictionary for given keyword and any compatibility names
@@ -939,27 +950,25 @@ public:
         (
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
         ) const;
 
         //- Find and return an entry pointer if present, or return a nullptr,
-        //- using any compatibility names it needed.
+        //- using any compatibility names if needed.
         //
         //  \param compat list of old compatibility keywords and the last
         //      OpenFOAM version for which they were used.
         //  \param recursive search parent dictionaries
         //  \param patternMatch use regular expressions
-        const entry* lookupEntryPtrCompat
+        const entry* findCompat
         (
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option
         ) const;
 
-        //- Find and return an entry if present otherwise error,
-        //- using any compatibility names it needed.
+        //- Find and return an entry if present, otherwise FatalIOError,
+        //- using any compatibility names if needed.
         //
         //  \param compat list of old compatibility keywords and the last
         //      OpenFOAM version for which they were used.
@@ -969,12 +978,28 @@ public:
         (
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
-            bool recursive,
-            bool patternMatch
+            enum keyType::option
+        ) const;
+
+        //- Find and return a T
+        //- using any compatibility names if needed.
+        //- FatalIOError if not found, or if there are excess tokens.
+        //  Default search: non-recursive with patterns.
+        //
+        //  \param compat list of old compatibility keywords and the last
+        //      OpenFOAM version for which they were used.
+        //  \param recursive search parent dictionaries
+        //  \param patternMatch use regular expressions
+        template<class T>
+        T getCompat
+        (
+            const word& keyword,
+            std::initializer_list<std::pair<const char*,int>> compat,
+            enum keyType::option = keyType::REGEX
         ) const;
 
         //- Find and return an entry data stream,
-        //- using any compatibility names it needed.
+        //- using any compatibility names if needed.
         //  Default search: non-recursive with patterns.
         //
         //  \param compat list of old compatibility keywords and the last
@@ -985,12 +1010,11 @@ public:
         (
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
         ) const;
 
         //- Find and return a T, or return the given default value
-        //- using any compatibility names it needed.
+        //- using any compatibility names if needed.
         //  Default search: non-recursive with patterns.
         //
         //  \param compat list of old compatibility keywords and the last
@@ -1003,12 +1027,34 @@ public:
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
             const T& deflt,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
+        ) const;
+
+        //- Find entry and assign to T val
+        //- using any compatibility names if needed.
+        //- FatalIOError if there are excess tokens.
+        //  Default search: non-recursive with patterns.
+        //
+        //  \param compat list of old compatibility keywords and the last
+        //      OpenFOAM version for which they were used.
+        //  \param val the value to read
+        //  \param recursive search parent dictionaries
+        //  \param patternMatch use regular expressions
+        //
+        //  \return true if the entry was found.
+        template<class T>
+        bool readCompat
+        (
+            const word& keyword,
+            std::initializer_list<std::pair<const char*,int>> compat,
+            T& val,
+            enum keyType::option = keyType::REGEX,
+            bool mandatory = true
         ) const;
 
         //- Find an entry if present, and assign to T val
-        //- using any compatibility names it needed.
+        //- using any compatibility names if needed.
+        //- FatalIOError if it is found and there are excess tokens.
         //  Default search: non-recursive with patterns.
         //
         //  \param compat list of old compatibility keywords and the last
@@ -1024,19 +1070,11 @@ public:
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
             T& val,
-            bool recursive = false,
-            bool patternMatch = true
+            enum keyType::option = keyType::REGEX
         ) const;
 
 
     // Member Operators
-
-        //- Find and return an entry data stream (identical to #lookup method).
-        //  Default search: non-recursive with patterns.
-        //
-        //  \param recursive search parent dictionaries
-        //  \param patternMatch use regular expressions
-        ITstream& operator[](const word& keyword) const;
 
         //- Copy assignment
         void operator=(const dictionary& rhs);
@@ -1061,6 +1099,196 @@ public:
 
         //- Write dictionary to Ostream
         friend Ostream& operator<<(Ostream& os, const dictionary& dict);
+
+
+    // Housekeeping
+
+        //- Deprecated(2018-07) find and return an entry data stream
+        //
+        //  \deprecated(2018-07) - use lookup() method
+        ITstream& operator[](const word& keyword) const
+        {
+            return lookup(keyword);
+        }
+
+        //- Deprecated(2018-10) find and return a T.
+        //  \deprecated(2018-10) - use get() method
+        template<class T>
+        T lookupType
+        (
+            const word& keyword,
+            bool recursive = false,
+            bool patternMatch = true
+        ) const
+        {
+            return get<T>(keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        bool found
+        (
+            const word& keyword,
+            bool recursive,
+            bool patternMatch = true
+        ) const
+        {
+            return found(keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        entry* lookupEntryPtr
+        (
+            const word& keyword,
+            bool recursive,
+            bool patternMatch
+        )
+        {
+            return findEntry(keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        const entry* lookupEntryPtr
+        (
+            const word& keyword,
+            bool recursive,
+            bool patternMatch
+        ) const
+        {
+            return findEntry(keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        const entry* lookupScopedEntryPtr
+        (
+            const word& keyword,
+            bool recursive,
+            bool patternMatch
+        ) const
+        {
+            return findScoped(keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  Find and return a sub-dictionary pointer if present
+        //  (and a sub-dictionary) otherwise return nullptr.
+        //
+        //  Search type: non-recursive with patterns.
+        //  \deprecated(2018-10) - use findDict() method
+        const dictionary* subDictPtr(const word& keyword) const
+        {
+            return findDict(keyword, keyType::REGEX);
+        }
+
+        //- Deprecated(2018-10)
+        //- Find and return a sub-dictionary pointer if present
+        //  (and a sub-dictionary) otherwise return nullptr.
+        //
+        //  Search type: non-recursive with patterns.
+        //  \deprecated(2018-10) - use findDict() method
+        dictionary* subDictPtr(const word& keyword)
+        {
+            return findDict(keyword, keyType::REGEX);
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        const entry& lookupEntry
+        (
+            const word& keyword,
+            bool recursive,
+            bool patternMatch
+        ) const
+        {
+            return lookupEntry(keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        ITstream& lookup
+        (
+            const word& keyword,
+            bool recursive,
+            bool patternMatch = true
+        ) const
+        {
+            return lookup(keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        template<class T>
+        T lookupOrDefault
+        (
+            const word& keyword,
+            const T& deflt,
+            bool recursive,
+            bool patternMatch = true
+        ) const
+        {
+            return
+                lookupOrDefault
+                (keyword, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        template<class T>
+        T lookupOrAddDefault
+        (
+            const word& keyword,
+            const T& deflt,
+            bool recursive,
+            bool patternMatch = true
+        )
+        {
+            return
+                lookupOrAddDefault
+                (keyword, deflt, matchOpt(recursive, patternMatch));
+        }
+
+        //- Deprecated(2018-10)
+        //  \deprecated(2018-10) - use keyType::option version
+        template<class T>
+        bool readIfPresent
+        (
+            const word& keyword,
+            T& val,
+            bool recursive,
+            bool patternMatch = true
+        ) const
+        {
+            return
+                readIfPresent
+                (keyword, val, matchOpt(recursive, patternMatch));
+        }
+
+
+    // Shortcuts - when a templated classes also inherits from a dictionary
+
+        #undef defineDictionaryGetter
+        #define defineDictionaryGetter(Func, Type)                            \
+            /** \brief Same as get\<Type\>(const word&, keyType::option) */   \
+            Type Func                                                         \
+            (                                                                 \
+                const word& keyword,                                          \
+                enum keyType::option matchOpt = keyType::REGEX                \
+            ) const                                                           \
+            {                                                                 \
+                return get<Type>(keyword, matchOpt);                          \
+            }
+
+        defineDictionaryGetter(getBool, bool);
+        defineDictionaryGetter(getLabel, label);
+        defineDictionaryGetter(getScalar, scalar);
+        defineDictionaryGetter(getString, string);
+        defineDictionaryGetter(getWord, word);
+        defineDictionaryGetter(getFileName, fileName);
+
+        #undef defineDictionaryGetter
 };
 
 

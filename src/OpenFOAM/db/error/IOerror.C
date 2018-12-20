@@ -44,9 +44,9 @@ Foam::IOerror::IOerror(const string& title)
 Foam::IOerror::IOerror(const dictionary& errDict)
 :
     error(errDict),
-    ioFileName_(errDict.lookup("ioFileName")),
-    ioStartLineNumber_(readLabel(errDict.lookup("ioStartLineNumber"))),
-    ioEndLineNumber_(readLabel(errDict.lookup("ioEndLineNumber")))
+    ioFileName_(errDict.get<string>("ioFileName")),
+    ioStartLineNumber_(errDict.get<label>("ioStartLineNumber")),
+    ioEndLineNumber_(errDict.get<label>("ioEndLineNumber"))
 {}
 
 
@@ -139,15 +139,15 @@ void Foam::IOerror::SafeFatalIOError
     else
     {
         std::cerr
-            << std::endl
-            << "--> FOAM FATAL IO ERROR:" << std::endl
+            << nl
+            << "--> FOAM FATAL IO ERROR:" << nl
             << msg
-            << std::endl
+            << nl
             << "file: " << ioStream.name()
             << " at line " << ioStream.lineNumber() << '.'
-            << std::endl << std::endl
+            << nl << nl
             << "    From function " << functionName
-            << std::endl
+            << nl
             << "    in file " << sourceFileName
             << " at line " << sourceFileLineNumber << '.'
             << std::endl;
@@ -260,34 +260,43 @@ void Foam::IOerror::abort()
 }
 
 
-Foam::Ostream& Foam::operator<<(Ostream& os, const IOerror& err)
+void Foam::IOerror::write(Ostream& os, const bool includeTitle) const
 {
     if (!os.bad())
     {
-        os  << nl
-            << err.title().c_str() << nl
-            << err.message().c_str() << nl << endl;
-
-        os  << "file: " << err.ioFileName().c_str();
-
-        if (err.ioStartLineNumber() >= 0 && err.ioEndLineNumber() >= 0)
+        os  << nl;
+        if (includeTitle)
         {
-            os  << " from line " << err.ioStartLineNumber()
-                << " to line " << err.ioEndLineNumber() << '.';
+            os  << title().c_str() << nl;
         }
-        else if (err.ioStartLineNumber() >= 0)
+        os  << message().c_str() << nl << endl;
+
+        os  << "file: " << ioFileName().c_str();
+
+        if (ioStartLineNumber() >= 0 && ioEndLineNumber() >= 0)
         {
-            os  << " at line " << err.ioStartLineNumber() << '.';
+            os  << " from line " << ioStartLineNumber()
+                << " to line " << ioEndLineNumber() << '.';
+        }
+        else if (ioStartLineNumber() >= 0)
+        {
+            os  << " at line " << ioStartLineNumber() << '.';
         }
 
-        if (IOerror::level >= 2 && err.sourceFileLineNumber())
+        if (IOerror::level >= 2 && sourceFileLineNumber())
         {
             os  << nl << nl
-                << "    From function " << err.functionName().c_str() << endl
-                << "    in file " << err.sourceFileName().c_str()
-                << " at line " << err.sourceFileLineNumber() << '.';
+                << "    From function " << functionName().c_str() << endl
+                << "    in file " << sourceFileName().c_str()
+                << " at line " << sourceFileLineNumber() << '.';
         }
     }
+}
+
+
+Foam::Ostream& Foam::operator<<(Ostream& os, const IOerror& err)
+{
+    err.write(os);
 
     return os;
 }

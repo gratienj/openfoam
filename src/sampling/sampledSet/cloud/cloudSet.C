@@ -161,14 +161,20 @@ void Foam::cloudSet::genSamples()
     samplingSegments.shrink();
     samplingCurveDist.shrink();
 
+    // Move into *this
     setSamples
     (
-        samplingPts,
-        samplingCells,
-        samplingFaces,
-        samplingSegments,
-        samplingCurveDist
+        std::move(samplingPts),
+        std::move(samplingCells),
+        std::move(samplingFaces),
+        std::move(samplingSegments),
+        std::move(samplingCurveDist)
     );
+
+    if (debug)
+    {
+        write(Info);
+    }
 }
 
 
@@ -187,11 +193,6 @@ Foam::cloudSet::cloudSet
     sampleCoords_(sampleCoords)
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
 
 
@@ -204,21 +205,10 @@ Foam::cloudSet::cloudSet
 )
 :
     sampledSet(name, mesh, searchEngine, dict),
-    sampleCoords_(dict.lookup("points"))
+    sampleCoords_(dict.get<pointField>("points"))
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::cloudSet::~cloudSet()
-{}
 
 
 // ************************************************************************* //

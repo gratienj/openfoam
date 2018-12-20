@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "zeroGradient.H"
-
+#include "stringListOps.H"
 #include "volFields.H"
 #include "dictionary.H"
 #include "wordRes.H"
@@ -70,10 +70,8 @@ bool Foam::functionObjects::zeroGradient::checkFormatName(const word& str)
 
         return false;
     }
-    else
-    {
-        return true;
-    }
+
+    return true;
 }
 
 
@@ -108,22 +106,15 @@ Foam::functionObjects::zeroGradient::zeroGradient
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::functionObjects::zeroGradient::~zeroGradient()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::functionObjects::zeroGradient::read(const dictionary& dict)
 {
     fvMeshFunctionObject::read(dict);
 
-    selectFields_ = wordRes::uniq
-    (
-        wordReList(dict.lookup("fields"))
-    );
+    dict.readEntry("fields", selectFields_);
+    selectFields_.uniq();
+
     Info<< type() << " fields: " << selectFields_ << nl;
 
     resultName_ = dict.lookupOrDefault<word>("result", type() + "(@@)");
@@ -139,13 +130,12 @@ bool Foam::functionObjects::zeroGradient::execute()
     DynamicList<word> missing(selectFields_.size());
     DynamicList<word> ignored(selectFields_.size());
 
-    // check exact matches first
-    forAll(selectFields_, i)
+    // Check exact matches first
+    for (const wordRe& select : selectFields_)
     {
-        const wordRe& select = selectFields_[i];
-        if (!select.isPattern())
+        if (select.isLiteral())
         {
-            const word& fieldName = static_cast<const word&>(select);
+            const word& fieldName = select;
 
             if (!candidates.erase(fieldName))
             {
@@ -158,9 +148,9 @@ bool Foam::functionObjects::zeroGradient::execute()
         }
     }
 
-    forAllConstIter(wordHashSet, candidates, iter)
+    for (const word& fieldName : candidates)
     {
-        process(iter.key());
+        process(fieldName);
     }
 
     if (missing.size())
@@ -186,18 +176,15 @@ bool Foam::functionObjects::zeroGradient::write()
     }
 
     // Consistent output order
-    const wordList outputList = results_.sortedToc();
-    forAll(outputList, i)
+    for (const word& fieldName : results_.sortedToc())
     {
-        const word& fieldName = outputList[i];
+        const regIOobject* ioptr = findObject<regIOobject>(fieldName);
 
-        if (foundObject<regIOobject>(fieldName))
+        if (ioptr)
         {
-            const regIOobject& io = lookupObject<regIOobject>(fieldName);
-
             Log << "    " << fieldName << endl;
 
-            io.write();
+            ioptr->write();
         }
     }
 

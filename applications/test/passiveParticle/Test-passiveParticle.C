@@ -37,10 +37,12 @@ Description
 int main(int argc, char *argv[])
 {
     argList::addArgument("cloud");
+
+    argList::noFunctionObjects();
+
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createMesh.H"
-    runTime.functionObjects().off();
 
     const word cloudName = args[1];
 
@@ -65,11 +67,9 @@ int main(int argc, char *argv[])
                 << endl;
         }
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
 
-        runTime++;
+        ++runTime;
         Pout<< "Writing particles to time " << runTime.timeName() << endl;
         particles.write();
     }
@@ -89,11 +89,7 @@ int main(int argc, char *argv[])
         }
     }
 
-
-    Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-        << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
-
+    runTime.printExecutionTime(Info);
 
     Info<< "End\n" << endl;
 

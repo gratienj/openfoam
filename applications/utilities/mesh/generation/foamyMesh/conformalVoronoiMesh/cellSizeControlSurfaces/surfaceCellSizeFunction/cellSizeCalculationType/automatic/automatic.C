@@ -26,7 +26,7 @@ License
 #include "automatic.H"
 #include "addToRunTimeSelectionTable.H"
 #include "triSurfaceMesh.H"
-#include "vtkSurfaceWriter.H"
+#include "foamVtkSurfaceWriter.H"
 #include "primitivePatchInterpolation.H"
 #include "Time.H"
 
@@ -97,7 +97,7 @@ Foam::automatic::automatic
 (
     const dictionary& cellSizeCalcTypeDict,
     const triSurfaceMesh& surface,
-    const scalar& defaultCellSize
+    const scalar defaultCellSize
 )
 :
     cellSizeCalculationType
@@ -109,19 +109,22 @@ Foam::automatic::automatic
     ),
     coeffsDict_(cellSizeCalcTypeDict.optionalSubDict(typeName + "Coeffs")),
     surfaceName_(surface.searchableSurface::name()),
-    readCurvature_(Switch(coeffsDict_.lookup("curvature"))),
-    curvatureFile_(coeffsDict_.lookup("curvatureFile")),
-    readFeatureProximity_(Switch(coeffsDict_.lookup("featureProximity"))),
-    featureProximityFile_(coeffsDict_.lookup("featureProximityFile")),
-    readInternalCloseness_(Switch(coeffsDict_.lookup("internalCloseness"))),
-    internalClosenessFile_(coeffsDict_.lookup("internalClosenessFile")),
+
+    readCurvature_(coeffsDict_.get<bool>("curvature")),
+    readFeatureProximity_(coeffsDict_.get<bool>("featureProximity")),
+    readInternalCloseness_(coeffsDict_.get<bool>("internalCloseness")),
+
+    curvatureFile_(coeffsDict_.get<word>("curvatureFile")),
+    featureProximityFile_(coeffsDict_.get<word>("featureProximityFile")),
+    internalClosenessFile_(coeffsDict_.get<word>("internalClosenessFile")),
+
     curvatureCellSizeCoeff_
     (
-        readScalar(coeffsDict_.lookup("curvatureCellSizeCoeff"))
+        coeffsDict_.get<scalar>("curvatureCellSizeCoeff")
     ),
     maximumCellSize_
     (
-        readScalar(coeffsDict_.lookup("maximumCellSizeCoeff"))*defaultCellSize
+        coeffsDict_.get<scalar>("maximumCellSizeCoeff") * defaultCellSize
     )
 {}
 
@@ -285,20 +288,23 @@ Foam::tmp<Foam::triSurfacePointScalarField> Foam::automatic::load()
             faces[fI] = surface_.triSurface::operator[](fI);
         }
 
-        vtkSurfaceWriter().write
+        vtk::surfaceWriter vtkWriter
         (
-            surface_.searchableSurface::time().constant()/"triSurface",
-            surfaceName_.nameLessExt(),
-            meshedSurfRef
+            surface_.points(),
+            faces,
             (
-                surface_.points(),
-                faces
-            ),
-            "cellSize",
-            pointCellSize,
-            true,
-            true
+                surface_.searchableSurface::time().constant()
+              / "triSurface"
+              / surfaceName_.nameLessExt() + "_cellSize"
+            )
         );
+
+
+        vtkWriter.writeGeometry();
+
+        vtkWriter.beginPointData(1);
+
+        vtkWriter.write("cellSize", pointCellSize);
     }
 
     return tPointCellSize;

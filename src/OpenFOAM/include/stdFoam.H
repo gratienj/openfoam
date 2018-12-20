@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ Namespace
     stdFoam
 
 Description
-    Some global templates and macros used by OpenFOAM and some standard
+    Global templates and macros used by OpenFOAM and some standard
     C++ headers.
 
     Some of the templates defined here correspond to useful
@@ -47,7 +47,30 @@ SeeAlso
 #include <initializer_list>
 #include <utility>
 
+// Mirror OPENFOAM define in other variants
+#ifdef OPENFOAM
+// Code base from www.openfoam.com
+# ifndef OPENFOAM_COM
+#  define OPENFOAM_COM OPENFOAM
+# endif
+// Older name (prior to 1806)
+# ifndef OPENFOAM_PLUS
+#  define OPENFOAM_PLUS OPENFOAM
+# endif
+#endif
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+//- Namespace for OpenFOAM
+namespace Foam
+{
+    //- Implementation details for various OpenFOAM classes
+    namespace Detail {}
+
+    //- Additional OpenFOAM modules
+    namespace Module {}
+}
+
 
 namespace stdFoam
 {
@@ -80,7 +103,7 @@ constexpr auto cbegin(const C& c) -> decltype(c.begin())
     return c.begin();
 }
 
-//- Return iterator to the end of the container \a c array.
+//- Return iterator to the end of the container \a c.
 //  Definition as per std::end C++17
 template<class C>
 constexpr auto end(C& c) -> decltype(c.end())
@@ -88,7 +111,7 @@ constexpr auto end(C& c) -> decltype(c.end())
     return c.end();
 }
 
-//- Return const_iterator to the end of the container \a c array.
+//- Return const_iterator to the end of the container \a c.
 //  Definition as per std::end C++17
 template<class C>
 constexpr auto end(const C& c) -> decltype(c.end())
@@ -155,14 +178,28 @@ constexpr auto crend(const C& c) -> decltype(c.rend())
     return c.rend();
 }
 
+//- Return the lesser of the parameters.
+//  Definition as per std::min C++14
+template<class T>
+constexpr inline const T& min(const T& a, const T& b)
+{
+    return (b < a) ? b : a;
+}
+
+//- Return the greater of the parameters.
+//  Definition as per std::max C++14
+template<class T>
+constexpr inline const T& max(const T& a, const T& b)
+{
+    return (a < b) ? b : a;
+}
 
 } // End namespace stdFoam
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-//- Iterate across all elements in the \a container object of type
-//  \a Container.
+//- Iterate across all elements in the \a container object.
 //  \par Usage
 //  \code
 //  forAllIters(container, iter)
@@ -198,7 +235,7 @@ constexpr auto crend(const C& c) -> decltype(c.rend())
     )
 
 
-//- Rverse iterate across elements in the \a container object of type
+//- Reverse iterate across elements in the \a container object of type
 //  \a Container.
 //  \par Usage
 //  \code

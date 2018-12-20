@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,13 +44,22 @@ Description
         // Fields to be sampled
         fields          (p U);
 
-        // Interpolation scheme to use (only used if interpolate=true for
-        // the surfaces below)
+        // Scheme to obtain face centre value
+        sampleScheme    cell;
+
+        // Scheme to obtain node values
+        // (only used if interpolate=true for the surfaces below)
         interpolationScheme cell;
 
         // Output surface format
         surfaceFormat   vtk;
-        formatOptions   {  }
+        formatOptions
+        {
+            vtk
+            {
+                precision  10;
+            }
+        }
 
         surfaces
         (
@@ -70,6 +79,22 @@ Description
     }
     \endverbatim
 
+    Entries:
+    \table
+        Property | Description                             | Required | Default
+        type     | surfaces                                | yes      |
+        surfaces | the list of sample surfaces             | recommended |
+        fields   | word/regex list of fields to sampled    | yes      |
+        sampleScheme | scheme to obtain face centre value  | no       | cell
+        interpolationScheme | scheme to obtain node values | yes      |
+        surfaceFormat | output surface format              | yes      |
+        formatOptions | dictionary of format options       | no       |
+    \endtable
+
+Note
+    The interpolationScheme is only used if interpolate=true is used by any
+    of the surfaces.
+
 See also
     Foam::surfMeshSamplers
 
@@ -87,7 +112,7 @@ SourceFiles
 #include "mergedSurf.H"
 #include "volFieldsFwd.H"
 #include "surfaceFieldsFwd.H"
-#include "wordReList.H"
+#include "wordRes.H"
 #include "IOobjectList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -95,7 +120,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class Time;
 class fvMesh;
 class dictionary;
@@ -130,29 +155,46 @@ class sampledSurfaces
         fileName outputPath_;
 
 
-        // Read from dictonary
+    // Read from dictonary
 
-            //- Names of fields to sample
-            wordReList fieldSelection_;
+        //- Names of fields to sample
+        wordRes fieldSelection_;
 
-            //- Interpolation scheme to use
-            word interpolationScheme_;
+        //- Interpolation/sample scheme to obtain face values
+        word sampleFaceScheme_;
 
-
-        // surfaces
-
-            //- Merged meshed surfaces (parallel only)
-            List<mergedSurf> mergedList_;
+        //- Interpolation/sample scheme to obtain node values
+        word sampleNodeScheme_;
 
 
-        // Calculated
+    // Surfaces
 
-            //- Surface formatter
-            autoPtr<surfaceWriter> formatter_;
+        //- Merged meshed surfaces (parallel only)
+        List<mergedSurf> mergedList_;
+
+        //- Track which surfaces have changed
+        List<bool> changedGeom_;
+
+
+    // Calculated
+
+        //- Surface formatter
+        autoPtr<surfaceWriter> formatter_;
 
 
     // Private Member Functions
 
+        //- Return the surfaces
+        const PtrList<sampledSurface>& surfaces() const
+        {
+            return *this;
+        }
+
+        //- Return the surfaces
+        PtrList<sampledSurface>& surfaces()
+        {
+            return *this;
+        }
 
         //- Return number of fields
         label classifyFields();
@@ -168,7 +210,7 @@ class sampledSurfaces
         void writeSurface
         (
             const Field<Type>& values,
-            const label surfI,
+            const label surfi,
             const word& fieldName,
             const fileName& outputDir
         );
@@ -177,22 +219,25 @@ class sampledSurfaces
         template<class Type>
         void sampleAndWrite
         (
-            const GeometricField<Type, fvPatchField, volMesh>&
+            const GeometricField<Type, fvPatchField, volMesh>& vField
         );
 
         //- Sample and write a particular surface field
         template<class Type>
         void sampleAndWrite
         (
-            const GeometricField<Type, fvsPatchField, surfaceMesh>&
+            const GeometricField<Type, fvsPatchField, surfaceMesh>& sField
         );
 
         //- Sample and write all sampled fields
         template<class Type> void sampleAndWrite(const IOobjectList& objects);
 
-        //- Disallow default bitwise copy construct and assignment
-        sampledSurfaces(const sampledSurfaces&);
-        void operator=(const sampledSurfaces&);
+
+        //- No copy construct
+        sampledSurfaces(const sampledSurfaces&) = delete;
+
+        //- No copy assignment
+        void operator=(const sampledSurfaces&) = delete;
 
 
 public:
@@ -207,7 +252,7 @@ public:
         sampledSurfaces
         (
             const word& name,
-            const Time& time,
+            const Time& runTime,
             const dictionary& dict
         );
 
@@ -216,14 +261,14 @@ public:
         sampledSurfaces
         (
             const word& name,
-            const objectRegistry&,
-            const dictionary&,
+            const objectRegistry& obr,
+            const dictionary& dict,
             const bool loadFromFiles = false
         );
 
 
     //- Destructor
-    virtual ~sampledSurfaces();
+    virtual ~sampledSurfaces() = default;
 
 
     // Member Functions
@@ -265,7 +310,7 @@ public:
         static scalar mergeTol();
 
         //- Set tolerance (and return old tolerance)
-        static scalar mergeTol(const scalar);
+        static scalar mergeTol(const scalar tol);
 };
 
 

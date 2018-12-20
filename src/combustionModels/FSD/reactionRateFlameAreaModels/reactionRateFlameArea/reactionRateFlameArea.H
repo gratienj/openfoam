@@ -65,7 +65,7 @@ protected:
         //- Mesh reference
         const fvMesh& mesh_;
 
-        //- Combstion model owner
+        //- Combustion model owner
         const combustionModel& combModel_;
 
         //- Fuel name
@@ -79,11 +79,11 @@ private:
 
     // Private member functions
 
-         //- Disallow copy construct
-        reactionRateFlameArea(const reactionRateFlameArea&);
+         //- No copy construct
+        reactionRateFlameArea(const reactionRateFlameArea&) = delete;
 
-         //- Disallow default bitwise assignment
-        void operator=(const reactionRateFlameArea&);
+         //- No copy assignment
+        void operator=(const reactionRateFlameArea&) = delete;
 
 
 public:

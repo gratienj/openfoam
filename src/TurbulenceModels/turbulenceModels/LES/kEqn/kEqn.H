@@ -76,13 +76,6 @@ class kEqn
 :
     public LESeddyViscosity<BasicTurbulenceModel>
 {
-    // Private Member Functions
-
-        // Disallow default bitwise copy construct and assignment
-        kEqn(const kEqn&);
-        void operator=(const kEqn&);
-
-
 protected:
 
     // Protected data
@@ -98,6 +91,13 @@ protected:
 
 
     // Protected Member Functions
+
+        //- No copy construct
+        kEqn(const kEqn&) = delete;
+
+        //- No copy assignment
+        void operator=(const kEqn&) = delete;
+
 
         virtual void correctNut();
         virtual tmp<fvScalarMatrix> kSource() const;
@@ -146,7 +146,7 @@ public:
             return k_;
         }
 
-        //- Return sub-grid disipation rate
+        //- Return sub-grid dissipation rate
         virtual tmp<volScalarField> epsilon() const;
 
         //- Return the effective diffusivity for k

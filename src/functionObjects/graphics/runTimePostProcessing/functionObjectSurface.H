@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,15 +56,14 @@ class functionObjectSurface
     public geometrySurface,
     public functionObjectBase
 {
+protected:
 
-private:
+    // Protected Member Functions
 
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         functionObjectSurface(const functionObjectSurface&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const functionObjectSurface&) = delete;
 
 
@@ -81,7 +80,7 @@ public:
         (
             const runTimePostProcessing& parent,
             const dictionary& dict,
-            const HashPtrTable<Function1<vector>, word>& colours
+            const HashPtrTable<Function1<vector>>& colours
         );
 
 

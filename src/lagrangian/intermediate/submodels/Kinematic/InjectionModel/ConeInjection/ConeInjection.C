@@ -45,10 +45,10 @@ Foam::ConeInjection<CloudType>::ConeInjection
     injectorCells_(positionAxis_.size()),
     injectorTetFaces_(positionAxis_.size()),
     injectorTetPts_(positionAxis_.size()),
-    duration_(readScalar(this->coeffDict().lookup("duration"))),
+    duration_(this->coeffDict().getScalar("duration")),
     parcelsPerInjector_
     (
-        readScalar(this->coeffDict().lookup("parcelsPerInjector"))
+        this->coeffDict().getScalar("parcelsPerInjector")
     ),
     flowRateProfile_
     (
@@ -104,8 +104,7 @@ Foam::ConeInjection<CloudType>::ConeInjection
     forAll(positionAxis_, i)
     {
         vector& axis = positionAxis_[i].second();
-
-        axis /= mag(axis);
+        axis.normalise();
 
         vector tangent = Zero;
         scalar magTangent = 0.0;
@@ -147,7 +146,7 @@ Foam::ConeInjection<CloudType>::ConeInjection
     Umag_(im.Umag_),
     thetaInner_(im.thetaInner_),
     thetaOuter_(im.thetaOuter_),
-    sizeDistribution_(im.sizeDistribution_, false),
+    sizeDistribution_(im.sizeDistribution_.clone()),
     nInjected_(im.nInjected_),
     tanVec1_(im.tanVec1_),
     tanVec2_(im.tanVec2_)
@@ -198,12 +197,12 @@ Foam::label Foam::ConeInjection<CloudType>::parcelsToInject
     {
         const scalar targetVolume = flowRateProfile_.integrate(0, time1);
 
+        const scalar volumeFraction = targetVolume/this->volumeTotal_;
+
         const label targetParcels =
-            parcelsPerInjector_*targetVolume/this->volumeTotal_;
+            ceil(positionAxis_.size()*parcelsPerInjector_*volumeFraction);
 
-        const label nToInject = targetParcels - nInjected_;
-
-        return positionAxis_.size()*nToInject;
+        return targetParcels - nInjected_;
     }
     else
     {
@@ -277,7 +276,7 @@ void Foam::ConeInjection<CloudType>::setProperties
     vector normal = alpha*(tanVec1_[i]*cos(beta) + tanVec2_[i]*sin(beta));
     vector dirVec = dcorr*positionAxis_[i].second();
     dirVec += normal;
-    dirVec /= mag(dirVec);
+    dirVec.normalise();
 
     parcel.U() = Umag_.value(t)*dirVec;
 

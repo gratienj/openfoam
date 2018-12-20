@@ -166,7 +166,7 @@ while (pimple.correct())
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar("phiHbyA", dimArea*dimVelocity, 0)
+        dimensionedScalar(dimArea*dimVelocity, Zero)
     );
 
     forAll(phases, phasei)
@@ -217,16 +217,11 @@ while (pimple.correct())
             )
         );
 
-        forAllConstIter
-        (
-            phaseSystem::KdTable,
-            fluid.Kds(),
-            KdIter
-        )
+        forAllConstIters(fluid.Kds(), KdIter)
         {
             const volScalarField& K(*KdIter());
 
-            const phasePair& pair(fluid.phasePairs()[KdIter.key()]);
+            const phasePair& pair = *(fluid.phasePairs()[KdIter.key()]);
 
             const phaseModel* phase1 = &pair.phase1();
             const phaseModel* phase2 = &pair.phase2();
@@ -261,7 +256,7 @@ while (pimple.correct())
             mesh
         ),
         mesh,
-        dimensionedScalar("rAUf", dimensionSet(-1, 3, 1, 0, 0), 0)
+        dimensionedScalar(dimensionSet(-1, 3, 1, 0, 0), Zero)
     );
 
     forAll(phases, phasei)
@@ -331,10 +326,6 @@ while (pimple.correct())
                     ).ptr()
                 );
 
-                deleteDemandDrivenData
-                (
-                    pEqnComps[phasei].faceFluxCorrectionPtr()
-                );
                 pEqnComps[phasei].relax();
             }
             else

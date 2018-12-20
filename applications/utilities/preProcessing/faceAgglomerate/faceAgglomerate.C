@@ -41,7 +41,6 @@ SeeAlso
 #include "fvMesh.H"
 #include "Time.H"
 #include "volFields.H"
-#include "CompactListList.H"
 #include "unitConversion.H"
 #include "pairPatchAgglomeration.H"
 #include "labelListIOList.H"
@@ -54,8 +53,15 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Agglomerate boundary faces using the pairPatchAgglomeration"
+        " algorithm. Writes a map of fine to coarse grid."
+    );
+
+    argList::addOption("dict", "file", "Use alternative viewFactorsDict");
     #include "addRegionOption.H"
-    #include "addDictOption.H"
+
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createNamedMesh.H"
@@ -67,7 +73,7 @@ int main(int argc, char *argv[])
     // Read control dictionary
     const IOdictionary agglomDict(dictIO);
 
-    bool writeAgglom = readBool(agglomDict.lookup("writeFacesAgglomeration"));
+    const bool writeAgglom(agglomDict.get<bool>("writeFacesAgglomeration"));
 
     const polyBoundaryMesh& boundary = mesh.boundaryMesh();
 
@@ -87,12 +93,12 @@ int main(int argc, char *argv[])
 
     label nCoarseFaces = 0;
 
-    forAllConstIter(dictionary, agglomDict, iter)
+    for (const entry& dEntry : agglomDict)
     {
-        labelList patchids = boundary.findIndices(iter().keyword());
-        forAll(patchids, i)
+        labelList patchids = boundary.indices(dEntry.keyword());
+
+        for (const label patchi : patchids)
         {
-            label patchi =  patchids[i];
             const polyPatch& pp = boundary[patchi];
 
             if (!pp.coupled())
@@ -130,7 +136,7 @@ int main(int argc, char *argv[])
     }
 
     // Sync agglomeration across coupled patches
-    labelList nbrAgglom(mesh.nFaces() - mesh.nInternalFaces(), -1);
+    labelList nbrAgglom(mesh.nBoundaryFaces(), -1);
 
     forAll(boundary, patchi)
     {
@@ -176,7 +182,7 @@ int main(int argc, char *argv[])
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("facesAgglomeration", dimless, 0)
+            dimensionedScalar(dimless, Zero)
         );
 
         volScalarField::Boundary& facesAgglomerationBf =

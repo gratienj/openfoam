@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,10 @@ Class
     Foam::scalarRanges
 
 Description
-    A List of scalarRange.
+    A collection of scalar bounds to be used as a unary predicate.
+
+SeeAlso
+    Foam::predicates::scalars
 
 SourceFiles
     scalarRanges.C
@@ -44,7 +47,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                       Class scalarRanges Declaration
+                        Class scalarRanges Declaration
 \*---------------------------------------------------------------------------*/
 
 class scalarRanges
@@ -55,28 +58,37 @@ public:
 
     // Constructors
 
-        //- Construct null
-        scalarRanges();
+        //- Inherit constructors from List of scalarRange
+        using List<scalarRange>::List;
 
-        //- Construct from Istream.
-        //  The list items are comma-delimited.
-        scalarRanges(Istream& is);
+        //- Construct null
+        inline scalarRanges();
+
+        //- Construct by parsing string for scalar ranges
+        //  The individual items are space, comma or semicolon delimited.
+        //  Optionally report when any range failed to parse
+        inline scalarRanges(const std::string& str, bool verbose = true);
+
+
+    // Static Constructors
+
+        //- Construct by parsing string for scalar ranges
+        //  The individual items are space, comma or semicolon delimited.
+        static scalarRanges parse(const std::string& str, bool verbose = true);
 
 
     // Member Functions
 
-        //- Return true if the given value is within the ranges
-        bool selected(const scalar value) const;
+        //- Match any condition in the list.
+        //  \return True if the value matches any condition in the list.
+        inline bool match(const scalar& value) const;
 
-        //- Return the set of selected entries in the given list
-        //  that are within the ranges
-        List<bool> selected(const UList<scalar>& values) const;
 
-        //- Select a list of values that are within the ranges
-        List<scalar> select(const List<scalar>& values) const;
+    // Member Operators
 
-        //- Select a list of values that are within the ranges
-        void inplaceSelect(List<scalar>& values) const;
+        //- Identical to match(), for use as a predicate.
+        inline bool operator()(const scalar& value) const;
+
 };
 
 
@@ -85,6 +97,8 @@ public:
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "scalarRangesI.H"
 
 #endif
 

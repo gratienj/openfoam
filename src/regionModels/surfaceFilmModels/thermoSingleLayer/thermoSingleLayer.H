@@ -69,11 +69,11 @@ class thermoSingleLayer
 {
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        thermoSingleLayer(const thermoSingleLayer&);
+        //- No copy construct
+        thermoSingleLayer(const thermoSingleLayer&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const thermoSingleLayer&);
+        //- No copy assignment
+        void operator=(const thermoSingleLayer&) = delete;
 
         //- Return boundary types for sensible enthalpy field
         wordList hsBoundaryTypes();
@@ -120,7 +120,7 @@ protected:
         scalar deltaWet_;
 
 
-        // Hyprophilic/phobic properties
+        // Hydrophilic/phobic properties
 
             //- Activation flag
             bool hydrophilic_;
@@ -166,11 +166,11 @@ protected:
             //- Viscosity model
             autoPtr<filmViscosityModel> viscosity_;
 
-            //- Heat transfer coefficient bewteen film surface and primary
+            //- Heat transfer coefficient between film surface and primary
             //  region [W/m2/K]
             autoPtr<heatTransferModel> htcs_;
 
-            //- Heat transfer coefficient bewteen wall and film [W/m2/K]
+            //- Heat transfer coefficient between wall and film [W/m2/K]
             autoPtr<heatTransferModel> htcw_;
 
             //- Phase change

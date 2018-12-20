@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -40,6 +40,7 @@ namespace Foam
 {
     defineTypeNameAndDebug(basicThermo, 0);
     defineRunTimeSelectionTable(basicThermo, fvMesh);
+    defineRunTimeSelectionTable(basicThermo, fvMeshDictPhase);
 }
 
 const Foam::word Foam::basicThermo::dictName("thermophysicalProperties");
@@ -125,35 +126,35 @@ Foam::wordList Foam::basicThermo::heBoundaryTypes()
 Foam::volScalarField& Foam::basicThermo::lookupOrConstruct
 (
     const fvMesh& mesh,
-    const char* name
-) const
+    const word& name,
+    bool& isOwner
+)
 {
-    if (!mesh.objectRegistry::foundObject<volScalarField>(name))
+    volScalarField* ptr =
+        mesh.objectRegistry::getObjectPtr<volScalarField>(name);
+
+    isOwner = !ptr;
+
+    if (!ptr)
     {
-        volScalarField* fPtr
+        ptr = new volScalarField
         (
-            new volScalarField
+            IOobject
             (
-                IOobject
-                (
-                    name,
-                    mesh.time().timeName(),
-                    mesh,
-                    IOobject::MUST_READ,
-                    IOobject::AUTO_WRITE
-                ),
-                mesh
-            )
+                name,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::MUST_READ,
+                IOobject::AUTO_WRITE
+            ),
+            mesh
         );
 
         // Transfer ownership of this object to the objectRegistry
-        fPtr->store(fPtr);
+        ptr->store(ptr);
     }
 
-    return const_cast<volScalarField&>
-    (
-        mesh.objectRegistry::lookupObject<volScalarField>(name)
-    );
+    return *ptr;
 }
 
 
@@ -186,20 +187,10 @@ Foam::basicThermo::basicThermo
 
     phaseName_(phaseName),
 
-    p_(lookupOrConstruct(mesh, "p")),
+    p_(lookupOrConstruct(mesh, "p", pOwner_)),
 
-    T_
-    (
-        IOobject
-        (
-            phasePropertyName("T"),
-            mesh.time().timeName(),
-            mesh,
-            IOobject::MUST_READ,
-            IOobject::AUTO_WRITE
-        ),
-        mesh
-    ),
+    T_(lookupOrConstruct(mesh, phasePropertyName("T"), TOwner_)),
+    TOwner_(lookupOrDefault<Switch>("updateT", TOwner_)),
 
     alpha_
     (
@@ -208,11 +199,11 @@ Foam::basicThermo::basicThermo
             phasePropertyName("thermo:alpha"),
             mesh.time().timeName(),
             mesh,
-            IOobject::NO_READ,
+            IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionSet(1, -1, -1, 0, 0)
+        dimensionedScalar(dimensionSet(1, -1, -1, 0, 0), Zero)
     ),
 
     dpdt_(lookupOrDefault<Switch>("dpdt", true))
@@ -241,20 +232,10 @@ Foam::basicThermo::basicThermo
 
     phaseName_(phaseName),
 
-    p_(lookupOrConstruct(mesh, "p")),
+    p_(lookupOrConstruct(mesh, "p", pOwner_)),
 
-    T_
-    (
-        IOobject
-        (
-            phasePropertyName("T"),
-            mesh.time().timeName(),
-            mesh,
-            IOobject::MUST_READ,
-            IOobject::AUTO_WRITE
-        ),
-        mesh
-    ),
+    T_(lookupOrConstruct(mesh, phasePropertyName("T"), TOwner_)),
+    TOwner_(lookupOrDefault<Switch>("updateT", TOwner_)),
 
     alpha_
     (
@@ -267,9 +248,64 @@ Foam::basicThermo::basicThermo
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionSet(1, -1, -1, 0, 0)
+        dimensionedScalar(dimensionSet(1, -1, -1, 0, 0), Zero)
     )
 {}
+
+
+Foam::basicThermo::basicThermo
+(
+    const fvMesh& mesh,
+    const word& phaseName,
+    const word& dictionaryName
+)
+:
+    IOdictionary
+    (
+        IOobject
+        (
+            dictionaryName,
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE
+        )
+    ),
+
+    phaseName_(phaseName),
+
+    p_(lookupOrConstruct(mesh, "p", pOwner_)),
+
+    T_(lookupOrConstruct(mesh, "T", TOwner_)),
+    TOwner_(lookupOrDefault<Switch>("updateT", TOwner_)),
+
+    alpha_
+    (
+        IOobject
+        (
+            "thermo:alpha",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        mesh,
+        dimensionedScalar(dimensionSet(1, -1, -1, 0, 0), Zero)
+    ),
+
+    dpdt_(lookupOrDefault<Switch>("dpdt", true))
+{
+    if (debug)
+    {
+        Pout<< "Constructed shared thermo : mesh:" << mesh.name()
+            << " phase:" << phaseName
+            << " dictionary:" << dictionaryName
+            << " T:" << T_.name()
+            << " updateT:" << TOwner_
+            << " alphaName:" << alpha_.name()
+            << endl;
+    }
+}
 
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
@@ -299,30 +335,25 @@ const Foam::basicThermo& Foam::basicThermo::lookupThermo
     const fvPatchScalarField& pf
 )
 {
-    if (pf.db().foundObject<basicThermo>(dictName))
-    {
-        return pf.db().lookupObject<basicThermo>(dictName);
-    }
-    else
-    {
-        HashTable<const basicThermo*> thermos =
-            pf.db().lookupClass<basicThermo>();
+    const basicThermo* thermo = pf.db().findObject<basicThermo>(dictName);
 
-        for
+    if (thermo)
+    {
+        return *thermo;
+    }
+
+    HashTable<const basicThermo*> thermos =
+        pf.db().lookupClass<basicThermo>();
+
+    forAllConstIters(thermos, iter)
+    {
+        if
         (
-            HashTable<const basicThermo*>::iterator iter = thermos.begin();
-            iter != thermos.end();
-            ++iter
+            &(iter()->he().internalField())
+         == &(pf.internalField())
         )
         {
-            if
-            (
-                &(iter()->he().internalField())
-              == &(pf.internalField())
-            )
-            {
-                return *iter();
-            }
+            return *iter();
         }
     }
 
@@ -447,7 +478,7 @@ Foam::wordList Foam::basicThermo::splitThermoName
         }
         else if ((endc = thermoName.find(',', beg)) != string::npos)
         {
-            end = min(endb, endc);
+            end = std::min(endb, endc);
         }
         else
         {

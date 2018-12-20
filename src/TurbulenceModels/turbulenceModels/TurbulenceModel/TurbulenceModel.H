@@ -75,15 +75,13 @@ protected:
         const transportModel& transport_;
 
 
-private:
+    // Protected Member Functions
 
-    // Private Member Functions
+        //- No copy construct
+        TurbulenceModel(const TurbulenceModel&) = delete;
 
-        //- Disallow default bitwise copy construct
-        TurbulenceModel(const TurbulenceModel&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const TurbulenceModel&);
+        //- No copy assignment
+        void operator=(const TurbulenceModel&) = delete;
 
 
 public:
@@ -139,8 +137,7 @@ public:
 
 
     //- Destructor
-    virtual ~TurbulenceModel()
-    {}
+    virtual ~TurbulenceModel() = default;
 
 
     // Member Functions

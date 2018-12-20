@@ -30,11 +30,13 @@ Description
 #include "stringOps.H"
 #include "dictionary.H"
 #include "IOstreams.H"
+#include "OSspecific.H"
 
 #include "int.H"
 #include "uint.H"
 #include "scalar.H"
 #include "Switch.H"
+#include "fileName.H"
 #include "stringList.H"
 
 using namespace Foam;
@@ -53,6 +55,8 @@ int main(int argc, char *argv[])
         " or with '${__UNKNOWN:+unknown}' empty"
     );
 
+    setEnv("FOAM_CASE", cwd(), true);
+
     dictionary dict;
     dict.add("HOME", "myHome");
 
@@ -61,17 +65,86 @@ int main(int argc, char *argv[])
     subDict.add("value2", "test2");
     dict.add("FOAM_RUN", subDict);
 
+    if (false)
+    {
+        typedef std::string inputType;
+        typedef string outputType;
+
+        inputType in1("move-construct-from");
+
+        Info<<"move construct from " << in1.length() << nl;
+
+        outputType out1(std::move(in1));
+
+        Info<<"after move construct "
+            << out1.size() << ", " << in1.size() << nl;
+
+        in1 = "move-assign-from";
+        out1 = "some-text-rubbish";
+        out1.resize(10);
+
+        Info<<"move assign from " << in1.length() << nl;
+
+        out1 = std::move(in1);
+
+        Info<<"after move assign "
+            << out1.size() << ", " << in1.size() << nl;
+
+        return 0;
+    }
+
+
+    // basic expansions
+    {
+        for
+        (
+            const auto& cstr
+          :
+            {
+                "~OpenFOAM/controlDict",    "<etc>/controlDict",
+                "<etc:ugo>/controlDict",
+                "<etc:u>/controlDict",
+                "<etc:ug>/controlDict",
+                "<etc:go>/controlDict",
+                "<etc:o>/controlDict",
+                "<etc:JUNK>/controlDict",   // rubbish input
+                "<etc:>/controlDict",       // rubbish input
+                "$FOAM_CASE/xyz",           "<case>/xyz",
+                "$FOAM_CASE/constant/xyz",  "<constant>/xyz",
+                "$FOAM_CASE/system/xyz",    "<system>/xyz",
+
+                // corner cases
+                "~OpenFOAM",                "<etc>",
+                "~OpenFOAM/",               "<etc>/",
+                "$FOAM_CASE",               "<case>",
+                "$FOAM_CASE/constant",      "<constant>",
+                "$FOAM_CASE/system",        "<system>",
+
+                "$FOAM_CASE/",              "<case>/",
+                "$FOAM_CASE/constant/",     "<constant>/",
+                "$FOAM_CASE/system/",       "<system>/",
+            }
+        )
+        {
+            string input(cstr);
+            string output(stringOps::expand(input));
+
+            Info<< "input:  " << input  << nl
+                << "expand: " << output << nl << nl;
+        }
+    }
+
 
     // Test Foam::name with formatting string
     {
-        word formatted = Foam::name("formatted=<%X>", 0xdeadbeef);
+        word formatted = word::printf("formatted=<%X>", 0xdeadbeef);
         Info<<"formatted: " << formatted << nl;
     }
 
     Info<<"formatted: "
-        << Foam::name("formatted not checked for validity=<%X>", 0xdeadbeef)
+        << word::printf("formatted not checked for validity=<%X>", 0xdeadbeef)
         << nl
-        << endl
+        << endl;
 
 
     Info<< "string:" << test << nl << "hash:"
@@ -154,7 +227,12 @@ int main(int argc, char *argv[])
     Info<<"camel-case => " << (word("camel") & "case") << nl;
     for (const auto& s : { " text with \"spaces'", "08/15 value" })
     {
-        Info<<"validated \"" << s << "\" => "
+        // Character sequence
+
+        Info<<"validated 5 chars from \" => "
+            << word::validate(s, s+5, true) << nl;
+
+        Info<<"validated (via string convert) \"" << s << "\" => "
             << word::validate(s, true) << nl;
     }
     Info<< nl;
@@ -227,34 +305,33 @@ int main(int argc, char *argv[])
 
     cout<< "\ntest Foam::name()\n";
 
-    Info<< "hash: = " << Foam::name("0x%012X", string::hash()(s2)) << endl;
+    Info<< "hash: = " << word::printf("0x%012X", string::hash()(s2)) << endl;
 
-    // test formatting on int
+    // Test formatting on int
     {
         label val = 25;
-        Info<<"val: " << val << "\n";
-
-        Info<< "int " << val << " as word >"
-            << Foam::name(val) << "< or "
-            << Foam::name("formatted >%08d<", val) << "\n";
+        Info<< "int " << val << " nameOp='"
+            << nameOp<label>()(val) << "', name='"
+            << Foam::name(val) << "' or "
+            << word::printf("formatted '%08d'", val) << "\n";
     }
 
-    // test formatting on scalar
+    // Test formatting on scalar
     {
         scalar val = 3.1415926535897931;
-        Info<< "scalar " << val << " as word >"
-            << Foam::name(val) << "< or "
-            << Foam::name("formatted >%.9f<", val) << "\n";
+        Info<< "scalar " << val << " nameOp='"
+            << nameOp<scalar>()(val) << "', name='"
+            << Foam::name(val) << "' or "
+            << word::printf("formatted '%.9f'", val) << "\n";
     }
 
-    // test formatting on uint
+    // Test formatting on uint
     {
         uint64_t val = 25000000ul;
-        Info<<"val: " << val << "\n";
-
-        Info<< "uint64 " << val << " as word >"
-            << Foam::name(val) << "< or "
-            << Foam::name("formatted >%08d<", val) << "\n";
+        Info<< "uint64 " << val << " nameOp='"
+            << nameOp<uint64_t>()(val) << "', name='"
+            << Foam::name(val) << "' or "
+            << word::printf("formatted '%08d'", val) << "\n";
     }
 
     // test startsWith, endsWith methods

@@ -36,24 +36,24 @@ inline Foam::IndirectListAddressing::IndirectListAddressing
 
 inline Foam::IndirectListAddressing::IndirectListAddressing
 (
-    const Xfer<List<label>>& addr
+    List<label>&& addr
 )
 :
-    addressing_(addr)
+    addressing_(std::move(addr))
 {}
 
 
 template<class T>
 inline Foam::IndirectList<T>::IndirectList
 (
-    const UList<T>& completeList,
+    const UList<T>& values,
     const labelUList& addr
 )
 :
     IndirectListAddressing(addr),
     UIndirectList<T>
     (
-        completeList,
+        values,
         IndirectListAddressing::addressing()
     )
 {}
@@ -62,14 +62,14 @@ inline Foam::IndirectList<T>::IndirectList
 template<class T>
 inline Foam::IndirectList<T>::IndirectList
 (
-    const UList<T>& completeList,
-    const Xfer<List<label>>& addr
+    const UList<T>& values,
+    List<label>&& addr
 )
 :
-    IndirectListAddressing(addr),
+    IndirectListAddressing(std::move(addr)),
     UIndirectList<T>
     (
-        completeList,
+        values,
         IndirectListAddressing::addressing()
     )
 {}
@@ -78,13 +78,13 @@ inline Foam::IndirectList<T>::IndirectList
 template<class T>
 inline Foam::IndirectList<T>::IndirectList
 (
-    const IndirectList<T>& lst
+    const IndirectList<T>& list
 )
 :
-    IndirectListAddressing(lst.addressing()),
+    IndirectListAddressing(list.addressing()),  // Copy addressing
     UIndirectList<T>
     (
-        lst.completeList(),
+        list.completeList(),
         IndirectListAddressing::addressing()
     )
 {}
@@ -93,13 +93,13 @@ inline Foam::IndirectList<T>::IndirectList
 template<class T>
 inline Foam::IndirectList<T>::IndirectList
 (
-    const UIndirectList<T>& lst
+    const UIndirectList<T>& list
 )
 :
-    IndirectListAddressing(lst.addressing()),
+    IndirectListAddressing(list.addressing()),  // Copy addressing
     UIndirectList<T>
     (
-        lst.completeList(),
+        list.completeList(),
         IndirectListAddressing::addressing()
     )
 {}
@@ -125,10 +125,10 @@ inline void Foam::IndirectListAddressing::resetAddressing
 
 inline void Foam::IndirectListAddressing::resetAddressing
 (
-    const Xfer<List<label>>& addr
+    List<label>&& addr
 )
 {
-    addressing_.transfer(addr());
+    addressing_.transfer(addr);
 }
 
 

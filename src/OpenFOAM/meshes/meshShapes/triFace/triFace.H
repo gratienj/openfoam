@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -53,8 +53,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
-
+// Forward declarations
 class face;
 class triFace;
 
@@ -87,10 +86,10 @@ public:
         );
 
         //- Copy construct from a list of three point labels.
-        explicit inline triFace(const labelUList& lst);
+        inline explicit triFace(const labelUList& lst);
 
         //- Construct from an initializer list of three point labels
-        explicit inline triFace(std::initializer_list<label> lst);
+        inline explicit triFace(std::initializer_list<label> lst);
 
         //- Construct from Istream
         inline triFace(Istream& is);
@@ -124,11 +123,21 @@ public:
         template<class Type>
         Type average(const UList<point>& unused, const Field<Type>& fld) const;
 
+        //- The area normal - with magnitude equal to area of face
+        inline vector areaNormal(const UList<point>& points) const;
+
+        //- The unit normal
+        inline vector unitNormal(const UList<point>& points) const;
+
+        //- Legacy name for areaNormal()
+        //  \deprecated(2018-06) Deprecated for new use
+        inline vector normal(const UList<point>& points) const
+        {
+            return areaNormal(points); // Legacy definition
+        }
+
         //- Magnitude of face area
         inline scalar mag(const UList<point>& points) const;
-
-        //- Vector normal; magnitude is equal to area of face
-        inline vector normal(const UList<point>& points) const;
 
         //- Number of triangles after splitting
         inline label nTriangles() const;
@@ -137,12 +146,12 @@ public:
         //  The starting points of the original and reverse face are identical.
         inline triFace reverseFace() const;
 
-        //- Return true if the global point label is found in face.
-        bool found(const label globalIndex) const;
+        //- Return true if the point label is found in face.
+        inline bool found(const label pointLabel) const;
 
-        //- Which local index (0,1,2) on face given a global index.
-        //  returns -1 if not found
-        label which(const label globalIndex) const;
+        //- Find local index on face for the point label.
+        //  \return position in face (0,1,2) or -1 if not found.
+        inline label which(const label pointLabel) const;
 
         //- Return swept-volume from old-points to new-points
         inline scalar sweptVol
@@ -212,6 +221,19 @@ public:
             label& nearLabel
         ) const;
 
+        //- The sign for which side of the face plane the point is on.
+        //  Uses the supplied tolerance for rounding around zero.
+        //  \return
+        //  -  0: on plane
+        //  - +1: front-side
+        //  - -1: back-side
+        inline int sign
+        (
+            const point& p,
+            const UList<point>& points,
+            const scalar tol = SMALL
+        ) const;
+
         //- Return number of edges
         inline label nEdges() const;
 
@@ -236,62 +258,79 @@ public:
         //  - -1: same face, but different orientation
         static inline int compare(const triFace& a, const triFace& b);
 
+
+    // Hashing
+
+        //- The (commutative) hash-value for triFace
+        inline unsigned hashval(unsigned seed=0) const
+        {
+            // Fortunately we don't need this very often
+            const uLabel t0((*this)[0]);
+            const uLabel t1((*this)[1]);
+            const uLabel t2((*this)[2]);
+
+            const uLabel val = (t0*t1*t2 + t0+t1+t2);
+
+            return Foam::Hash<uLabel>()(val, seed);
+        }
+
+        //- Hashing function class for triFace (commutative)
+        //  Also useful for inheritance in sub-classes
+        template<class HashT=Foam::Hash<label>>
+        struct Hash
+        {
+            inline unsigned operator()
+            (
+                const triFace& obj,
+                unsigned seed=0
+            ) const
+            {
+                return obj.hashval(seed);
+            }
+        };
 };
 
 
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+template<> inline bool contiguous<triFace>()  {return true;}
+
+//- Hash specialization for triFace as a commutative hash value.
 template<>
-inline bool contiguous<triFace>()  {return true;}
-
-inline bool operator==(const triFace& a, const triFace& b);
-inline bool operator!=(const triFace& a, const triFace& b);
-
-
-//- Hash specialization for hashing triFace - a commutative hash value.
-//  Hash incrementally.
-template<>
-inline unsigned Hash<triFace>::operator()(const triFace& t, unsigned seed) const
+struct Hash<triFace>
 {
-    // Fortunately we don't need this very often
-    const uLabel t0(t[0]);
-    const uLabel t1(t[1]);
-    const uLabel t2(t[2]);
-
-    const uLabel val = (t0*t1*t2 + t0+t1+t2);
-
-    return Hash<uLabel>()(val, seed);
-}
+    inline unsigned operator()(const triFace& obj, unsigned seed=0) const
+    {
+        return obj.hashval(seed);
+    }
+};
 
 
-//- Hash specialization for hashing triFace - a commutative hash value.
+//- Specialization to offset faces, used in ListListOps::combineOffset
 template<>
-inline unsigned Hash<triFace>::operator()(const triFace& t) const
+struct offsetOp<triFace>
 {
-    return Hash<triFace>::operator()(t, 0);
-}
-
-
-//- Hash specialization to offset faces in ListListOps::combineOffset
-template<>
-class offsetOp<triFace>
-{
-
-public:
-
     inline triFace operator()
     (
         const triFace& x,
         const label offset
     ) const
     {
-        triFace result(x);
+        triFace result;
 
-        forAll(x, xI)
+        forAll(x, i)
         {
-            result[xI] = x[xI] + offset;
+            result[i] = x[i] + offset;
         }
         return result;
     }
 };
+
+
+// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
+
+inline bool operator==(const triFace& a, const triFace& b);
+inline bool operator!=(const triFace& a, const triFace& b);
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

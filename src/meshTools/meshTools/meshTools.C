@@ -192,11 +192,7 @@ Foam::vector Foam::meshTools::normEdgeVec
     const label edgeI
 )
 {
-    vector eVec = mesh.edges()[edgeI].vec(mesh.points());
-
-    eVec /= mag(eVec);
-
-    return eVec;
+    return mesh.edges()[edgeI].unitVec(mesh.points());
 }
 
 
@@ -301,11 +297,7 @@ void Foam::meshTools::writeOBJ
     forAll(cellLabels, i)
     {
         const cell& cFaces = cells[cellLabels[i]];
-
-        forAll(cFaces, j)
-        {
-            usedFaces.insert(cFaces[j]);
-        }
+        usedFaces.insert(cFaces);
     }
 
     writeOBJ(os, faces, points, usedFaces.toc());
@@ -808,7 +800,7 @@ Foam::vector Foam::meshTools::edgeToCutDir
         edgeI = meshTools::walkFace(mesh, facei, edgeI, vertI, 2);
     }
 
-    avgVec /= mag(avgVec) + VSMALL;
+    avgVec.normalise();
 
     return avgVec;
 }

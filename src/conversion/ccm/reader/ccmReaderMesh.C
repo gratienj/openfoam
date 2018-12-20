@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,10 +32,10 @@ License
 #include "IOdictionary.H"
 
 #include "ccmBoundaryInfo.H"
-#include "PackedList.H"
 #include "uindirectPrimitivePatch.H"
 #include "SortableList.H"
 #include "mergePoints.H"
+#include "bitSet.H"
 #include "ListOps.H"
 
 #include "ccmInternal.H" // include last to avoid any strange interactions
@@ -480,8 +480,10 @@ void Foam::ccm::reader::readCells
         auto dictIter = boundaryRegion_.find(info.ccmIndex);
         if (dictIter.found())
         {
-            word patchName(dictIter()["Label"]);
-            word patchType(dictIter()["BoundaryType"]);
+            dictionary& dict = dictIter.object();
+
+            const word patchName(dict.get<word>("Label"));
+            const word patchType(dict.get<word>("BoundaryType"));
 
             if (!patchName.empty())
             {
@@ -494,8 +496,8 @@ void Foam::ccm::reader::readCells
             }
 
             // Optional, but potentially useful information:
-            dictIter().add("BoundaryIndex", info.ccmIndex);
-            dictIter().add("size", info.size);
+            dict.add("BoundaryIndex", info.ccmIndex);
+            dict.add("size", info.size);
         }
 
         bndInfo.append(info);
@@ -553,7 +555,7 @@ void Foam::ccm::reader::readCells
             }
         }
 
-        ccmLookupOrder.resetAddressing(addr.xfer());
+        ccmLookupOrder.resetAddressing(std::move(addr));
     }
 
 
@@ -1039,7 +1041,7 @@ void Foam::ccm::reader::readMonitoring
             word zoneName;
             if (iter.found())
             {
-                iter().lookup("Label") >> zoneName;
+                iter().readEntry("Label", zoneName);
             }
             else
             {
@@ -1099,7 +1101,7 @@ void Foam::ccm::reader::juggleSolids()
     // Identify solid cells
     // ~~~~~~~~~~~~~~~~~~~~
     label nSolids = 0;
-    boolList solidCells(cellTableId_.size(), false);
+    bitSet solidCells(cellTableId_.size(), false);
     {
         Map<word> solidMap = cellTable_.solids();
 
@@ -1107,7 +1109,7 @@ void Foam::ccm::reader::juggleSolids()
         {
             if (solidMap.found(cellTableId_[cellI]))
             {
-                solidCells[cellI] = true;
+                solidCells.set(cellI);
                 ++nSolids;
             }
         }
@@ -1130,7 +1132,7 @@ void Foam::ccm::reader::juggleSolids()
         label faceI = patchStarts[patchIndex] + i;
         label cellI = faceOwner_[faceI];
 
-        if (solidCells[cellI])
+        if (solidCells.test(cellI))
         {
             ++adjustPatch;
         }
@@ -1186,7 +1188,7 @@ void Foam::ccm::reader::juggleSolids()
         label faceI = patchStarts[patchIndex] + i;
         label cellI = faceOwner_[faceI];
 
-        if (solidCells[cellI])
+        if (solidCells.test(cellI))
         {
             oldToNew[faceI] = solidFace++;
         }
@@ -1213,7 +1215,7 @@ void Foam::ccm::reader::removeUnwanted()
     // Identify fluid/porous/solid cells for removal
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     label nRemove = 0;
-    boolList removeCells(cellTableId_.size(), false);
+    bitSet removeCells(cellTableId_.size(), false);
 
     {
         Map<word> fluidMap  = cellTable_.fluids();
@@ -1236,7 +1238,7 @@ void Foam::ccm::reader::removeUnwanted()
               : false
             )
             {
-                removeCells[cellI] = true;
+                removeCells.set(cellI);
                 ++nRemove;
                 removeMap.set(tableId, cellTable_.name(tableId));
             }
@@ -1291,7 +1293,7 @@ void Foam::ccm::reader::removeUnwanted()
     for (label faceI = 0; faceI < nFaces_; ++faceI)
     {
         label cellI = faceOwner_[faceI];
-        if (removeCells[cellI])
+        if (removeCells.test(cellI))
         {
             if (faceI < nInternalFaces_)
             {
@@ -1356,7 +1358,7 @@ void Foam::ccm::reader::removeUnwanted()
     oldToNew.setSize(nCells_, -1);
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
-        if (!removeCells[cellI])
+        if (!removeCells.test(cellI))
         {
             if (nCell != cellI)
             {
@@ -1886,7 +1888,7 @@ void Foam::ccm::reader::mergeInplaceInterfaces()
     label nMergedTotal = 0;
 
     // Markup points to merge
-    PackedBoolList whichPoints(points_.size());
+    bitSet whichPoints(points_.size());
 
     Info<< "interface merge points (tol="
         << option().mergeTol() << "):" << endl;
@@ -1923,7 +1925,7 @@ void Foam::ccm::reader::mergeInplaceInterfaces()
         }
 
         // The global addresses
-        labelList addr(whichPoints.used());
+        labelList addr(whichPoints.toc());
 
         const UIndirectList<point> pointsToMerge(points_, addr);
 
@@ -2412,10 +2414,10 @@ void Foam::ccm::reader::addPatches
     wordHashSet hashedNames(origBndId_.size());
 
     // lookup patch names/types from the problem description
-    // provide some fallback vlues
+    // provide some fallback values
     forAll(newPatches, patchI)
     {
-        word fallbackName("patch" + Foam::name(patchI));
+        const word fallbackName("patch" + Foam::name(patchI));
         word patchName;
         word patchType;
 
@@ -2423,8 +2425,8 @@ void Foam::ccm::reader::addPatches
 
         if (citer.found())
         {
-            citer().lookup("Label") >> patchName;
-            citer().lookup("BoundaryType") >> patchType;
+            citer().readEntry("Label", patchName);
+            citer().readEntry("BoundaryType", patchType);
         }
         else
         {
@@ -2591,7 +2593,7 @@ Foam::autoPtr<Foam::polyMesh> Foam::ccm::reader::mesh
 {
     if (!readGeometry())
     {
-        return autoPtr<polyMesh>();
+        return nullptr;
     }
 
     // merge cellTable and rename boundaryRegion
@@ -2599,36 +2601,34 @@ Foam::autoPtr<Foam::polyMesh> Foam::ccm::reader::mesh
 
     // Construct polyMesh
     // ~~~~~~~~~~~~~~~~~~
-    autoPtr<polyMesh> mesh
+    auto meshPtr = autoPtr<polyMesh>::New
     (
-        new polyMesh
+        IOobject
         (
-            IOobject
-            (
-                polyMesh::defaultRegion,
-                "constant",
-                registry
-            ),
-            xferMove(points_),
-            xferMove(faces_),
-            xferMove(faceOwner_),
-            xferMove(faceNeighbour_)
-        )
+            polyMesh::defaultRegion,
+            "constant",
+            registry
+        ),
+        std::move(points_),
+        std::move(faces_),
+        std::move(faceOwner_),
+        std::move(faceNeighbour_)
     );
+    polyMesh& mesh = *meshPtr;
 
-    addPatches(mesh());
+    addPatches(mesh);
 
     // Attach cellZones based on the cellTable Id
     // any other values can be extracted later from the cellTable dictionary
-    cellTable_.addCellZones(mesh(), cellTableId_);
-    warnDuplicates("cellZones", mesh().cellZones().names());
+    cellTable_.addCellZones(mesh, cellTableId_);
+    warnDuplicates("cellZones", mesh.cellZones().names());
 
-    addFaceZones(mesh());
+    addFaceZones(mesh);
 
-    warnDuplicates("boundaries", mesh().boundaryMesh().names());
+    warnDuplicates("boundaries", mesh.boundaryMesh().names());
     clearGeom();
 
-    return mesh;
+    return meshPtr;
 }
 
 

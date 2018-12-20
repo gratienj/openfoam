@@ -48,7 +48,7 @@ SourceFiles
 #define meshDualiser_H
 
 #include "DynamicList.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "boolList.H"
 #include "typeInfo.H"
 
@@ -100,9 +100,9 @@ class meshDualiser
         //  emanating from (boundary & feature) point
         void generateDualBoundaryEdges
         (
-            const PackedBoolList&,
+            const bitSet& isBoundaryEdge,
             const label pointi,
-            polyTopoChange&
+            polyTopoChange& meshMod
         );
 
         //- Check that owner and neighbour of face have same dual cell
@@ -143,10 +143,10 @@ class meshDualiser
         void createFacesAroundEdge
         (
             const bool splitFace,
-            const PackedBoolList&,
+            const bitSet& isBoundaryEdge,
             const label edgeI,
             const label startFacei,
-            polyTopoChange&,
+            polyTopoChange& meshMod,
             boolList& doneEFaces
         ) const;
 
@@ -168,11 +168,11 @@ class meshDualiser
             boolList& donePFaces            // pFaces visited
         ) const;
 
-        //- Disallow default bitwise copy construct
-        meshDualiser(const meshDualiser&);
+        //- No copy construct
+        meshDualiser(const meshDualiser&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const meshDualiser&);
+        //- No copy assignment
+        void operator=(const meshDualiser&) = delete;
 
 
 public:

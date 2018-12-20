@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,12 +37,12 @@ Description
     The switch nonDimensional can be used for a non-dimensional table. It needs
     inputs rpm and dm of the fan. It should be used with uniformJump true.
 
-    The nonDimensional flux for the table is calculate as :
+    The nonDimensional U for the table is calculate as :
 
-        phi = 4.0*mDot/(rho*sqr(PI)*dm^3*omega)
+        phi = 120*Un/(PI^3*dm*rpm)
         where:
             dm is the mean diameter.
-            omega is rad/sec.
+            rpm is the RPM of the fan.
 
     The nonDimensinal pressure :
 
@@ -80,7 +80,7 @@ Usage
             componentColumns 1(1);
             separator       ",";
             mergeSeparators no;
-            file            "$FOAM_CASE/constant/pressureVsU";
+            file            "<constant>/pressureVsU";
         }
         value           uniform 0;
     }
@@ -129,22 +129,22 @@ class fanFvPatchField
         word phiName_;
 
         //- Name of the density field used to normalise the mass flux
-        //  if neccessary
+        //- if necessary
         word rhoName_;
 
         //- Uniform pressure drop
         bool uniformJump_;
 
         //- Swtich for using non-dimensional curve
-        Switch nonDimensional_;
+        bool nonDimensional_;
 
         // Parameters for non-dimensional table
 
-            //- Fan rpm
-            scalar rpm_;
+        //- Fan rpm
+        scalar rpm_;
 
-            //- Fan mean diameter
-            scalar dm_;
+        //- Fan mean diameter
+        scalar dm_;
 
 
     // Private Member Functions

@@ -83,11 +83,11 @@ class fvSurfaceMapper
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        fvSurfaceMapper(const fvSurfaceMapper&);
+        //- No copy construct
+        fvSurfaceMapper(const fvSurfaceMapper&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const fvSurfaceMapper&);
+        //- No copy assignment
+        void operator=(const fvSurfaceMapper&) = delete;
 
 
         //- Calculate addressing
@@ -145,7 +145,7 @@ public:
         //- Return interpolated addressing
         virtual const labelListList& addressing() const;
 
-        //- Return interpolaion weights
+        //- Return interpolation weights
         virtual const scalarListList& weights() const;
 
         //- Are there any inserted faces

@@ -30,6 +30,7 @@ Description
 #include "Time.H"
 #include "fvMesh.H"
 #include "wallDist.H"
+#include "fvCFD.H"
 
 using namespace Foam;
 
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
     const volScalarField& y = wallDist::New(mesh).y();
     y.write();
 
-    runTime++;
+    ++runTime;
 
     Info<< "Time now = " << runTime.timeName() << endl;
 

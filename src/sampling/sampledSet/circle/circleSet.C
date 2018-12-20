@@ -94,8 +94,7 @@ void Foam::circleSet::calcSamples
     label nPoint = 1;
     while (theta < 360)
     {
-        axis1 = axis1*cosAlpha + (axis1^circleAxis_)*sinAlpha;
-        axis1 /= mag(axis1);
+        axis1 = normalised(axis1*cosAlpha + (axis1^circleAxis_)*sinAlpha);
         point pt = origin_ + radius*axis1;
 
         label celli = searchEngine().findCell(pt);
@@ -111,7 +110,7 @@ void Foam::circleSet::calcSamples
                 radius*constant::mathematical::pi/180.0*theta
             );
 
-            nPoint++;
+            ++nPoint;
         }
         else
         {
@@ -148,14 +147,20 @@ void Foam::circleSet::genSamples()
     samplingSegments.shrink();
     samplingCurveDist.shrink();
 
+    // Move into *this
     setSamples
     (
-        samplingPts,
-        samplingCells,
-        samplingFaces,
-        samplingSegments,
-        samplingCurveDist
+        std::move(samplingPts),
+        std::move(samplingCells),
+        std::move(samplingFaces),
+        std::move(samplingSegments),
+        std::move(samplingCurveDist)
     );
+
+    if (debug)
+    {
+        write(Info);
+    }
 }
 
 
@@ -180,11 +185,6 @@ Foam::circleSet::circleSet
     dTheta_(dTheta)
 {
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
 
 
@@ -197,27 +197,13 @@ Foam::circleSet::circleSet
 )
 :
     sampledSet(name, mesh, searchEngine, dict),
-    origin_(dict.lookup("origin")),
-    circleAxis_(dict.lookup("circleAxis")),
-    startPoint_(dict.lookup("startPoint")),
-    dTheta_(readScalar(dict.lookup("dTheta")))
+    origin_(dict.get<point>("origin")),
+    circleAxis_(normalised(dict.get<vector>("circleAxis"))),
+    startPoint_(dict.get<point>("startPoint")),
+    dTheta_(dict.get<scalar>("dTheta"))
 {
-    // Normalise circleAxis
-    circleAxis_ /= mag(circleAxis_);
-
     genSamples();
-
-    if (debug)
-    {
-        write(Info);
-    }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::circleSet::~circleSet()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

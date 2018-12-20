@@ -88,11 +88,11 @@ class layerAdditionRemoval
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        layerAdditionRemoval(const layerAdditionRemoval&);
+        //- No copy construct
+        layerAdditionRemoval(const layerAdditionRemoval&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const layerAdditionRemoval&);
+        //- No copy assignment
+        void operator=(const layerAdditionRemoval&) = delete;
 
         //- Check validity of construction data
         void checkDefinition();
@@ -158,7 +158,7 @@ public:
             const word& zoneName,
             const scalar minThickness,
             const scalar maxThickness,
-            const Switch thicknessFromVolume = true
+            const bool thicknessFromVolume = true
         );
 
         //- Construct from dictionary

@@ -1,11 +1,10 @@
-/*---------------------------------------------------------------------------*\
+/*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
-|   \\  /    A nd           | Web:      http://www.OpenFOAM.com               |
+|  \\    /   O peration     | Version:  v1812                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
-
 FoamFile
 {
     version     2.2;
@@ -33,9 +32,9 @@ fuel    C7H16;
 
 chemistryReader foamChemistryReader;
 
-foamChemistryFile "$FOAM_CASE/constant/reactions";
+foamChemistryFile "<constant>/reactions";
 
-foamChemistryThermoFile "$FOAM_CASE/constant/thermo.compressibleGas";
+foamChemistryThermoFile "<constant>/thermo.compressibleGas";
 
 dpdt no;
 

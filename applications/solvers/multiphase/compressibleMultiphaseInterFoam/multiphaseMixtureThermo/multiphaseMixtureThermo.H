@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,15 +62,8 @@ public:
     {
     public:
 
-        class hash
-        :
-            public Hash<interfacePair>
+        struct hash
         {
-        public:
-
-            hash()
-            {}
-
             label operator()(const interfacePair& key) const
             {
                 return word::hash()(key.first()) + word::hash()(key.second());
@@ -80,8 +73,7 @@ public:
 
         // Constructors
 
-            interfacePair()
-            {}
+            interfacePair() {} // = default
 
             interfacePair(const word& alpha1Name, const word& alpha2Name)
             :
@@ -235,6 +227,9 @@ public:
         //- Update densities for given pressure change
         void correctRho(const volScalarField& dp);
 
+        //- Return the name of the thermo physics
+        virtual word thermoName() const;
+
         //- Return true if the equation of state is incompressible
         //  i.e. rho != f(p)
         virtual bool incompressible() const;
@@ -369,6 +364,9 @@ public:
                 const scalarField& T,
                 const label patchi
             ) const;
+
+            //- Molecular weight [kg/kmol]
+            virtual tmp<volScalarField> W() const;
 
 
         // Fields derived from transport state variables

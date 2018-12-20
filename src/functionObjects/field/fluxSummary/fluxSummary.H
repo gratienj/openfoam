@@ -71,7 +71,7 @@ Usage
     - surface
     - surfaceAndDirection
 
-    Output data is written to files of the form \<timeDir\>/<faceZoneName>.dat
+    Output data is written to files of the form \<timeDir\>/\<faceZoneName\>.dat
 
 See also
     Foam::functionObjects::fvMeshFunctionObject
@@ -245,10 +245,10 @@ protected:
         //- Specialized write for surfaces
         bool surfaceModeWrite();
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         fluxSummary(const fluxSummary&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const fluxSummary&) = delete;
 
 

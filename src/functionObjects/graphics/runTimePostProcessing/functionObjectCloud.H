@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,29 +56,30 @@ class functionObjectCloud
     public pointData,
     public functionObjectBase
 {
-private:
-
-    // Private Member Functions
-
-        //- Disallow default bitwise copy construct
-        functionObjectCloud(const functionObjectCloud&) = delete;
-
-        //- Disallow default bitwise assignment
-        void operator=(const functionObjectCloud&) = delete;
-
-
 protected:
 
-    // Protected data
+    // Protected Data
 
         //- Name of functionObjectCloud
         word cloudName_;
+
+        //- The input filename used
+        fileName inputFileName_;
 
         //- Name of field to colour by
         word colourFieldName_;
 
         //- Actor
         vtkSmartPointer<vtkActor> actor_;
+
+
+    // Protected Member Functions
+
+        //- No copy construct
+        functionObjectCloud(const functionObjectCloud&) = delete;
+
+        //- No copy assignment
+        void operator=(const functionObjectCloud&) = delete;
 
 
 public:
@@ -94,7 +95,7 @@ public:
         (
             const runTimePostProcessing& parent,
             const dictionary& dict,
-            const HashPtrTable<Function1<vector>, word>& colours
+            const HashPtrTable<Function1<vector>>& colours
         );
 
 

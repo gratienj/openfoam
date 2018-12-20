@@ -116,7 +116,7 @@ Foam::incompressibleThreePhaseMixture::incompressibleThreePhaseMixture
             U.db()
         ),
         U.mesh(),
-        dimensionedScalar("nu", dimensionSet(0, 2, -1, 0, 0), 0),
+        dimensionedScalar(dimensionSet(0, 2, -1, 0, 0), Zero),
         calculatedFvPatchScalarField::typeName
     ),
 
@@ -231,9 +231,9 @@ bool Foam::incompressibleThreePhaseMixture::read()
          && nuModel3_().read(*this)
         )
         {
-            nuModel1_->viscosityProperties().lookup("rho") >> rho1_;
-            nuModel2_->viscosityProperties().lookup("rho") >> rho2_;
-            nuModel3_->viscosityProperties().lookup("rho") >> rho3_;
+            nuModel1_->viscosityProperties().readEntry("rho", rho1_);
+            nuModel2_->viscosityProperties().readEntry("rho", rho2_);
+            nuModel3_->viscosityProperties().readEntry("rho", rho3_);
 
             return true;
         }

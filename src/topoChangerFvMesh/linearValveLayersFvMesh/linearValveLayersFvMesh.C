@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -83,40 +83,32 @@ void Foam::linearValveLayersFvMesh::addZonesAndModifiers()
     // Do face zones for slider
 
     // Inner slider
-    const word innerSliderName(motionDict_.subDict("slider").lookup("inside"));
+    const word innerSliderName
+    (
+        motionDict_.subDict("slider").get<word>("inside")
+    );
     const polyPatch& innerSlider = boundaryMesh()[innerSliderName];
-
-    labelList isf(innerSlider.size());
-
-    forAll(isf, i)
-    {
-        isf[i] = innerSlider.start() + i;
-    }
 
     fz[0] = new faceZone
     (
         "insideSliderZone",
-        isf,
+        identity(innerSlider.size(), innerSlider.start()),
         false, // none are flipped
         0,
         faceZones()
     );
 
     // Outer slider
-    const word outerSliderName(motionDict_.subDict("slider").lookup("outside"));
+    const word outerSliderName
+    (
+        motionDict_.subDict("slider").get<word>("outside")
+    );
     const polyPatch& outerSlider = boundaryMesh()[outerSliderName];
-
-    labelList osf(outerSlider.size());
-
-    forAll(osf, i)
-    {
-        osf[i] = outerSlider.start() + i;
-    }
 
     fz[1] = new faceZone
     (
         "outsideSliderZone",
-        osf,
+        identity(outsideSlider.size(), outsideSlider.start()),
         false, // none are flipped
         1,
         faceZones()
@@ -128,21 +120,15 @@ void Foam::linearValveLayersFvMesh::addZonesAndModifiers()
     // Add face zone for layer addition
     const word layerPatchName
     (
-        motionDict_.subDict("layer").lookup("patch")
+        motionDict_.subDict("layer").get<word>("patch")
     );
 
     const polyPatch& layerPatch = boundaryMesh()[layerPatchName];
 
-    labelList lpf(layerPatch.size());
-
-    forAll(lpf, i)
-    {
-        lpf[i] = layerPatch.start() + i;
-    }
-
     fz[3] = new faceZone
     (
         "valveLayerZone",
+        identity(layerPatch.size(), layerPatch.start()),
         lpf,
         true, // all are flipped
         0,
@@ -179,14 +165,8 @@ void Foam::linearValveLayersFvMesh::addZonesAndModifiers()
             1,
             topoChanger_,
             "valveLayerZone",
-            readScalar
-            (
-                motionDict_.subDict("layer").lookup("minThickness")
-            ),
-            readScalar
-            (
-                motionDict_.subDict("layer").lookup("maxThickness")
-            )
+            motionDict_.subDict("layer").get<scalar>("minThickness"),
+            motionDict_.subDict("layer").get<scalar>("maxThickness")
         );
 
 
@@ -301,7 +281,7 @@ Foam::tmp<Foam::pointField> Foam::linearValveLayersFvMesh::newPoints() const
 
     const word layerPatchName
     (
-        motionDict_.subDict("layer").lookup("patch")
+        motionDict_.subDict("layer").get<word>("patch")
     );
 
     const polyPatch& layerPatch = boundaryMesh()[layerPatchName];
@@ -310,7 +290,7 @@ Foam::tmp<Foam::pointField> Foam::linearValveLayersFvMesh::newPoints() const
 
     const vector vel
     (
-        motionDict_.lookup("pistonVelocity")
+        motionDict_.get<vector>("pistonVelocity")
     );
 
     forAll(patchPoints, ppI)

@@ -59,11 +59,11 @@ private:
         //- Create IO object if dictionary is present
         IOobject createIOobject(const fvMesh& mesh) const;
 
-        //- Disallow default bitwise copy construct
-        IOporosityModelList(const IOporosityModelList&);
+        //- No copy construct
+        IOporosityModelList(const IOporosityModelList&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const IOporosityModelList&);
+        //- No copy assignment
+        void operator=(const IOporosityModelList&) = delete;
 
 
 public:
@@ -71,12 +71,11 @@ public:
     // Constructors
 
         //- Construct from mesh
-        IOporosityModelList(const fvMesh& mesh);
+        explicit IOporosityModelList(const fvMesh& mesh);
 
 
         //- Destructor
-        virtual ~IOporosityModelList()
-        {}
+        virtual ~IOporosityModelList() = default;
 
 
     // Member Functions

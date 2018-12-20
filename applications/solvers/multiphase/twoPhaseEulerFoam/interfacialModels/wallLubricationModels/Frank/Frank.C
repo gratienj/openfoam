@@ -55,7 +55,7 @@ Foam::wallLubricationModels::Frank::Frank
     wallLubricationModel(dict, pair),
     Cwd_("Cwd", dimless, dict),
     Cwc_("Cwc", dimless, dict),
-    p_(readScalar(dict.lookup("p")))
+    p_(dict.get<scalar>("p"))
 {}
 
 
@@ -85,7 +85,7 @@ Foam::tmp<Foam::volVectorField> Foam::wallLubricationModels::Frank::Fi() const
         )
        *max
         (
-            dimensionedScalar("zero", dimless/dimLength, 0.0),
+            dimensionedScalar(dimless/dimLength, Zero),
             (1.0 - yTilde)/(Cwd_*y*pow(yTilde, p_ - 1.0))
         )
        *pair_.continuous().rho()

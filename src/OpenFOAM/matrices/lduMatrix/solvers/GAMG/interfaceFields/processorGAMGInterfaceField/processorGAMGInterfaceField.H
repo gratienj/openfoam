@@ -83,11 +83,14 @@ class processorGAMGInterfaceField
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        processorGAMGInterfaceField(const processorGAMGInterfaceField&);
+        //- No copy construct
+        processorGAMGInterfaceField
+        (
+            const processorGAMGInterfaceField&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const processorGAMGInterfaceField&);
+        //- No copy assignment
+        void operator=(const processorGAMGInterfaceField&) = delete;
 
 
 public:
@@ -168,13 +171,13 @@ public:
                 return procInterface_.myProcNo();
             }
 
-            //- Return neigbour processor number
+            //- Return neighbour processor number
             virtual int neighbProcNo() const
             {
                 return procInterface_.neighbProcNo();
             }
 
-            //- Does the interface field perform the transfromation
+            //- Does the interface field perform the transformation
             virtual bool doTransform() const
             {
                 return doTransform_;

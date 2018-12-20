@@ -4,17 +4,18 @@
 #include "cellSet.H"
 #include "faceSet.H"
 #include "pointSet.H"
-#include "EdgeMap.H"
+#include "edgeHashes.H"
 #include "wedgePolyPatch.H"
 #include "unitConversion.H"
 #include "polyMeshTetDecomposition.H"
 #include "surfaceWriter.H"
 #include "checkTools.H"
+#include "functionObject.H"
 
 #include "vtkSurfaceWriter.H"
 #include "writer.H"
 
-#include "cyclicAMIPolyPatch.H"
+#include "cyclicACMIPolyPatch.H"
 #include "Time.H"
 
 // Find wedge with opposite orientation. Note: does not actually check that
@@ -544,7 +545,7 @@ Foam::label Foam::checkGeometry
                 nonAlignedPoints.write();
                 if (setWriter.valid())
                 {
-                    mergeAndWrite(setWriter, nonAlignedPoints);
+                    mergeAndWrite(setWriter(), nonAlignedPoints);
                 }
             }
         }
@@ -786,7 +787,7 @@ Foam::label Foam::checkGeometry
                 points.write();
                 if (setWriter.valid())
                 {
-                    mergeAndWrite(setWriter, points);
+                    mergeAndWrite(setWriter(), points);
                 }
             }
         }
@@ -809,7 +810,7 @@ Foam::label Foam::checkGeometry
                 nearPoints.write();
                 if (setWriter.valid())
                 {
-                    mergeAndWrite(setWriter, nearPoints);
+                    mergeAndWrite(setWriter(), nearPoints);
                 }
             }
         }
@@ -963,6 +964,13 @@ Foam::label Foam::checkGeometry
           : patchWriter()
         );
 
+        // Currently only do AMI checks
+
+        const fileName outputDir
+        (
+            mesh.time().globalPath()/functionObject::outputPrefix/"checkMesh"
+        );
+
         forAll(pbm, patchi)
         {
             if (isA<cyclicAMIPolyPatch>(pbm[patchi]))
@@ -1007,7 +1015,11 @@ Foam::label Foam::checkGeometry
                         globalFaces().gather
                         (
                             UPstream::worldComm,
-                            labelList(UPstream::procID(UPstream::worldComm)),
+                            ListOps::create<label>
+                            (
+                                UPstream::procID(UPstream::worldComm),
+                                labelOp<int>()  // int -> label
+                            ),
                             ami.srcWeightsSum(),
                             mergedWeights
                         );
@@ -1016,8 +1028,11 @@ Foam::label Foam::checkGeometry
                         {
                             wr.write
                             (
-                                "postProcessing",
-                                "src_" + tmName,
+                                outputDir,
+                                (
+                                    "patch" + Foam::name(cpp.index())
+                                  + "-src_" + tmName
+                                ),
                                 meshedSurfRef
                                 (
                                     mergedPoints,
@@ -1027,6 +1042,43 @@ Foam::label Foam::checkGeometry
                                 mergedWeights,
                                 false
                             );
+                        }
+
+                        if (isA<cyclicACMIPolyPatch>(pbm[patchi]))
+                        {
+                            const cyclicACMIPolyPatch& pp =
+                                refCast<const cyclicACMIPolyPatch>(pbm[patchi]);
+                            scalarField mergedMask;
+                            globalFaces().gather
+                            (
+                                UPstream::worldComm,
+                                ListOps::create<label>
+                                (
+                                    UPstream::procID(UPstream::worldComm),
+                                    labelOp<int>()  // int -> label
+                                ),
+                                pp.mask(),
+                                mergedMask
+                            );
+                            if (Pstream::master())
+                            {
+                                wr.write
+                                (
+                                    outputDir,
+                                    (
+                                        "patch" + Foam::name(cpp.index())
+                                      + "-src_" + tmName
+                                    ),
+                                    meshedSurfRef
+                                    (
+                                        mergedPoints,
+                                        mergedFaces
+                                    ),
+                                    "mask",
+                                    mergedMask,
+                                    false
+                                );
+                            }
                         }
                     }
                     {
@@ -1057,7 +1109,11 @@ Foam::label Foam::checkGeometry
                         globalFaces().gather
                         (
                             UPstream::worldComm,
-                            labelList(UPstream::procID(UPstream::worldComm)),
+                            ListOps::create<label>
+                            (
+                                UPstream::procID(UPstream::worldComm),
+                                labelOp<int>()  // int -> label
+                            ),
                             ami.tgtWeightsSum(),
                             mergedWeights
                         );
@@ -1066,8 +1122,11 @@ Foam::label Foam::checkGeometry
                         {
                             wr.write
                             (
-                                "postProcessing",
-                                "tgt_" + tmName,
+                                outputDir,
+                                (
+                                    "patch" + Foam::name(cpp.index())
+                                  + "-tgt_" + tmName
+                                ),
                                 meshedSurfRef
                                 (
                                     mergedPoints,
@@ -1077,6 +1136,43 @@ Foam::label Foam::checkGeometry
                                 mergedWeights,
                                 false
                             );
+                        }
+
+                        if (isA<cyclicACMIPolyPatch>(pbm[patchi]))
+                        {
+                            const cyclicACMIPolyPatch& pp =
+                                refCast<const cyclicACMIPolyPatch>(pbm[patchi]);
+                            scalarField mergedMask;
+                            globalFaces().gather
+                            (
+                                UPstream::worldComm,
+                                ListOps::create<label>
+                                (
+                                    UPstream::procID(UPstream::worldComm),
+                                    labelOp<int>()  // int -> label
+                                ),
+                                pp.neighbPatch().mask(),
+                                mergedMask
+                            );
+                            if (Pstream::master())
+                            {
+                                wr.write
+                                (
+                                    outputDir,
+                                    (
+                                        "patch" + Foam::name(cpp.index())
+                                      + "-tgt_" + tmName
+                                    ),
+                                    meshedSurfRef
+                                    (
+                                        mergedPoints,
+                                        mergedFaces
+                                    ),
+                                    "mask",
+                                    mergedMask,
+                                    false
+                                );
+                            }
                         }
                     }
                 }

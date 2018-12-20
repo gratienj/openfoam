@@ -46,7 +46,7 @@ const Foam::word& Foam::patchInteractionData::interactionTypeName() const
 }
 
 
-const Foam::word& Foam::patchInteractionData::patchName() const
+const Foam::keyType& Foam::patchInteractionData::patchName() const
 {
     return patchName_;
 }
@@ -74,12 +74,14 @@ Foam::Istream& Foam::operator>>
 {
     is.check(FUNCTION_NAME);
 
-    const dictionaryEntry entry(dictionary::null, is);
+    const dictionaryEntry dictEntry(dictionary::null, is);
+    const dictionary& dict = dictEntry.dict();
 
-    pid.patchName_ = entry.keyword();
-    entry.lookup("type") >> pid.interactionTypeName_;
-    pid.e_ = entry.lookupOrDefault<scalar>("e", 1.0);
-    pid.mu_ = entry.lookupOrDefault<scalar>("mu", 0.0);
+    pid.patchName_ = dictEntry.keyword();
+
+    dict.readEntry("type", pid.interactionTypeName_);
+    pid.e_ = dict.lookupOrDefault<scalar>("e", 1.0);
+    pid.mu_ = dict.lookupOrDefault<scalar>("mu", 0.0);
 
     return is;
 }

@@ -76,28 +76,28 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "information about surface meshes"
+        "Information about surface meshes"
     );
 
     argList::noBanner();
     argList::noParallel();
-    argList::addArgument("surfaceFile");
+    argList::addArgument("surface", "The input surface file");
 
     argList::addOption
     (
         "scale",
         "factor",
-        "input geometry scaling factor"
+        "Input geometry scaling factor"
     );
     argList::addBoolOption
     (
         "areas",
-        "display area of each face"
+        "Display area of each face"
     );
     argList::addBoolOption
     (
         "xml",
-        "write output in XML format"
+        "Write output in XML format"
     );
     profiling::disable(); // Disable profiling (and its output)
 
@@ -112,17 +112,17 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    const bool writeXML = args.optionFound("xml");
-    const bool writeAreas = args.optionFound("areas");
+    const bool writeXML = args.found("xml");
+    const bool writeAreas = args.found("areas");
 
 
     // use UnsortedMeshedSurface, not MeshedSurface to maintain ordering
     UnsortedMeshedSurface<face> surf(importName);
 
-    const scalar scaling = args.optionLookupOrDefault<scalar>("scale", -1);
+    const scalar scaling = args.opt<scalar>("scale", -1);
     if (scaling > 0)
     {
-        Info<< " -scale " << scaling << nl;
+        DetailInfo << " -scale " << scaling << nl;
         surf.scalePoints(scaling);
     }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -80,10 +80,10 @@ namespace combustionModels
                           Class FSD Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 class FSD
 :
-    public singleStepCombustion <CombThermoType, ThermoType>
+    public singleStepCombustion <ReactionThermo, ThermoType>
 {
     // Private data
 
@@ -96,7 +96,7 @@ class FSD
         //- Fuel mass concentration on the fuel stream
         dimensionedScalar YFuelFuelStream_;
 
-        //- Oxygen mass concentration on the oxydizer stream
+        //- Oxygen mass concentration on the oxidizer stream
         dimensionedScalar YO2OxiStream_;
 
         //- Similarity constant for the sub-grid ft fluctuations
@@ -114,7 +114,7 @@ class FSD
         //- Dimension of the ft space. Used to integrate the beta-pdf
         scalar ftDim_;
 
-        //- Minimum mixture freaction variance to calculate pdf
+        //- Minimum mixture fraction variance to calculate pdf
         scalar ftVarMin_;
 
 
@@ -123,11 +123,11 @@ class FSD
         //- Calculate the normalised fuel source term
         void calculateSourceNorm();
 
-        //- Disallow copy construct
-        FSD(const FSD&);
+        //- No copy construct
+        FSD(const FSD&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const FSD&);
+        //- No copy assignment
+        void operator=(const FSD&) = delete;
 
 
 public:
@@ -142,9 +142,9 @@ public:
         FSD
         (
             const word& modelType,
-            const fvMesh& mesh,
-            const word& combustionProperties,
-            const word& phaseName
+            ReactionThermo& thermo,
+            const compressibleTurbulenceModel& turb,
+            const word& combustionProperties
         );
 
 

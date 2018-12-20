@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,10 +65,17 @@ void Foam::fv::interRegionOption::setMapper()
                 (
                     mesh_,
                     nbrMesh,
-                    meshToMesh::interpolationMethodNames_.lookup
+                    meshToMesh::interpolationMethodNames_.lookupOrDefault
                     (
                         "interpolationMethod",
-                        coeffs_
+                        coeffs_,
+                        meshToMesh::interpolationMethod::imCellVolumeWeight
+                    ),
+                    meshToMesh::procMapMethodNames_.lookupOrDefault
+                    (
+                        "procMapMethod",
+                        coeffs_,
+                        meshToMesh::procMapMethod::pmAABB
                     ),
                     false // not interpolating patches
                 )
@@ -102,8 +109,8 @@ Foam::fv::interRegionOption::interRegionOption
         dict,
         mesh
     ),
-    master_(coeffs_.lookupOrDefault<bool>("master", true)),
-    nbrRegionName_(coeffs_.lookup("nbrRegion")),
+    master_(coeffs_.lookupOrDefault("master", true)),
+    nbrRegionName_(coeffs_.get<word>("nbrRegion")),
     meshInterpPtr_()
 {
     if (active())
@@ -117,6 +124,19 @@ Foam::fv::interRegionOption::interRegionOption
 
 Foam::fv::interRegionOption::~interRegionOption()
 {}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+bool Foam::fv::interRegionOption::read(const dictionary& dict)
+{
+    if (option::read(dict))
+    {
+        return true;
+    }
+
+    return false;
+}
 
 
 // ************************************************************************* //

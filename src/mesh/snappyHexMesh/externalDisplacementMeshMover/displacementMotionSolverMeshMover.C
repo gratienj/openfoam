@@ -51,7 +51,7 @@ bool Foam::displacementMotionSolverMeshMover::moveMesh
     labelList& checkFaces
 )
 {
-    const label nRelaxIter = readLabel(moveDict.lookup("nRelaxIter"));
+    const label nRelaxIter = moveDict.get<label>("nRelaxIter");
 
     meshMover_.setDisplacementPatchFields();
 
@@ -118,7 +118,7 @@ Foam::displacementMotionSolverMeshMover::displacementMotionSolverMeshMover
     (
         displacementMotionSolver::New
         (
-            dict.lookup("solver"),
+            dict.get<word>("solver"),
             pointDisplacement.mesh()(),
             IOdictionary
             (
@@ -205,18 +205,18 @@ bool Foam::displacementMotionSolverMeshMover::move
     // Note that this has to update the pointDisplacement boundary conditions
     // as well, not just the internal field.
     {
-        const label nSmoothPatchThickness = readLabel
+        const label nSmoothPatchThickness
         (
-            moveDict.lookup("nSmoothThickness")
+            moveDict.get<label>("nSmoothThickness")
         );
 
-        const word minThicknessName = word(moveDict.lookup("minThicknessName"));
+        const word minThicknessName(moveDict.get<word>("minThicknessName"));
 
         scalarField zeroMinThickness;
 
         if (minThicknessName == "none")
         {
-            zeroMinThickness = scalarField(adaptPatchPtr_().nPoints(), 0.0);
+            zeroMinThickness = scalarField(adaptPatchPtr_().nPoints(), Zero);
         }
 
         const scalarField& minThickness =
@@ -226,7 +226,7 @@ bool Foam::displacementMotionSolverMeshMover::move
           : mesh().lookupObject<scalarField>(minThicknessName)
         );
 
-        const PackedBoolList isPatchMasterPoint
+        const bitSet isPatchMasterPoint
         (
             meshRefinement::getMasterPoints
             (
@@ -235,7 +235,7 @@ bool Foam::displacementMotionSolverMeshMover::move
             )
         );
 
-        const PackedBoolList isPatchMasterEdge
+        const bitSet isPatchMasterEdge
         (
             meshRefinement::getMasterEdges
             (

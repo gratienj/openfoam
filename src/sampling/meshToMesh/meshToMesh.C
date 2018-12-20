@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,7 +41,7 @@ const Foam::Enum
     Foam::meshToMesh::interpolationMethod
 >
 Foam::meshToMesh::interpolationMethodNames_
-{
+({
     { interpolationMethod::imDirect, "direct" },
     { interpolationMethod::imMapNearest, "mapNearest" },
     { interpolationMethod::imCellVolumeWeight, "cellVolumeWeight" },
@@ -49,6 +49,17 @@ Foam::meshToMesh::interpolationMethodNames_
         interpolationMethod::imCorrectedCellVolumeWeight,
         "correctedCellVolumeWeight"
     },
+});
+
+
+const Foam::Enum
+<
+    Foam::meshToMesh::procMapMethod
+>
+Foam::meshToMesh::procMapMethodNames_
+{
+    { procMapMethod::pmAABB, "AABB" },
+    { procMapMethod::pmLOD, "LOD" },
 };
 
 
@@ -469,10 +480,10 @@ void Foam::meshToMesh::calculate(const word& methodName, const bool normalise)
                 tgtRegion_.time(),
                 IOobject::NO_READ
             ),
-            xferMove(newTgtPoints),
-            xferMove(newTgtFaces),
-            xferMove(newTgtFaceOwners),
-            xferMove(newTgtFaceNeighbours),
+            std::move(newTgtPoints),
+            std::move(newTgtFaces),
+            std::move(newTgtFaceOwners),
+            std::move(newTgtFaceNeighbours),
             false                                   // no parallel comms
         );
 
@@ -481,7 +492,7 @@ void Foam::meshToMesh::calculate(const word& methodName, const bool normalise)
         patches[0] = new polyPatch
         (
             "defaultFaces",
-            newTgt.nFaces() - newTgt.nInternalFaces(),
+            newTgt.nBoundaryFaces(),
             newTgt.nInternalFaces(),
             0,
             newTgt.boundaryMesh(),
@@ -513,24 +524,19 @@ void Foam::meshToMesh::calculate(const word& methodName, const bool normalise)
 
         calcAddressing(methodName, srcRegion_, newTgt);
 
-        // per source cell the target cell address in newTgt mesh
-        forAll(srcToTgtCellAddr_, i)
+        // Per source cell the target cell address in newTgt mesh
+        for (labelList& addressing : srcToTgtCellAddr_)
         {
-            labelList& addressing = srcToTgtCellAddr_[i];
-            forAll(addressing, addrI)
+            for (label& addr : addressing)
             {
-                addressing[addrI] = newTgtCellIDs[addressing[addrI]];
+                addr = newTgtCellIDs[addr];
             }
         }
 
-        // convert target addresses in newTgtMesh into global cell numbering
-        forAll(tgtToSrcCellAddr_, i)
+        // Convert target addresses in newTgtMesh into global cell numbering
+        for (labelList& addressing : tgtToSrcCellAddr_)
         {
-            labelList& addressing = tgtToSrcCellAddr_[i];
-            forAll(addressing, addrI)
-            {
-                addressing[addrI] = globalSrcCells.toGlobal(addressing[addrI]);
-            }
+            globalSrcCells.inplaceToGlobal(addressing);
         }
 
         // set up as a reverse distribute
@@ -628,18 +634,18 @@ Foam::meshToMesh::interpolationMethodAMI(const interpolationMethod method)
 {
     switch (method)
     {
-        case imDirect:
+        case interpolationMethod::imDirect:
         {
             return AMIPatchToPatchInterpolation::imDirect;
             break;
         }
-        case imMapNearest:
+        case interpolationMethod::imMapNearest:
         {
             return AMIPatchToPatchInterpolation::imMapNearest;
             break;
         }
-        case imCellVolumeWeight:
-        case imCorrectedCellVolumeWeight:
+        case interpolationMethod::imCellVolumeWeight:
+        case interpolationMethod::imCorrectedCellVolumeWeight:
         {
             return AMIPatchToPatchInterpolation::imFaceAreaWeight;
             break;
@@ -647,7 +653,7 @@ Foam::meshToMesh::interpolationMethodAMI(const interpolationMethod method)
         default:
         {
             FatalErrorInFunction
-                << "Unhandled enumeration " << method
+                << "Unhandled enumeration " << interpolationMethodNames_[method]
                 << abort(FatalError);
         }
     }
@@ -790,10 +796,10 @@ void Foam::meshToMesh::constructFromCuttingPatches
     DynamicList<label> srcIDs(patchMap.size());
     DynamicList<label> tgtIDs(patchMap.size());
 
-    forAllConstIter(HashTable<word>, patchMap, iter)
+    forAllConstIters(patchMap, iter)
     {
         const word& tgtPatchName = iter.key();
-        const word& srcPatchName = iter();
+        const word& srcPatchName = iter.object();
 
         const polyPatch& srcPatch = srcBm[srcPatchName];
 
@@ -827,11 +833,13 @@ Foam::meshToMesh::meshToMesh
     const polyMesh& src,
     const polyMesh& tgt,
     const interpolationMethod& method,
+    const procMapMethod& mapMethod,
     bool interpAllPatches
 )
 :
     srcRegion_(src),
     tgtRegion_(tgt),
+    procMapMethod_(mapMethod),
     srcPatchID_(),
     tgtPatchID_(),
     patchAMIs_(),
@@ -850,10 +858,10 @@ Foam::meshToMesh::meshToMesh
     constructNoCuttingPatches
     (
         interpolationMethodNames_[method],
-        AMIPatchToPatchInterpolation::interpolationMethodToWord
-        (
+        AMIPatchToPatchInterpolation::interpolationMethodNames_
+        [
             interpolationMethodAMI(method)
-        ),
+        ],
         interpAllPatches
     );
 }
@@ -865,11 +873,13 @@ Foam::meshToMesh::meshToMesh
     const polyMesh& tgt,
     const word& methodName,
     const word& AMIMethodName,
+    const procMapMethod& mapMethod,
     bool interpAllPatches
 )
 :
     srcRegion_(src),
     tgtRegion_(tgt),
+    procMapMethod_(mapMethod),
     srcPatchID_(),
     tgtPatchID_(),
     patchAMIs_(),
@@ -896,11 +906,13 @@ Foam::meshToMesh::meshToMesh
     const interpolationMethod& method,
     const HashTable<word>& patchMap,
     const wordList& cuttingPatches,
+    const procMapMethod& mapMethod,
     const bool normalise
 )
 :
     srcRegion_(src),
     tgtRegion_(tgt),
+    procMapMethod_(mapMethod),
     srcPatchID_(),
     tgtPatchID_(),
     patchAMIs_(),
@@ -917,10 +929,10 @@ Foam::meshToMesh::meshToMesh
     constructFromCuttingPatches
     (
         interpolationMethodNames_[method],
-        AMIPatchToPatchInterpolation::interpolationMethodToWord
-        (
+        AMIPatchToPatchInterpolation::interpolationMethodNames_
+        [
             interpolationMethodAMI(method)
-        ),
+        ],
         patchMap,
         cuttingPatches,
         normalise
@@ -936,11 +948,13 @@ Foam::meshToMesh::meshToMesh
     const word& AMIMethodName,  // boundary mapping
     const HashTable<word>& patchMap,
     const wordList& cuttingPatches,
+    const procMapMethod& mapMethod,
     const bool normalise
 )
 :
     srcRegion_(src),
     tgtRegion_(tgt),
+    procMapMethod_(mapMethod),
     srcPatchID_(),
     tgtPatchID_(),
     patchAMIs_(),

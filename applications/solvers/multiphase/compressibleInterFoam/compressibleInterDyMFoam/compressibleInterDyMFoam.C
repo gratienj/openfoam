@@ -25,7 +25,7 @@ Application
     compressibleInterDyMFoam
 
 Description
-    Solver for 2 compressible, non-isothermal immiscible fluids using a VOF
+    Solver for two compressible, non-isothermal immiscible fluids using a VOF
     (volume of fluid) phase-fraction based interface capturing approach,
     with optional mesh motion and mesh topology changes including adaptive
     re-meshing.
@@ -44,9 +44,7 @@ Description
 #include "localEulerDdtScheme.H"
 #include "CrankNicolsonDdtScheme.H"
 #include "subCycle.H"
-#include "twoPhaseMixture.H"
-#include "twoPhaseMixtureThermo.H"
-#include "turbulentFluidThermoModel.H"
+#include "compressibleInterPhaseTransportModel.H"
 #include "pimpleControl.H"
 #include "fvOptions.H"
 #include "CorrectPhi.H"
@@ -56,18 +54,23 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for two compressible, non-isothermal immiscible fluids"
+        " using VOF phase-fraction based interface capturing.\n"
+        "With optional mesh motion and mesh topology changes including"
+        " adaptive re-meshing."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
     #include "initContinuityErrs.H"
-    #include "createControl.H"
+    #include "createDyMControls.H"
     #include "createFields.H"
-    #include "createAlphaFluxes.H"
-    #include "createFvOptions.H"
     #include "createUf.H"
-    #include "createControls.H"
     #include "CourantNo.H"
     #include "setInitialDeltaT.H"
 
@@ -76,14 +79,12 @@ int main(int argc, char *argv[])
     const volScalarField& psi1 = mixture.thermo1().psi();
     const volScalarField& psi2 = mixture.thermo2().psi();
 
-    turbulence->validate();
-
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     Info<< "\nStarting time loop\n" << endl;
 
     while (runTime.run())
     {
-        #include "readControls.H"
+        #include "readDyMControls.H"
 
         // Store divU from the previous mesh so that it can be mapped
         // and used in correctPhi to ensure the corrected phi has the
@@ -101,7 +102,7 @@ int main(int argc, char *argv[])
             #include "setDeltaT.H"
         }
 
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -116,6 +117,8 @@ int main(int argc, char *argv[])
 
                 if (mesh.changing())
                 {
+                    MRF.update();
+
                     Info<< "Execution time for mesh.update() = "
                         << runTime.elapsedCpuTime() - timeBeforeMeshUpdate
                         << " s" << endl;
@@ -124,12 +127,8 @@ int main(int argc, char *argv[])
                     ghf = (g & mesh.Cf()) - ghRef;
                 }
 
-                if ((mesh.changing() && correctPhi) || mesh.topoChanging())
+                if ((mesh.changing() && correctPhi))
                 {
-                    // Calculate absolute flux from the mapped surface velocity
-                    // Note: temporary fix until mapped Uf is assessed
-                    Uf = fvc::interpolate(U);
-
                     // Calculate absolute flux from the mapped surface velocity
                     phi = mesh.Sf() & Uf;
 
@@ -150,6 +149,8 @@ int main(int argc, char *argv[])
             #include "alphaControls.H"
             #include "compressibleAlphaEqnSubCycle.H"
 
+            turbulence.correctPhasePhi();
+
             #include "UEqn.H"
             #include "TEqn.H"
 
@@ -161,7 +162,7 @@ int main(int argc, char *argv[])
 
             if (pimple.turbCorr())
             {
-                turbulence->correct();
+                turbulence.correct();
             }
         }
 
@@ -173,9 +174,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = "
-            << runTime.elapsedCpuTime()
-            << " s\n\n" << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

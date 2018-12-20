@@ -76,12 +76,7 @@ leastSquaresFaGrad<Type>::grad
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensioned<GradType>
-            (
-                "zero",
-                vsf.dimensions()/dimLength,
-                pTraits<GradType>::zero
-            ),
+            dimensioned<GradType>(vsf.dimensions()/dimLength, Zero),
             zeroGradientFaPatchField<GradType>::typeName
         )
     );
@@ -143,7 +138,6 @@ leastSquaresFaGrad<Type>::grad
     }
 
     // Remove component of gradient normal to surface (area)
-    // Removed for consistencty.  Matthias Rauter, 6/Dec/2016
     lsGrad.correctBoundaryConditions();
 
     gaussGrad<Type>::correctBoundaryConditions(vsf, lsGrad);

@@ -59,11 +59,11 @@ class edgeMeshFormat
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        edgeMeshFormat(const edgeMeshFormat&);
+        //- No copy construct
+        edgeMeshFormat(const edgeMeshFormat&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const edgeMeshFormat&);
+        //- No copy assignment
+        void operator=(const edgeMeshFormat&) = delete;
 
 
 protected:
@@ -92,16 +92,12 @@ public:
         //- Read file and return edgeMesh
         static autoPtr<edgeMesh> New(const fileName& name)
         {
-            return autoPtr<edgeMesh>
-            (
-                new edgeMeshFormat(name)
-            );
+            return autoPtr<edgeMesh>::NewFrom<edgeMeshFormat>(name);
         }
 
 
     //- Destructor
-    virtual ~edgeMeshFormat()
-    {}
+    virtual ~edgeMeshFormat() = default;
 
 
     // Member Functions

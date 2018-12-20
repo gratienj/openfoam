@@ -62,22 +62,16 @@ Foam::InterfaceCompositionPhaseChangePhaseSystem<BasePhaseSystem>::
 massTransfer() const
 {
     // Create a mass transfer matrix for each species of each phase
-    autoPtr<phaseSystem::massTransferTable> eqnsPtr
-    (
-        new phaseSystem::massTransferTable()
-    );
+    auto eqnsPtr = autoPtr<phaseSystem::massTransferTable>::New();
+    auto& eqns = *eqnsPtr;
 
-    phaseSystem::massTransferTable& eqns = eqnsPtr();
-
-    forAll(this->phaseModels_, phasei)
+    for (const phaseModel& phase : this->phaseModels_)
     {
-        const phaseModel& phase = this->phaseModels_[phasei];
-
         const PtrList<volScalarField>& Yi = phase.Y();
 
         forAll(Yi, i)
         {
-            eqns.insert
+            eqns.set
             (
                 Yi[i].name(),
                 new fvScalarMatrix(Yi[i], dimMass/dimTime)
@@ -86,14 +80,9 @@ massTransfer() const
     }
 
     // Reset the interfacial mass flow rates
-    forAllConstIter
-    (
-        phaseSystem::phasePairTable,
-        this->phasePairs_,
-        phasePairIter
-    )
+    forAllConstIters(this->phasePairs_, phasePairIter)
     {
-        const phasePair& pair(phasePairIter());
+        const phasePair& pair = *(phasePairIter.object());
 
         if (pair.ordered())
         {
@@ -104,26 +93,22 @@ massTransfer() const
             *this->dmdtExplicit_[pair];
 
         *this->dmdtExplicit_[pair] =
-            dimensionedScalar("zero", dimDensity/dimTime, 0);
+            dimensionedScalar(dimDensity/dimTime, Zero);
     }
 
     // Sum up the contribution from each interface composition model
-    forAllConstIter
+    forAllConstIters
     (
-        interfaceCompositionModelTable,
         interfaceCompositionModels_,
         interfaceCompositionModelIter
     )
     {
-        const interfaceCompositionModel& compositionModel
-        (
-            interfaceCompositionModelIter()
-        );
+        const phasePair& pair =
+            *(this->phasePairs_[interfaceCompositionModelIter.key()]);
 
-        const phasePair& pair
-        (
-            this->phasePairs_[interfaceCompositionModelIter.key()]
-        );
+        const interfaceCompositionModel& compositionModel =
+            *(interfaceCompositionModelIter.object());
+
         const phaseModel& phase = pair.phase1();
         const phaseModel& otherPhase = pair.phase2();
         const phasePairKey key(phase.name(), otherPhase.name());
@@ -140,15 +125,8 @@ massTransfer() const
             this->massTransferModels_[key][phase.name()]->K()
         );
 
-        forAllConstIter
-        (
-            hashedWordList,
-            compositionModel.species(),
-            memberIter
-        )
+        for (const word& member : compositionModel.species())
         {
-            const word& member = *memberIter;
-
             const word name
             (
                 IOobject::groupName(member, phase.name())
@@ -209,14 +187,9 @@ correctThermo()
     // Yfi is likely to be a strong non-linear (typically exponential) function
     // of Tf, so the solution for the temperature is newton-accelerated
 
-    forAllConstIter
-    (
-        phaseSystem::phasePairTable,
-        this->phasePairs_,
-        phasePairIter
-    )
+    forAllConstIters(this->phasePairs_, phasePairIter)
     {
-        const phasePair& pair(phasePairIter());
+        const phasePair& pair = *(phasePairIter.object());
 
         if (pair.ordered())
         {
@@ -239,7 +212,7 @@ correctThermo()
                 this->mesh()
             ),
             this->mesh(),
-            dimensionedScalar("zero", dimEnergy/dimVolume/dimTime, 0)
+            dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
         );
         volScalarField mDotLPrime
         (
@@ -250,7 +223,7 @@ correctThermo()
                 this->mesh()
             ),
             this->mesh(),
-            dimensionedScalar("zero", mDotL.dimensions()/dimTemperature, 0)
+            dimensionedScalar(mDotL.dimensions()/dimTemperature, Zero)
         );
 
         volScalarField& Tf = *this->Tf_[pair];

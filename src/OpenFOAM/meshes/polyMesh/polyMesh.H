@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -85,7 +85,7 @@ public:
         //- Enumeration defining the state of the mesh after a read update.
         //  Used for post-processing applications, where the mesh
         //  needs to update based on the files written in time
-        //  directores
+        //  directories
         enum readUpdateState
         {
             UNCHANGED,
@@ -189,11 +189,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow construct as copy
-        polyMesh(const polyMesh&);
+        //- No copy construct
+        polyMesh(const polyMesh&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const polyMesh&);
+        //- No copy assignment
+        void operator=(const polyMesh&) = delete;
 
         //- Initialise the polyMesh from the primitive data
         void initMesh();
@@ -315,18 +315,22 @@ public:
 
     // Constructors
 
-        //- Construct from IOobject
+        //- Read construct from IOobject
         explicit polyMesh(const IOobject& io);
+
+        //- Construct from IOobject or as zero-sized mesh
+        //  Boundary is added using addPatches() member function
+        polyMesh(const IOobject& io, const zero, bool syncPar=true);
 
         //- Construct from IOobject or from components.
         //  Boundary is added using addPatches() member function
         polyMesh
         (
             const IOobject& io,
-            const Xfer<pointField>& points,
-            const Xfer<faceList>& faces,
-            const Xfer<labelList>& owner,
-            const Xfer<labelList>& neighbour,
+            pointField&& points,
+            faceList&& faces,
+            labelList&& owner,
+            labelList&& neighbour,
             const bool syncPar = true
         );
 
@@ -335,9 +339,9 @@ public:
         polyMesh
         (
             const IOobject& io,
-            const Xfer<pointField>& points,
-            const Xfer<faceList>& faces,
-            const Xfer<cellList>& cells,
+            pointField&& points,
+            faceList&& faces,
+            cellList&& cells,
             const bool syncPar = true
         );
 
@@ -345,7 +349,7 @@ public:
         polyMesh
         (
             const IOobject& io,
-            const Xfer<pointField>& points,
+            pointField&& points,
             const cellShapeList& shapes,
             const faceListList& boundaryFaces,
             const wordList& boundaryPatchNames,
@@ -356,12 +360,12 @@ public:
             const bool syncPar = true
         );
 
-        //- Construct from cell shapes with patch information in dictionary
-        //  format.
+        //- Construct from cell shapes, with patch information in dictionary
+        //- format.
         polyMesh
         (
             const IOobject& io,
-            const Xfer<pointField>& points,
+            pointField&& points,
             const cellShapeList& shapes,
             const faceListList& boundaryFaces,
             const wordList& boundaryPatchNames,
@@ -387,7 +391,7 @@ public:
             fileName meshDir() const;
 
             //- Return the current instance directory for points
-            //  Used in the consruction of gemometric mesh data dependent
+            //  Used in the construction of geometric mesh data dependent
             //  on points
             const fileName& pointsInstance() const;
 
@@ -493,6 +497,12 @@ public:
 
         // Mesh motion
 
+            //- Is mesh dynamic
+            virtual bool dynamic() const
+            {
+                return false;
+            }
+
             //- Is mesh moving
             bool moving() const
             {
@@ -582,14 +592,18 @@ public:
             //- Reset mesh primitive data. Assumes all patch info correct
             //  (so does e.g. parallel communication). If not use
             //  validBoundary=false
+            //
+            // \note Only autoPtr parameters that test as valid() are used
+            //    for resetting, otherwise the existing entries are left
+            //    untouched.
             void resetPrimitives
             (
-                const Xfer<pointField>& points,
-                const Xfer<faceList>& faces,
-                const Xfer<labelList>& owner,
-                const Xfer<labelList>& neighbour,
-                const labelList& patchSizes,
-                const labelList& patchStarts,
+                autoPtr<pointField>&& points,
+                autoPtr<faceList>&& faces,
+                autoPtr<labelList>&& owner,
+                autoPtr<labelList>&& neighbour,
+                const labelUList& patchSizes,
+                const labelUList& patchStarts,
                 const bool validBoundary = true
             );
 

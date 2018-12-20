@@ -34,6 +34,11 @@ License
 // For EOF only
 #include <cstdio>
 
+// Flex may use register, which is deprecated and incompatible with C++17
+#pragma clang diagnostic ignored "-Wdeprecated-register"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 // flex input buffer size
 int Foam::chemkinReader::yyBufSize = YY_BUF_SIZE;
 
@@ -595,7 +600,7 @@ bool finishReaction = false;
         speciesThermo_.insert
         (
             currentSpecieName,
-            new gasHThermoPhysics
+            autoPtr<gasHThermoPhysics>::New
             (
                 janafThermo<perfectGas<specie>>
                 (

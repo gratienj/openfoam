@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,29 +26,40 @@ License
 #include "Switch.H"
 #include "error.H"
 #include "dictionary.H"
+#include "IOstreams.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-const char* Foam::Switch::names[Foam::Switch::INVALID+1] =
+namespace
+{
+static_assert
+(
+    Foam::Switch::INVALID+1 == 9,
+    "Switch::switchType does not have 9 entries"
+);
+
+//- The names corresponding to the Switch::switchType enumeration.
+//  Includes extra entries for "invalid".
+static const char* names[9] =
 {
     "false", "true",
     "no",    "yes",
     "off",   "on",
-    "none",  "true",  // Is there a reasonable counterpart to "none"?
+    "none",  "(unused)",
     "invalid"
 };
 
+} // End anonymous namespace
 
 // * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * * //
 
-Foam::Switch::switchType Foam::Switch::asEnum
+Foam::Switch::switchType Foam::Switch::parse
 (
     const std::string& str,
-    const bool allowInvalid
+    bool allowBad
 )
 {
-    const std::string::size_type len = str.size();
-    switch (len)
+    switch (str.size())
     {
         case 1: // (f|n|t|y) - single-character forms
         {
@@ -86,7 +97,7 @@ Foam::Switch::switchType Foam::Switch::asEnum
         }
     }
 
-    if (!allowInvalid)
+    if (!allowBad)
     {
         FatalErrorInFunction
             << "Unknown switch word " << str << nl
@@ -101,22 +112,36 @@ Foam::Switch Foam::Switch::lookupOrAddToDict
 (
     const word& name,
     dictionary& dict,
-    const Switch& defaultValue
+    const Switch defaultValue
 )
 {
     return dict.lookupOrAddDefault<Switch>(name, defaultValue);
 }
 
 
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::Switch::Switch(Istream& is)
+{
+    is >> *this;
+}
+
+
 // * * * * * * * * * * * * * * * Member Functions * * * * * * * * * * * * * * //
 
-bool Foam::Switch::valid() const
+bool Foam::Switch::valid() const noexcept
 {
     return switch_ <= switchType::NONE;
 }
 
 
-const char* Foam::Switch::asText() const
+const char* Foam::Switch::c_str() const noexcept
+{
+    return names[switch_];
+}
+
+
+std::string Foam::Switch::str() const
 {
     return names[switch_];
 }
@@ -125,6 +150,62 @@ const char* Foam::Switch::asText() const
 bool Foam::Switch::readIfPresent(const word& name, const dictionary& dict)
 {
     return dict.readIfPresent<Switch>(name, *this);
+}
+
+
+// * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
+
+Foam::Istream& Foam::operator>>(Istream& is, Switch& sw)
+{
+    token t(is);
+
+    if (!t.good())
+    {
+        FatalIOErrorInFunction(is)
+            << "Bad token - could not get bool"
+            << exit(FatalIOError);
+        is.setBad();
+        return is;
+    }
+
+    if (t.isLabel())
+    {
+        sw = bool(t.labelToken());
+    }
+    else if (t.isWord())
+    {
+        // Permit invalid value, but catch immediately for better messages
+        sw = Switch(t.wordToken(), true);
+
+        if (!sw.valid())
+        {
+            FatalIOErrorInFunction(is)
+                << "Expected 'true/false', 'on/off' ... found "
+                << t.wordToken()
+                << exit(FatalIOError);
+            is.setBad();
+            return is;
+        }
+    }
+    else
+    {
+        FatalIOErrorInFunction(is)
+            << "Wrong token type - expected bool, found "
+            << t.info()
+            << exit(FatalIOError);
+        is.setBad();
+        return is;
+    }
+
+    is.check(FUNCTION_NAME);
+    return is;
+}
+
+
+Foam::Ostream& Foam::operator<<(Ostream& os, const Switch& sw)
+{
+    os << sw.c_str();
+    return os;
 }
 
 

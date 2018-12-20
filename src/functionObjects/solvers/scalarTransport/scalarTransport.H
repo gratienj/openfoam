@@ -48,6 +48,7 @@ Description
 Usage
     Example of function object specification to solve a scalar transport
     equation:
+    \verbatim
     functions
     {
         scalar1
@@ -221,10 +222,10 @@ class scalarTransport
             const surfaceScalarField& phi
         ) const;
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         scalarTransport(const scalarTransport&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const scalarTransport&) = delete;
 
 

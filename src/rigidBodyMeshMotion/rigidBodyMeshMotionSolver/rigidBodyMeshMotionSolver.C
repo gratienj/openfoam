@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -59,7 +59,7 @@ Foam::rigidBodyMeshMotionSolver::bodyMesh::bodyMesh
 :
     name_(name),
     bodyID_(bodyID),
-    patches_(wordReList(dict.lookup("patches"))),
+    patches_(dict.lookup("patches")),
     patchSet_(mesh.boundaryMesh().patchSet(patches_))
 {}
 
@@ -73,6 +73,7 @@ Foam::rigidBodyMeshMotionSolver::rigidBodyMeshMotionSolver
     motionSolver(mesh, dict, typeName),
     model_
     (
+        mesh.time(),
         coeffDict(),
         IOobject
         (
@@ -96,7 +97,7 @@ Foam::rigidBodyMeshMotionSolver::rigidBodyMeshMotionSolver
         )
       : coeffDict()
     ),
-    test_(coeffDict().lookupOrDefault<Switch>("test", false)),
+    test_(coeffDict().lookupOrDefault("test", false)),
     rhoInf_(1.0),
     rhoName_(coeffDict().lookupOrDefault<word>("rho", "rho")),
     curTimeIndex_(-1),
@@ -121,23 +122,24 @@ Foam::rigidBodyMeshMotionSolver::rigidBodyMeshMotionSolver
 {
     if (rhoName_ == "rhoInf")
     {
-        rhoInf_ = readScalar(coeffDict().lookup("rhoInf"));
+        coeffDict().readEntry("rhoInf", rhoInf_);
     }
 
     const dictionary& bodiesDict = coeffDict().subDict("bodies");
 
-    forAllConstIter(IDLList<entry>, bodiesDict, iter)
+    for (const entry& dEntry : bodiesDict)
     {
-        const dictionary& bodyDict = iter().dict();
+        const keyType& bodyName = dEntry.keyword();
+        const dictionary& bodyDict = dEntry.dict();
 
         if (bodyDict.found("patches"))
         {
-            const label bodyID = model_.bodyID(iter().keyword());
+            const label bodyID = model_.bodyID(bodyName);
 
             if (bodyID == -1)
             {
                 FatalErrorInFunction
-                    << "Body " << iter().keyword()
+                    << "Body " << bodyName
                     << " has been merged with another body"
                        " and cannot be assigned a set of patches"
                     << exit(FatalError);
@@ -148,7 +150,7 @@ Foam::rigidBodyMeshMotionSolver::rigidBodyMeshMotionSolver
                 new bodyMesh
                 (
                     mesh,
-                    iter().keyword(),
+                    bodyName,
                     bodyID,
                     bodyDict
                 )
@@ -156,12 +158,6 @@ Foam::rigidBodyMeshMotionSolver::rigidBodyMeshMotionSolver
         }
     }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::rigidBodyMeshMotionSolver::~rigidBodyMeshMotionSolver()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -193,20 +189,20 @@ void Foam::rigidBodyMeshMotionSolver::solve()
         curTimeIndex_ = this->db().time().timeIndex();
     }
 
-    if (db().foundObject<uniformDimensionedVectorField>("g"))
+    if (t.foundObject<uniformDimensionedVectorField>("g"))
     {
-        model_.g() =
-            db().lookupObject<uniformDimensionedVectorField>("g").value();
+        model_.g() = t.lookupObject<uniformDimensionedVectorField>("g").value();
     }
 
     if (test_)
     {
-        label nIter(readLabel(coeffDict().lookup("nIter")));
+        const label nIter(coeffDict().get<label>("nIter"));
 
         for (label i=0; i<nIter; i++)
         {
             model_.solve
             (
+                t.value(),
                 t.deltaTValue(),
                 scalarField(model_.nDoF(), Zero),
                 Field<spatialVector>(model_.nBodies(), Zero)
@@ -236,6 +232,7 @@ void Foam::rigidBodyMeshMotionSolver::solve()
 
         model_.solve
         (
+            t.value(),
             t.deltaTValue(),
             scalarField(model_.nDoF(), Zero),
             fx
@@ -253,10 +250,8 @@ void Foam::rigidBodyMeshMotionSolver::solve()
     // Update the displacements
     forAll(bodyMeshes_, bi)
     {
-        forAllConstIter(labelHashSet, bodyMeshes_[bi].patchSet_, iter)
+        for (const label patchi : bodyMeshes_[bi].patchSet_)
         {
-            label patchi = iter.key();
-
             pointField patchPoints0
             (
                 meshSolver_.pointDisplacement().boundaryField()[patchi]
@@ -301,7 +296,8 @@ bool Foam::rigidBodyMeshMotionSolver::writeObject
     );
 
     model_.state().write(dict);
-    return dict.regIOobject::write();
+    // Force ascii writing
+    return dict.regIOobject::writeObject(IOstream::ASCII, ver, cmp, valid);
 }
 
 

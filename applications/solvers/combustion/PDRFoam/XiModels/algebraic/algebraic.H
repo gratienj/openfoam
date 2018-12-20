@@ -67,11 +67,11 @@ class algebraic
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        algebraic(const algebraic&);
+        //- No copy construct
+        algebraic(const algebraic&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const algebraic&);
+        //- No copy assignment
+        void operator=(const algebraic&) = delete;
 
 
 public:
@@ -104,7 +104,7 @@ public:
         //- Return the flame diffusivity
         virtual tmp<volScalarField> Db() const;
 
-        //- Correct the flame-wrinking Xi
+        //- Correct the flame-wrinkling Xi
         virtual void correct();
 
         //- Update properties from given dictionary

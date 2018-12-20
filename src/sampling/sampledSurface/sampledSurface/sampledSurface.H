@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -70,13 +70,6 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
-
-class sampledSurface;
-
-Ostream& operator<<(Ostream&, const sampledSurface&);
-
-
 /*---------------------------------------------------------------------------*\
                       Class sampledSurface Declaration
 \*---------------------------------------------------------------------------*/
@@ -85,6 +78,8 @@ class sampledSurface
 :
     public meshedSurf
 {
+private:
+
     // Private data
 
         //- Name of sample surface
@@ -103,39 +98,33 @@ class sampledSurface
         mutable scalar area_;
 
 
-    // Service methods
-
-        //- Check field size matches surface size
-        template<class Type>
-        bool checkFieldSize(const Field<Type>&) const;
-
-        //- Project field onto surface
-        template<class ReturnType, class Type>
-        void project
-        (
-            Field<ReturnType>&,
-            const Field<Type>&
-        ) const;
-
-        //- Project field onto surface
-        template<class ReturnType, class Type>
-        void project
-        (
-            Field<ReturnType>&,
-            const tmp<Field<Type>>&
-        ) const;
-
-        //- Project field onto surface
-        template<class ReturnType, class Type>
-        tmp<Field<ReturnType>> project(const tmp<Field<Type>>&) const;
-
-
 protected:
 
-    // Protected Member functions
+    // Protected Member Functions
+
+        //- General loop for sampling elements to faces
+        template<class Type>
+        static tmp<Field<Type>> sampleOnFaces
+        (
+            const interpolation<Type>& sampler,
+            const labelUList& elements,
+            const faceList& fcs,
+            const pointField& pts
+        );
+
+
+        //- Create cell values by averaging the point values
+        template<class Type>
+        static tmp<GeometricField<Type, fvPatchField, volMesh>> pointAverage
+        (
+            const GeometricField<Type, pointPatchField, pointMesh>& pfld
+        );
+
 
         virtual void clearGeom() const;
 
+        //- Construct null
+        explicit sampledSurface(const word& name, std::nullptr_t);
 
 public:
 
@@ -189,7 +178,7 @@ public:
         sampledSurface
         (
             const word& name,
-            const polyMesh&,
+            const polyMesh& mesh,
             const bool interpolate = false
         );
 
@@ -197,15 +186,15 @@ public:
         sampledSurface
         (
             const word& name,
-            const polyMesh&,
-            const dictionary&
+            const polyMesh& mesh,
+            const dictionary& dict
         );
 
         //- Clone
         autoPtr<sampledSurface> clone() const
         {
             NotImplemented;
-            return autoPtr<sampledSurface>(nullptr);
+            return nullptr;
         }
 
 
@@ -215,8 +204,8 @@ public:
         static autoPtr<sampledSurface> New
         (
             const word& name,
-            const polyMesh&,
-            const dictionary&
+            const polyMesh& mesh,
+            const dictionary& dict
         );
 
 
@@ -226,7 +215,7 @@ public:
 
     // Member Functions
 
-      // Access
+    // Access
 
         //- Access to the underlying mesh
         const polyMesh& mesh() const
@@ -276,138 +265,118 @@ public:
         //- The total surface area
         scalar area() const;
 
+        //- If element ids/order of the original surface are available
+        virtual bool hasFaceIds() const
+        {
+            return false;
+        }
 
-        //- Integration of a field across the surface
-        template<class Type>
-        Type integrate(const Field<Type>&) const;
+        //- List of element ids/order of the original surface,
+        //- when hasFaceIds is true.
+        virtual const labelList& originalIds() const
+        {
+            return Foam::emptyLabelList;
+        }
 
-        //- Integration of a field across the surface
-        template<class Type>
-        Type integrate(const tmp<Field<Type>>&) const;
 
-        //- Area-averaged value of a field across the surface
-        template<class Type>
-        Type average(const Field<Type>&) const;
+    // Sample (faces)
 
-        //- Area-averaged value of a field across the surface
-        template<class Type>
-        Type average(const tmp<Field<Type>>&) const;
-
-        //- Project field onto surface
-        tmp<Field<scalar>> project(const Field<scalar>&) const;
-
-        //- Project field onto surface
-        tmp<Field<scalar>> project(const Field<vector>&) const;
-
-        //- Project field onto surface
-        tmp<Field<vector>> project(const Field<sphericalTensor>&) const;
-
-        //- Project field onto surface
-        tmp<Field<vector>> project(const Field<symmTensor>&) const;
-
-        //- Project field onto surface
-        tmp<Field<vector>> project(const Field<tensor>&) const;
-
-        //- Interpolate from points to cell centre
-        template<class Type>
-        tmp<GeometricField<Type, fvPatchField, volMesh>> pointAverage
-        (
-            const GeometricField<Type, pointPatchField, pointMesh>& pfld
-        ) const;
-
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<scalarField> sample
         (
-            const volScalarField&
+            const interpolation<scalar>& sampler
         ) const = 0;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<vectorField> sample
         (
-            const volVectorField&
+            const interpolation<vector>& sampler
         ) const = 0;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<sphericalTensorField> sample
         (
-            const volSphericalTensorField&
+            const interpolation<sphericalTensor>& sampler
         ) const = 0;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<symmTensorField> sample
         (
-            const volSymmTensorField&
+            const interpolation<symmTensor>& sampler
         ) const = 0;
 
-        //- Sample field on surface
+        //- Sample volume field onto surface faces
         virtual tmp<tensorField> sample
         (
-            const volTensorField&
+            const interpolation<tensor>& sampler
         ) const = 0;
 
-        //- Surface sample field on surface
+
+        //- Sample surface field onto surface
         virtual tmp<scalarField> sample
         (
-            const surfaceScalarField&
+            const surfaceScalarField& sField
         ) const;
 
-        //- Surface Sample field on surface
+        //- Sample surface field onto surface
         virtual tmp<vectorField> sample
         (
-            const surfaceVectorField&
+            const surfaceVectorField& sField
         ) const;
 
-        //- Surface sample field on surface
+        //- Sample surface field onto surface
         virtual tmp<sphericalTensorField> sample
         (
-            const surfaceSphericalTensorField&
+            const surfaceSphericalTensorField& sField
         ) const;
 
-        //- Surface sample field on surface
+        //- Sample surface field onto surface
         virtual tmp<symmTensorField> sample
         (
-            const surfaceSymmTensorField&
+            const surfaceSymmTensorField& sField
         ) const;
 
-        //- Surface sample field on surface
+        //- Sample surface field onto surface
         virtual tmp<tensorField> sample
         (
-            const surfaceTensorField&
+            const surfaceTensorField& sField
         ) const;
 
-        //- Interpolate field on surface
+
+    // Interpolate (points)
+
+        //- Interpolate volume field onto surface points
         virtual tmp<scalarField> interpolate
         (
-            const interpolation<scalar>&
+            const interpolation<scalar>& interpolator
         ) const = 0;
 
-
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<vectorField> interpolate
         (
-            const interpolation<vector>&
+            const interpolation<vector>& interpolator
         ) const = 0;
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<sphericalTensorField> interpolate
         (
-            const interpolation<sphericalTensor>&
+            const interpolation<sphericalTensor>& interpolator
         ) const = 0;
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<symmTensorField> interpolate
         (
-            const interpolation<symmTensor>&
+            const interpolation<symmTensor>& interpolator
         ) const = 0;
 
-        //- Interpolate field on surface
+        //- Interpolate volume field onto surface points
         virtual tmp<tensorField> interpolate
         (
-            const interpolation<tensor>&
+            const interpolation<tensor>& interpolator
         ) const = 0;
 
 
-      // Edit
+    // Edit
 
         //- Rename
         virtual void rename(const word& newName)
@@ -416,15 +385,17 @@ public:
         }
 
 
-      // Write
+    // Write
 
-        //- Write
-        virtual void print(Ostream&) const;
-
-        //- Ostream operator
-        friend Ostream& operator<<(Ostream&, const sampledSurface&);
+        //- Print information
+        virtual void print(Ostream& os) const;
 };
 
+
+// Global Operators
+
+//- Ostream operator
+Ostream& operator<<(Ostream& os, const sampledSurface& s);
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

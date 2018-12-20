@@ -193,8 +193,8 @@ void Foam::twoPhaseSystem::solve()
 
     const dictionary& alphaControls = mesh_.solverDict(alpha1.name());
 
-    label nAlphaSubCycles(readLabel(alphaControls.lookup("nAlphaSubCycles")));
-    label nAlphaCorr(readLabel(alphaControls.lookup("nAlphaCorr")));
+    label nAlphaSubCycles(alphaControls.get<label>("nAlphaSubCycles"));
+    label nAlphaCorr(alphaControls.get<label>("nAlphaCorr"));
 
     bool LTS = fv::localEulerDdt::enabled(mesh_);
 
@@ -263,7 +263,7 @@ void Foam::twoPhaseSystem::solve()
                 mesh_
             ),
             mesh_,
-            dimensionedScalar("Sp", dimless/dimTime, 0.0)
+            dimensionedScalar(dimless/dimTime, Zero)
         );
 
         volScalarField::Internal Su

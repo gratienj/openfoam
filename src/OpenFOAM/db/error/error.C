@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2014 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,26 +33,27 @@ License
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
-void Foam::error::warnAboutAge
-(
-    const char* what,
-    const int oldVersion
-)
+void Foam::error::warnAboutAge(const char* what, const int version)
 {
-    if (oldVersion < 1000)
+    if (version <= 0)
     {
-        // Emit warning
+        // No warning for 0 (unversioned) or -ve values (silent versioning)
+    }
+    else if (version < 1000)
+    {
+        // Warning for things that predate the YYMM versioning
+        // (eg, 240 for version 2.4)
         std::cerr
             << "    This " << what << " is considered to be VERY old!\n"
             << std::endl;
     }
-    else if (OPENFOAM_PLUS > oldVersion)
+    else if (version < OPENFOAM)
     {
         const int months =
         (
             // YYMM -> months
-            (12 * (OPENFOAM_PLUS/100) + (OPENFOAM_PLUS % 100))
-          - (12 * (oldVersion/100) + (oldVersion % 100))
+            (12 * (OPENFOAM/100) + (OPENFOAM % 100))
+          - (12 * (version/100)  + (version % 100))
         );
 
         std::cerr
@@ -60,13 +61,8 @@ void Foam::error::warnAboutAge
             << " months old.\n"
             << std::endl;
     }
-///// Uncertain if this is desirable
-///    else if (OPENFOAM_PLUS < oldVersion)
-///    {
-///        std::cerr
-///            << "    This " << what << " appears to be a future option\n"
-///            << std::endl;
-///    }
+    // No warning for (OPENFOAM < version).
+    // We use this to denote future expiry dates of transition features.
 }
 
 
@@ -96,9 +92,9 @@ Foam::error::error(const dictionary& errDict)
 :
     std::exception(),
     messageStream(errDict),
-    functionName_(errDict.lookup("functionName")),
-    sourceFileName_(errDict.lookup("sourceFileName")),
-    sourceFileLineNumber_(readLabel(errDict.lookup("sourceFileLineNumber"))),
+    functionName_(errDict.get<string>("functionName")),
+    sourceFileName_(errDict.get<string>("sourceFileName")),
+    sourceFileLineNumber_(errDict.get<label>("sourceFileLineNumber")),
     throwExceptions_(false),
     messageStreamPtr_(new OStringStream())
 {
@@ -187,7 +183,7 @@ Foam::error::operator Foam::dictionary() const
     dictionary errDict;
 
     string oneLineMessage(message());
-    oneLineMessage.replaceAll('\n', ' ');
+    oneLineMessage.replaceAll("\n", " ");
 
     errDict.add("type", word("Foam::error"));
     errDict.add("message", oneLineMessage);
@@ -240,7 +236,7 @@ void Foam::error::exit(const int errNo)
     {
         Perr<< endl << *this << endl
             << "\nFOAM exiting\n" << endl;
-        ::exit(1);
+        ::exit(errNo);
     }
 }
 

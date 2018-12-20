@@ -25,7 +25,7 @@ License
 
 #include "ManualInjection.H"
 #include "mathematicalConstants.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 
 using namespace Foam::constant::mathematical;
 
@@ -97,7 +97,7 @@ Foam::ManualInjection<CloudType>::ManualInjection
     injectorTetFaces_(im.injectorTetFaces_),
     injectorTetPts_(im.injectorTetPts_),
     U0_(im.U0_),
-    sizeDistribution_(im.sizeDistribution_, false),
+    sizeDistribution_(im.sizeDistribution_.clone()),
     ignoreOutOfBounds_(im.ignoreOutOfBounds_)
 {}
 
@@ -116,7 +116,7 @@ void Foam::ManualInjection<CloudType>::updateMesh()
 {
     label nRejected = 0;
 
-    PackedBoolList keep(positions_.size(), true);
+    bitSet keep(positions_.size(), true);
 
     forAll(positions_, pI)
     {
@@ -132,7 +132,7 @@ void Foam::ManualInjection<CloudType>::updateMesh()
             )
         )
         {
-            keep[pI] = false;
+            keep.unset(pI);
             nRejected++;
         }
     }

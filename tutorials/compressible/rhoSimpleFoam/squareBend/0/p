@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  plus                                  |
+|  \\    /   O peration     | Version:  v1812                                 |
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -20,25 +20,23 @@ internalField   uniform 110000;
 
 boundaryField
 {
-    Default_Boundary_Region
-    {
-        type            zeroGradient;
-    }
     inlet
     {
         type            zeroGradient;
+
         //type            mixed;
-        refValue        uniform 110000;
-        refGradient     uniform 0;
-        valueFraction   uniform 0.3;
+        //refValue        $internalField;
+        //refGradient     uniform 0;
+        //valueFraction   uniform 0.3;
     }
+
     outlet
     {
         type            fixedValue;
-        value           uniform 110000;
+        value           $internalField;
 
         //type            mixed;
-        //refValue        uniform 110000;
+        //refValue        $internalField;
         //refGradient     uniform 0;
         //valueFraction   uniform 1;
         //type            transonicOutletPressure;
@@ -46,7 +44,12 @@ boundaryField
         //phi             phi;
         //gamma           1.4;
         //psi             psi;
-        //pInf            uniform 110000;
+        //pInf            $internalField;
+    }
+
+    "(?i).*walls"
+    {
+        type            zeroGradient;
     }
 }
 

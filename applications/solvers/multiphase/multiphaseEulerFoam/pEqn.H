@@ -55,7 +55,7 @@
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar("phiHbyA", dimArea*dimVelocity, 0)
+        dimensionedScalar(dimArea*dimVelocity, Zero)
     );
 
     volScalarField rho("rho", fluid.rho());
@@ -98,7 +98,10 @@
         phiHbyAs[phasei] =
         (
             fvc::flux(HbyAs[phasei])
-          + rAlphaAUfs[phasei]*fvc::ddtCorr(phase.U(), phase.phi())
+          + MRF.zeroFilter
+            (
+                rAlphaAUfs[phasei]*fvc::ddtCorr(phase.U(), phase.phi())
+            )
         );
         MRF.makeRelative(phiHbyAs[phasei]);
         MRF.makeRelative(phase.phi().oldTime());
@@ -173,7 +176,7 @@
             mesh
         ),
         mesh,
-        dimensionedScalar("rAUf", dimensionSet(-1, 3, 1, 0, 0), 0)
+        dimensionedScalar(dimensionSet(-1, 3, 1, 0, 0), Zero)
     );
 
     phasei = 0;

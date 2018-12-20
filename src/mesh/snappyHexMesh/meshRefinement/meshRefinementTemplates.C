@@ -57,7 +57,7 @@ template<class T> void Foam::meshRefinement::updateList
 template<class T>
 T Foam::meshRefinement::gAverage
 (
-    const PackedBoolList& isMasterElem,
+    const bitSet& isMasterElem,
     const UList<T>& values
 )
 {
@@ -75,7 +75,7 @@ T Foam::meshRefinement::gAverage
 
     forAll(values, i)
     {
-        if (isMasterElem[i])
+        if (isMasterElem.test(i))
         {
             sum += values[i];
             n++;
@@ -106,7 +106,7 @@ void Foam::meshRefinement::testSyncBoundaryFaceList
     const UList<T>& syncedFaceData
 ) const
 {
-    label nBFaces = mesh_.nFaces() - mesh_.nInternalFaces();
+    const label nBFaces = mesh_.nBoundaryFaces();
 
     if (faceData.size() != nBFaces || syncedFaceData.size() != nBFaces)
     {
@@ -274,7 +274,7 @@ template<class Type>
 void Foam::meshRefinement::weightedSum
 (
     const polyMesh& mesh,
-    const PackedBoolList& isMasterEdge,
+    const bitSet& isMasterEdge,
     const labelList& meshPoints,
     const edgeList& edges,
     const scalarField& edgeWeights,
@@ -304,7 +304,7 @@ void Foam::meshRefinement::weightedSum
 
     forAll(edges, edgeI)
     {
-        if (isMasterEdge[edgeI])
+        if (isMasterEdge.test(edgeI))
         {
             const edge& e = edges[edgeI];
 

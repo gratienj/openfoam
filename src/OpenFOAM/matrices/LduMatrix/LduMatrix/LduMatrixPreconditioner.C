@@ -35,7 +35,10 @@ Foam::LduMatrix<Type, DType, LUType>::preconditioner::New
     const dictionary& preconditionerDict
 )
 {
-    const word preconditionerName = preconditionerDict.lookup("preconditioner");
+    const word preconditionerName
+    (
+        preconditionerDict.get<word>("preconditioner")
+    );
 
     if (sol.matrix().symmetric())
     {
@@ -44,10 +47,8 @@ Foam::LduMatrix<Type, DType, LUType>::preconditioner::New
 
         if (!cstrIter.found())
         {
-            FatalIOErrorInFunction
-            (
-                preconditionerDict
-            )   << "Unknown symmetric matrix preconditioner "
+            FatalIOErrorInFunction(preconditionerDict)
+                << "Unknown symmetric matrix preconditioner "
                 << preconditionerName << endl << endl
                 << "Valid symmetric matrix preconditioners are :" << endl
                 << symMatrixConstructorTablePtr_->sortedToc()
@@ -70,10 +71,8 @@ Foam::LduMatrix<Type, DType, LUType>::preconditioner::New
 
         if (!cstrIter.found())
         {
-            FatalIOErrorInFunction
-            (
-                preconditionerDict
-            )   << "Unknown asymmetric matrix preconditioner "
+            FatalIOErrorInFunction(preconditionerDict)
+                << "Unknown asymmetric matrix preconditioner "
                 << preconditionerName << endl << endl
                 << "Valid asymmetric matrix preconditioners are :" << endl
                 << asymMatrixConstructorTablePtr_->sortedToc()
@@ -89,20 +88,13 @@ Foam::LduMatrix<Type, DType, LUType>::preconditioner::New
             )
         );
     }
-    else
-    {
-        FatalIOErrorInFunction
-        (
-            preconditionerDict
-        )   << "cannot preconditione incomplete matrix, "
-               "no diagonal or off-diagonal coefficient"
-            << exit(FatalIOError);
 
-        return autoPtr<typename LduMatrix<Type, DType, LUType>::preconditioner>
-        (
-            nullptr
-        );
-    }
+    FatalIOErrorInFunction(preconditionerDict)
+        << "Cannot precondition incomplete matrix, "
+           "no diagonal or off-diagonal coefficient"
+        << exit(FatalIOError);
+
+    return nullptr;
 }
 
 

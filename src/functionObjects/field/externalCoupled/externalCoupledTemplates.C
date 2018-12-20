@@ -82,8 +82,7 @@ bool Foam::functionObjects::externalCoupled::readData
     label nFound = 0;
     for (const fvMesh& mesh : meshes)
     {
-        const volFieldType* vfptr =
-            mesh.lookupObjectPtr<volFieldType>(fieldName);
+        const volFieldType* vfptr = mesh.findObject<volFieldType>(fieldName);
 
         if (!vfptr)
         {
@@ -125,10 +124,10 @@ bool Foam::functionObjects::externalCoupled::readData
                     os
                 );
 
-                // Pass responsability for all reading over to bc
+                // Pass responsibility for all reading over to bc
                 pf.readData(IStringStream(os.str())());
 
-                // Update the value from the read coefficicient. Bypass any
+                // Update the value from the read coefficient. Bypass any
                 // additional processing by derived type.
                 pf.patchFieldType::evaluate();
             }
@@ -176,7 +175,7 @@ bool Foam::functionObjects::externalCoupled::readData
                 }
                 pf.valueFraction() = data[columni];
 
-                // Update the value from the read coefficicient. Bypass any
+                // Update the value from the read coefficient. Bypass any
                 // additional processing by derived type.
                 pf.mixedFvPatchField<Type>::evaluate();
             }
@@ -211,7 +210,7 @@ bool Foam::functionObjects::externalCoupled::readData
                     );
                 }
 
-                // Update the value from the read coefficicient. Bypass any
+                // Update the value from the read coefficient. Bypass any
                 // additional processing by derived type.
                 pf.fixedGradientFvPatchField<Type>::evaluate();
             }
@@ -244,7 +243,7 @@ bool Foam::functionObjects::externalCoupled::readData
 
                 pf == value;
 
-                // Update the value from the read coefficicient. Bypass any
+                // Update the value from the read coefficient. Bypass any
                 // additional processing by derived type.
                 pf.fixedValueFvPatchField<Type>::evaluate();
             }
@@ -278,8 +277,8 @@ Foam::functionObjects::externalCoupled::gatherAndCombine
     Pstream::gatherList(gatheredValues);
 
 
-    tmp<Field<Type>> tresult(new Field<Type>(0));
-    Field<Type>& result = tresult.ref();
+    auto tresult = tmp<Field<Type>>::New();
+    auto& result = tresult.ref();
 
     if (Pstream::master())
     {
@@ -358,8 +357,7 @@ bool Foam::functionObjects::externalCoupled::writeData
 
     for (const fvMesh& mesh : meshes)
     {
-        const volFieldType* vfptr =
-            mesh.lookupObjectPtr<volFieldType>(fieldName);
+        const volFieldType* vfptr = mesh.findObject<volFieldType>(fieldName);
 
         if (!vfptr)
         {

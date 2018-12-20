@@ -321,7 +321,7 @@ Foam::fvMatrix<Type>::fvMatrix
 template<class Type>
 Foam::fvMatrix<Type>::fvMatrix(const fvMatrix<Type>& fvm)
 :
-    tmp<fvMatrix<Type>>::refCount(),
+    refCount(),
     lduMatrix(fvm),
     psi_(fvm.psi_),
     dimensions_(fvm.dimensions_),
@@ -522,19 +522,44 @@ void Foam::fvMatrix<Type>::setReference
 template<class Type>
 void Foam::fvMatrix<Type>::setReferences
 (
-    const labelList& cellLabels,
-    const UList<Type>& values,
+    const labelUList& cellLabels,
+    const Type& value,
     const bool forceReference
 )
 {
-    bool needRef = (forceReference || psi_.needReference());
+    const bool needRef = (forceReference || psi_.needReference());
 
     if (needRef)
     {
         forAll(cellLabels, celli)
         {
-            label cellId = cellLabels[celli];
-            if (celli >= 0)
+            const label cellId = cellLabels[celli];
+            if (cellId >= 0)
+            {
+                source()[cellId] += diag()[cellId]*value;
+                diag()[cellId] += diag()[cellId];
+            }
+        }
+    }
+}
+
+
+template<class Type>
+void Foam::fvMatrix<Type>::setReferences
+(
+    const labelUList& cellLabels,
+    const UList<Type>& values,
+    const bool forceReference
+)
+{
+    const bool needRef = (forceReference || psi_.needReference());
+
+    if (needRef)
+    {
+        forAll(cellLabels, celli)
+        {
+            const label cellId = cellLabels[celli];
+            if (cellId >= 0)
             {
                 source()[cellId] += diag()[cellId]*values[celli];
                 diag()[cellId] += diag()[cellId];
@@ -542,7 +567,6 @@ void Foam::fvMatrix<Type>::setReferences
         }
     }
 }
-
 
 
 template<class Type>
@@ -841,7 +865,7 @@ Foam::fvMatrix<Type>::H() const
             Hphi.replace
             (
                 cmpt,
-                dimensionedScalar("0", Hphi.dimensions(), 0.0)
+                dimensionedScalar(Hphi.dimensions(), Zero)
             );
         }
     }
@@ -1426,14 +1450,9 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::correction
 {
     tmp<Foam::fvMatrix<Type>> tAcorr = A - (A & A.psi());
 
-    if
-    (
-        (A.hasUpper() || A.hasLower())
-     && A.psi().mesh().fluxRequired(A.psi().name())
-    )
-    {
-        tAcorr().faceFluxCorrectionPtr() = (-A.flux()).ptr();
-    }
+    // Delete the faceFluxCorrection from the correction matrix
+    // as it does not have a clear meaning or purpose
+    deleteDemandDrivenData(tAcorr.ref().faceFluxCorrectionPtr());
 
     return tAcorr;
 }
@@ -1447,17 +1466,9 @@ Foam::tmp<Foam::fvMatrix<Type>> Foam::correction
 {
     tmp<Foam::fvMatrix<Type>> tAcorr = tA - (tA() & tA().psi());
 
-    // Note the matrix coefficients are still that of matrix A
-    const fvMatrix<Type>& A = tAcorr();
-
-    if
-    (
-        (A.hasUpper() || A.hasLower())
-     && A.psi().mesh().fluxRequired(A.psi().name())
-    )
-    {
-        tAcorr.ref().faceFluxCorrectionPtr() = (-A.flux()).ptr();
-    }
+    // Delete the faceFluxCorrection from the correction matrix
+    // as it does not have a clear meaning or purpose
+    deleteDemandDrivenData(tAcorr.ref().faceFluxCorrectionPtr());
 
     return tAcorr;
 }

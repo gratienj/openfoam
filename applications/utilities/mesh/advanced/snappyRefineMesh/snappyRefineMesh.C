@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,7 @@ Group
     grpMeshAdvancedUtilities
 
 Description
-    Utility to refine cells near to a surface.
+    Refine cells near to a surface.
 
 \*---------------------------------------------------------------------------*/
 
@@ -300,9 +300,8 @@ void addCutNeighbours
 
     labelHashSet addCutFaces(cutCells.size());
 
-    forAllConstIter(labelHashSet, cutCells, iter)
+    for (const label celli : cutCells)
     {
-        const label celli = iter.key();
         const labelList& cFaces = mesh.cells()[celli];
 
         forAll(cFaces, i)
@@ -333,9 +332,9 @@ void addCutNeighbours
     Info<< "    Selected an additional " << addCutFaces.size()
         << " neighbours of cutCells to refine" << endl;
 
-    forAllConstIter(labelHashSet, addCutFaces, iter)
+    for (const label facei : addCutFaces)
     {
-        cutCells.insert(iter.key());
+        cutCells.insert(facei);
     }
 }
 
@@ -383,10 +382,9 @@ bool limitRefinementLevel
 
     labelHashSet addCutCells(cutCells.size());
 
-    forAllConstIter(labelHashSet, cutCells, iter)
+    for (const label celli : cutCells)
     {
-        // cellI will be refined.
-        const label celli = iter.key();
+        // celli will be refined.
         const labelList& cCells = mesh.cellCells()[celli];
 
         forAll(cCells, i)
@@ -411,9 +409,9 @@ bool limitRefinementLevel
             << " to satisfy 1:" << limitDiff << " refinement level"
             << endl;
 
-        forAllConstIter(labelHashSet, addCutCells, iter)
+        for (const label celli : addCutCells)
         {
-            cutCells.insert(iter.key());
+            cutCells.insert(celli);
         }
         return true;
     }
@@ -625,13 +623,17 @@ void classifyCells
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Refine cells near to a surface"
+    );
     argList::noParallel();
 
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createPolyMesh.H"
 
-    // If nessecary add oldInternalFaces patch
+    // If necessary add oldInternalFaces patch
     label newPatchi = addPatch(mesh, "oldInternalFaces");
 
 
@@ -660,9 +662,7 @@ int main(int argc, char *argv[])
 
         IOdictionary motionProperties(motionObj);
 
-        Switch twoDMotion(motionProperties.lookup("twoDMotion"));
-
-        if (twoDMotion)
+        if (motionProperties.get<bool>("twoDMotion"))
         {
             Info<< "Correcting for 2D motion" << endl << endl;
             correct2DPtr = new twoDPointCorrector(mesh);
@@ -681,22 +681,22 @@ int main(int argc, char *argv[])
         )
     );
 
-    fileName surfName(refineDict.lookup("surface"));
+    fileName surfName(refineDict.get<fileName>("surface"));
     surfName.expand();
-    label nCutLayers(readLabel(refineDict.lookup("nCutLayers")));
-    label cellLimit(readLabel(refineDict.lookup("cellLimit")));
-    bool selectCut(readBool(refineDict.lookup("selectCut")));
-    bool selectInside(readBool(refineDict.lookup("selectInside")));
-    bool selectOutside(readBool(refineDict.lookup("selectOutside")));
-    bool selectHanging(readBool(refineDict.lookup("selectHanging")));
+    const label nCutLayers(refineDict.get<label>("nCutLayers"));
+    const label cellLimit(refineDict.get<label>("cellLimit"));
+    const bool selectCut(refineDict.get<bool>("selectCut"));
+    const bool selectInside(refineDict.get<bool>("selectInside"));
+    const bool selectOutside(refineDict.get<bool>("selectOutside"));
+    const bool selectHanging(refineDict.get<bool>("selectHanging"));
 
-    scalar minEdgeLen(readScalar(refineDict.lookup("minEdgeLen")));
-    scalar maxEdgeLen(readScalar(refineDict.lookup("maxEdgeLen")));
-    scalar curvature(readScalar(refineDict.lookup("curvature")));
-    scalar curvDist(readScalar(refineDict.lookup("curvatureDistance")));
+    const scalar minEdgeLen(refineDict.get<scalar>("minEdgeLen"));
+    const scalar maxEdgeLen(refineDict.get<scalar>("maxEdgeLen"));
+    const scalar curvature(refineDict.get<scalar>("curvature"));
+    const scalar curvDist(refineDict.get<scalar>("curvatureDistance"));
     pointField outsidePts(refineDict.lookup("outsidePoints"));
-    label refinementLimit(readLabel(refineDict.lookup("splitLevel")));
-    bool writeMesh(readBool(refineDict.lookup("writeMesh")));
+    const label refinementLimit(refineDict.get<label>("splitLevel"));
+    const bool writeMesh(refineDict.get<bool>("writeMesh"));
 
     Info<< "Cells to be used for meshing (0=false, 1=true):" << nl
         << "    cells cut by surface            : " << selectCut << nl

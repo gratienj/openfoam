@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,8 +28,8 @@ Group
     grpIncompressibleSolvers
 
 Description
-    Steady-state solver for incompressible, 1D turbulent flow, typically to
-    generate boundary layer conditions at an inlet.
+    Steady-state solver for incompressible, 1D turbulent flow, 
+    typically to generate boundary layer conditions at an inlet.
 
     Boundary layer code to calculate the U, k and epsilon distributions.
     Used to create inlet boundary conditions for experimental comparisons
@@ -49,14 +49,19 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Steady-state solver for incompressible, 1D turbulent flow,"
+        " typically to generate boundary layer conditions at an inlet."
+    );
+
     argList::noParallel();
+    #include "addCheckCaseOptions.H"
 
-    #include "setRootCase.H"
-
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createFields.H"
-    #include "createFvOptions.H"
     #include "interrogateWallPatches.H"
 
     turbulence->validate();
@@ -106,9 +111,7 @@ int main(int argc, char *argv[])
             #include "makeGraphs.H"
         }
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

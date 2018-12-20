@@ -47,7 +47,7 @@ Usage
 
         log             true;
         writeControl    writeTime;
-        writeFields     true;
+        writeFields     false;
 
         regionType      patch;
         name            movingWall;
@@ -77,27 +77,27 @@ Usage
 
     Where the entries comprise:
     \table
-        Property     | Description             | Required    | Default value
-        type         | type name: surfaceFieldValue   | yes         |
-        log          | write data to standard output | no    | no
-        writeFields  | Write the region field values  | yes     |
-        writeArea    | Write the area of the surfaceFieldValue | no |
-        surfaceFormat | output value format    | no          |
-        regionType   | face regionType: see below  | yes         |
-        name         | name of face regionType if required  | no |
-        operation    | operation to perform    | yes         |
-        postOperation | post-operation to perform    | no | none |
-        weightField  | name of field to apply weighting | no |
-        scaleFactor  | scale factor            | no          | 1
-        fields       | list of fields to operate on | yes    |
+        Property     | Description                      | Required    | Default
+        type         | type name: surfaceFieldValue     | yes         |
+        log          | write data to standard output    | no          | no
+        writeFields  | Write the region field values    | yes         |
+        writeArea    | Write the area of the surfaceFieldValue | no   |
+        surfaceFormat | output value format             | no          |
+        regionType   | face regionType: see below       | yes         |
+        name         | name of face regionType if required  | no      |
+        operation    | operation to perform             | yes         |
+        postOperation | post-operation to perform       | no          | none
+        weightField  | name of field to apply weighting | no          |
+        scaleFactor  | scale factor                     | no          | 1
+        fields       | list of fields to operate on     | yes         |
     \endtable
 
     Where \c regionType is defined by
     \plaintable
-        faceZone     | requires a 'name' entry to specify the faceZone
-        patch        | requires a 'name' entry to specify the patch
-        surface      | requires a 'name' entry to specify the surfMesh
-        sampledSurface | requires a 'sampledSurfaceDict' sub-dictionary
+        faceZone     | requires a \b name entry to specify the faceZone
+        patch        | requires a \b name entry to specify the patch
+        surface      | requires a \b name entry to specify the surfMesh
+        sampledSurface | requires a \b sampledSurfaceDict sub-dictionary
     \endplaintable
 
     The \c operation is one of:
@@ -113,16 +113,19 @@ Usage
        areaAverage   | area-weighted average
        areaIntegrate | area integral
        CoV           | coefficient of variation: standard deviation/mean
-       areaNormalAverage| area-weighted average in face normal direction
+       areaNormalAverage | area-weighted average in face normal direction
        areaNormalIntegrate | area-weighted integral in face normal directon
-       weightedSum   | weighted sum
-       weightedAverage | weighted average
-       weightedAreaAverage | weighted area average
+       uniformity    | uniformity index
+       weightedSum           | weighted sum
+       weightedAverage       | weighted average
+       weightedAreaAverage   | weighted area average
        weightedAreaIntegrate | weighted area integral
-       absWeightedSum | sum using absolute weighting
-       absWeightedAverage | average using absolute weighting
-       absWeightedAreaAverage | area average using absolute weighting
+       weightedUniformity    | weighted uniformity index
+       absWeightedSum           | sum using absolute weighting
+       absWeightedAverage       | average using absolute weighting
+       absWeightedAreaAverage   | area average using absolute weighting
        absWeightedAreaIntegrate | area integral using absolute weighting
+       absWeightedUniformity    | uniformity index using absolute weighting
     \endplaintable
 
 Note
@@ -144,6 +147,21 @@ Note
           cells.  This can only happen for sampling on a \c triSurfaceMesh
         - take care when using isoSurfaces - these might have duplicate
           triangles and so integration might be wrong
+
+    Uniformity
+    \f[
+        UI(\phi) = 1 - \frac{1}{2 \overline{\phi} A}
+        \int{\left| W \phi \cdot \hat{n} - \bar{W} \bar{\phi}\right| d\vec{A}}
+        \,,\;
+        \bar{\phi} = \frac{\int{W \phi \cdot d\vec{A}}}{\int{W \cdot d\vec{A}}}
+    \f]
+
+    A velocity uniformity index is calculated with no weighting (W=1) and
+    \f$ \phi = \vec{U} \f$.
+
+    A scalar concentration uniformity index is calculated with either
+    \f$ \rho \vec{U} \f$ or \f$ \vec{U} \f$ for weighting and
+    \f$ \phi = conc \f$.
 
 See also
     Foam::fieldValues
@@ -232,6 +250,7 @@ public:
             opCoV,                  //!< Coefficient of variation
             opAreaNormalAverage,    //!< Area average in normal direction
             opAreaNormalIntegrate,  //!< Area integral in normal direction
+            opUniformity,           //!< Uniformity index
 
             // Weighted variants
 
@@ -247,6 +266,9 @@ public:
             //! Weighted area integral
             opWeightedAreaIntegrate = (opAreaIntegrate | typeWeighted),
 
+            //! Weighted uniformity index
+            opWeightedUniformity = (opUniformity | typeWeighted),
+
             // Variants using absolute weighting
 
             //! Sum using abs weighting
@@ -261,6 +283,10 @@ public:
             //! Area integral using abs weighting
             opAbsWeightedAreaIntegrate =
                 (opWeightedAreaIntegrate | typeAbsolute),
+
+            //! Uniformity index using abs weighting
+            opAbsWeightedUniformity =
+                (opWeightedUniformity | typeAbsolute),
         };
 
         //- Operation type names

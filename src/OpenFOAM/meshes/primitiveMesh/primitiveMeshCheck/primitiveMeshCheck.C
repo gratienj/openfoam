@@ -28,7 +28,7 @@ License
 #include "ListOps.H"
 #include "unitConversion.H"
 #include "SortableList.H"
-#include "EdgeMap.H"
+#include "edgeHashes.H"
 #include "primitiveMeshTools.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -46,7 +46,7 @@ bool Foam::primitiveMesh::checkClosedBoundary
 (
     const vectorField& areas,
     const bool report,
-    const PackedBoolList& internalOrCoupledFaces
+    const bitSet& internalOrCoupledFaces
 ) const
 {
     if (debug)
@@ -1586,7 +1586,7 @@ bool Foam::primitiveMesh::checkFaceFaces
     label nBaffleFaces = 0;
     label nErrorDuplicate = 0;
     label nErrorOrder = 0;
-    Map<label> nCommonPoints(100);
+    Map<label> nCommonPoints(128);
 
     for (label facei = 0; facei < nFaces(); facei++)
     {
@@ -1684,7 +1684,7 @@ bool Foam::primitiveMesh::checkFaceFaces
 
 bool Foam::primitiveMesh::checkClosedBoundary(const bool report) const
 {
-    return checkClosedBoundary(faceAreas(), report, PackedBoolList(0));
+    return checkClosedBoundary(faceAreas(), report, bitSet());
 }
 
 
@@ -1693,7 +1693,7 @@ bool Foam::primitiveMesh::checkClosedCells
     const bool report,
     labelHashSet* setPtr,
     labelHashSet* aspectSetPtr,
-     const Vector<label>& solutionD
+    const Vector<label>& solutionD
 ) const
 {
     return checkClosedCells

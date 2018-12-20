@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,28 +44,28 @@ void Foam::syncTools::swapBoundaryCellPositions
 
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
-    label nBnd = mesh.nFaces()-mesh.nInternalFaces();
+    neighbourCellData.resize(mesh.nBoundaryFaces());
 
-    neighbourCellData.setSize(nBnd);
-
-    forAll(patches, patchi)
+    for (const polyPatch& pp : patches)
     {
-        const polyPatch& pp = patches[patchi];
+        label bFacei = pp.start()-mesh.nInternalFaces();
+
         const labelUList& faceCells = pp.faceCells();
-        forAll(faceCells, i)
+
+        for (const label celli : faceCells)
         {
-            label bFacei = pp.start()+i-mesh.nInternalFaces();
-            neighbourCellData[bFacei] = cellData[faceCells[i]];
+            neighbourCellData[bFacei] = cellData[celli];
+            ++bFacei;
         }
     }
     syncTools::swapBoundaryFacePositions(mesh, neighbourCellData);
 }
 
 
-Foam::PackedBoolList Foam::syncTools::getMasterPoints(const polyMesh& mesh)
+Foam::bitSet Foam::syncTools::getMasterPoints(const polyMesh& mesh)
 {
-    PackedBoolList isMasterPoint(mesh.nPoints());
-    PackedBoolList donePoint(mesh.nPoints());
+    bitSet isMaster(mesh.nPoints());
+    bitSet unvisited(mesh.nPoints(), true);
 
     const globalMeshData& globalData = mesh.globalData();
     const labelList& meshPoints = globalData.coupledPatch().meshPoints();
@@ -73,43 +73,28 @@ Foam::PackedBoolList Foam::syncTools::getMasterPoints(const polyMesh& mesh)
     const labelListList& transformedSlaves =
             globalData.globalPointTransformedSlaves();
 
-    forAll(meshPoints, coupledPointi)
+    forAll(meshPoints, i)
     {
-        label meshPointi = meshPoints[coupledPointi];
-        if
-        (
-            (
-                slaves[coupledPointi].size()
-              + transformedSlaves[coupledPointi].size()
-            )
-          > 0
-        )
+        const label meshPointi = meshPoints[i];
+
+        if (!slaves[i].empty() || !transformedSlaves[i].empty())
         {
-            isMasterPoint[meshPointi] = true;
+            isMaster.set(meshPointi);
         }
-        donePoint[meshPointi] = true;
+        unvisited.unset(meshPointi);
     }
 
+    // Add in all unvisited points
+    isMaster |= unvisited;
 
-    // Do all other points
-    // ~~~~~~~~~~~~~~~~~~~
-
-    forAll(donePoint, pointi)
-    {
-        if (!donePoint[pointi])
-        {
-            isMasterPoint[pointi] = true;
-        }
-    }
-
-    return isMasterPoint;
+    return isMaster;
 }
 
 
-Foam::PackedBoolList Foam::syncTools::getMasterEdges(const polyMesh& mesh)
+Foam::bitSet Foam::syncTools::getMasterEdges(const polyMesh& mesh)
 {
-    PackedBoolList isMasterEdge(mesh.nEdges());
-    PackedBoolList doneEdge(mesh.nEdges());
+    bitSet isMaster(mesh.nEdges());
+    bitSet unvisited(mesh.nEdges(), true);
 
     const globalMeshData& globalData = mesh.globalData();
     const labelList& meshEdges = globalData.coupledPatchMeshEdges();
@@ -117,125 +102,91 @@ Foam::PackedBoolList Foam::syncTools::getMasterEdges(const polyMesh& mesh)
     const labelListList& transformedSlaves =
         globalData.globalEdgeTransformedSlaves();
 
-    forAll(meshEdges, coupledEdgeI)
+    forAll(meshEdges, i)
     {
-        label meshEdgeI = meshEdges[coupledEdgeI];
-        if
-        (
-            (
-                slaves[coupledEdgeI].size()
-              + transformedSlaves[coupledEdgeI].size()
-            )
-          > 0
-        )
+        const label meshEdgei = meshEdges[i];
+
+        if (!slaves[i].empty() || !transformedSlaves[i].empty())
         {
-            isMasterEdge[meshEdgeI] = true;
+            isMaster.set(meshEdgei);
         }
-        doneEdge[meshEdgeI] = true;
+        unvisited.unset(meshEdgei);
     }
 
+    // Add in all unvisited edges
+    isMaster |= unvisited;
 
-    // Do all other edges
-    // ~~~~~~~~~~~~~~~~~~
-
-    forAll(doneEdge, edgeI)
-    {
-        if (!doneEdge[edgeI])
-        {
-            isMasterEdge[edgeI] = true;
-        }
-    }
-
-    return isMasterEdge;
+    return isMaster;
 }
 
 
-Foam::PackedBoolList Foam::syncTools::getMasterFaces(const polyMesh& mesh)
+Foam::bitSet Foam::syncTools::getMasterFaces(const polyMesh& mesh)
 {
-    PackedBoolList isMasterFace(mesh.nFaces(), 1);
+    bitSet isMaster(mesh.nFaces(), true);
 
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
-    forAll(patches, patchi)
+    for (const polyPatch& pp : patches)
     {
-        if (patches[patchi].coupled())
-        {
-            const coupledPolyPatch& pp =
-                refCast<const coupledPolyPatch>(patches[patchi]);
-
-            if (!pp.owner())
-            {
-                forAll(pp, i)
-                {
-                    isMasterFace.unset(pp.start()+i);
-                }
-            }
-        }
-    }
-
-    return isMasterFace;
-}
-
-
-Foam::PackedBoolList Foam::syncTools::getInternalOrMasterFaces
-(
-    const polyMesh& mesh
-)
-{
-    PackedBoolList isMasterFace(mesh.nFaces(), 1);
-
-    const polyBoundaryMesh& patches = mesh.boundaryMesh();
-
-    forAll(patches, patchi)
-    {
-        const polyPatch& pp = patches[patchi];
-
         if (pp.coupled())
         {
             if (!refCast<const coupledPolyPatch>(pp).owner())
             {
-                forAll(pp, i)
-                {
-                    isMasterFace.unset(pp.start()+i);
-                }
-            }
-        }
-        else
-        {
-            forAll(pp, i)
-            {
-                isMasterFace.unset(pp.start()+i);
+                isMaster.unset(pp.range());
             }
         }
     }
 
-    return isMasterFace;
+    return isMaster;
 }
 
 
-Foam::PackedBoolList Foam::syncTools::getInternalOrCoupledFaces
+Foam::bitSet Foam::syncTools::getInternalOrMasterFaces
 (
     const polyMesh& mesh
 )
 {
-    PackedBoolList isMasterFace(mesh.nFaces(), 1);
+    bitSet isMaster(mesh.nFaces(), true);
 
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
-    forAll(patches, patchi)
+    for (const polyPatch& pp : patches)
     {
-        const polyPatch& pp = patches[patchi];
-
-        if (!pp.coupled())
+        if (pp.coupled())
         {
-            forAll(pp, i)
+            if (!refCast<const coupledPolyPatch>(pp).owner())
             {
-                isMasterFace.unset(pp.start()+i);
+                isMaster.unset(pp.range());
             }
+        }
+        else
+        {
+            isMaster.unset(pp.range());
         }
     }
 
-    return isMasterFace;
+    return isMaster;
+}
+
+
+Foam::bitSet Foam::syncTools::getInternalOrCoupledFaces
+(
+    const polyMesh& mesh
+)
+{
+    bitSet isMaster(mesh.nFaces(), true);
+
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+    for (const polyPatch& pp : patches)
+    {
+        if (!pp.coupled())
+        {
+            isMaster.unset(pp.range());
+        }
+    }
+
+    return isMaster;
 }
 
 

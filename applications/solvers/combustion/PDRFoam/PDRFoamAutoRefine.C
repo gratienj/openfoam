@@ -63,7 +63,6 @@ Description
 #include "XiModel.H"
 #include "PDRDragModel.H"
 #include "ignition.H"
-#include "Switch.H"
 #include "bound.H"
 #include "dynamicRefineFvMesh.H"
 #include "pimpleControl.H"
@@ -72,8 +71,13 @@ Description
 
 int main(int argc, char *argv[])
 {
-    #include "setRootCase.H"
+    argList::addNote
+    (
+        "Solver for compressible premixed/partially-premixed combustion with"
+        " turbulence modelling."
+    );
 
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
 
@@ -102,8 +106,8 @@ int main(int argc, char *argv[])
         #include "compressibleCourantNo.H"
         #include "setDeltaT.H"
 
-        // Indicators for refinement. Note: before runTime++
-        // only for postprocessing reasons.
+        // Indicators for refinement.
+        // Note: before ++runTime only for post-processing reasons.
         tmp<volScalarField> tmagGradP = mag(fvc::grad(p));
         volScalarField normalisedGradP
         (
@@ -113,7 +117,7 @@ int main(int argc, char *argv[])
         normalisedGradP.writeOpt() = IOobject::AUTO_WRITE;
         tmagGradP.clear();
 
-        runTime++;
+        ++runTime;
 
         Info<< "\n\nTime = " << runTime.timeName() << endl;
 
@@ -122,20 +126,20 @@ int main(int argc, char *argv[])
             fvc::makeAbsolute(phi, rho, U);
 
             // Test : disable refinement for some cells
-            PackedBoolList& protectedCell =
+            bitSet& protectedCell =
                 refCast<dynamicRefineFvMesh>(mesh).protectedCell();
 
             if (protectedCell.empty())
             {
                 protectedCell.setSize(mesh.nCells());
-                protectedCell = 0;
+                protectedCell = false;
             }
 
             forAll(betav, celli)
             {
                 if (betav[celli] < 0.99)
                 {
-                    protectedCell[celli] = 1;
+                    protectedCell.set(celli);
                 }
             }
 
@@ -198,9 +202,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "\nExecutionTime = "
-             << runTime.elapsedCpuTime()
-             << " s\n" << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "\n end\n";

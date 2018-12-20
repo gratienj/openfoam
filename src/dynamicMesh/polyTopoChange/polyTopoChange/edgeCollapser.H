@@ -52,9 +52,9 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class polyMesh;
-class PackedBoolList;
+class bitSet;
 class polyTopoChange;
 class globalIndex;
 class face;
@@ -92,7 +92,7 @@ private:
 
         //- Allow a face to be collapsed to a point early, before the test
         //  to collapse to an edge
-        const Switch allowEarlyCollapseToPoint_;
+        const bool allowEarlyCollapseToPoint_;
 
         //- Fraction of maxCollapseFaceToPointSideLengthCoeff_ to use when
         //  allowEarlyCollapseToPoint_ is on
@@ -123,7 +123,7 @@ private:
             const scalarList& dNeg,
             const scalarList& dPos,
             const scalar dShift,
-            PackedBoolList& collapseEdge,
+            bitSet& collapseEdge,
             Map<point>& collapsePointToLocation
         ) const;
 
@@ -136,7 +136,7 @@ private:
             const labelList& pointPriority,
             const point& fC,
             const labelList& facePts,
-            PackedBoolList& collapseEdge,
+            bitSet& collapseEdge,
             Map<point>& collapsePointToLocation
         ) const;
 
@@ -161,7 +161,7 @@ private:
             const face& f,
             const label facei,
             const scalar targetFaceSize,
-            PackedBoolList& collapseEdge,
+            bitSet& collapseEdge,
             Map<point>& collapsePointToLocation,
             const scalarField& faceFilterFactor
         ) const;
@@ -184,8 +184,8 @@ private:
         //  location
         label breakStringsAtEdges
         (
-            const PackedBoolList& markedEdges,
-            PackedBoolList& collapseEdge,
+            const bitSet& markedEdges,
+            bitSet& collapseEdge,
             List<pointEdgeCollapse>& allPointInfo
         ) const;
 
@@ -195,7 +195,7 @@ private:
         void determineDuplicatePointsOnFace
         (
             const face& f,
-            PackedBoolList& markedPoints,
+            bitSet& markedPoints,
             labelHashSet& uniqueCollapses,
             labelHashSet& duplicateCollapses,
             List<pointEdgeCollapse>& allPointInfo
@@ -223,7 +223,7 @@ private:
         (
             const globalIndex& globalPoints,
             const labelList& boundaryPoint,
-            const PackedBoolList& collapseEdge,
+            const bitSet& collapseEdge,
             const Map<point>& collapsePointToLocation,
             List<pointEdgeCollapse>& allPointInfo
         ) const;
@@ -236,11 +236,11 @@ private:
             face& f
         ) const;
 
-        //- Disallow default bitwise copy construct
-        edgeCollapser(const edgeCollapser&);
+        //- No copy construct
+        edgeCollapser(const edgeCollapser&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const edgeCollapser&);
+        //- No copy assignment
+        void operator=(const edgeCollapser&) = delete;
 
 
 public:
@@ -275,7 +275,7 @@ public:
             (
                 const polyMesh& mesh,
                 const dictionary& meshQualityDict,
-                PackedBoolList& isErrorPoint
+                bitSet& isErrorPoint
             );
 
             //- Ensure that the collapse is parallel consistent and update
@@ -287,7 +287,7 @@ public:
                 const globalIndex& globalPoints,
                 const labelList& pointPriority,
                 const Map<point>& collapsePointToLocation,
-                PackedBoolList& collapseEdge,
+                bitSet& collapseEdge,
                 List<pointEdgeCollapse>& allPointInfo,
                 const bool allowCellCollapse = false
             ) const;
@@ -308,7 +308,7 @@ public:
             (
                 const scalarField& minEdgeLen,
                 const labelList& pointPriority,
-                PackedBoolList& collapseEdge,
+                bitSet& collapseEdge,
                 Map<point>& collapsePointToLocation
             ) const;
 
@@ -317,7 +317,7 @@ public:
             (
                 const scalar maxCos,
                 const labelList& pointPriority,
-                PackedBoolList& collapseEdge,
+                bitSet& collapseEdge,
                 Map<point>& collapsePointToLocation
             ) const;
 
@@ -331,7 +331,7 @@ public:
             (
                 const scalarField& faceFilterFactor,
                 const labelList& pointPriority,
-                PackedBoolList& collapseEdge,
+                bitSet& collapseEdge,
                 Map<point>& collapsePointToLocation
             ) const;
 
@@ -341,7 +341,7 @@ public:
                 const faceZone& fZone,
                 const scalarField& faceFilterFactor,
                 const labelList& pointPriority,
-                PackedBoolList& collapseEdge,
+                bitSet& collapseEdge,
                 Map<point>& collapsePointToLocation
             ) const;
 };

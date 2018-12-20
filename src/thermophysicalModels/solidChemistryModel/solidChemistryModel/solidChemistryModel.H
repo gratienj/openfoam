@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2017 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -65,11 +65,11 @@ class solidChemistryModel
 {
     // Private Member Functions
 
-        //- Disallow copy constructor
-        solidChemistryModel(const solidChemistryModel&);
+        //- No copy construct
+        solidChemistryModel(const solidChemistryModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const solidChemistryModel&);
+        //- No copy assignment
+        void operator=(const solidChemistryModel&) = delete;
 
 
 protected:
@@ -113,8 +113,8 @@ public:
 
     // Constructors
 
-        //- Construct from mesh and phase name
-        solidChemistryModel(const fvMesh& mesh, const word& phaseName);
+        //- Construct from thermo
+        solidChemistryModel(typename CompType::reactionThermo& thermo);
 
 
     //- Destructor
@@ -140,7 +140,7 @@ public:
         ) const = 0;
 
         //- Return the reaction rate for reaction r and the reference
-        //  species and charateristic times
+        //  species and characteristic times
         virtual scalar omega
         (
             const Reaction<SolidThermo>& r,
@@ -157,7 +157,7 @@ public:
 
 
         //- Return the reaction rate for iReaction and the reference
-        //  species and charateristic times
+        //  species and characteristic times
         virtual scalar omegaI
         (
             label iReaction,

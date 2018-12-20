@@ -25,7 +25,7 @@ Application
     MPPICInterFoam
 
 Description
-    Solver for 2 incompressible, isothermal immiscible fluids using a VOF
+    Solver for two incompressible, isothermal immiscible fluids using a VOF
     (volume of fluid) phase-fraction based interface capturing approach.
     The momentum and other fluid properties are of the "mixture" and a single
     momentum equation is solved.
@@ -56,9 +56,17 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for two incompressible, isothermal immiscible fluids using"
+        " VOF phase-fraction based interface capturing.\n"
+        "Includes MRF and an MPPIC cloud."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
@@ -97,7 +105,7 @@ int main(int argc, char *argv[])
             #include "setDeltaT.H"
         }
 
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -130,12 +138,7 @@ int main(int argc, char *argv[])
                 mesh
             ),
             mesh,
-            dimensionedVector
-            (
-                "0",
-                cloudSU.dimensions()/dimVolume,
-                vector::zero
-            ),
+            dimensionedVector(cloudSU.dimensions()/dimVolume, Zero),
             zeroGradientFvPatchVectorField::typeName
         );
 
@@ -168,9 +171,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

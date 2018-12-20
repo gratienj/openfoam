@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2012-2015 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,11 +59,11 @@ class porosityModel
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        porosityModel(const porosityModel&);
+        //- No copy construct
+        porosityModel(const porosityModel&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const porosityModel&);
+        //- No copy assignment
+        void operator=(const porosityModel&) = delete;
 
 
 protected:
@@ -91,12 +91,11 @@ protected:
         //- Cell zone IDs
         labelList cellZoneIDs_;
 
-        //- Local co-ordinate system
-        coordinateSystem coordSys_;
+        //- Local coordinate system
+        autoPtr<coordinateSystem> csysPtr_;
 
 
     // Protected Member Functions
-
 
         //- Transform the model data wrt mesh changes
         virtual void calcTransformModelData() = 0;
@@ -128,8 +127,12 @@ protected:
             volTensorField& AU
         ) const = 0;
 
+
+        //- Local coordinate system
+        inline const coordinateSystem& csys() const;
+
         //- Return label index
-        label fieldIndex(const label index) const;
+        inline label fieldIndex(const label index) const;
 
 
 public:
@@ -209,7 +212,7 @@ public:
     );
 
     //- Destructor
-    virtual ~porosityModel();
+    virtual ~porosityModel() = default;
 
 
     // Member Functions
@@ -222,6 +225,9 @@ public:
 
         //- Return const access to the cell zone IDs
         inline const labelList& cellZoneIDs() const;
+
+        //- Return dictionary used for model construction
+        const dictionary& dict() const;
 
         //- Transform the model data wrt mesh changes
         virtual void transformModelData();

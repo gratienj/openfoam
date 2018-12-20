@@ -82,8 +82,8 @@ class PrintTable
 
     // Private Member Functions
 
-        //- Disallow default bitwise assignment
-        void operator=(const PrintTable<KeyType, DataType>&);
+        //- No copy assignment
+        void operator=(const PrintTable<KeyType, DataType>&) = delete;
 
 
 public:
@@ -101,13 +101,13 @@ public:
 
 
     //- Destructor
-    ~PrintTable();
+    ~PrintTable() = default;
 
 
     // Member Functions
 
         //- Add an entry (D) to the given key(K)
-        void add(const KeyType& K, const DataType& D);
+        inline void add(const KeyType& K, const DataType& D);
 
         //- Print the table
         void print

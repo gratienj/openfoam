@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015-2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,9 +31,9 @@ License
 
 // * * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * //
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 void Foam::combustionModels::
-diffusionMulticomponent<CombThermoType, ThermoType>::init()
+diffusionMulticomponent<ReactionThermo, ThermoType>::init()
 {
     // Load default values
     this->coeffs().readIfPresent("Ci", Ci_);
@@ -60,7 +60,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::init()
             (
                 IOobject
                 (
-                    "Rijk" + name(k),
+                    "Rijk" + Foam::name(k),
                     this->mesh_.time().timeName(),
                     this->mesh_,
                     IOobject::NO_READ,
@@ -68,7 +68,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::init()
                     false
                 ),
                 this->mesh_,
-                dimensionedScalar("Rij", dimMass/dimTime/dimVolume, 0.0),
+                dimensionedScalar(dimMass/dimTime/dimVolume, Zero),
                 zeroGradientFvPatchScalarField::typeName
             )
         );
@@ -121,25 +121,31 @@ diffusionMulticomponent<CombThermoType, ThermoType>::init()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-template<class CombThermoType, class ThermoType>
-Foam::combustionModels::diffusionMulticomponent<CombThermoType, ThermoType>::
+template<class ReactionThermo, class ThermoType>
+Foam::combustionModels::diffusionMulticomponent<ReactionThermo, ThermoType>::
 diffusionMulticomponent
 (
     const word& modelType,
-    const fvMesh& mesh,
-    const word& combustionProperties,
-    const word& phaseName
+    ReactionThermo& thermo,
+    const compressibleTurbulenceModel& turb,
+    const word& combustionProperties
 )
 :
-    CombThermoType(modelType, mesh, combustionProperties, phaseName),
+    ChemistryCombustion<ReactionThermo>
+    (
+        modelType,
+        thermo,
+        turb,
+        combustionProperties
+    ),
     reactions_
     (
-        dynamic_cast<const reactingMixture<ThermoType>&>(this->thermo())
+        dynamic_cast<const reactingMixture<ThermoType>&>(thermo)
     ),
     specieThermo_
     (
-        dynamic_cast<const reactingMixture<ThermoType>&>
-           (this->thermo()).speciesData()
+        dynamic_cast<const reactingMixture<ThermoType>&>(thermo).
+            speciesData()
     ),
     RijPtr_(reactions_.size()),
     Ci_(reactions_.size(), 1.0),
@@ -160,27 +166,19 @@ diffusionMulticomponent
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class CombThermoType, class ThermoType>
-Foam::combustionModels::diffusionMulticomponent<CombThermoType, ThermoType>::
-~diffusionMulticomponent()
-{}
-
-
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 Foam::tmp<Foam::volScalarField> Foam::combustionModels::
-diffusionMulticomponent<CombThermoType, ThermoType>::tc() const
+diffusionMulticomponent<ReactionThermo, ThermoType>::tc() const
 {
     return this->chemistryPtr_->tc();
 }
 
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 void Foam::combustionModels::
-diffusionMulticomponent<CombThermoType, ThermoType>::correct()
+diffusionMulticomponent<ReactionThermo, ThermoType>::correct()
 {
     if (this->active())
     {
@@ -200,7 +198,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
                 (
                     IOobject
                     (
-                        "Rijl" + word(k),
+                        "Rijl" + Foam::name(k),
                         this->mesh_.time().timeName(),
                         this->mesh_,
                         IOobject::NO_READ,
@@ -208,7 +206,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
                         false
                     ),
                     this->mesh_,
-                    dimensionedScalar("Rijl", dimMass/dimTime/dimVolume, 0.0),
+                    dimensionedScalar(dimMass/dimTime/dimVolume, Zero),
                     zeroGradientFvPatchScalarField::typeName
                 )
             );
@@ -233,14 +231,14 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
             {
                 const label lIndex = lhs[l].index;
                 this->chemistryPtr_->RR(lIndex) =
-                    dimensionedScalar("zero", dimMass/dimTime/dimVolume, 0.0);
+                    dimensionedScalar(dimMass/dimTime/dimVolume, Zero);
             }
 
             forAll(rhs, l)
             {
                 const label rIndex = rhs[l].index;
                 this->chemistryPtr_->RR(rIndex) =
-                    dimensionedScalar("zero", dimMass/dimTime/dimVolume, 0.0);
+                    dimensionedScalar(dimMass/dimTime/dimVolume, Zero);
             }
         }
 
@@ -258,7 +256,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
 
             const volScalarField ft
             (
-                "ft" + name(k),
+                "ft" + Foam::name(k),
                 (
                     s_[k]*Yfuel - (Yox - YoxStream_[k])
                 )
@@ -279,7 +277,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
 
             const volScalarField preExp
             (
-                "preExp" + name(k),
+                "preExp" + Foam::name(k),
                  1.0  + sqr(OAvailScaled)
             );
 
@@ -291,7 +289,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
 
             const volScalarField topHatFilter(pos(filter - 1e-3));
 
-            const volScalarField prob("prob" + name(k), preExp*filter);
+            const volScalarField prob("prob" + Foam::name(k), preExp*filter);
 
             const volScalarField RijkDiff
             (
@@ -317,7 +315,7 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
 
             Rijk.relax(alpha_);
 
-            if (this->mesh_.time().outputTime() && debug)
+            if (debug && this->mesh_.time().writeTime())
             {
                 Rijk.write();
                 ft.write();
@@ -367,9 +365,9 @@ diffusionMulticomponent<CombThermoType, ThermoType>::correct()
 }
 
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 Foam::tmp<Foam::fvScalarMatrix>
-Foam::combustionModels::diffusionMulticomponent<CombThermoType, ThermoType>::R
+Foam::combustionModels::diffusionMulticomponent<ReactionThermo, ThermoType>::R
 (
     volScalarField& Y
 ) const
@@ -390,10 +388,10 @@ Foam::combustionModels::diffusionMulticomponent<CombThermoType, ThermoType>::R
 }
 
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 Foam::tmp<Foam::volScalarField>
-Foam::combustionModels::diffusionMulticomponent<CombThermoType, ThermoType>::
-Qdot() const
+Foam::combustionModels::
+diffusionMulticomponent<ReactionThermo, ThermoType>::Qdot() const
 {
     tmp<volScalarField> tQdot
     (
@@ -409,7 +407,7 @@ Qdot() const
                 false
             ),
             this->mesh(),
-            dimensionedScalar("dQ", dimEnergy/dimTime, 0.0),
+            dimensionedScalar(dimEnergy/dimTime/dimVolume, Zero),
             zeroGradientFvPatchScalarField::typeName
         )
     );
@@ -424,11 +422,11 @@ Qdot() const
 }
 
 
-template<class CombThermoType, class ThermoType>
+template<class ReactionThermo, class ThermoType>
 bool Foam::combustionModels::
-diffusionMulticomponent<CombThermoType, ThermoType>::read()
+diffusionMulticomponent<ReactionThermo, ThermoType>::read()
 {
-    if (CombThermoType::read())
+    if (ChemistryCombustion<ReactionThermo>::read())
     {
         this->coeffs().readIfPresent("Ci", Ci_);
         this->coeffs().readIfPresent("sigma", sigma_);
@@ -438,10 +436,8 @@ diffusionMulticomponent<CombThermoType, ThermoType>::read()
         this->coeffs().readIfPresent("laminarIgn", laminarIgn_);
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 

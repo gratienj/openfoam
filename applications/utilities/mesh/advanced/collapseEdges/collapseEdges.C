@@ -63,13 +63,12 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
-    timeSelector::addOptions(true, false);
     argList::addNote
     (
         "Collapses small edges to a point.\n"
         "Optionally collapse small faces to a point and thin faces to an edge."
     );
-
+    timeSelector::addOptions(true, false);  // constant(true), zero(false)
     argList::addBoolOption
     (
         "collapseFaces",
@@ -83,15 +82,18 @@ int main(int argc, char *argv[])
         "Collapse faces that are in the supplied face set"
     );
 
-    #include "addDictOption.H"
+    argList::addOption("dict", "file", "Use alternative collapseDict");
+
     #include "addOverwriteOption.H"
+
+    argList::noFunctionObjects();  // Never use function objects
+
     #include "setRootCase.H"
     #include "createTime.H"
 
-    runTime.functionObjects().off();
     instantList timeDirs = timeSelector::selectIfPresent(runTime, args);
 
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     const word oldInstance = mesh.pointsInstance();
 
@@ -102,10 +104,10 @@ int main(int argc, char *argv[])
 
     IOdictionary collapseDict(dictIO);
 
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
-    const bool collapseFaces = args.optionFound("collapseFaces");
-    const bool collapseFaceSet = args.optionFound("collapseFaceSet");
+    const bool collapseFaces = args.found("collapseFaces");
+    const bool collapseFaceSet = args.found("collapseFaceSet");
 
     if (collapseFaces && collapseFaceSet)
     {
@@ -123,11 +125,10 @@ int main(int argc, char *argv[])
     word faceSetName("indirectPatchFaces");
     IOobject::readOption readFlag = IOobject::READ_IF_PRESENT;
 
-    if (args.optionReadIfPresent("collapseFaceSet", faceSetName))
+    if (args.readIfPresent("collapseFaceSet", faceSetName))
     {
         readFlag = IOobject::MUST_READ;
     }
-
 
 
     labelIOList pointPriority
@@ -186,7 +187,7 @@ int main(int argc, char *argv[])
                 polyMeshFilter::copySets(newMesh(), mesh);
             }
 
-            pointPriority = meshFilter.pointPriority();
+            pointPriority = *(meshFilter.pointPriority());
         }
 
         if (collapseFaceSet)
@@ -203,14 +204,14 @@ int main(int argc, char *argv[])
             // from the previous edge filtering to use as a stopping criterion.
             meshFilter.filter(indirectPatchFaces);
             {
-                polyTopoChange meshMod(newMesh);
+                polyTopoChange meshMod(newMesh());
 
                 meshMod.changeMesh(mesh, false);
 
                 polyMeshFilter::copySets(newMesh(), mesh);
             }
 
-            pointPriority = meshFilter.pointPriority();
+            pointPriority = *(meshFilter.pointPriority());
         }
 
         if (collapseFaces)
@@ -227,20 +228,20 @@ int main(int argc, char *argv[])
             // from the previous edge filtering to use as a stopping criterion.
             meshFilter.filter(nBadFaces);
             {
-                polyTopoChange meshMod(newMesh);
+                polyTopoChange meshMod(newMesh());
 
                 meshMod.changeMesh(mesh, false);
 
                 polyMeshFilter::copySets(newMesh(), mesh);
             }
 
-            pointPriority = meshFilter.pointPriority();
+            pointPriority = *(meshFilter.pointPriority());
         }
 
         // Write resulting mesh
         if (!overwrite)
         {
-            runTime++;
+            ++runTime;
         }
         else
         {
@@ -254,9 +255,8 @@ int main(int argc, char *argv[])
         pointPriority.write();
     }
 
-    Info<< nl << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-        << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
+    Info<< nl;
+    runTime.printExecutionTime(Info);
 
     Info<< "End\n" << endl;
 

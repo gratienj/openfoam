@@ -26,6 +26,9 @@ License
 #include "lduMatrix.H"
 #include "IOstreams.H"
 #include "Switch.H"
+#include "objectRegistry.H"
+#include "IOField.H"
+#include "Time.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -308,6 +311,57 @@ const Foam::scalarField& Foam::lduMatrix::upper() const
     else
     {
         return *lowerPtr_;
+    }
+}
+
+
+void Foam::lduMatrix::setResidualField
+(
+    const Field<scalar>& residual,
+    const word& fieldName,
+    const bool initial
+) const
+{
+    if (!lduMesh_.hasDb())
+    {
+        return;
+    }
+
+    word lookupName;
+    if (initial)
+    {
+        lookupName = word("initialResidual:" + fieldName);
+    }
+    else
+    {
+        lookupName = word("residual:" + fieldName);
+    }
+
+    IOField<scalar>* residualPtr =
+        lduMesh_.thisDb().getObjectPtr<IOField<scalar>>(lookupName);
+
+    if (residualPtr)
+    {
+        const IOdictionary* dataPtr =
+            lduMesh_.thisDb().findObject<IOdictionary>("data");
+
+        if (dataPtr)
+        {
+            if (initial && dataPtr->found("firstIteration"))
+            {
+                *residualPtr = residual;
+                DebugInfo
+                    << "Setting residual field for first solver iteration "
+                    << "for solver field: " << fieldName << endl;
+            }
+        }
+        else
+        {
+            *residualPtr = residual;
+            DebugInfo
+                << "Setting residual field for solver field "
+                << fieldName << endl;
+        }
     }
 }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,29 +32,35 @@ Description
     provide comparison against other chemistry solvers, that uses a single cell
     mesh, and fields created from the initial conditions.
 
-
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
 #include "psiReactionThermo.H"
-#include "psiChemistryModel.H"
+#include "BasicChemistryModel.H"
+#include "reactingMixture.H"
 #include "chemistrySolver.H"
 #include "OFstream.H"
 #include "thermoPhysicsTypes.H"
-#include "basicMultiComponentMixture.H"
-#include "cellModel.H"
+#include "basicSpecieMixture.H"
+#include "hexCellFvMesh.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for chemistry problems, designed for use on single cell cases"
+        " to provide comparison against other chemistry solvers"
+    );
+
     argList::noParallel();
 
     #define CREATE_MESH createSingleCellMesh.H
     #define NO_CONTROL
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createSingleCellMesh.H"
     #include "createFields.H"
@@ -72,7 +78,7 @@ int main(int argc, char *argv[])
 
         #include "setDeltaT.H"
 
-        runTime++;
+        ++runTime;
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
         #include "solveChemistry.H"
@@ -82,9 +88,7 @@ int main(int argc, char *argv[])
 
         #include "output.H"
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info << "Number of steps = " << runTime.timeIndex() << endl;

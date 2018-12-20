@@ -90,7 +90,7 @@ polyMeshAdder/polyMeshAdder.C
 fvMeshTools/fvMeshTools.C
 
 fvMeshSubset/fvMeshSubset.C
-meshSubsetHelper/meshSubsetHelper.C
+fvMeshSubsetProxy/fvMeshSubsetProxy.C
 
 motionSmoother/motionSmoother.C
 motionSmoother/motionSmootherAlgo.C
@@ -112,6 +112,7 @@ motionSolvers/velocity/velocityDisplacement/velocityDisplacementMotionSolver.C
 motionSolvers/componentVelocity/componentVelocityMotionSolver.C
 motionSolvers/displacement/solidBody/solidBodyMotionSolver.C
 motionSolvers/displacement/solidBody/multiSolidBodyMotionSolver.C
+motionSolvers/displacement/codedPoints0/codedPoints0MotionSolver.C
 
 solidBodyMotionFunctions = motionSolvers/displacement/solidBody/solidBodyMotionFunctions
 $(solidBodyMotionFunctions)/solidBodyMotionFunction/solidBodyMotionFunction.C

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -104,7 +104,7 @@ Foam::perfectInterface::perfectInterface
     const polyTopoChanger& mme
 )
 :
-    polyMeshModifier(name, index, mme, readBool(dict.lookup("active"))),
+    polyMeshModifier(name, index, mme, dict.get<bool>("active")),
     faceZoneID_
     (
         dict.lookup("faceZoneName"),
@@ -262,10 +262,7 @@ void Foam::perfectInterface::setRefinement
         {
             const labelList& pFaces = mesh.pointFaces()[meshPointi];
 
-            forAll(pFaces, pFacei)
-            {
-                affectedFaces.insert(pFaces[pFacei]);
-            }
+            affectedFaces.insert(pFaces);
         }
     }
     forAll(pp1, i)
@@ -291,9 +288,8 @@ void Foam::perfectInterface::setRefinement
 
 
     // 2. Renumber (non patch0/1) faces.
-    forAllConstIter(labelHashSet, affectedFaces, iter)
+    for (const label facei : affectedFaces)
     {
-        const label facei = iter.key();
         const face& f = mesh.faces()[facei];
 
         face newFace(f.size());
@@ -455,14 +451,14 @@ void Foam::perfectInterface::setRefinement(polyTopoChange& ref) const
         const polyPatch& patch1 = patches[slavePatchID_.index()];
 
 
-        labelList pp0Labels(identity(patch0.size())+patch0.start());
+        labelList pp0Labels(identity(patch0.size(), patch0.start()));
         indirectPrimitivePatch pp0
         (
             IndirectList<face>(mesh.faces(), pp0Labels),
             mesh.points()
         );
 
-        labelList pp1Labels(identity(patch1.size())+patch1.start());
+        labelList pp1Labels(identity(patch1.size(), patch1.start()));
         indirectPrimitivePatch pp1
         (
             IndirectList<face>(mesh.faces(), pp1Labels),

@@ -63,10 +63,10 @@ class NASedgeFormat
 {
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         NASedgeFormat(const NASedgeFormat&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const NASedgeFormat&) = delete;
 
 public:
@@ -82,10 +82,7 @@ public:
         //- Read file and return edge mesh
         static autoPtr<edgeMesh> New(const fileName& name)
         {
-            return autoPtr<edgeMesh>
-            (
-                new NASedgeFormat(name)
-            );
+            return autoPtr<edgeMesh>::NewFrom<NASedgeFormat>(name);
         }
 
 

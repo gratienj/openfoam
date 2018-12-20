@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     // Create the spring model from dictionary
     rigidBodyMotion spring(springDict);
 
-    label nIter(readLabel(springDict.lookup("nIter")));
+    label nIter(springDict.get<label>("nIter"));
 
     Info<< spring << endl;
 
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
         for (label i=0; i<nIter; i++)
         {
-            spring.solve(deltaT, tau, fx);
+            spring.solve(t + deltaT, deltaT, tau, fx);
         }
 
         // Write the results for graph generation

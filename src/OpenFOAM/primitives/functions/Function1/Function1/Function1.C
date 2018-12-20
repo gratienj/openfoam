@@ -25,6 +25,8 @@ License
 
 #include "Function1.H"
 #include "Time.H"
+// Required by clang 5 for correct instantiation of Function1::New
+#include "Constant.H"
 
 // * * * * * * * * * * * * * * * * Constructor * * * * * * * * * * * * * * * //
 
@@ -38,15 +40,8 @@ Foam::Function1<Type>::Function1(const word& entryName)
 template<class Type>
 Foam::Function1<Type>::Function1(const Function1<Type>& de)
 :
-    tmp<Function1<Type>>::refCount(),
+    refCount(),
     name_(de.name_)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class Type>
-Foam::Function1<Type>::~Function1()
 {}
 
 
@@ -79,8 +74,7 @@ Foam::tmp<Foam::Field<Type>> Foam::Function1<Type>::value
 ) const
 {
     NotImplemented;
-
-    return tmp<Foam::Field<Type>>(nullptr);
+    return nullptr;
 }
 
 
@@ -101,8 +95,7 @@ Foam::tmp<Foam::Field<Type>> Foam::Function1<Type>::integrate
 ) const
 {
     NotImplemented;
-
-    return tmp<Foam::Field<Type>>(nullptr);
+    return nullptr;
 }
 
 
@@ -113,8 +106,8 @@ Foam::FieldFunction1<Function1Type>::value
     const scalarField& x
 ) const
 {
-    tmp<Field<Type>> tfld(new Field<Type>(x.size()));
-    Field<Type>& fld = tfld.ref();
+    auto tfld = tmp<Field<Type>>::New(x.size());
+    auto& fld = tfld.ref();
 
     forAll(x, i)
     {
@@ -154,8 +147,8 @@ Foam::FieldFunction1<Function1Type>::integrate
     const scalarField& x2
 ) const
 {
-    tmp<Field<Type>> tfld(new Field<Type>(x1.size()));
-    Field<Type>& fld = tfld.ref();
+    auto tfld = tmp<Field<Type>>::New(x1.size());
+    auto& fld = tfld.ref();
 
     forAll(x1, i)
     {

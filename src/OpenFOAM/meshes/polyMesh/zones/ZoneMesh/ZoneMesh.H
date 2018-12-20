@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +39,7 @@ SourceFiles
 #include "regIOobject.H"
 #include "pointField.H"
 #include "Map.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -47,14 +47,13 @@ SourceFiles
 namespace Foam
 {
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-// Forward declaration of friend functions and operators
+// Forward declarations
 
 template<class ZoneType, class MeshType> class ZoneMesh;
 
 template<class ZoneType, class MeshType>
 Ostream& operator<<(Ostream& os, const ZoneMesh<ZoneType, MeshType>& zones);
+
 
 /*---------------------------------------------------------------------------*\
                            Class ZoneMesh Declaration
@@ -87,20 +86,40 @@ class ZoneMesh
         template<class UnaryMatchPredicate>
         static wordList namesImpl
         (
-            const PtrList<ZoneType>& zones,
+            const PtrList<ZoneType>& list,
             const UnaryMatchPredicate& matcher,
             const bool doSort
         );
 
+        //- Templated implementation for indices()
+        template<class UnaryMatchPredicate>
+        static labelList indicesImpl
+        (
+            const PtrList<ZoneType>& list,
+            const UnaryMatchPredicate& matcher
+        );
 
-        //- Disallow construct as copy
+        //- Templated implementation for findIndex()
+        template<class UnaryMatchPredicate>
+        static label findIndexImpl
+        (
+            const PtrList<ZoneType>& list,
+            const UnaryMatchPredicate& matcher
+        );
+
+
+        //- No copy construct
         ZoneMesh(const ZoneMesh&) = delete;
 
-        //- Disallow assignment
+        //- No copy assignment
         void operator=(const ZoneMesh<ZoneType, MeshType>&) = delete;
 
 
 public:
+
+    //- Debug switch to disallow the use of generic zones
+    static int disallowGenericZones;
+
 
     // Constructors
 
@@ -154,33 +173,65 @@ public:
         //- A list of the zone names
         wordList names() const;
 
-        //- A list of the zone names satisfying the input matcher
+        //- A list of zone names satisfying the input matcher
         wordList names(const wordRe& matcher) const;
 
-        //- A list of the zone names satisfying the input matchers
+        //- A list of zone names satisfying the input matchers
         wordList names(const wordRes& matcher) const;
 
         //- Sorted list of the zone names
         wordList sortedNames() const;
 
-        //- Sorted list of the zone names satisfying the input matcher
+        //- Sorted list of zone names satisfying the input matcher
         wordList sortedNames(const wordRe& matcher) const;
 
-        //- Sorted list of the zone names satisfying the input matchers
+        //- Sorted list of zone names satisfying the input matchers
         wordList sortedNames(const wordRes& matcher) const;
 
 
         //- Return zone indices for all matches
-        labelList findIndices(const keyType& key) const;
+        labelList indices(const keyType& key) const;
+
+        //- Return zone indices for all matches
+        labelList indices(const wordRes& matcher) const;
+
 
         //- Return zone index for the first match, return -1 if not found
         label findIndex(const keyType& key) const;
 
+        //- Return zone index for the first match, return -1 if not found
+        label findIndex(const wordRes& matcher) const;
+
+
         //- Find zone index given a name, return -1 if not found
         label findZoneID(const word& zoneName) const;
 
-        //- Mark items (cells, faces, points) that match the zone specification
-        PackedBoolList findMatching(const keyType& key) const;
+
+        //- Return all elements (cells, faces, points) contained in the
+        //- listed zones.
+        //  The bitSet is empty (zero-size) if there are no elements matched
+        //  anywhere.
+        bitSet selection(const labelUList& zoneIds) const;
+
+        //- Return all elements (cells, faces, points) that match the zone
+        //- specification as a bitSet.
+        //  The bitSet is empty (zero-size) if there are no elements matched
+        //  anywhere.
+        bitSet selection(const keyType& key) const;
+
+        //- Return all elements (cells, faces, points) that match the zone
+        //- specification as a bitSet.
+        //  The bitSet is empty (zero-size) if there are no elements matched
+        //  anywhere.
+        bitSet selection(const wordRes& matcher) const;
+
+
+        //- Lookup zone by name and return const pointer, nullptr on error.
+        const ZoneType* zonePtr(const word& zoneName) const;
+
+        //- Lookup zone by name and return pointer, nullptr on error.
+        ZoneType* zonePtr(const word& zoneName);
+
 
         //- Clear addressing
         void clearAddressing();
@@ -200,6 +251,7 @@ public:
 
         //- writeData member function required by regIOobject
         bool writeData(Ostream& os) const;
+
 
     // Member Operators
 
@@ -227,6 +279,7 @@ public:
         //
         //      if (nOrig == zones.size()) { existing... } else { new... }
         //  \endcode
+        //  \param zoneName the name of the zone
         //  \param verbose report if an existing zone was selected or
         //      a new zone was created.
         //  \return non-const reference to the existing or new zone
@@ -240,6 +293,15 @@ public:
             Ostream& os,
             const ZoneMesh<ZoneType, MeshType>& zones
         );
+
+
+    // Housekeeping
+
+        //- Identical to the indices() method (AUG-2018)
+        labelList findIndices(const keyType& key) const
+        {
+            return indices(key);
+        }
 };
 
 

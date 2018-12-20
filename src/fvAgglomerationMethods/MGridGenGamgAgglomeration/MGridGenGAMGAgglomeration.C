@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -170,14 +170,14 @@ Foam::MGridGenGAMGAgglomeration::MGridGenGAMGAgglomeration
     fvMesh_(refCast<const fvMesh>(mesh))
 {
     // Min, max size of agglomerated cells
-    label minSize(readLabel(controlDict.lookup("minSize")));
-    label maxSize(readLabel(controlDict.lookup("maxSize")));
+    label minSize(controlDict.get<label>("minSize"));
+    label maxSize(controlDict.get<label>("maxSize"));
 
     // Number of iterations applied to improve agglomeration consistency across
     // processor boundaries
     label nProcConsistencyIter
     (
-        readLabel(controlDict.lookup("nProcConsistencyIter"))
+        controlDict.get<label>("nProcConsistencyIter")
     );
 
     // Start geometric agglomeration from the cell volumes and areas of the mesh
@@ -238,7 +238,7 @@ Foam::MGridGenGAMGAgglomeration::MGridGenGAMGAgglomeration
 
             const labelField& agglom = finalAgglomPtr();
 
-            // Global nubmering
+            // Global numbering
             const globalIndex globalNumbering(nCoarseCells);
 
             labelField globalAgglom(addr.size());
@@ -267,9 +267,8 @@ Foam::MGridGenGAMGAgglomeration::MGridGenGAMGAgglomeration
             //        Should not be. fluke?
             //scalarField weights(*faceWeightsPtr);
             scalarField weights = *magSfPtr;
-            forAllConstIter(labelHashSet, sharedFaces, iter)
+            for (const label facei : sharedFaces)
             {
-                label facei= iter.key();
                 weights[facei] *= 2.0;
             }
 

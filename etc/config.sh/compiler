@@ -3,7 +3,7 @@
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
 #   \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-#    \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+#    \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -11,10 +11,11 @@
 #
 # File
 #     etc/config.sh/compiler
+#     - sourced by OpenFOAM-*/etc/config.sh/settings
 #
 # Description
 #     Setup for custom compiler versions for OpenFOAM
-#     Sourced from OpenFOAM-<VERSION>/etc/config.sh/settings
+#     Per-compiler overrides in "compiler-$WM_COMPILER" files
 #
 #------------------------------------------------------------------------------
 
@@ -65,7 +66,16 @@ ThirdParty)
     Gcc72)
         gcc_version=gcc-7.2.0
         ;;
-    Clang)
+    Gcc73)
+        gcc_version=gcc-7.3.0
+        ;;
+    Gcc81)
+        gcc_version=gcc-8.1.0
+        ;;
+    Gcc82)
+        gcc_version=gcc-8.2.0
+        ;;
+    Clang | Clang37)
         clang_version=llvm-3.7.1
         ;;
     Clang38)
@@ -78,7 +88,10 @@ ThirdParty)
         clang_version=llvm-4.0.1
         ;;
     Clang50)
-        clang_version=llvm-5.0.0
+        clang_version=llvm-5.0.2
+        ;;
+    Clang60)
+        clang_version=llvm-6.0.1
         ;;
     *)
         /bin/cat << UNKNOWN_COMPILER 1>&2
@@ -91,6 +104,9 @@ Please check your settings
 UNKNOWN_COMPILER
         ;;
     esac
+
+    # Per-compiler overrides in "compiler-$WM_COMPILER" files
+    _foamEtc -config "compiler-$WM_COMPILER"
     ;;
 esac
 

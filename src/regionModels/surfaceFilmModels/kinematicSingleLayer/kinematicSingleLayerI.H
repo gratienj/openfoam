@@ -172,7 +172,7 @@ inline const volScalarField& kinematicSingleLayer::muPrimary() const
 
 inline const filmThermoModel& kinematicSingleLayer::filmThermo() const
 {
-    return filmThermo_();
+    return *filmThermo_;
 }
 
 
@@ -190,24 +190,13 @@ inline transferModelList& kinematicSingleLayer::transfer()
 
 inline const filmTurbulenceModel& kinematicSingleLayer::turbulence() const
 {
-    return turbulence_();
+    return *turbulence_;
 }
 
 
 inline tmp<volScalarField> kinematicSingleLayer::mass() const
 {
     return deltaRho_*magSf();
-}
-
-
-inline tmp<volScalarField> kinematicSingleLayer::netMass() const
-{
-    return
-        fvc::surfaceSum
-        (
-            pos0(phi_)*phi_/(fvc::interpolate(delta_) + deltaSmall_)
-        )*time().deltaT()
-      + rho_*delta_*magSf();
 }
 
 

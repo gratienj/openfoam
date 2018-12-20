@@ -56,10 +56,10 @@ class pimpleControl
 {
     // Private member functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         pimpleControl(const pimpleControl&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const pimpleControl&) = delete;
 
 
@@ -99,6 +99,13 @@ protected:
 
         //- Return true if all convergence checks are satisfied
         virtual bool criteriaSatisfied();
+
+        //- Set the firstIteration flag on the mesh data dictionary
+        virtual void setFirstIterFlag
+        (
+            const bool check = true,
+            const bool force = false
+        );
 
 
 public:
@@ -161,7 +168,7 @@ public:
             inline bool solveFlow() const;
 
             //- Return true to solve for turbulence
-            inline bool turbCorr() const;
+            inline bool turbCorr();
 };
 
 

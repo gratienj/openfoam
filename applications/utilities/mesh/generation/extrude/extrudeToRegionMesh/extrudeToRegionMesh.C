@@ -492,15 +492,8 @@ labelListList globalEdgeFaces
 
     forAll(edgeFaces, edgeI)
     {
-        const labelList& eFaces = edgeFaces[edgeI];
-
         // Store pp face and processor as unique tag.
-        labelList& globalEFaces = globalEdgeFaces[edgeI];
-        globalEFaces.setSize(eFaces.size());
-        forAll(eFaces, i)
-        {
-            globalEFaces[i] = globalFaces.toGlobal(eFaces[i]);
-        }
+        globalEdgeFaces[edgeI] = globalFaces.toGlobal(edgeFaces[edgeI]);
     }
 
     // Synchronise across coupled edges.
@@ -527,10 +520,7 @@ label findUncoveredPatchFace
 {
     // Make set of extruded faces.
     labelHashSet extrudeFaceSet(extrudeMeshFaces.size());
-    forAll(extrudeMeshFaces, i)
-    {
-        extrudeFaceSet.insert(extrudeMeshFaces[i]);
-    }
+    extrudeFaceSet.insert(extrudeMeshFaces);
 
     const polyBoundaryMesh& pbm = mesh.boundaryMesh();
     const labelList& eFaces = mesh.edgeFaces()[meshEdgeI];
@@ -564,10 +554,7 @@ label findUncoveredCyclicPatchFace
 {
     // Make set of extruded faces.
     labelHashSet extrudeFaceSet(extrudeMeshFaces.size());
-    forAll(extrudeMeshFaces, i)
-    {
-        extrudeFaceSet.insert(extrudeMeshFaces[i]);
-    }
+    extrudeFaceSet.insert(extrudeMeshFaces);
 
     const polyBoundaryMesh& pbm = mesh.boundaryMesh();
     const labelList& eFaces = mesh.edgeFaces()[meshEdgeI];
@@ -724,7 +711,7 @@ void countExtrudePatches
             }
         }
     }
-    // Synchronise decistion. Actual numbers are not important, just make
+    // Synchronise decision. Actual numbers are not important, just make
     // sure that they're > 0 on all processors.
     Pstream::listCombineGather(zoneSidePatch, plusEqOp<label>());
     Pstream::listCombineScatter(zoneSidePatch);
@@ -1274,7 +1261,7 @@ void extrudeGeometricProperties
     // Determine edge normals on original patch
     labelList patchEdges;
     labelList coupledEdges;
-    PackedBoolList sameEdgeOrientation;
+    bitSet sameEdgeOrientation;
     PatchTools::matchEdges
     (
         extrudePatch,
@@ -1473,15 +1460,21 @@ void extrudeGeometricProperties
 }
 
 
-
-
 int main(int argc, char *argv[])
 {
-    argList::addNote("Create region mesh by extruding a faceZone or faceSet");
+    argList::addNote
+    (
+        "Create region mesh by extruding a faceZone or faceSet"
+    );
 
     #include "addRegionOption.H"
     #include "addOverwriteOption.H"
-    #include "addDictOption.H"
+
+    argList::addOption
+    (
+        "dict", "file", "Use alternative extrudeToRegionMeshDict"
+    );
+
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createNamedMesh.H"
@@ -1501,8 +1494,7 @@ int main(int argc, char *argv[])
 
 
     const word oldInstance = mesh.pointsInstance();
-    bool overwrite = args.optionFound("overwrite");
-
+    const bool overwrite = args.found("overwrite");
 
     const word dictName("extrudeToRegionMeshDict");
 
@@ -1510,22 +1502,20 @@ int main(int argc, char *argv[])
 
     IOdictionary dict(dictIO);
 
-
     // Point generator
     autoPtr<extrudeModel> model(extrudeModel::New(dict));
 
-
     // Region
-    const word shellRegionName(dict.lookup("region"));
+    const word shellRegionName(dict.get<word>("region"));
 
     // Faces to extrude - either faceZones or faceSets (boundary faces only)
     wordList zoneNames;
     wordList zoneShadowNames;
 
-    bool hasZones = dict.found("faceZones");
+    const bool hasZones = dict.found("faceZones");
     if (hasZones)
     {
-        dict.lookup("faceZones") >> zoneNames;
+        dict.readEntry("faceZones", zoneNames);
         dict.readIfPresent("faceZonesShadow", zoneShadowNames);
 
         // Check
@@ -1539,24 +1529,24 @@ int main(int argc, char *argv[])
     }
     else
     {
-        dict.lookup("faceSets") >> zoneNames;
+        dict.readEntry("faceSets", zoneNames);
         dict.readIfPresent("faceSetsShadow", zoneShadowNames);
     }
 
 
     mappedPatchBase::sampleMode sampleMode =
-        mappedPatchBase::sampleModeNames_[dict.lookup("sampleMode")];
+        mappedPatchBase::sampleModeNames_.get("sampleMode", dict);
 
-    const Switch oneD(dict.lookup("oneD"));
-    Switch oneDNonManifoldEdges(false);
+    const bool oneD(dict.get<bool>("oneD"));
+    bool oneDNonManifoldEdges(false);
     word oneDPatchType(emptyPolyPatch::typeName);
     if (oneD)
     {
         oneDNonManifoldEdges = dict.lookupOrDefault("nonManifold", false);
-        dict.lookup("oneDPolyPatchType") >> oneDPatchType;
+        oneDPatchType = dict.get<word>("oneDPolyPatchType");
     }
 
-    const Switch adaptMesh(dict.lookup("adaptMesh"));
+    const bool adaptMesh(dict.get<bool>("adaptMesh"));
 
     if (hasZones)
     {
@@ -1658,7 +1648,7 @@ int main(int argc, char *argv[])
     word meshInstance;
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
         meshInstance = runTime.timeName();
     }
     else
@@ -1885,7 +1875,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    const primitiveFacePatch extrudePatch(zoneFaces.xfer(), mesh.points());
+    const primitiveFacePatch extrudePatch(std::move(zoneFaces), mesh.points());
 
 
     Pstream::listCombineGather(isInternal, orEqOp<bool>());
@@ -2171,7 +2161,7 @@ int main(int argc, char *argv[])
     labelListList extrudeEdgePatches(extrudePatch.nEdges());
 
     // Is edge a non-manifold edge
-    PackedBoolList nonManifoldEdge(extrudePatch.nEdges());
+    bitSet nonManifoldEdge(extrudePatch.nEdges());
 
     // Note: logic has to be same as in countExtrudePatches.
     forAll(edgeFaces, edgeI)
@@ -2195,12 +2185,12 @@ int main(int argc, char *argv[])
                 //  and generate space overlapping columns of cells.
                 if (eFaces.size() != 2)
                 {
-                    nonManifoldEdge[edgeI] = 1;
+                    nonManifoldEdge.set(edgeI);
                 }
             }
             else
             {
-                nonManifoldEdge[edgeI] = 1;
+                nonManifoldEdge.set(edgeI);
             }
         }
         else if (eFaces.size() == 2)
@@ -2227,7 +2217,7 @@ int main(int argc, char *argv[])
                     ePatches[1] = zoneZonePatch_min[index];
                 }
 
-                nonManifoldEdge[edgeI] = 1;
+                nonManifoldEdge.set(edgeI);
             }
         }
         else if (sidePatchID[edgeI] != -1)
@@ -2265,7 +2255,7 @@ int main(int argc, char *argv[])
                     ePatches[i] = zoneSidePatch[zoneID[eFaces[i]]];
                 }
             }
-            nonManifoldEdge[edgeI] = 1;
+            nonManifoldEdge.set(edgeI);
         }
     }
 
@@ -2410,10 +2400,7 @@ int main(int argc, char *argv[])
             IOobject::AUTO_WRITE,
             false
         ),
-        xferCopy(pointField()),
-        xferCopy(faceList()),
-        xferCopy(labelList()),
-        xferCopy(labelList()),
+        Zero,
         false
     );
 
@@ -2442,7 +2429,7 @@ int main(int argc, char *argv[])
             meshMod
         );
 
-        // Enforce actual point posititions according to extrudeModel (model)
+        // Enforce actual point positions according to extrudeModel (model)
         // (extruder.setRefinement only does fixed expansionRatio)
         // The regionPoints and nLayers are looped in the same way as in
         // createShellMesh
@@ -2475,7 +2462,7 @@ int main(int argc, char *argv[])
 
 
     // Update numbering on extruder.
-    extruder.updateMesh(shellMap);
+    extruder.updateMesh(shellMap());
 
 
     // Calculate offsets from shell mesh back to original mesh
@@ -2823,7 +2810,7 @@ int main(int argc, char *argv[])
         addBafflesMap = meshMod.changeMesh(mesh, false);
 
         // Update fields
-        mesh.updateMesh(addBafflesMap);
+        mesh.updateMesh(addBafflesMap());
 
 
 //XXXXXX

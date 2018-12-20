@@ -28,7 +28,10 @@ License
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class T>
-inline Foam::SortableList<T>::SortableList()
+inline constexpr Foam::SortableList<T>::SortableList() noexcept
+:
+    List<T>(),
+    indices_()
 {}
 
 
@@ -75,15 +78,6 @@ template<class T>
 Foam::SortableList<T>::SortableList(List<T>&& values)
 :
     List<T>(std::move(values))
-{
-    sort();
-}
-
-
-template<class T>
-Foam::SortableList<T>::SortableList(const Xfer<List<T>>& values)
-:
-    List<T>(values)
 {
     sort();
 }
@@ -158,13 +152,6 @@ void Foam::SortableList<T>::swap(SortableList<T>& lst)
 }
 
 
-template<class T>
-Foam::Xfer<Foam::List<T>> Foam::SortableList<T>::xfer()
-{
-    return xferMoveTo<List<T>>(*this);
-}
-
-
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
 template<class T>
@@ -195,7 +182,7 @@ template<class T>
 inline void Foam::SortableList<T>::operator=(List<T>&& lst)
 {
     indices_.clear();
-    List<T>::operator=(std::move(lst));
+    List<T>::transfer(lst);
 }
 
 

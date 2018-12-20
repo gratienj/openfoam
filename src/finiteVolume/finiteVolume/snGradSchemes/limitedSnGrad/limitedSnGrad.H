@@ -81,8 +81,8 @@ class limitedSnGrad
 
     // Private Member Functions
 
-        //- Disallow default bitwise assignment
-        void operator=(const limitedSnGrad&);
+        //- No copy assignment
+        void operator=(const limitedSnGrad&) = delete;
 
         //- Lookup function for the corrected to support backward compatibility
         //  of dictionary specification
@@ -138,10 +138,8 @@ public:
         {
             if (limitCoeff_ < 0 || limitCoeff_ > 1)
             {
-                FatalIOErrorInFunction
-                (
-                    schemeData
-                )   << "limitCoeff is specified as " << limitCoeff_
+                FatalIOErrorInFunction(schemeData)
+                    << "limitCoeff is specified as " << limitCoeff_
                     << " but should be >= 0 && <= 1"
                     << exit(FatalIOError);
             }

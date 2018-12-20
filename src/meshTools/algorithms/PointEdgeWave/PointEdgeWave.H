@@ -58,7 +58,7 @@ SourceFiles
 #ifndef PointEdgeWave_H
 #define PointEdgeWave_H
 
-#include "boolList.H"
+#include "bitSet.H"
 #include "scalarField.H"
 #include "tensorField.H"
 
@@ -90,7 +90,7 @@ class PointEdgeWave
   // Private static data
 
         //- Relative tolerance. Stop propagation if relative changes
-        //  less than this tolerance (responsability for checking this is
+        //  less than this tolerance (responsibility for checking this is
         //  up to Type implementation)
         static scalar propagationTol_;
 
@@ -114,7 +114,7 @@ class PointEdgeWave
         TrackingData& td_;
 
         //- Has point changed
-        boolList changedPoint_;
+        bitSet changedPoint_;
 
         //- List of changed points
         labelList changedPoints_;
@@ -123,7 +123,8 @@ class PointEdgeWave
         label nChangedPoints_;
 
         //- Edges that have changed
-        boolList changedEdge_;
+        bitSet changedEdge_;
+
         labelList changedEdges_;
         label nChangedEdges_;
 
@@ -209,11 +210,11 @@ class PointEdgeWave
             label handleCollocatedPoints();
 
 
-        //- Disallow default bitwise copy construct
-        PointEdgeWave(const PointEdgeWave&);
+        //- No copy construct
+        PointEdgeWave(const PointEdgeWave&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const PointEdgeWave&);
+        //- No copy assignment
+        void operator=(const PointEdgeWave&) = delete;
 
 
 public:
@@ -286,14 +287,14 @@ public:
             return td_;
         }
 
-        //- Get number of unvisited edges, i.e. edges that were not (yet)
+        //- Number of unvisited edges, i.e. edges that were not (yet)
         //  reached from walking across mesh. This can happen from
         //  - not enough iterations done
         //  - a disconnected mesh
         //  - a mesh without walls in it
-        label getUnsetEdges() const;
+        label nUnvisitedEdges() const;
 
-        label getUnsetPoints() const;
+        label nUnvisitedPoints() const;
 
         //- Copy initial data into allPointInfo_
         void setPointInfo

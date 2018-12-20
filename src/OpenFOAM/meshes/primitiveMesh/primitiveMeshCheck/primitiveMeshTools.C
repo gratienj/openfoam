@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -78,8 +78,7 @@ Foam::scalar Foam::primitiveMeshTools::boundaryFaceSkewness
 {
     vector Cpf = fCtrs[facei] - ownCc;
 
-    vector normal = fAreas[facei];
-    normal /= mag(normal) + ROOTVSMALL;
+    vector normal = normalised(fAreas[facei]);
     vector d = normal*(normal & Cpf);
 
 
@@ -455,7 +454,7 @@ Foam::tmp<Foam::scalarField> Foam::primitiveMeshTools::cellDeterminant
     const primitiveMesh& mesh,
     const Vector<label>& meshD,
     const vectorField& faceAreas,
-    const PackedBoolList& internalOrCoupledFace
+    const bitSet& internalOrCoupledFace
 )
 {
     // Determine number of dimensions and (for 2D) missing dimension
@@ -495,7 +494,7 @@ Foam::tmp<Foam::scalarField> Foam::primitiveMeshTools::cellDeterminant
 
             forAll(curFaces, i)
             {
-                if (internalOrCoupledFace[curFaces[i]])
+                if (internalOrCoupledFace.test(curFaces[i]))
                 {
                     avgArea += mag(faceAreas[curFaces[i]]);
 
@@ -503,7 +502,7 @@ Foam::tmp<Foam::scalarField> Foam::primitiveMeshTools::cellDeterminant
                 }
             }
 
-            if (nInternalFaces == 0)
+            if (nInternalFaces == 0 || avgArea < ROOTVSMALL)
             {
                 cellDeterminant[celli] = 0;
             }
@@ -515,7 +514,7 @@ Foam::tmp<Foam::scalarField> Foam::primitiveMeshTools::cellDeterminant
 
                 forAll(curFaces, i)
                 {
-                    if (internalOrCoupledFace[curFaces[i]])
+                    if (internalOrCoupledFace.test(curFaces[i]))
                     {
                         areaTensor += sqr(faceAreas[curFaces[i]]/avgArea);
                     }

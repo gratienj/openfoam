@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,7 +37,7 @@ Description
     #include "createTime.H"
     instantList timeDirs = timeSelector::select0(runTime, args);
     ...
-    forAll(timeDirs, timeI)
+    forAll(timeDirs, timei)
     {
         ...
     }
@@ -79,7 +79,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class argList;
 class Time;
 
@@ -89,17 +89,17 @@ class Time;
 
 class timeSelector
 :
-    public scalarRanges
+    private scalarRanges
 {
 public:
 
     // Constructors
 
-        //- Construct Null
+        //- Construct null
         timeSelector();
 
-        //- Construct from Istream
-        timeSelector(Istream& is);
+        //- Construct by parsing string for time ranges
+        timeSelector(const std::string& str);
 
 
     // Member Functions
@@ -146,8 +146,8 @@ public:
         );
 
         //- Return the set of times selected based on the argList options
-        //  also set the runTime to the first instance or the
-        //  \c constant/ directory if no instances are specified or available
+        //- and also set the runTime to the first instance or the
+        //- \c constant/ directory if no instances are specified or available
         static instantList select0
         (
             Time& runTime,
@@ -155,7 +155,7 @@ public:
         );
 
         //- If any time option provided return the set of times (as select0)
-        //  otherwise return just the current time.
+        //- otherwise return just the current time.
         //  Also set the runTime to the first instance
         static instantList selectIfPresent
         (
@@ -163,17 +163,6 @@ public:
             const argList& args
         );
 
-        //- Return the set of times selected based on the argList options
-        //  including support for \b -newTimes in which times are selected
-        //  if the file 'fName' does not exist in the time directory.
-        //  Also set the runTime to the first instance or the
-        //  \c constant/ directory if no instances are specified or available
-        static instantList select
-        (
-            Time& runTime,
-            const argList& args,
-            const word& fName
-        );
 };
 
 

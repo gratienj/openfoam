@@ -58,7 +58,7 @@ Foam::phaseModel::phaseModel
             IOobject::AUTO_WRITE
         ),
         fluid.mesh(),
-        dimensionedScalar("alpha", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     ),
     fluid_(fluid),
     name_(phaseName),
@@ -95,7 +95,7 @@ Foam::phaseModel::phaseModel
             fluid.mesh()
         ),
         fluid.mesh(),
-        dimensionedScalar("0", dimensionSet(0, 3, -1, 0, 0), 0)
+        dimensionedScalar(dimensionSet(0, 3, -1, 0, 0), Zero)
     ),
     alphaRhoPhi_
     (
@@ -106,7 +106,7 @@ Foam::phaseModel::phaseModel
             fluid.mesh()
         ),
         fluid.mesh(),
-        dimensionedScalar("0", dimensionSet(1, 0, -1, 0, 0), 0)
+        dimensionedScalar(dimensionSet(1, 0, -1, 0, 0), Zero)
     )
 {
     alphaPhi_.setOriented();
@@ -227,14 +227,14 @@ Foam::tmp<Foam::volScalarField> Foam::phaseModel::d() const
 Foam::PhaseCompressibleTurbulenceModel<Foam::phaseModel>&
 Foam::phaseModel::turbulence()
 {
-    return turbulence_();
+    return *turbulence_;
 }
 
 
 const Foam::PhaseCompressibleTurbulenceModel<Foam::phaseModel>&
 Foam::phaseModel::turbulence() const
 {
-    return turbulence_();
+    return *turbulence_;
 }
 
 

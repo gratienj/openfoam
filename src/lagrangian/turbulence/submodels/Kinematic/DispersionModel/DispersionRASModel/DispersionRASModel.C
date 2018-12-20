@@ -41,21 +41,19 @@ Foam::DispersionRASModel<CloudType>::kModel() const
             this->owner().U().group()
         );
 
-    if (obr.foundObject<turbulenceModel>(turbName))
-    {
-        const turbulenceModel& model =
-            obr.lookupObject<turbulenceModel>(turbName);
-        return model.k();
-    }
-    else
-    {
-        FatalErrorInFunction
-            << "Turbulence model not found in mesh database" << nl
-            << "Database objects include: " << obr.sortedToc()
-            << abort(FatalError);
+    const turbulenceModel* turb = obr.findObject<turbulenceModel>(turbName);
 
-        return tmp<volScalarField>(nullptr);
+    if (turb)
+    {
+        return turb->k();
     }
+
+    FatalErrorInFunction
+        << "Turbulence model not found in mesh database" << nl
+        << "Database objects include: " << obr.sortedToc()
+        << abort(FatalError);
+
+    return nullptr;
 }
 
 
@@ -71,21 +69,19 @@ Foam::DispersionRASModel<CloudType>::epsilonModel() const
             this->owner().U().group()
         );
 
-    if (obr.foundObject<turbulenceModel>(turbName))
-    {
-        const turbulenceModel& model =
-            obr.lookupObject<turbulenceModel>(turbName);
-        return model.epsilon();
-    }
-    else
-    {
-        FatalErrorInFunction
-            << "Turbulence model not found in mesh database" << nl
-            << "Database objects include: " << obr.sortedToc()
-            << abort(FatalError);
+    const turbulenceModel* turb = obr.findObject<turbulenceModel>(turbName);
 
-        return tmp<volScalarField>(nullptr);
+    if (turb)
+    {
+        return turb->epsilon();
     }
+
+    FatalErrorInFunction
+        << "Turbulence model not found in mesh database" << nl
+        << "Database objects include: " << obr.sortedToc()
+        << abort(FatalError);
+
+    return nullptr;
 }
 
 

@@ -45,7 +45,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward declarations
 class porosityModelList;
 Ostream& operator<<(Ostream& os, const porosityModelList& models);
 
@@ -61,11 +61,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        porosityModelList(const porosityModelList&);
+        //- No copy construct
+        porosityModelList(const porosityModelList&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const porosityModelList&);
+        //- No copy assignment
+        void operator=(const porosityModelList&) = delete;
 
 
 protected:
@@ -82,13 +82,13 @@ public:
     porosityModelList(const fvMesh& mesh, const dictionary& dict);
 
     //- Destructor
-    ~porosityModelList();
+    ~porosityModelList() = default;
 
 
     // Member Functions
 
         //- Return active status
-        bool active(const bool active = false) const;
+        bool active(const bool warn = false) const;
 
         //- Reset the source list
         void reset(const dictionary& dict);

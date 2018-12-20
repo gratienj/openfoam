@@ -39,7 +39,7 @@ bool Foam::CV2D::dualCellSurfaceIntersection
     {
         if (!is_infinite(ec))
         {
-            point e0 = toPoint3D(circumcenter(ec->first));
+            Foam::point e0 = toPoint3D(circumcenter(ec->first));
 
             // If edge end is outside bounding box then edge cuts boundary
             if (!qSurf_.globalBounds().contains(e0))
@@ -47,9 +47,10 @@ bool Foam::CV2D::dualCellSurfaceIntersection
                 return true;
             }
 
-            point e1 = toPoint3D(circumcenter(ec->first->neighbor(ec->second)));
+            Foam::point e1 =
+                toPoint3D(circumcenter(ec->first->neighbor(ec->second)));
 
-            // If other edge end is ouside bounding box then edge cuts boundary
+            // If other edge end is outside bounding box then edge cuts boundary
             if (!qSurf_.globalBounds().contains(e1))
             {
                 return true;
@@ -144,8 +145,8 @@ void Foam::CV2D::insertSurfaceNearestPointPairs()
     label nSurfacePointsEst =
         min
         (
-            number_of_vertices(),
-            size_t(10*sqrt(scalar(number_of_vertices())))
+            label(number_of_vertices()),
+            label(10*sqrt(scalar(number_of_vertices())))
         );
 
     DynamicList<point2D> nearSurfacePoints(nSurfacePointsEst);

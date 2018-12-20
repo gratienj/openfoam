@@ -29,6 +29,7 @@ Description
 #include "argList.H"
 #include "Time.H"
 #include "volFields.H"
+#include "fvCFD.H"
 
 using namespace Foam;
 
@@ -54,7 +55,7 @@ int main(int argc, char *argv[])
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar("zero", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     );
 
     Info<< "Creating field p\n" << endl;
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar("zero", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     );
 
 

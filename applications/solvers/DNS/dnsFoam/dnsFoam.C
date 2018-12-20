@@ -44,9 +44,14 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Direct numerical simulation for boxes of isotropic turbulence."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMeshNoClear.H"
     #include "createControl.H"
@@ -54,6 +59,13 @@ int main(int argc, char *argv[])
     #include "initContinuityErrs.H"
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+    label ntot = 1;
+    forAll(K.nn(), idim)
+    {
+        ntot *= K.nn()[idim];
+    }
+    const scalar recRootN = 1.0/Foam::sqrt(scalar(ntot));
 
     Info<< nl << "Starting time loop" << endl;
 
@@ -66,7 +78,7 @@ int main(int argc, char *argv[])
             fft::reverseTransform
             (
                 K/(mag(K) + 1.0e-6) ^ forceGen.newField(), K.nn()
-            )
+            )*recRootN
         );
 
         #include "globalProperties.H"
@@ -126,9 +138,7 @@ int main(int argc, char *argv[])
             );
         }
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

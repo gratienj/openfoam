@@ -43,8 +43,9 @@ Description
 
             coordinateSystem
             {
-                e1  (0.70710678 0.70710678 0);
-                e2  (0 0 1);
+                origin  (0 0 0);
+                e1      (0.70710678 0.70710678 0);
+                e2      (0 0 1);
             }
         }
     }
@@ -68,6 +69,7 @@ SourceFiles
 namespace Foam
 {
 
+// Forward declarations
 class porosityModel;
 
 namespace fv
@@ -82,7 +84,6 @@ class interRegionExplicitPorositySource
 :
     public interRegionOption
 {
-
 protected:
 
     // Protected data
@@ -111,14 +112,14 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         interRegionExplicitPorositySource
         (
             const interRegionExplicitPorositySource&
-        );
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const interRegionExplicitPorositySource&);
+        //- No copy assignment
+        void operator=(const interRegionExplicitPorositySource&) = delete;
 
 
 public:

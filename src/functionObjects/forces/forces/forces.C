@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +29,7 @@ License
 #include "turbulentTransportModel.H"
 #include "turbulentFluidThermoModel.H"
 #include "addToRunTimeSelectionTable.H"
+#include "cartesianCS.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -37,7 +38,6 @@ namespace Foam
 namespace functionObjects
 {
     defineTypeNameAndDebug(forces, 0);
-
     addToRunTimeSelectionTable(functionObject, forces, dictionary);
 }
 }
@@ -222,9 +222,8 @@ void Foam::functionObjects::forces::initialiseBins()
         // Determine extents of patches
         binMin_ = GREAT;
         scalar binMax = -GREAT;
-        forAllConstIter(labelHashSet, patchSet_, iter)
+        for (const label patchi : patchSet_)
         {
-            label patchi = iter.key();
             const polyPatch& pp = pbm[patchi];
             scalarField d(pp.faceCentres() & binDir_);
             binMin_ = min(min(d), binMin_);
@@ -244,9 +243,8 @@ void Foam::functionObjects::forces::initialiseBins()
                 const porosityModel& pm = *iter();
                 const labelList& cellZoneIDs = pm.cellZoneIDs();
 
-                forAll(cellZoneIDs, i)
+                for (const label zonei : cellZoneIDs)
                 {
-                    label zonei = cellZoneIDs[i];
                     const cellZone& cZone = mesh_.cellZones()[zonei];
                     const scalarField d(dd, cZone);
                     binMin_ = min(min(d), binMin_);
@@ -294,20 +292,14 @@ void Foam::functionObjects::forces::resetFields()
     if (writeFields_)
     {
         volVectorField& force =
-            const_cast<volVectorField&>
-            (
-                lookupObject<volVectorField>(fieldName("force"))
-            );
+            lookupObjectRef<volVectorField>(fieldName("force"));
 
-        force == dimensionedVector("0", force.dimensions(), Zero);
+        force == dimensionedVector(force.dimensions(), Zero);
 
         volVectorField& moment =
-            const_cast<volVectorField&>
-            (
-                lookupObject<volVectorField>(fieldName("moment"))
-            );
+            lookupObjectRef<volVectorField>(fieldName("moment"));
 
-        moment == dimensionedVector("0", moment.dimensions(), Zero);
+        moment == dimensionedVector(moment.dimensions(), Zero);
     }
 }
 
@@ -355,7 +347,7 @@ Foam::functionObjects::forces::devRhoReff() const
         const dictionary& transportProperties =
             lookupObject<dictionary>("transportProperties");
 
-        dimensionedScalar nu(transportProperties.lookup("nu"));
+        dimensionedScalar nu("nu", dimViscosity, transportProperties);
 
         const volVectorField& U = lookupObject<volVectorField>(UName_);
 
@@ -417,25 +409,20 @@ Foam::tmp<Foam::volScalarField> Foam::functionObjects::forces::rho() const
 {
     if (rhoName_ == "rhoInf")
     {
-        return tmp<volScalarField>
+        return tmp<volScalarField>::New
         (
-            new volScalarField
+            IOobject
             (
-                IOobject
-                (
-                    "rho",
-                    mesh_.time().timeName(),
-                    mesh_
-                ),
-                mesh_,
-                dimensionedScalar("rho", dimDensity, rhoRef_)
-            )
+                "rho",
+                mesh_.time().timeName(),
+                mesh_
+            ),
+            mesh_,
+            dimensionedScalar("rho", dimDensity, rhoRef_)
         );
     }
-    else
-    {
-        return(lookupObject<volScalarField>(rhoName_));
-    }
+
+    return(lookupObject<volScalarField>(rhoName_));
 }
 
 
@@ -445,17 +432,15 @@ Foam::scalar Foam::functionObjects::forces::rho(const volScalarField& p) const
     {
         return 1.0;
     }
-    else
-    {
-        if (rhoName_ != "rhoInf")
-        {
-            FatalErrorInFunction
-                << "Dynamic pressure is expected but kinematic is provided."
-                << exit(FatalError);
-        }
 
-        return rhoRef_;
+    if (rhoName_ != "rhoInf")
+    {
+        FatalErrorInFunction
+            << "Dynamic pressure is expected but kinematic is provided."
+            << exit(FatalError);
     }
+
+    return rhoRef_;
 }
 
 
@@ -511,19 +496,13 @@ void Foam::functionObjects::forces::addToFields
     }
 
     volVectorField& force =
-        const_cast<volVectorField&>
-        (
-            lookupObject<volVectorField>(fieldName("force"))
-        );
+        lookupObjectRef<volVectorField>(fieldName("force"));
 
     vectorField& pf = force.boundaryFieldRef()[patchi];
     pf += fN + fT + fP;
 
     volVectorField& moment =
-        const_cast<volVectorField&>
-        (
-            lookupObject<volVectorField>(fieldName("moment"))
-        );
+        lookupObjectRef<volVectorField>(fieldName("moment"));
 
     vectorField& pm = moment.boundaryFieldRef()[patchi];
     pm += Md;
@@ -545,16 +524,10 @@ void Foam::functionObjects::forces::addToFields
     }
 
     volVectorField& force =
-        const_cast<volVectorField&>
-        (
-            lookupObject<volVectorField>(fieldName("force"))
-        );
+        lookupObjectRef<volVectorField>(fieldName("force"));
 
     volVectorField& moment =
-        const_cast<volVectorField&>
-        (
-            lookupObject<volVectorField>(fieldName("moment"))
-        );
+        lookupObjectRef<volVectorField>(fieldName("moment"));
 
     forAll(cellIDs, i)
     {
@@ -853,7 +826,7 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
 
     const polyBoundaryMesh& pbm = mesh_.boundaryMesh();
 
-    patchSet_ = pbm.patchSet(wordReList(dict.lookup("patches")));
+    patchSet_ = pbm.patchSet(dict.get<wordRes>("patches"));
 
     if (directForceDensity_)
     {
@@ -870,7 +843,7 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
         // Reference density needed for incompressible calculations
         if (rhoName_ == "rhoInf")
         {
-            dict.lookup("rhoInf") >> rhoRef_;
+            dict.readEntry("rhoInf", rhoRef_);
         }
 
         // Reference pressure, 0 by default
@@ -878,12 +851,29 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
     }
 
     coordSys_.clear();
+    localSystem_ = false;
 
     // Centre of rotation for moment calculations
     // specified directly, from coordinate system, or implicitly (0 0 0)
     if (!dict.readIfPresent<point>("CofR", coordSys_.origin()))
     {
-        coordSys_ = coordinateSystem(obr_, dict);
+        // The 'coordinateSystem' sub-dictionary is optional,
+        // but enforce use of a cartesian system.
+
+        if (dict.found(coordinateSystem::typeName_()))
+        {
+            // New() for access to indirect (global) coordinate system
+            coordSys_ =
+                coordinateSystem::New
+                (
+                    obr_, dict, coordinateSystem::typeName_()
+                );
+        }
+        else
+        {
+            coordSys_ = coordSystem::cartesian(dict);
+        }
+
         localSystem_ = true;
     }
 
@@ -900,7 +890,7 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
     if (dict.found("binData"))
     {
         const dictionary& binDict(dict.subDict("binData"));
-        binDict.lookup("nBin") >> nBin_;
+        binDict.readEntry("nBin", nBin_);
 
         if (nBin_ < 0)
         {
@@ -915,9 +905,9 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
         }
         else
         {
-            binDict.lookup("cumulative") >> binCumulative_;
-            binDict.lookup("direction") >> binDir_;
-            binDir_ /= mag(binDir_);
+            binDict.readEntry("cumulative", binCumulative_);
+            binDict.readEntry("direction", binDir_);
+            binDir_.normalise();
         }
     }
 
@@ -940,7 +930,7 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
                     IOobject::NO_WRITE
                 ),
                 mesh_,
-                dimensionedVector("0", dimForce, Zero)
+                dimensionedVector(dimForce, Zero)
             )
         );
 
@@ -959,7 +949,7 @@ bool Foam::functionObjects::forces::read(const dictionary& dict)
                     IOobject::NO_WRITE
                 ),
                 mesh_,
-                dimensionedVector("0", dimForce*dimLength, Zero)
+                dimensionedVector(dimForce*dimLength, Zero)
             )
         );
 
@@ -982,10 +972,8 @@ void Foam::functionObjects::forces::calcForcesMoment()
 
         const surfaceVectorField::Boundary& Sfb = mesh_.Sf().boundaryField();
 
-        forAllConstIter(labelHashSet, patchSet_, iter)
+        for (const label patchi : patchSet_)
         {
-            label patchi = iter.key();
-
             vectorField Md
             (
                 mesh_.C().boundaryField()[patchi] - coordSys_.origin()
@@ -1026,10 +1014,8 @@ void Foam::functionObjects::forces::calcForcesMoment()
         // Scale pRef by density for incompressible simulations
         scalar pRef = pRef_/rho(p);
 
-        forAllConstIter(labelHashSet, patchSet_, iter)
+        for (const label patchi : patchSet_)
         {
-            label patchi = iter.key();
-
             vectorField Md
             (
                 mesh_.C().boundaryField()[patchi] - coordSys_.origin()
@@ -1067,7 +1053,7 @@ void Foam::functionObjects::forces::calcForcesMoment()
                 << endl;
         }
 
-        forAllConstIter(HashTable<const porosityModel*>, models, iter)
+        forAllConstIters(models, iter)
         {
             // Non-const access required if mesh is changing
             porosityModel& pm = const_cast<porosityModel&>(*iter());
@@ -1076,9 +1062,8 @@ void Foam::functionObjects::forces::calcForcesMoment()
 
             const labelList& cellZoneIDs = pm.cellZoneIDs();
 
-            forAll(cellZoneIDs, i)
+            for (const label zonei : cellZoneIDs)
             {
-                label zonei = cellZoneIDs[i];
                 const cellZone& cZone = mesh_.cellZones()[zonei];
 
                 const vectorField d(mesh_.C(), cZone);

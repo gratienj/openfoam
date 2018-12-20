@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -45,17 +45,21 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for cold-flow in internal combustion engines."
+    );
+
     #define CREATE_TIME createEngineTime.H
     #define CREATE_MESH createEngineMesh.H
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseLists.H"
     #include "createEngineTime.H"
     #include "createEngineMesh.H"
     #include "createControl.H"
     #include "createFields.H"
     #include "createFieldRefs.H"
-    #include "createFvOptions.H"
     #include "createRhoUf.H"
     #include "initContinuityErrs.H"
     #include "readEngineTimeControls.H"
@@ -75,9 +79,9 @@ int main(int argc, char *argv[])
         #include "compressibleCourantNo.H"
         #include "setDeltaT.H"
 
-        runTime++;
+        ++runTime;
 
-        Info<< "Crank angle = " << runTime.theta() << " CA-deg"
+        Info<< "Engine time = " << runTime.theta() << runTime.unit()
             << endl;
 
         mesh.move();
@@ -106,9 +110,7 @@ int main(int argc, char *argv[])
 
         #include "logSummary.H"
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

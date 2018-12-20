@@ -49,7 +49,7 @@ volVectorField zeta
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedVector("zero", dimLength, Zero)
+    dimensionedVector(dimLength, Zero)
 );
 
 Info<< "Creating field p_gh\n" << endl;
@@ -77,3 +77,4 @@ setRefCell(p_gh, pimple.dict(), p_ghRefCell, p_ghRefValue);
 mesh.setFluxRequired(p_gh.name());
 
 #include "createMRF.H"
+#include "createFvOptions.H"

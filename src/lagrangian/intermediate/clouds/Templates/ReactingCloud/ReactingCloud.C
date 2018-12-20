@@ -133,7 +133,7 @@ Foam::ReactingCloud<CloudType>::ReactingCloud
                     IOobject::AUTO_WRITE
                 ),
                 this->mesh(),
-                dimensionedScalar("zero", dimMass, 0.0)
+                dimensionedScalar(dimMass, Zero)
             )
         );
     }
@@ -200,13 +200,6 @@ Foam::ReactingCloud<CloudType>::ReactingCloud
 //    compositionModel_(nullptr),
     phaseChangeModel_(nullptr),
     rhoTrans_(0)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class CloudType>
-Foam::ReactingCloud<CloudType>::~ReactingCloud()
 {}
 
 

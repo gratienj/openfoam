@@ -43,10 +43,10 @@ const Foam::Enum
     Foam::functionObjects::fieldMinMax::modeType
 >
 Foam::functionObjects::fieldMinMax::modeTypeNames_
-{
+({
     { modeType::mdMag,  "magnitude" },
     { modeType::mdCmpt, "component" },
-};
+});
 
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
@@ -123,12 +123,6 @@ Foam::functionObjects::fieldMinMax::fieldMinMax
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::functionObjects::fieldMinMax::~fieldMinMax()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::functionObjects::fieldMinMax::read(const dictionary& dict)
@@ -136,7 +130,7 @@ bool Foam::functionObjects::fieldMinMax::read(const dictionary& dict)
     fvMeshFunctionObject::read(dict);
     writeFile::read(dict);
 
-    location_ = dict.lookupOrDefault<Switch>("location", true);
+    location_ = dict.lookupOrDefault("location", true);
 
     mode_ = modeTypeNames_.lookupOrDefault("mode", dict, modeType::mdMag);
 

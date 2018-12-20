@@ -72,11 +72,11 @@ class limiterBlended
         tmp<surfaceInterpolationScheme<Type>> tScheme2_;
 
 
-        //- Disallow default bitwise copy construct
-        limiterBlended(const limiterBlended&);
+        //- No copy construct
+        limiterBlended(const limiterBlended&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const limiterBlended&);
+        //- No copy assignment
+        void operator=(const limiterBlended&) = delete;
 
 
 public:
@@ -197,7 +197,7 @@ public:
                     (
                         blendingFactor
                       * tScheme1_().correction(vf)
-                      + (scalar(1.0) - blendingFactor)
+                      + (scalar(1) - blendingFactor)
                       * tScheme2_().correction(vf)
                     );
                 }
@@ -214,7 +214,7 @@ public:
             {
                 return
                 (
-                    (scalar(1.0) - blendingFactor)
+                    (scalar(1) - blendingFactor)
                   * tScheme2_().correction(vf)
                 );
             }

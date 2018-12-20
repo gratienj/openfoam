@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2014-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2014-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -61,8 +61,8 @@ void Foam::cellCellStencils::cellVolumeWeight::walkFront
 ) const
 {
     // Current front
-    PackedBoolList isFront(mesh_.nFaces());
-    PackedBoolList doneCell(mesh_.nCells());
+    bitSet isFront(mesh_.nFaces());
+    // unused: bitSet doneCell(mesh_.nCells());
 
     const fvBoundaryMesh& fvm = mesh_.boundary();
 
@@ -77,7 +77,7 @@ void Foam::cellCellStencils::cellVolumeWeight::walkFront
 
             forAll(fvm[patchI], i)
             {
-                isFront[fvm[patchI].start()+i] = true;
+                isFront.set(fvm[patchI].start()+i);
             }
         }
     }
@@ -100,7 +100,7 @@ void Foam::cellCellStencils::cellVolumeWeight::walkFront
             {
                 //Pout<< "Front at face:" << faceI
                 //    << " at:" << mesh_.faceCentres()[faceI] << endl;
-                isFront[faceI] = true;
+                isFront.set(faceI);
             }
         }
 
@@ -125,7 +125,7 @@ void Foam::cellCellStencils::cellVolumeWeight::walkFront
             {
                 //Pout<< "Front at coupled face:" << faceI
                 //    << " at:" << mesh_.faceCentres()[faceI] << endl;
-                isFront[faceI] = true;
+                isFront.set(faceI);
             }
         }
     }
@@ -143,10 +143,10 @@ void Foam::cellCellStencils::cellVolumeWeight::walkFront
             << " size:" << returnReduce(isFront.count(), sumOp<label>())
             << endl;
 
-        PackedBoolList newIsFront(mesh_.nFaces());
+        bitSet newIsFront(mesh_.nFaces());
         forAll(isFront, faceI)
         {
-            if (isFront[faceI])
+            if (isFront.test(faceI))
             {
                 label own = mesh_.faceOwner()[faceI];
                 if (allCellTypes[own] != HOLE)
@@ -267,7 +267,7 @@ void Foam::cellCellStencils::cellVolumeWeight::findHoles
     // real patches
 
     //  0 : region not yet determined
-    //  1 : borders blockage so is not ok (but can be overriden by real
+    //  1 : borders blockage so is not ok (but can be overridden by real
     //      patch)
     //  2 : has real patch in it so is reachable
     labelList regionType(cellRegion.nRegions(), 0);
@@ -680,10 +680,50 @@ Foam::cellCellStencils::cellVolumeWeight::cellVolumeWeight
             false
         ),
         mesh_,
-        dimensionedScalar("zero", dimless, 0.0),
+        dimensionedScalar(dimless, Zero),
         zeroGradientFvPatchScalarField::typeName
     )
 {
+    // Protect local fields from interpolation
+    nonInterpolatedFields_.insert("cellTypes");
+    nonInterpolatedFields_.insert("cellInterpolationWeight");
+
+    // For convenience also suppress frequently used displacement field
+    nonInterpolatedFields_.insert("cellDisplacement");
+    nonInterpolatedFields_.insert("grad(cellDisplacement)");
+    const word w("snGradCorr(cellDisplacement)");
+    const word d("((viscosity*faceDiffusivity)*magSf)");
+    nonInterpolatedFields_.insert("surfaceIntegrate(("+d+"*"+w+"))");
+
+    // Read zoneID
+    this->zoneID();
+
+    // Read old-time cellTypes
+    IOobject io
+    (
+        "cellTypes",
+        mesh_.time().timeName(),
+        mesh_,
+        IOobject::READ_IF_PRESENT,
+        IOobject::NO_WRITE,
+        false
+    );
+    if (io.typeHeaderOk<volScalarField>(true))
+    {
+        if (debug)
+        {
+            Pout<< "Reading cellTypes from time " << mesh_.time().timeName()
+                << endl;
+        }
+
+        const volScalarField volCellTypes(io, mesh_);
+        forAll(volCellTypes, celli)
+        {
+            // Round to integer
+            cellTypes_[celli] = volCellTypes[celli];
+        }
+    }
+
     if (doUpdate)
     {
         update();
@@ -721,12 +761,16 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
     PtrList<fvMeshSubset> meshParts(nZones);
 
     Info<< incrIndent;
-    forAll(nCellsPerZone, zoneI)
+    forAll(meshParts, zonei)
     {
-        Info<< indent<< "zone:" << zoneI << " nCells:" << nCellsPerZone[zoneI]
-            << endl;
-        meshParts.set(zoneI, new fvMeshSubset(mesh_));
-        meshParts[zoneI].setLargeCellSubset(zoneID, zoneI);
+        Info<< indent<< "zone:" << zonei << " nCells:"
+            << nCellsPerZone[zonei] << nl;
+
+        meshParts.set
+        (
+            zonei,
+            new fvMeshSubset(mesh_, zonei, zoneID)
+        );
     }
     Info<< decrIndent;
 
@@ -784,9 +828,10 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
             (
                 srcMesh,
                 tgtMesh,
-                meshToMesh::imCellVolumeWeight,
+                meshToMesh::interpolationMethod::imCellVolumeWeight,
                 HashTable<word>(0),     // patchMap,
                 wordList(0),            // cuttingPatches
+                meshToMesh::procMapMethod::pmAABB,
                 false                   // do not normalise
             );
 
@@ -942,6 +987,40 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
     walkFront(layerRelax, allCellTypes, allWeight);
 
 
+    // Check previous iteration cellTypes_ for any hole->calculated changes
+    {
+        label nCalculated = 0;
+
+        forAll(cellTypes_, celli)
+        {
+            if (allCellTypes[celli] == CALCULATED && cellTypes_[celli] == HOLE)
+            {
+                if (allStencil[celli].size() == 0)
+                {
+                    FatalErrorInFunction
+                        << "Cell:" << celli
+                        << " at:" << mesh_.cellCentres()[celli]
+                        << " zone:" << zoneID[celli]
+                        << " changed from hole to calculated"
+                        << " but there is no donor"
+                        << exit(FatalError);
+                }
+                else
+                {
+                    allCellTypes[celli] = INTERPOLATED;
+                    nCalculated++;
+                }
+            }
+        }
+
+        if (debug)
+        {
+            Pout<< "Detected " << nCalculated << " cells changing from hole"
+                << " to calculated. Changed these to interpolated"
+                << endl;
+        }
+    }
+
     // Normalise weights, Clear storage
     forAll(allCellTypes, cellI)
     {
@@ -987,7 +1066,7 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
                 false
             ),
             mesh_,
-            dimensionedScalar("zero", dimless, 0.0),
+            dimensionedScalar(dimless, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
 
@@ -1012,7 +1091,7 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
                 false
             ),
             mesh_,
-            dimensionedScalar("zero", dimless, 0.0),
+            dimensionedScalar(dimless, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
 
@@ -1024,6 +1103,40 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
         volTypes.write();
     }
 
+
+//     // Check previous iteration cellTypes_ for any hole->calculated changes
+//     {
+//         label nCalculated = 0;
+//
+//         forAll(cellTypes_, celli)
+//         {
+//             if (allCellTypes[celli] == CALCULATED && cellTypes_[celli] == HOLE)
+//             {
+//                 if (allStencil[celli].size() == 0)
+//                 {
+//                     FatalErrorInFunction
+//                         << "Cell:" << celli
+//                         << " at:" << mesh_.cellCentres()[celli]
+//                         << " zone:" << zoneID[celli]
+//                         << " changed from hole to calculated"
+//                         << " but there is no donor"
+//                         << exit(FatalError);
+//                 }
+//                 else
+//                 {
+//                     allCellTypes[celli] = INTERPOLATED;
+//                     nCalculated++;
+//                 }
+//             }
+//         }
+//
+//         if (debug)
+//         {
+//             Pout<< "Detected " << nCalculated << " cells changing from hole"
+//                 << " to calculated. Changed these to interpolated"
+//                 << endl;
+//         }
+//     }
 
 
     cellTypes_.transfer(allCellTypes);
@@ -1044,8 +1157,10 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
 
 
     List<Map<label>> compactMap;
-    mapDistribute map(globalCells, cellStencil_, compactMap);
-    cellInterpolationMap_.transfer(map);
+    cellInterpolationMap_.reset
+    (
+        new mapDistribute(globalCells, cellStencil_, compactMap)
+    );
 
     // Dump interpolation stencil
     if (debug)
@@ -1059,7 +1174,7 @@ bool Foam::cellCellStencils::cellVolumeWeight::update()
         OBJstream str(mesh_.time().timePath()/"stencil2.obj");
         Info<< typeName << " : dumping to " << str.name() << endl;
         pointField cc(mesh_.cellCentres());
-        cellInterpolationMap_.distribute(cc);
+        cellInterpolationMap().distribute(cc);
 
         forAll(interpolationCells_, compactI)
         {

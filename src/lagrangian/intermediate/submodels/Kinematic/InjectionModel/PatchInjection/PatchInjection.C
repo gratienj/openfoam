@@ -38,11 +38,11 @@ Foam::PatchInjection<CloudType>::PatchInjection
 )
 :
     InjectionModel<CloudType>(dict, owner, modelName, typeName),
-    patchInjectionBase(owner.mesh(), this->coeffDict().lookup("patch")),
-    duration_(readScalar(this->coeffDict().lookup("duration"))),
+    patchInjectionBase(owner.mesh(), this->coeffDict().getWord("patch")),
+    duration_(this->coeffDict().getScalar("duration")),
     parcelsPerSecond_
     (
-        readScalar(this->coeffDict().lookup("parcelsPerSecond"))
+        this->coeffDict().getScalar("parcelsPerSecond")
     ),
     U0_(this->coeffDict().lookup("U0")),
     flowRateProfile_
@@ -84,7 +84,7 @@ Foam::PatchInjection<CloudType>::PatchInjection
     parcelsPerSecond_(im.parcelsPerSecond_),
     U0_(im.U0_),
     flowRateProfile_(im.flowRateProfile_),
-    sizeDistribution_(im.sizeDistribution_, false)
+    sizeDistribution_(im.sizeDistribution_.clone())
 {}
 
 

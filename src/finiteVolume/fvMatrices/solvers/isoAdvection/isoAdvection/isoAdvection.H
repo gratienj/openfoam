@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                 isoAdvector | Copyright (C) 2016-2017 DHI
+              Modified work | Copyright (C) 2018 Johan Roenby
 -------------------------------------------------------------------------------
 
 License
@@ -60,6 +61,7 @@ SourceFiles
 #include "className.H"
 #include "isoCutCell.H"
 #include "isoCutFace.H"
+#include "bitSet.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -119,7 +121,7 @@ class isoAdvection
             label nAlphaBounds_;
 
             //- Tolerance for search of isoFace giving specified VOF value
-            scalar vof2IsoTol_;
+            scalar isoFaceTol_;
 
             //- Tolerance for marking of surface cells:
             //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
@@ -146,11 +148,11 @@ class isoAdvection
             //- Face cutting object
             isoCutFace isoCutFace_;
 
-            //- Bool list for cells that have been touched by the bounding step
-            boolList cellIsBounded_;
+            //- Cells that have been touched by the bounding step
+            bitSet cellIsBounded_;
 
             //- True for all surface cells and their neighbours
-            boolList checkBounding_;
+            bitSet checkBounding_;
 
             //- Storage for boundary faces downwind to a surface cell
             DynamicLabelList bsFaces_;
@@ -181,11 +183,11 @@ class isoAdvection
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        isoAdvection(const isoAdvection&);
+        //- No copy construct
+        isoAdvection(const isoAdvection&) = delete;
 
-        //- Disallow default bitwise copy assignment
-        void operator=(const isoAdvection&);
+        //- No copy assignment
+        void operator=(const isoAdvection&) = delete;
 
 
         // Advection functions
@@ -193,18 +195,19 @@ class isoAdvection
             //- For each face calculate volumetric face transport during dt
             void timeIntegratedFlux();
 
-            //- Calculate volumetric face transport during dt given the isoFace
-            //  data provided as input for face facei
-            scalar timeIntegratedFaceFlux
+            //- Set ap_ values of celli's vertices in accordance with the
+            //  unit normal of celli as obtained from cellNoramlsIn.
+            void setCellVertexValues
             (
-                const label facei,
-                const vector& x0,
-                const vector& n0,
-                const scalar Un0,
-                const scalar f0,
-                const scalar dt,
-                const scalar phi,
-                const scalar magSf
+                const label celli,
+                const vectorField& cellNormalsIn
+            );
+
+            //- Function used to normalise and smoothen grad(alpha) in case
+            //  gradAlphaBasedNormal_ is true.
+            void normaliseAndSmooth
+            (
+                volVectorField& cellN
             );
 
             //- For a given cell return labels of faces fluxing out of this cell
@@ -254,6 +257,17 @@ class isoAdvection
                 bsn0_.clear();
                 bsUn0_.clear();
                 bsf0_.clear();
+
+                if (mesh_.topoChanging())
+                {
+                    // Introduced resizing to cope with changing meshes
+                    checkBounding_.resize(mesh_.nCells());
+                    cellIsBounded_.resize(mesh_.nCells());
+                    ap_.resize(mesh_.nPoints());
+                }
+                checkBounding_ = false;
+                cellIsBounded_ = false;
+
             }
 
         // Face value functions needed for random face access where the face

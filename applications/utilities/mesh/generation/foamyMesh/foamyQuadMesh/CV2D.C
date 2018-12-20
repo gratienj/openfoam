@@ -150,10 +150,8 @@ Foam::CV2D::CV2D
     ),
     z_
     (
-        point
-        (
-            cvMeshDict.subDict("surfaceConformation").lookup("locationInMesh")
-        ).z()
+        cvMeshDict.subDict("surfaceConformation")
+       .get<Foam::point>("locationInMesh").z()
     ),
     startOfInternalPoints_(0),
     startOfSurfacePointPairs_(0),
@@ -187,10 +185,8 @@ void Foam::CV2D::insertPoints
     label nVert = startOfInternalPoints_;
 
     // Add the points and index them
-    forAll(points, i)
+    for (const point2D& p : points)
     {
-        const point2D& p = points[i];
-
         if (qSurf_.wellInside(toPoint3D(p), nearness))
         {
             insert(toPoint(p))->index() = nVert++;
@@ -260,7 +256,7 @@ void Foam::CV2D::insertGrid()
     {
         for (int j=0; j<nj; j++)
         {
-            point p(x0 + i*deltax, y0 + j*deltay, 0);
+            Foam::point p(x0 + i*deltax, y0 + j*deltay, 0);
 
             if (meshControls().randomiseInitialGrid())
             {
@@ -496,7 +492,7 @@ void Foam::CV2D::newPoints()
     scalar u = 1.0;
     scalar l = 0.7;
 
-    PackedBoolList pointToBeRetained(startOfSurfacePointPairs_, true);
+    bitSet pointToBeRetained(startOfSurfacePointPairs_, true);
 
     std::list<Point> pointsToInsert;
 
@@ -562,7 +558,7 @@ void Foam::CV2D::newPoints()
 
                     alignmentDirs[aA] = a + sign(dotProduct)*b;
 
-                    alignmentDirs[aA] /= mag(alignmentDirs[aA]);
+                    alignmentDirs[aA].normalise();
                 }
             }
         }
@@ -590,7 +586,7 @@ void Foam::CV2D::newPoints()
                     0.5*(sizes[vA->index()] + sizes[vB->index()]);
 
                 // Test for changing aspect ratio on second alignment (first
-                // alignment is neartest surface normal)
+                // alignment is nearest surface normal)
                 // if (aD == 1)
                 // {
                 //     targetFaceSize *= 2.0;
@@ -639,8 +635,8 @@ void Foam::CV2D::newPoints()
                     // to be removed.
                     if
                     (
-                        pointToBeRetained[vA->index()] == true
-                     && pointToBeRetained[vB->index()] == true
+                        pointToBeRetained.test(vA->index())
+                     && pointToBeRetained.test(vB->index())
                     )
                     {
                         pointsToInsert.push_back(toPoint(0.5*(dVA + dVB)));
@@ -648,12 +644,12 @@ void Foam::CV2D::newPoints()
 
                     if (vA->internalPoint())
                     {
-                        pointToBeRetained[vA->index()] = false;
+                        pointToBeRetained.unset(vA->index());
                     }
 
                     if (vB->internalPoint())
                     {
-                        pointToBeRetained[vB->index()] = false;
+                        pointToBeRetained.unset(vB->index());
                     }
                 }
                 else
@@ -689,7 +685,7 @@ void Foam::CV2D::newPoints()
     {
         if (vit->internalPoint())
         {
-            if (pointToBeRetained[vit->index()])
+            if (pointToBeRetained.test(vit->index()))
             {
                 pointsToInsert.push_front
                 (
@@ -773,7 +769,7 @@ void Foam::CV2D::newPoints()
                 if (!is_infinite(ec)) break;
             } while (++ec != ecStart);
 
-            // Store the start-end of the first non-infinte edge
+            // Store the start-end of the first non-infinite edge
             point2D de0 = toPoint2D(circumcenter(ec->first));
 
             // Keep track of the maximum edge length^2
@@ -849,7 +845,7 @@ void Foam::CV2D::newPoints()
             cd0 = vector2D(cd0.x() + cd0.y(), cd0.y() - cd0.x());
 
             // Normalise the primary coordinate direction
-            cd0 /= mag(cd0);
+            cd0.normalise();
 
             // Calculate the orthogonal coordinate direction
             vector2D cd1(-cd0.y(), cd0.x());

@@ -72,11 +72,11 @@ class processorGAMGInterface
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        processorGAMGInterface(const processorGAMGInterface&);
+        //- No copy construct
+        processorGAMGInterface(const processorGAMGInterface&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const processorGAMGInterface&);
+        //- No copy assignment
+        void operator=(const processorGAMGInterface&) = delete;
 
 
 public:
@@ -159,7 +159,7 @@ public:
                 return myProcNo_;
             }
 
-            //- Return neigbour processor number (rank in communicator)
+            //- Return neighbour processor number (rank in communicator)
             virtual int neighbProcNo() const
             {
                 return neighbProcNo_;

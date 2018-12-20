@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -43,7 +43,6 @@ Description
 #include "refinementFeatures.H"
 #include "shellSurfaces.H"
 #include "decompositionMethod.H"
-#include "noDecomp.H"
 #include "fvMeshDistribute.H"
 #include "wallPolyPatch.H"
 #include "refinementParameters.H"
@@ -63,6 +62,7 @@ Description
 #include "fvMeshTools.H"
 #include "profiling.H"
 #include "processorMeshes.H"
+#include "vtkSetWriter.H"
 
 using namespace Foam;
 
@@ -118,14 +118,14 @@ autoPtr<refinementSurfaces> createRefinementSurfaces
     List<Map<scalar>> regionAngle(surfi);
     List<Map<autoPtr<dictionary>>> regionPatchInfo(surfi);
 
-    HashSet<word> unmatchedKeys(surfacesDict.toc());
+    wordHashSet unmatchedKeys(surfacesDict.toc());
 
     surfi = 0;
     forAll(allGeometry.names(), geomi)
     {
         const word& geomName = allGeometry.names()[geomi];
 
-        const entry* ePtr = surfacesDict.lookupEntryPtr(geomName, false, true);
+        const entry* ePtr = surfacesDict.findEntry(geomName, keyType::REGEX);
 
         if (ePtr)
         {
@@ -141,12 +141,13 @@ autoPtr<refinementSurfaces> createRefinementSurfaces
             // Invert surfaceCellSize to get the refinementLevel
 
             const word scsFuncName =
-                shapeDict.lookup("surfaceCellSizeFunction");
+                shapeDict.get<word>("surfaceCellSizeFunction");
+
             const dictionary& scsDict =
                 shapeDict.optionalSubDict(scsFuncName + "Coeffs");
 
             const scalar surfaceCellSize =
-                readScalar(scsDict.lookup("surfaceCellSizeCoeff"));
+                scsDict.get<scalar>("surfaceCellSizeCoeff");
 
             const label refLevel = sizeCoeffToRefinement
             (
@@ -222,7 +223,7 @@ autoPtr<refinementSurfaces> createRefinementSurfaces
                             );
 
                         const word scsFuncName =
-                            shapeControlRegionDict.lookup
+                            shapeControlRegionDict.get<word>
                             (
                                 "surfaceCellSizeFunction"
                             );
@@ -233,10 +234,7 @@ autoPtr<refinementSurfaces> createRefinementSurfaces
                             );
 
                         const scalar surfaceCellSize =
-                            readScalar
-                            (
-                                scsDict.lookup("surfaceCellSizeCoeff")
-                            );
+                            scsDict.get<scalar>("surfaceCellSizeCoeff");
 
                         const label refLevel = sizeCoeffToRefinement
                         (
@@ -394,9 +392,9 @@ void extractSurface
     //  processor patches)
     HashTable<label> patchSize(1024);
     label nFaces = 0;
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchi : includePatches)
     {
-        const polyPatch& pp = bMesh[iter.key()];
+        const polyPatch& pp = bMesh[patchi];
         patchSize.insert(pp.name(), pp.size());
         nFaces += pp.size();
     }
@@ -427,9 +425,9 @@ void extractSurface
     // Collect faces on zones
     DynamicList<label> faceLabels(nFaces);
     DynamicList<label> compactZones(nFaces);
-    forAllConstIter(labelHashSet, includePatches, iter)
+    for (const label patchi : includePatches)
     {
-        const polyPatch& pp = bMesh[iter.key()];
+        const polyPatch& pp = bMesh[patchi];
         forAll(pp, i)
         {
             faceLabels.append(pp.start()+i);
@@ -476,7 +474,7 @@ void extractSurface
 
     // Gather all ZoneIDs
     List<labelList> gatheredZones(Pstream::nProcs());
-    gatheredZones[Pstream::myProcNo()] = compactZones.xfer();
+    gatheredZones[Pstream::myProcNo()].transfer(compactZones);
     Pstream::gatherList(gatheredZones);
 
     // On master combine all points, faces, zones
@@ -515,10 +513,10 @@ void extractSurface
 
         UnsortedMeshedSurface<face> unsortedFace
         (
-            xferMove(allPoints),
-            xferMove(allFaces),
-            xferMove(allZones),
-            xferMove(surfZones)
+            std::move(allPoints),
+            std::move(allFaces),
+            std::move(allZones),
+            surfZones
         );
 
 
@@ -527,7 +525,7 @@ void extractSurface
         fileName globalCasePath
         (
             runTime.processorCase()
-          ? runTime.path()/".."/outFileName
+          ? runTime.globalPath()/outFileName
           : runTime.path()/outFileName
         );
         globalCasePath.clean();
@@ -556,7 +554,7 @@ scalar getMergeDistance(const polyMesh& mesh, const scalar mergeTol)
     {
         const scalar writeTol = std::pow
         (
-            scalar(10.0),
+            scalar(10),
             -scalar(IOstream::defaultPrecision())
         );
 
@@ -679,54 +677,59 @@ void writeMesh
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Automatic split hex mesher. Refines and snaps to surface"
+    );
+
     #include "addRegionOption.H"
     #include "addOverwriteOption.H"
-    Foam::argList::addBoolOption
+    #include "addProfilingOption.H"
+    argList::addBoolOption
     (
         "checkGeometry",
-        "check all surface geometry for quality"
+        "Check all surface geometry for quality"
     );
-    Foam::argList::addOption
+    argList::addOption
     (
         "surfaceSimplify",
         "boundBox",
-        "simplify the surface using snappyHexMesh starting from a boundBox"
+        "Simplify the surface using snappyHexMesh starting from a boundBox"
     );
-    Foam::argList::addOption
+    argList::addOption
     (
         "patches",
         "(patch0 .. patchN)",
-        "only triangulate selected patches (wildcards supported)"
+        "Only triangulate selected patches (wildcards supported)"
     );
-    Foam::argList::addOption
+    argList::addOption
     (
         "outFile",
         "file",
-        "name of the file to save the simplified surface to"
+        "Name of the file to save the simplified surface to"
     );
-    #include "addProfilingOption.H"
-    #include "addDictOption.H"
+    argList::addOption("dict", "file", "Use alternative snappyHexMeshDict");
+
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
 
-    const bool overwrite = args.optionFound("overwrite");
-    const bool checkGeometry = args.optionFound("checkGeometry");
-    const bool surfaceSimplify = args.optionFound("surfaceSimplify");
+    const bool overwrite = args.found("overwrite");
+    const bool checkGeometry = args.found("checkGeometry");
+    const bool surfaceSimplify = args.found("surfaceSimplify");
 
     autoPtr<fvMesh> meshPtr;
 
     {
-        word regionName;
-        if (args.optionReadIfPresent("region", regionName))
+        word regionName = fvMesh::defaultRegion;
+        if (args.readIfPresent("region", regionName))
         {
             Info<< "Create mesh " << regionName << " for time = "
                 << runTime.timeName() << nl << endl;
         }
         else
         {
-            regionName = fvMesh::defaultRegion;
             Info<< "Create mesh for time = "
                 << runTime.timeName() << nl << endl;
         }
@@ -781,42 +784,53 @@ int main(int argc, char *argv[])
     const scalar mergeDist = getMergeDistance
     (
         mesh,
-        readScalar(meshDict.lookup("mergeTolerance"))
+        meshDict.get<scalar>("mergeTolerance")
     );
 
-    const Switch keepPatches(meshDict.lookupOrDefault("keepPatches", false));
+    const bool keepPatches(meshDict.lookupOrDefault("keepPatches", false));
+
+    // format to be used for writing lines
+    const word setFormat
+    (
+        meshDict.lookupOrDefault
+        (
+            "setFormat",
+            vtkSetWriter<scalar>::typeName
+        )
+    );
+    const autoPtr<writer<scalar>> setFormatter
+    (
+        writer<scalar>::New(setFormat)
+    );
 
 
     // Read decomposePar dictionary
     dictionary decomposeDict;
     if (Pstream::parRun())
     {
-        fileName decompDictFile;
-        args.optionReadIfPresent("decomposeParDict", decompDictFile);
-
-        // A demand-driven decompositionMethod can have issues finding
-        // an alternative decomposeParDict location.
+        // Ensure demand-driven decompositionMethod finds alternative
+        // decomposeParDict location properly.
 
         IOdictionary* dictPtr = new IOdictionary
         (
-            decompositionModel::selectIO
+            IOobject::selectIO
             (
                 IOobject
                 (
-                    "decomposeParDict",
+                    decompositionModel::canonicalName,
                     runTime.system(),
                     runTime,
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE
                 ),
-                decompDictFile
+                args.opt<fileName>("decomposeParDict", "")
             )
         );
 
         // Store it on the object registry, but to be found it must also
         // have the expected "decomposeParDict" name.
 
-        dictPtr->rename("decomposeParDict");
+        dictPtr->rename(decompositionModel::canonicalName);
         runTime.store(dictPtr);
 
         decomposeDict = *dictPtr;
@@ -881,24 +895,24 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Set output level
-    {
-        wordList flags;
-        if (meshDict.readIfPresent("outputFlags", flags))
-        {
-            meshRefinement::outputLevel
-            (
-                meshRefinement::outputType
-                (
-                    meshRefinement::readFlags
-                    (
-                        meshRefinement::outputTypeNames,
-                        flags
-                    )
-                )
-            );
-        }
-    }
+    //// Set output level
+    //{
+    //    wordList flags;
+    //    if (meshDict.readIfPresent("outputFlags", flags))
+    //    {
+    //        meshRefinement::outputLevel
+    //        (
+    //            meshRefinement::outputType
+    //            (
+    //                meshRefinement::readFlags
+    //                (
+    //                    meshRefinement::outputTypeNames,
+    //                    flags
+    //                )
+    //            )
+    //        );
+    //    }
+    //}
 
     // for the impatient who want to see some output files:
     profiling::writeNow();
@@ -959,7 +973,7 @@ int main(int argc, char *argv[])
 
         // Calculate current ratio of hex cells v.s. wanted cell size
         const scalar defaultCellSize =
-            readScalar(motionDict.lookup("defaultCellSize"));
+            motionDict.get<scalar>("defaultCellSize");
 
         const scalar initialCellSize = ::pow(meshPtr().V()[0], 1.0/3.0);
 
@@ -1021,7 +1035,7 @@ int main(int argc, char *argv[])
                 if (patchInfo.set(globalRegioni))
                 {
                     patchTypes[geomi][regioni] =
-                        word(patchInfo[globalRegioni].lookup("type"));
+                        patchInfo[globalRegioni].get<word>("type");
                 }
                 else
                 {
@@ -1039,7 +1053,7 @@ int main(int argc, char *argv[])
         (
             100.0,      // max size ratio
             1e-9,       // intersection tolerance
-            autoPtr<writer<scalar>>(new vtkSetWriter<scalar>()),
+            setFormatter,
             0.01,       // min triangle quality
             true
         );
@@ -1083,7 +1097,7 @@ int main(int argc, char *argv[])
 
     if (!limitDict.empty())
     {
-        Info<< "Read refinement shells in = "
+        Info<< "Read limit shells in = "
             << mesh.time().cpuTimeIncrement() << " s" << nl << endl;
     }
 
@@ -1320,7 +1334,7 @@ int main(int argc, char *argv[])
                 }
 
                 // For now: have single faceZone per surface. Use first
-                // region in surface for patch for zoneing
+                // region in surface for patch for zoning
                 if (regNames.size())
                 {
                     label globalRegioni = surfaces.globalRegion(surfi, 0);
@@ -1428,7 +1442,7 @@ int main(int argc, char *argv[])
             decomposeDict
         )
     );
-    decompositionMethod& decomposer = decomposerPtr();
+    decompositionMethod& decomposer = *decomposerPtr;
 
     if (Pstream::parRun() && !decomposer.parallelAware())
     {
@@ -1450,11 +1464,11 @@ int main(int argc, char *argv[])
     // Now do the real work -refinement -snapping -layers
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    const Switch wantRefine(meshDict.lookup("castellatedMesh"));
-    const Switch wantSnap(meshDict.lookup("snap"));
-    const Switch wantLayers(meshDict.lookup("addLayers"));
+    const bool wantRefine(meshDict.get<bool>("castellatedMesh"));
+    const bool wantSnap(meshDict.get<bool>("snap"));
+    const bool wantLayers(meshDict.get<bool>("addLayers"));
 
-    const Switch mergePatchFaces
+    const bool mergePatchFaces
     (
         meshDict.lookupOrDefault("mergePatchFaces", true)
     );
@@ -1477,7 +1491,8 @@ int main(int argc, char *argv[])
             decomposer,
             distributor,
             globalToMasterPatch,
-            globalToSlavePatch
+            globalToSlavePatch,
+            setFormatter
         );
 
 
@@ -1663,11 +1678,11 @@ int main(int argc, char *argv[])
 
         labelHashSet includePatches(bMesh.size());
 
-        if (args.optionFound("patches"))
+        if (args.found("patches"))
         {
             includePatches = bMesh.patchSet
             (
-                wordReList(args.optionLookup("patches")())
+                args.getList<wordRe>("patches")
             );
         }
         else
@@ -1685,7 +1700,7 @@ int main(int argc, char *argv[])
 
         fileName outFileName
         (
-            args.optionLookupOrDefault<fileName>
+            args.opt<fileName>
             (
                 "outFile",
                 "constant/triSurface/simplifiedSurface.stl"

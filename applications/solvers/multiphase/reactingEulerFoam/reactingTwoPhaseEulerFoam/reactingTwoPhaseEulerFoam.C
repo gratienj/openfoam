@@ -28,7 +28,7 @@ Group
     grpMultiphaseSolvers
 
 Description
-    Solver for a system of 2 compressible fluid phases with a common pressure,
+    Solver for a system of two compressible fluid phases with a common pressure,
     but otherwise separate properties. The type of phase model is run time
     selectable and can optionally represent multiple species and in-phase
     reactions. The phase system is also run time selectable and can optionally
@@ -75,9 +75,16 @@ namespace Foam
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for a system of two compressible fluid phases with a"
+        " common pressure, but otherwise separate properties."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
@@ -91,14 +98,14 @@ int main(int argc, char *argv[])
         #include "setInitialDeltaT.H"
     }
 
-    Switch faceMomentum
+    bool faceMomentum
     (
-        pimple.dict().lookupOrDefault<Switch>("faceMomentum", false)
+        pimple.dict().lookupOrDefault("faceMomentum", false)
     );
 
-    Switch implicitPhasePressure
+    bool implicitPhasePressure
     (
-        mesh.solverDict(alpha1.name()).lookupOrDefault<Switch>
+        mesh.solverDict(alpha1.name()).lookupOrDefault
         (
             "implicitPhasePressure", false
         )
@@ -134,7 +141,7 @@ int main(int argc, char *argv[])
             #include "setDeltaT.H"
         }
 
-        runTime++;
+        ++runTime;
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
         // --- Pressure-velocity PIMPLE corrector loop
@@ -169,9 +176,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = "
-            << runTime.elapsedCpuTime()
-            << " s\n\n" << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

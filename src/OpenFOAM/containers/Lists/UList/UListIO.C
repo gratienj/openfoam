@@ -74,52 +74,32 @@ Foam::Ostream& Foam::UList<T>::writeList
     const label shortListLen
 ) const
 {
-    const UList<T>& L = *this;
+    const UList<T>& list = *this;
 
-    const label sz = L.size();
+    const label len = list.size();
 
     // Write list contents depending on data format
     if (os.format() == IOstream::ASCII || !contiguous<T>())
     {
-        // Can the contents be considered 'uniform' (ie, identical)?
-        bool uniform = (sz > 1 && contiguous<T>());
-        if (uniform)
+        if (contiguous<T>() && list.uniform())
         {
-            for (label i=1; i < sz; ++i)
-            {
-                if (L[i] != L[0])
-                {
-                    uniform = false;
-                    break;
-                }
-            }
-        }
-
-        if (uniform)
-        {
-            // Size and start delimiter
-            os << sz << token::BEGIN_BLOCK;
-
-            // Contents
-            os << L[0];
-
-            // End delimiter
-            os << token::END_BLOCK;
+            // Two or more entries, and all entries have identical values.
+            os  << len << token::BEGIN_BLOCK << list[0] << token::END_BLOCK;
         }
         else if
         (
-            sz <= 1 || !shortListLen
-         || (sz <= shortListLen && contiguous<T>())
+            len <= 1 || !shortListLen
+         || (len <= shortListLen && contiguous<T>())
         )
         {
             // Size and start delimiter
-            os << sz << token::BEGIN_LIST;
+            os << len << token::BEGIN_LIST;
 
             // Contents
-            for (label i=0; i < sz; ++i)
+            for (label i=0; i < len; ++i)
             {
                 if (i) os << token::SPACE;
-                os << L[i];
+                os << list[i];
             }
 
             // End delimiter
@@ -128,12 +108,12 @@ Foam::Ostream& Foam::UList<T>::writeList
         else
         {
             // Size and start delimiter
-            os << nl << sz << nl << token::BEGIN_LIST << nl;
+            os << nl << len << nl << token::BEGIN_LIST << nl;
 
             // Contents
-            for (label i=0; i < sz; ++i)
+            for (label i=0; i < len; ++i)
             {
-                os << L[i] << nl;
+                os << list[i] << nl;
             }
 
             // End delimiter
@@ -143,15 +123,15 @@ Foam::Ostream& Foam::UList<T>::writeList
     else
     {
         // Contents are binary and contiguous
-        os << nl << sz << nl;
+        os << nl << len << nl;
 
-        if (sz)
+        if (len)
         {
             // write(...) includes surrounding start/end delimiters
             os.write
             (
-                reinterpret_cast<const char*>(L.cdata()),
-                L.byteSize()
+                reinterpret_cast<const char*>(list.cdata()),
+                list.byteSize()
             );
         }
     }
@@ -164,21 +144,25 @@ Foam::Ostream& Foam::UList<T>::writeList
 // * * * * * * * * * * * * * * * Ostream Operator *  * * * * * * * * * * * * //
 
 template<class T>
-Foam::Ostream& Foam::operator<<(Ostream& os, const UList<T>& lst)
+Foam::Ostream& Foam::operator<<(Ostream& os, const UList<T>& list)
 {
-    return lst.writeList(os, 10);
+    return list.writeList(os, 10);
 }
 
 
 template<class T>
-Foam::Istream& Foam::operator>>(Istream& is, UList<T>& L)
+Foam::Istream& Foam::operator>>(Istream& is, UList<T>& list)
 {
+    // The target list length - must match with sizes read
+    const label len = list.size();
+
     is.fatalCheck(FUNCTION_NAME);
 
     token firstToken(is);
 
     is.fatalCheck("operator>>(Istream&, UList<T>&) : reading first token");
 
+    // Compound: simply transfer contents
     if (firstToken.isCompound())
     {
         List<T> elems;
@@ -189,31 +173,38 @@ Foam::Istream& Foam::operator>>(Istream& is, UList<T>& L)
                 firstToken.transferCompoundToken(is)
             )
         );
-        // Check list length
-        const label sz = elems.size();
 
-        if (sz != L.size())
+        const label inputLen = elems.size();
+
+        // List lengths must match
+        if (inputLen != len)
         {
             FatalIOErrorInFunction(is)
-                << "incorrect length for UList. Read " << sz
-                << " expected " << L.size()
+                << "incorrect length for UList. Read "
+                << inputLen << " expected " << len
                 << exit(FatalIOError);
         }
-        for (label i=0; i<sz; ++i)
-        {
-            L[i] = elems[i];
-        }
-    }
-    else if (firstToken.isLabel())
-    {
-        const label sz = firstToken.labelToken();
 
-        // Set list length to that read
-        if (sz != L.size())
+        for (label i = 0; i < len; ++i)
+        {
+            list[i] = std::move(elems[i]);
+        }
+
+        return is;
+    }
+
+
+    // Label: could be int(..), int{...} or just a plain '0'
+    if (firstToken.isLabel())
+    {
+        const label inputLen = firstToken.labelToken();
+
+        // List lengths must match
+        if (inputLen != len)
         {
             FatalIOErrorInFunction(is)
-                << "incorrect length for UList. Read " << sz
-                << " expected " << L.size()
+                << "incorrect length for UList. Read "
+                << inputLen << " expected " << len
                 << exit(FatalIOError);
         }
 
@@ -224,13 +215,13 @@ Foam::Istream& Foam::operator>>(Istream& is, UList<T>& L)
             // Read beginning of contents
             const char delimiter = is.readBeginList("List");
 
-            if (sz)
+            if (len)
             {
                 if (delimiter == token::BEGIN_LIST)
                 {
-                    for (label i=0; i<sz; ++i)
+                    for (label i=0; i<len; ++i)
                     {
-                        is >> L[i];
+                        is >> list[i];
 
                         is.fatalCheck
                         (
@@ -251,9 +242,9 @@ Foam::Istream& Foam::operator>>(Istream& is, UList<T>& L)
                         "reading the single entry"
                     );
 
-                    for (label i=0; i<sz; ++i)
+                    for (label i=0; i<len; ++i)
                     {
-                        L[i] = element;
+                        list[i] = element;  // Copy the value
                     }
                 }
             }
@@ -261,22 +252,24 @@ Foam::Istream& Foam::operator>>(Istream& is, UList<T>& L)
             // Read end of contents
             is.readEndList("List");
         }
-        else
+        else if (len)
         {
-            // contents are binary and contiguous
+            // Non-empty, binary, contiguous
 
-            if (sz)
-            {
-                is.read(reinterpret_cast<char*>(L.data()), sz*sizeof(T));
+            is.read(reinterpret_cast<char*>(list.data()), len*sizeof(T));
 
-                is.fatalCheck
-                (
-                    "operator>>(Istream&, UList<T>&) : reading the binary block"
-                );
-            }
+            is.fatalCheck
+            (
+                "operator>>(Istream&, UList<T>&) : reading the binary block"
+            );
         }
+
+        return is;
     }
-    else if (firstToken.isPunctuation())
+
+
+    // "(...)" : read as SLList and transfer contents
+    if (firstToken.isPunctuation())
     {
         if (firstToken.pToken() != token::BEGIN_LIST)
         {
@@ -286,40 +279,33 @@ Foam::Istream& Foam::operator>>(Istream& is, UList<T>& L)
                 << exit(FatalIOError);
         }
 
-        // Putback the opening bracket
-        is.putBack(firstToken);
+        is.putBack(firstToken); // Putback the opening bracket
 
-        // Now read as a singly-linked list
-        SLList<T> sll(is);
+        SLList<T> sll(is);      // Read as singly-linked list
 
-        if (sll.size() != L.size())
+        // List lengths must match
+        if (sll.size() != len)
         {
             FatalIOErrorInFunction(is)
-                << "incorrect length for UList. Read " << sll.size()
-                << " expected " << L.size()
+                << "incorrect length for UList. Read "
+                << sll.size() << " expected " << len
                 << exit(FatalIOError);
         }
 
-        // Convert the singly-linked list to this list
-        label i = 0;
-        for
-        (
-            typename SLList<T>::const_iterator iter = sll.begin();
-            iter != sll.end();
-            ++iter, ++i
-        )
+        // Move assign each list element
+        for (label i = 0; i < len; ++i)
         {
-            L[i] = iter();
+            list[i] = std::move(sll.removeHead());
         }
 
+        return is;
     }
-    else
-    {
-        FatalIOErrorInFunction(is)
-            << "incorrect first token, expected <int> or '(', found "
-            << firstToken.info()
-            << exit(FatalIOError);
-    }
+
+
+    FatalIOErrorInFunction(is)
+        << "incorrect first token, expected <int> or '(', found "
+        << firstToken.info()
+        << exit(FatalIOError);
 
     return is;
 }

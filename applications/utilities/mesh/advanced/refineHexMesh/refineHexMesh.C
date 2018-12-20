@@ -28,7 +28,7 @@ Group
     grpMeshAdvancedUtilities
 
 Description
-    Refines a hex mesh by 2x2x2 cell splitting.
+    Refine a hex mesh by 2x2x2 cell splitting for the specified cellSet.
 
 \*---------------------------------------------------------------------------*/
 
@@ -56,26 +56,32 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Refine a hex mesh by 2x2x2 cell splitting for the specified cellSet"
+    );
     #include "addOverwriteOption.H"
     #include "addRegionOption.H"
     argList::addArgument("cellSet");
     argList::addBoolOption
     (
         "minSet",
-        "remove cells from input cellSet to keep to 2:1 ratio"
+        "Remove cells from input cellSet to keep to 2:1 ratio"
         " (default is to extend set)"
     );
 
+    argList::noFunctionObjects();  // Never use function objects
+
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
     #include "createNamedMesh.H"
+
     const word oldInstance = mesh.pointsInstance();
 
     word cellSetName(args[1]);
-    const bool overwrite = args.optionFound("overwrite");
+    const bool overwrite = args.found("overwrite");
 
-    const bool minSet = args.optionFound("minSet");
+    const bool minSet = args.found("minSet");
 
     Info<< "Reading cells to refine from cellSet " << cellSetName
         << nl << endl;
@@ -167,17 +173,17 @@ int main(int argc, char *argv[])
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
 
     // Create mesh, return map from old to new mesh.
     autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
     // Update fields
-    mesh.updateMesh(map);
+    mesh.updateMesh(map());
 
     // Update numbering of cells/vertices.
-    meshCutter.updateMesh(map);
+    meshCutter.updateMesh(map());
 
     // Optionally inflate mesh
     if (map().hasMotionPoints())

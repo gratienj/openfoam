@@ -94,6 +94,11 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Potential flow solver which solves for the velocity potential"
+    );
+
     argList::addOption
     (
         "pName",
@@ -122,10 +127,11 @@ int main(int argc, char *argv[])
     argList::addBoolOption
     (
         "withFunctionObjects",
-        "execute functionObjects"
+        "Execute functionObjects"
     );
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
 
@@ -181,13 +187,13 @@ int main(int argc, char *argv[])
     phi.write();
 
     // Optionally write Phi
-    if (args.optionFound("writePhi"))
+    if (args.found("writePhi"))
     {
         Phi.write();
     }
 
     // Calculate the pressure field from the Euler equation
-    if (args.optionFound("writep"))
+    if (args.found("writep"))
     {
         Info<< nl << "Calculating approximate pressure field" << endl;
 
@@ -235,9 +241,7 @@ int main(int argc, char *argv[])
 
     runTime.functionObjects().end();
 
-    Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-        << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-        << nl << endl;
+    runTime.printExecutionTime(Info);
 
     Info<< "End\n" << endl;
 

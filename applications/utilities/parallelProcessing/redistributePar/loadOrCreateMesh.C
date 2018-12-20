@@ -159,22 +159,14 @@ Foam::autoPtr<Foam::fvMesh> Foam::loadOrCreateMesh
 
     if (!haveMesh)
     {
-        bool oldParRun = Pstream::parRun();
+        const bool oldParRun = Pstream::parRun();
         Pstream::parRun() = false;
 
 
         // Create dummy mesh. Only used on procs that don't have mesh.
         IOobject noReadIO(io);
         noReadIO.readOpt() = IOobject::NO_READ;
-        fvMesh dummyMesh
-        (
-            noReadIO,
-            xferCopy(pointField()),
-            xferCopy(faceList()),
-            xferCopy(labelList()),
-            xferCopy(labelList()),
-            false
-        );
+        fvMesh dummyMesh(noReadIO, Zero, false);
 
         // Add patches
         List<polyPatch*> patches(patchEntries.size());
@@ -183,7 +175,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::loadOrCreateMesh
         forAll(patchEntries, patchi)
         {
             const entry& e = patchEntries[patchi];
-            const word type(e.dict().lookup("type"));
+            const word type(e.dict().get<word>("type"));
             const word& name = e.keyword();
 
             if
@@ -261,8 +253,8 @@ Foam::autoPtr<Foam::fvMesh> Foam::loadOrCreateMesh
     // parallel
 
     //Pout<< "Reading mesh from " << io.objectPath() << endl;
-    autoPtr<fvMesh> meshPtr(new fvMesh(io));
-    fvMesh& mesh = meshPtr();
+    auto meshPtr = autoPtr<fvMesh>::New(io);
+    fvMesh& mesh = *meshPtr;
 
 
 
@@ -278,7 +270,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::loadOrCreateMesh
         forAll(patchEntries, patchi)
         {
             const entry& e = patchEntries[patchi];
-            const word type(e.dict().lookup("type"));
+            const word type(e.dict().get<word>("type"));
             const word& name = e.keyword();
 
             if (type == processorPolyPatch::typeName)
@@ -391,17 +383,17 @@ Foam::autoPtr<Foam::fvMesh> Foam::loadOrCreateMesh
 
     if (!haveMesh)
     {
-        forAll(pointSetNames, i)
+        for (const word& setName : pointSetNames)
         {
-            pointSet(mesh, pointSetNames[i], 0).write();
+            pointSet(mesh, setName, 0).write();
         }
-        forAll(faceSetNames, i)
+        for (const word& setName : faceSetNames)
         {
-            faceSet(mesh, faceSetNames[i], 0).write();
+            faceSet(mesh, setName, 0).write();
         }
-        forAll(cellSetNames, i)
+        for (const word& setName : cellSetNames)
         {
-            cellSet(mesh, cellSetNames[i], 0).write();
+            cellSet(mesh, setName, 0).write();
         }
     }
 

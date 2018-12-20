@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -90,11 +90,16 @@ public:
 
 
     //- Destructor
-    virtual ~inhomogeneousMixture()
-    {}
+    virtual ~inhomogeneousMixture() = default;
 
 
     // Member functions
+
+        //- Return the instantiated type name
+        static word typeName()
+        {
+            return "inhomogeneousMixture<" + ThermoType::typeName() + '>';
+        }
 
         const dimensionedScalar& stoicRatio() const
         {

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,7 +37,7 @@ Foam::ensightCase::options::options(IOstream::streamFormat format)
     nodeValues_(false),
     separateCloud_(false)
 {
-    width(8); // ensures that the mask and printf-format are also resized
+    width(8); // Ensures that mask and printf-format are properly resized
 }
 
 
@@ -48,6 +48,7 @@ Foam::IOstream::streamFormat Foam::ensightCase::options::format() const
     return format_;
 }
 
+
 const Foam::word& Foam::ensightCase::options::mask() const
 {
     return mask_;
@@ -56,13 +57,13 @@ const Foam::word& Foam::ensightCase::options::mask() const
 
 Foam::word Foam::ensightCase::options::padded(const label i) const
 {
-    // As per Foam::name, but with fixed length
+    // As per word::printf(), but with fixed length
     char buf[32];
 
     ::snprintf(buf, 32, printf_.c_str(), static_cast<int>(i));
     buf[31] = 0;
 
-    // no stripping required
+    // No stripping required
     return word(buf, false);
 }
 
@@ -75,19 +76,18 @@ Foam::label Foam::ensightCase::options::width() const
 
 void Foam::ensightCase::options::width(const label n)
 {
-    // enforce min/max sanity limits
+    // Enforce min/max sanity limits
     if (n < 1 || n > 31)
     {
         return;
     }
 
-    // set mask accordingly
+    // Set mask accordingly
     mask_.resize(n, '*');
 
-    // appropriate printf format
-    printf_ = "%0" + Foam::name(n) + "d";
+    // Appropriate printf format
+    printf_ = "%0" + std::to_string(n) + "d";
 }
-
 
 
 bool Foam::ensightCase::options::overwrite() const

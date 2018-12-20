@@ -89,22 +89,22 @@ public:
 
         const rhoThermo& thermo1() const
         {
-            return thermo1_();
+            return *thermo1_;
         }
 
         const rhoThermo& thermo2() const
         {
-            return thermo2_();
+            return *thermo2_;
         }
 
         rhoThermo& thermo1()
         {
-            return thermo1_();
+            return *thermo1_;
         }
 
         rhoThermo& thermo2()
         {
-            return thermo2_();
+            return *thermo2_;
         }
 
         //- Correct the thermodynamics of each phase
@@ -112,6 +112,9 @@ public:
 
         //- Update mixture properties
         virtual void correct();
+
+        //- Return the name of the thermo physics
+        virtual word thermoName() const;
 
         //- Return true if the equation of state is incompressible
         //  i.e. rho != f(p)
@@ -241,6 +244,9 @@ public:
                 const scalarField& T,
                 const label patchi
             ) const;
+
+            //- Molecular weight [kg/kmol]
+            virtual tmp<volScalarField> W() const;
 
 
         // Fields derived from transport state variables

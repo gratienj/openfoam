@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,6 +35,69 @@ namespace Foam
     addToRunTimeSelectionTable(surfaceWriter, ensightSurfaceWriter, wordDict);
 }
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Field writing implementation
+#include "ensightSurfaceWriterImpl.C"
+
+// Field writing methods
+defineSurfaceWriterWriteFields(Foam::ensightSurfaceWriter);
+
+
+// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+
+void Foam::ensightSurfaceWriter::printTimeset
+(
+    OSstream& os,
+    const label ts,
+    const scalar& timeValue
+)
+{
+    os
+        << "time set:               " << ts << nl
+        << "number of steps:        " << 1 << nl;
+
+    // Assume to be contiguous numbering
+    os  << "filename start number:  0" << nl
+        << "filename increment:     1" << nl
+        << "time values:" << nl;
+
+    os  << "    " << timeValue
+        << nl << nl;
+}
+
+
+void Foam::ensightSurfaceWriter::printTimeset
+(
+    OSstream& os,
+    const label ts,
+    const UList<scalar>& values
+)
+{
+    label count = values.size();
+    os
+        << "time set:               " << ts << nl
+        << "number of steps:        " << count << nl;
+
+    // Assume to be contiguous numbering
+    os  << "filename start number:  0" << nl
+        << "filename increment:     1" << nl
+        << "time values:" << nl;
+
+    count = 0;
+    for (const scalar& t : values)
+    {
+        os << ' ' << setw(12) << t;
+
+        if (++count % 6 == 0)
+        {
+            os << nl;
+        }
+    }
+    os  << nl << nl;
+}
+
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -49,21 +112,17 @@ Foam::ensightSurfaceWriter::ensightSurfaceWriter()
 Foam::ensightSurfaceWriter::ensightSurfaceWriter(const dictionary& options)
 :
     surfaceWriter(),
-    writeFormat_(IOstream::ASCII),
-    collateTimes_(true)
-{
-    // choose ascii or binary format
-    if (options.found("format"))
-    {
-        writeFormat_ = IOstream::formatEnum(options.lookup("format"));
-    }
-    options.readIfPresent("collateTimes", collateTimes_);
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::ensightSurfaceWriter::~ensightSurfaceWriter()
+    writeFormat_
+    (
+        IOstreamOption::formatNames.lookupOrDefault
+        (
+            "format",
+            options,
+            IOstreamOption::ASCII,
+            true  // Failsafe behaviour
+        )
+    ),
+    collateTimes_(options.lookupOrDefault("collateTimes", true))
 {}
 
 
@@ -80,6 +139,50 @@ bool Foam::ensightSurfaceWriter::separateGeometry() const
 }
 
 
+void Foam::ensightSurfaceWriter::updateMesh
+(
+    const fileName& outputDir,
+    const fileName& surfaceName
+) const
+{
+    if (collateTimes_ && Pstream::master())
+    {
+        const ensight::FileName surfName(surfaceName);
+
+        const fileName baseDir = outputDir.path()/surfName;
+        const fileName timeDir = outputDir.name();
+
+        // Convert timeDir to a value (if possible - use 0.0 otherwise)
+        scalar timeValue = 0.0;
+        readScalar(timeDir, timeValue);
+
+        if (!isDir(baseDir))
+        {
+            mkDir(baseDir);
+        }
+
+        dictionary dict;
+
+        if (isFile(baseDir/"fieldsDict"))
+        {
+            IFstream is(baseDir/"fieldsDict");
+            if (is.good() && dict.read(is))
+            {
+                // ... any futher actions
+            }
+        }
+
+        dict.set("updateMesh", timeValue);
+
+        {
+            OFstream os(baseDir/"fieldsDict");
+            os << "// Summary of Ensight fields, times" << nl << nl;
+            dict.write(os, false);
+        }
+    }
+}
+
+
 Foam::fileName Foam::ensightSurfaceWriter::write
 (
     const fileName& outputDir,
@@ -88,16 +191,17 @@ Foam::fileName Foam::ensightSurfaceWriter::write
     const bool verbose
 ) const
 {
-    const pointField& points = surf.points();
-    const faceList&   faces  = surf.faces();
     const ensight::FileName surfName(surfaceName);
+
+    // Uncollated
+    // ==========
+    // geometry:  rootdir/time/surfaceName.case
+    // geometry:  rootdir/time/surfaceName.00000000.mesh
 
     if (!isDir(outputDir))
     {
         mkDir(outputDir);
     }
-
-    const scalar timeValue = 0.0;
 
     OFstream osCase(outputDir/surfName + ".case");
     ensightGeoFile osGeom
@@ -112,6 +216,9 @@ Foam::fileName Foam::ensightSurfaceWriter::write
         Info<< "Writing case file to " << osCase.name() << endl;
     }
 
+    const pointField& points = surf.points();
+    const faceList&   faces  = surf.faces();
+
     osCase
         << "FORMAT" << nl
         << "type: ensight gold" << nl
@@ -119,24 +226,21 @@ Foam::fileName Foam::ensightSurfaceWriter::write
         << "GEOMETRY" << nl
         << "model:        1     " << osGeom.name().name() << nl
         << nl
-        << "TIME" << nl
-        << "time set:                      1" << nl
-        << "number of steps:               1" << nl
-        << "filename start number:         0" << nl
-        << "filename increment:            1" << nl
-        << "time values:" << nl
-        << "    " << timeValue << nl
-        << nl;
+        << "TIME" << nl;
+
+    printTimeset(osCase, 1, 0.0);
 
     ensightPartFaces ensPart(0, osGeom.name().name(), points, faces, true);
     osGeom << ensPart;
 
     return osCase.name();
+
+
+    // Collated?
+    // ========
+    // geometry:  rootdir/surfaceName/surfaceName.case
+    // geometry:  rootdir/surfaceName/surfaceName.mesh
 }
-
-
-// create write methods
-defineSurfaceWriterWriteFields(Foam::ensightSurfaceWriter);
 
 
 // ************************************************************************* //

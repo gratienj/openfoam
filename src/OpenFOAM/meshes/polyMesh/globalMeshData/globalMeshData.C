@@ -508,6 +508,7 @@ void Foam::globalMeshData::calcSharedEdges() const
         }
     }
 
+
     sharedEdgeLabelsPtr_.reset(new labelList());
     labelList& sharedEdgeLabels = sharedEdgeLabelsPtr_();
     sharedEdgeLabels.transfer(dynSharedEdgeLabels);
@@ -543,14 +544,14 @@ void Foam::globalMeshData::calcGlobalPointSlaves() const
     (
         new labelListList
         (
-            globalData.pointPoints().xfer()
+            std::move(globalData.pointPoints())
         )
     );
     globalPointTransformedSlavesPtr_.reset
     (
         new labelListList
         (
-            globalData.transformedPointPoints().xfer()
+            std::move(globalData.transformedPointPoints())
         )
     );
 
@@ -558,7 +559,7 @@ void Foam::globalMeshData::calcGlobalPointSlaves() const
     (
         new mapDistribute
         (
-            globalData.map().xfer()
+            std::move(globalData.map())
         )
     );
 }
@@ -688,12 +689,7 @@ void Foam::globalMeshData::calcGlobalPointEdges
     forAll(pointEdges, pointi)
     {
         const labelList& pEdges = pointEdges[pointi];
-        labelList& globalPEdges = globalPointEdges[pointi];
-        globalPEdges.setSize(pEdges.size());
-        forAll(pEdges, i)
-        {
-            globalPEdges[i] = globalEdgeNumbers.toGlobal(pEdges[i]);
-        }
+        globalPointEdges[pointi] = globalEdgeNumbers.toGlobal(pEdges);
 
         labelPairList& globalPPoints = globalPointPoints[pointi];
         globalPPoints.setSize(pEdges.size());
@@ -902,7 +898,7 @@ void Foam::globalMeshData::calcGlobalEdgeSlaves() const
 
 
     // The whole problem with deducting edge-connectivity from
-    // point-connectivity is that one of the the endpoints might be
+    // point-connectivity is that one of the endpoints might be
     // a local master but the other endpoint might not. So we first
     // need to make sure that all points know about connectivity and
     // the transformations.
@@ -1186,9 +1182,9 @@ void Foam::globalMeshData::calcGlobalEdgeOrientation() const
         // Now check my edges on how they relate to the master's edgeVerts
         globalEdgeOrientationPtr_.reset
         (
-            new PackedBoolList(coupledPatch().nEdges())
+            new bitSet(coupledPatch().nEdges())
         );
-        PackedBoolList& globalEdgeOrientation = globalEdgeOrientationPtr_();
+        bitSet& globalEdgeOrientation = globalEdgeOrientationPtr_();
 
         forAll(coupledPatch().edges(), edgeI)
         {
@@ -1214,7 +1210,7 @@ void Foam::globalMeshData::calcGlobalEdgeOrientation() const
             }
             else
             {
-                globalEdgeOrientation[edgeI] = (stat == 1);
+                globalEdgeOrientation.set(edgeI, (stat == 1));
             }
         }
     }
@@ -1324,7 +1320,7 @@ void Foam::globalMeshData::calcGlobalPointBoundaryFaces() const
     // Global indices for boundary faces
     globalBoundaryFaceNumberingPtr_.reset
     (
-        new globalIndex(mesh_.nFaces()-mesh_.nInternalFaces())
+        new globalIndex(mesh_.nBoundaryFaces())
     );
     globalIndex& globalIndices = globalBoundaryFaceNumberingPtr_();
 
@@ -1545,9 +1541,8 @@ void Foam::globalMeshData::calcGlobalPointBoundaryCells() const
     }
 
 
-    boundaryCellsPtr_.reset(new labelList());
+    boundaryCellsPtr_.reset(new labelList(std::move(cellMap)));
     labelList& boundaryCells = boundaryCellsPtr_();
-    boundaryCells.transfer(cellMap.shrink());
 
 
     // Convert point-cells to global (boundary)cell numbers
@@ -1739,14 +1734,14 @@ void Foam::globalMeshData::calcGlobalCoPointSlaves() const
     (
         new labelListList
         (
-            globalData.pointPoints().xfer()
+            std::move(globalData.pointPoints())
         )
     );
     globalCoPointSlavesMapPtr_.reset
     (
         new mapDistribute
         (
-            globalData.map().xfer()
+            std::move(globalData.map())
         )
     );
 
@@ -1889,7 +1884,8 @@ const Foam::labelList& Foam::globalMeshData::sharedPointGlobalLabels() const
             sharedPointGlobalLabels = -1;
         }
     }
-    return sharedPointGlobalLabelsPtr_();
+
+    return *sharedPointGlobalLabelsPtr_;
 }
 
 
@@ -2026,7 +2022,7 @@ const Foam::labelList& Foam::globalMeshData::sharedPointLabels() const
     {
         calcSharedPoints();
     }
-    return sharedPointLabelsPtr_();
+    return *sharedPointLabelsPtr_;
 }
 
 
@@ -2036,7 +2032,7 @@ const Foam::labelList& Foam::globalMeshData::sharedPointAddr() const
     {
         calcSharedPoints();
     }
-    return sharedPointAddrPtr_();
+    return *sharedPointAddrPtr_;
 }
 
 
@@ -2056,7 +2052,7 @@ const Foam::labelList& Foam::globalMeshData::sharedEdgeLabels() const
     {
         calcSharedEdges();
     }
-    return sharedEdgeLabelsPtr_();
+    return *sharedEdgeLabelsPtr_;
 }
 
 
@@ -2066,7 +2062,7 @@ const Foam::labelList& Foam::globalMeshData::sharedEdgeAddr() const
     {
         calcSharedEdges();
     }
-    return sharedEdgeAddrPtr_();
+    return *sharedEdgeAddrPtr_;
 }
 
 
@@ -2127,7 +2123,7 @@ const Foam::indirectPrimitivePatch& Foam::globalMeshData::coupledPatch() const
                 << endl;
         }
     }
-    return coupledPatchPtr_();
+    return *coupledPatchPtr_;
 }
 
 
@@ -2147,7 +2143,7 @@ const Foam::labelList& Foam::globalMeshData::coupledPatchMeshEdges() const
             )
         );
     }
-    return coupledPatchMeshEdgesPtr_();
+    return *coupledPatchMeshEdgesPtr_;
 }
 
 
@@ -2166,7 +2162,7 @@ const
             em.insert(me[i], i);
         }
     }
-    return coupledPatchMeshEdgeMapPtr_();
+    return *coupledPatchMeshEdgeMapPtr_;
 }
 
 
@@ -2179,7 +2175,7 @@ const Foam::globalIndex& Foam::globalMeshData::globalPointNumbering() const
             new globalIndex(coupledPatch().nPoints())
         );
     }
-    return globalPointNumberingPtr_();
+    return *globalPointNumberingPtr_;
 }
 
 
@@ -2190,7 +2186,7 @@ Foam::globalMeshData::globalTransforms() const
     {
         globalTransformsPtr_.reset(new globalIndexAndTransform(mesh_));
     }
-    return globalTransformsPtr_();
+    return *globalTransformsPtr_;
 }
 
 
@@ -2200,7 +2196,7 @@ const Foam::labelListList& Foam::globalMeshData::globalPointSlaves() const
     {
         calcGlobalPointSlaves();
     }
-    return globalPointSlavesPtr_();
+    return *globalPointSlavesPtr_;
 }
 
 
@@ -2211,7 +2207,7 @@ const
     {
         calcGlobalPointSlaves();
     }
-    return globalPointTransformedSlavesPtr_();
+    return *globalPointTransformedSlavesPtr_;
 }
 
 
@@ -2221,7 +2217,7 @@ const Foam::mapDistribute& Foam::globalMeshData::globalPointSlavesMap() const
     {
         calcGlobalPointSlaves();
     }
-    return globalPointSlavesMapPtr_();
+    return *globalPointSlavesMapPtr_;
 }
 
 
@@ -2234,7 +2230,7 @@ const Foam::globalIndex& Foam::globalMeshData::globalEdgeNumbering() const
             new globalIndex(coupledPatch().nEdges())
         );
     }
-    return globalEdgeNumberingPtr_();
+    return *globalEdgeNumberingPtr_;
 }
 
 
@@ -2244,7 +2240,7 @@ const Foam::labelListList& Foam::globalMeshData::globalEdgeSlaves() const
     {
         calcGlobalEdgeSlaves();
     }
-    return globalEdgeSlavesPtr_();
+    return *globalEdgeSlavesPtr_;
 }
 
 
@@ -2255,17 +2251,17 @@ const
     {
         calcGlobalEdgeSlaves();
     }
-    return globalEdgeTransformedSlavesPtr_();
+    return *globalEdgeTransformedSlavesPtr_;
 }
 
 
-const Foam::PackedBoolList& Foam::globalMeshData::globalEdgeOrientation() const
+const Foam::bitSet& Foam::globalMeshData::globalEdgeOrientation() const
 {
     if (!globalEdgeOrientationPtr_.valid())
     {
         calcGlobalEdgeOrientation();
     }
-    return globalEdgeOrientationPtr_();
+    return *globalEdgeOrientationPtr_;
 }
 
 
@@ -2275,7 +2271,7 @@ const Foam::mapDistribute& Foam::globalMeshData::globalEdgeSlavesMap() const
     {
         calcGlobalEdgeSlaves();
     }
-    return globalEdgeSlavesMapPtr_();
+    return *globalEdgeSlavesMapPtr_;
 }
 
 
@@ -2286,7 +2282,7 @@ const
     {
         calcGlobalPointBoundaryFaces();
     }
-    return globalBoundaryFaceNumberingPtr_();
+    return *globalBoundaryFaceNumberingPtr_;
 }
 
 
@@ -2297,7 +2293,7 @@ const
     {
         calcGlobalPointBoundaryFaces();
     }
-    return globalPointBoundaryFacesPtr_();
+    return *globalPointBoundaryFacesPtr_;
 }
 
 
@@ -2308,7 +2304,7 @@ Foam::globalMeshData::globalPointTransformedBoundaryFaces() const
     {
         calcGlobalPointBoundaryFaces();
     }
-    return globalPointTransformedBoundaryFacesPtr_();
+    return *globalPointTransformedBoundaryFacesPtr_;
 }
 
 
@@ -2319,7 +2315,7 @@ const
     {
         calcGlobalPointBoundaryFaces();
     }
-    return globalPointBoundaryFacesMapPtr_();
+    return *globalPointBoundaryFacesMapPtr_;
 }
 
 
@@ -2329,7 +2325,7 @@ const Foam::labelList& Foam::globalMeshData::boundaryCells() const
     {
         calcGlobalPointBoundaryCells();
     }
-    return boundaryCellsPtr_();
+    return *boundaryCellsPtr_;
 }
 
 
@@ -2340,7 +2336,7 @@ const
     {
         calcGlobalPointBoundaryCells();
     }
-    return globalBoundaryCellNumberingPtr_();
+    return *globalBoundaryCellNumberingPtr_;
 }
 
 
@@ -2351,7 +2347,7 @@ const
     {
         calcGlobalPointBoundaryCells();
     }
-    return globalPointBoundaryCellsPtr_();
+    return *globalPointBoundaryCellsPtr_;
 }
 
 
@@ -2362,7 +2358,7 @@ Foam::globalMeshData::globalPointTransformedBoundaryCells() const
     {
         calcGlobalPointBoundaryCells();
     }
-    return globalPointTransformedBoundaryCellsPtr_();
+    return *globalPointTransformedBoundaryCellsPtr_;
 }
 
 
@@ -2373,7 +2369,7 @@ const
     {
         calcGlobalPointBoundaryCells();
     }
-    return globalPointBoundaryCellsMapPtr_();
+    return *globalPointBoundaryCellsMapPtr_;
 }
 
 
@@ -2383,7 +2379,7 @@ const Foam::labelListList& Foam::globalMeshData::globalCoPointSlaves() const
     {
         calcGlobalCoPointSlaves();
     }
-    return globalCoPointSlavesPtr_();
+    return *globalCoPointSlavesPtr_;
 }
 
 
@@ -2393,7 +2389,7 @@ const Foam::mapDistribute& Foam::globalMeshData::globalCoPointSlavesMap() const
     {
         calcGlobalCoPointSlaves();
     }
-    return globalCoPointSlavesMapPtr_();
+    return *globalCoPointSlavesMapPtr_;
 }
 
 
@@ -2438,7 +2434,7 @@ Foam::autoPtr<Foam::globalIndex> Foam::globalMeshData::mergePoints
 
     // 1. Count number of masters on my processor.
     label nMaster = 0;
-    PackedBoolList isMaster(mesh_.nPoints(), 1);
+    bitSet isMaster(mesh_.nPoints(), true);
     forAll(pointSlaves, pointi)
     {
         if (masterGlobalPoint[pointi] == -1)
@@ -2458,7 +2454,7 @@ Foam::autoPtr<Foam::globalIndex> Foam::globalMeshData::mergePoints
         else
         {
             // connected slave point
-            isMaster[cpp.meshPoints()[pointi]] = 0;
+            isMaster.unset(cpp.meshPoints()[pointi]);
         }
     }
 

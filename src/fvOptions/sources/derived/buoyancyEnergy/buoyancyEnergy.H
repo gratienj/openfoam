@@ -56,7 +56,7 @@ namespace fv
 {
 
 /*---------------------------------------------------------------------------*\
-               Class buoyancyEnergy Declaration
+                       Class buoyancyEnergy Declaration
 \*---------------------------------------------------------------------------*/
 
 class buoyancyEnergy
@@ -71,11 +71,11 @@ class buoyancyEnergy
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        buoyancyEnergy(const buoyancyEnergy&);
+        //- No copy construct
+        buoyancyEnergy(const buoyancyEnergy&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const buoyancyEnergy&);
+        //- No copy assignment
+        void operator=(const buoyancyEnergy&) = delete;
 
 
 public:
@@ -98,21 +98,17 @@ public:
 
     // Member Functions
 
-        // Evaluate
-
-            //- Add explicit contribution to compressible momentum equation
-            virtual void addSup
-            (
-                const volScalarField& rho,
-                fvMatrix<scalar>& eqn,
-                const label fieldi
-            );
+        //- Add explicit contribution to compressible momentum equation
+        virtual void addSup
+        (
+            const volScalarField& rho,
+            fvMatrix<scalar>& eqn,
+            const label fieldi
+        );
 
 
-        // IO
-
-            //- Read source dictionary
-            virtual bool read(const dictionary& dict);
+        //- Read source dictionary
+        virtual bool read(const dictionary& dict);
 };
 
 

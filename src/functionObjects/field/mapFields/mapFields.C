@@ -53,7 +53,7 @@ void Foam::functionObjects::mapFields::createInterpolation
 )
 {
     const fvMesh& meshTarget = mesh_;
-    const word mapRegionName(dict.lookup("mapRegion"));
+    const word mapRegionName(dict.get<word>("mapRegion"));
 
     Info<< name() << ':' << nl
         << "    Reading mesh " << mapRegionName << endl;
@@ -71,7 +71,7 @@ void Foam::functionObjects::mapFields::createInterpolation
         )
     );
     const fvMesh& mapRegion = mapRegionPtr_();
-    const word mapMethodName(dict.lookup("mapMethod"));
+    const word mapMethodName(dict.get<word>("mapMethod"));
     if (!meshToMesh::interpolationMethodNames_.found(mapMethodName))
     {
         FatalErrorInFunction
@@ -87,12 +87,12 @@ void Foam::functionObjects::mapFields::createInterpolation
         meshToMesh::interpolationMethodNames_[mapMethodName]
     );
 
-    // Lookup corresponding AMi method
+    // Lookup corresponding AMI method
     word patchMapMethodName =
-        AMIPatchToPatchInterpolation::interpolationMethodToWord
-        (
+        AMIPatchToPatchInterpolation::interpolationMethodNames_
+        [
             meshToMesh::interpolationMethodAMI(mapMethod)
-        );
+        ];
 
     // Optionally override
     if (dict.readIfPresent("patchMapMethod", patchMapMethodName))
@@ -100,11 +100,9 @@ void Foam::functionObjects::mapFields::createInterpolation
         Info<< "    Patch mapping method: " << patchMapMethodName << endl;
     }
 
-    bool consistent = readBool(dict.lookup("consistent"));
-
     Info<< "    Creating mesh to mesh interpolation" << endl;
 
-    if (consistent)
+    if (dict.get<bool>("consistent"))
     {
         interpPtr_.reset
         (
@@ -119,8 +117,11 @@ void Foam::functionObjects::mapFields::createInterpolation
     }
     else
     {
-        HashTable<word> patchMap(dict.lookup("patchMap"));
-        wordList cuttingPatches(dict.lookup("cuttingPatches"));
+        HashTable<word> patchMap;
+        wordList cuttingPatches;
+
+        dict.readEntry("patchMap", patchMap);
+        dict.readEntry("cuttingPatches", cuttingPatches);
 
         interpPtr_.reset
         (
@@ -156,19 +157,13 @@ Foam::functionObjects::mapFields::mapFields
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::functionObjects::mapFields::~mapFields()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::functionObjects::mapFields::read(const dictionary& dict)
 {
     fvMeshFunctionObject::read(dict);
 
-    dict.lookup("fields") >> fieldNames_;
+    dict.readEntry("fields", fieldNames_);
     createInterpolation(dict);
     return true;
 }

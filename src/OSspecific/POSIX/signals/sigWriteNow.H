@@ -74,8 +74,9 @@ public:
 
     friend class sigStopAtWriteNow;
 
-    //- wip. Have setter have access to signal_
+    //- Allow setter access to signal_
     friend class addwriteNowSignalToOpt;
+
 
     // Constructors
 
@@ -83,20 +84,21 @@ public:
         sigWriteNow();
 
         //- Construct from components
-        sigWriteNow(const bool verbose, Time& runTime);
+        sigWriteNow(Time& runTime, bool verbose=false);
 
 
     //- Destructor
     ~sigWriteNow();
 
 
-    // Member functions
-
-        //- (re)set signal catcher
-        static void set(const bool verbose);
+    // Member Functions
 
         //- Is active?
         bool active() const;
+
+        //- (re)set signal catcher
+        static void set(bool verbose=false);
+
 };
 
 

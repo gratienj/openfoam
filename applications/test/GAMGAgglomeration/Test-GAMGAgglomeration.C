@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
     #include "setRootCase.H"
     #include "createTime.H"
 
-    bool writeObj = args.optionFound("writeObj");
-    bool normalise = args.optionFound("normalise");
+    bool writeObj = args.found("writeObj");
+    bool normalise = args.found("normalise");
 
     #include "createMesh.H"
 
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     labelList cellToCoarse(identity(mesh.nCells()));
     labelListList coarseToCell(invertOneToMany(mesh.nCells(), cellToCoarse));
 
-    runTime++;
+    ++runTime;
 
     // Write initial agglomeration
     {
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("aggomeration", dimless, 0.0)
+            dimensionedScalar(dimless, Zero)
         );
         scalarField& fld = scalarAgglomeration.primitiveFieldRef();
         forAll(fld, celli)
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 
     for (label level = 0; level < agglom.size(); level++)
     {
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
                     IOobject::AUTO_WRITE
                 ),
                 mesh,
-                dimensionedScalar("aggomeration", dimless, 0.0)
+                dimensionedScalar(dimless, Zero)
             );
             scalarField& fld = scalarAgglomeration.primitiveFieldRef();
             forAll(fld, celli)

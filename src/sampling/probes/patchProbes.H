@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -96,7 +96,7 @@ protected:
     // Protected data
 
         //- Patches to sample
-        wordReList patchNames_;
+        wordRes patchNames_;
 
 
     // Protected Member Functions
@@ -147,11 +147,11 @@ protected:
 
 private:
 
-        //- Disallow default bitwise copy construct
-        patchProbes(const patchProbes&);
+        //- No copy construct
+        patchProbes(const patchProbes&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const patchProbes&);
+        //- No copy assignment
+        void operator=(const patchProbes&) = delete;
 
 
 public:
@@ -173,7 +173,7 @@ public:
         );
 
     //- Destructor
-    virtual ~patchProbes();
+    virtual ~patchProbes() = default;
 
 
     //- Public members

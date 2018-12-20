@@ -48,7 +48,7 @@ Foam::XiEqModel::XiEqModel
     (
         XiEqProperties.subDict
         (
-            word(XiEqProperties.lookup("XiEqModel")) + "Coeffs"
+            XiEqProperties.get<word>("XiEqModel") + "Coeffs"
         )
     ),
     thermo_(thermo),
@@ -110,7 +110,7 @@ Foam::XiEqModel::calculateSchelkinEffect(const scalar uPrimeCoef) const
                 false
             ),
             mesh,
-            dimensionedScalar("zero", Nv.dimensions(), 0.0)
+            dimensionedScalar(Nv.dimensions(), Zero)
         )
     );
     volScalarField& N = tN.ref();
@@ -127,12 +127,7 @@ Foam::XiEqModel::calculateSchelkinEffect(const scalar uPrimeCoef) const
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionedSymmTensor
-        (
-            "zero",
-            nsv.dimensions(),
-            Zero
-        )
+        dimensionedSymmTensor(nsv.dimensions(), Zero)
     );
     ns.primitiveFieldRef() = nsv.primitiveField()*pow(mesh.V(), 2.0/3.0);
 
@@ -147,10 +142,10 @@ Foam::XiEqModel::calculateSchelkinEffect(const scalar uPrimeCoef) const
 
     const scalarField upLocal(uPrimeCoef*sqrt((U & CT & U)*cellWidth));
 
-    const scalarField deltaUp(upLocal*(max(scalar(1.0), pow(nr, 0.5)) - 1.0));
+    const scalarField deltaUp(upLocal*(max(scalar(1), pow(nr, 0.5)) - 1.0));
 
     // Re use tN
-    N.primitiveFieldRef() = upLocal*(max(scalar(1.0), pow(nr, 0.5)) - 1.0);
+    N.primitiveFieldRef() = upLocal*(max(scalar(1), pow(nr, 0.5)) - 1.0);
 
     return tN;
 }

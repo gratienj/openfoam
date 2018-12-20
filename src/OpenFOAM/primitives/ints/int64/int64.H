@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2014-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,22 +55,22 @@ class Ostream;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-//- Return a word representation of an int64
+//- A word representation of int64 value
 inline word name(const int64_t val)
 {
-    // No stripping required
-    return word(std::to_string(val), false);
+    return word(std::to_string(val), false); // Needs no stripping
 }
 
 
-//- Return a word representation of an int64, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const char* fmt, const int64_t);
-
-
-//- Return a word representation of an int64, using printf-style formatter.
-//  The representation is not checked for valid word characters.
-word name(const std::string& fmt, const int64_t);
+//- A word representation of int64 value
+template<>
+struct nameOp<int64_t>
+{
+    inline word operator()(const int64_t val) const
+    {
+        return word(std::to_string(val), false); // Needs no stripping
+    }
+};
 
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
@@ -118,6 +118,14 @@ inline bool read(const std::string& str, int64_t& val)
 Istream& operator>>(Istream& is, int64_t& val);
 Ostream& operator<<(Ostream& os, const int64_t val);
 
+// On Darwin: long is not unambiguously (int32_t | int64_t)
+// - explicitly resolve for input and output
+#ifdef darwin
+    Istream& operator>>(Istream& is, long& val);
+    Ostream& operator<<(Ostream& os, const long val);
+#endif
+
+
 //- Template specialization for pTraits<int64_t>
 template<>
 class pTraits<int64_t>
@@ -156,22 +164,22 @@ public:
 
     // Constructors
 
-        //- Construct from primitive
+        //- Copy construct from primitive
         explicit pTraits(const int64_t& val);
 
-        //- Construct from Istream
+        //- Read construct from Istream
         pTraits(Istream& is);
 
 
     // Member Functions
 
-        //- Access to the int64_t value
+        //- Access to the value
         operator int64_t() const
         {
             return p_;
         }
 
-        //- Access to the int value
+        //- Access to the value
         operator int64_t&()
         {
             return p_;

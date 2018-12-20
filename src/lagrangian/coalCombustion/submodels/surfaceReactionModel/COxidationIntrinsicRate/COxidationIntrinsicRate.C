@@ -38,13 +38,13 @@ Foam::COxidationIntrinsicRate<CloudType>::COxidationIntrinsicRate
 )
 :
     SurfaceReactionModel<CloudType>(dict, owner, typeName),
-    Sb_(readScalar(this->coeffDict().lookup("Sb"))),
-    C1_(readScalar(this->coeffDict().lookup("C1"))),
-    rMean_(readScalar(this->coeffDict().lookup("rMean"))),
-    theta_(readScalar(this->coeffDict().lookup("theta"))),
-    Ai_(readScalar(this->coeffDict().lookup("Ai"))),
-    Ei_(readScalar(this->coeffDict().lookup("Ei"))),
-    Ag_(readScalar(this->coeffDict().lookup("Ag"))),
+    Sb_(this->coeffDict().getScalar("Sb")),
+    C1_(this->coeffDict().getScalar("C1")),
+    rMean_(this->coeffDict().getScalar("rMean")),
+    theta_(this->coeffDict().getScalar("theta")),
+    Ai_(this->coeffDict().getScalar("Ai")),
+    Ei_(this->coeffDict().getScalar("Ei")),
+    Ag_(this->coeffDict().getScalar("Ag")),
     tau_(this->coeffDict().lookupOrDefault("tau", sqrt(2.0))),
     CsLocalId_(-1),
     O2GlobalId_(owner.composition().carrierId("O2")),
@@ -180,7 +180,7 @@ Foam::scalar Foam::COxidationIntrinsicRate<CloudType>::calculate
         max(0.5*d*sqrt(Sb_*rhop*Ag_*ki*ppO2/(De*rhoO2)), ROOTVSMALL);
 
     // Effectiveness factor []
-    const scalar eta = max(3.0*sqr(phi)*(phi/tanh(phi) - 1.0), 0.0);
+    const scalar eta = max(3.0/sqr(phi)*(phi/tanh(phi) - 1.0), 0.0);
 
     // Chemical rate [kmol/m2/s]
     const scalar R = eta*d/6.0*rhop*Ag_*ki;

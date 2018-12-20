@@ -50,12 +50,6 @@ Foam::radiation::noScatter::noScatter
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::radiation::noScatter::~noScatter()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 Foam::tmp<Foam::volScalarField> Foam::radiation::noScatter::sigmaEff() const
@@ -74,7 +68,7 @@ Foam::tmp<Foam::volScalarField> Foam::radiation::noScatter::sigmaEff() const
                 false
             ),
             mesh_,
-            dimensionedScalar("zero", dimless/dimLength, 0.0)
+            dimensionedScalar(dimless/dimLength, Zero)
         )
     );
 }

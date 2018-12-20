@@ -3,6 +3,8 @@
 #include "polyMeshTools.H"
 #include "zeroGradientFvPatchFields.H"
 #include "syncTools.H"
+#include "tetPointRef.H"
+#include "regionSplit.H"
 
 using namespace Foam;
 
@@ -69,7 +71,7 @@ void minFaceToCell
 void Foam::writeFields
 (
     const fvMesh& mesh,
-    const HashSet<word>& selectedFields
+    const wordHashSet& selectedFields
 )
 {
     if (selectedFields.empty())
@@ -97,7 +99,7 @@ void Foam::writeFields
         (
             radToDeg
             (
-                Foam::acos(min(scalar(1.0), faceOrthogonality))
+                Foam::acos(min(scalar(1), faceOrthogonality))
             )
         );
 
@@ -113,7 +115,7 @@ void Foam::writeFields
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("angle", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             calculatedFvPatchScalarField::typeName
         );
         //- Take max
@@ -147,7 +149,7 @@ void Foam::writeFields
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("weight", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             calculatedFvPatchScalarField::typeName
         );
         //- Take min
@@ -188,7 +190,7 @@ void Foam::writeFields
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("skewness", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             calculatedFvPatchScalarField::typeName
         );
         //- Take max
@@ -215,7 +217,7 @@ void Foam::writeFields
                 false
             ),
             mesh,
-            dimensionedScalar("cellDeterminant", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
         cellDeterminant.primitiveFieldRef() =
@@ -249,7 +251,7 @@ void Foam::writeFields
                 false
             ),
             mesh,
-            dimensionedScalar("aspectRatio", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
 
@@ -273,6 +275,7 @@ void Foam::writeFields
 
     // cell type
     // ~~~~~~~~~
+
     if (selectedFields.found("cellShapes"))
     {
         volScalarField shape
@@ -287,7 +290,7 @@ void Foam::writeFields
                 false
             ),
             mesh,
-            dimensionedScalar("cellShapes", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             zeroGradientFvPatchScalarField::typeName
         );
         const cellShapeList& cellShapes = mesh.cellShapes();
@@ -316,7 +319,7 @@ void Foam::writeFields
                 false
             ),
             mesh,
-            dimensionedScalar("cellVolume", dimVolume, 0),
+            dimensionedScalar(dimVolume, Zero),
             calculatedFvPatchScalarField::typeName
         );
         V.ref() = mesh.V();
@@ -346,7 +349,7 @@ void Foam::writeFields
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("cellVolumeRatio", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             calculatedFvPatchScalarField::typeName
         );
         //- Take min
@@ -354,6 +357,99 @@ void Foam::writeFields
         Info<< "    Writing cell volume ratio to "
             << cellVolumeRatio.name() << endl;
         cellVolumeRatio.write();
+    }
+
+    // minTetVolume
+    if (selectedFields.found("minTetVolume"))
+    {
+        volScalarField minTetVolume
+        (
+            IOobject
+            (
+                "minTetVolume",
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE,
+                false
+            ),
+            mesh,
+            dimensionedScalar("minTetVolume", dimless, GREAT),
+            zeroGradientFvPatchScalarField::typeName
+        );
+
+
+        const labelList& own = mesh.faceOwner();
+        const labelList& nei = mesh.faceNeighbour();
+        const pointField& p = mesh.points();
+        forAll(own, facei)
+        {
+            const face& f = mesh.faces()[facei];
+            const point& fc = mesh.faceCentres()[facei];
+
+            {
+                const point& ownCc = mesh.cellCentres()[own[facei]];
+                scalar& ownVol = minTetVolume[own[facei]];
+                forAll(f, fp)
+                {
+                    scalar tetQual = tetPointRef
+                    (
+                        p[f[fp]],
+                        p[f.nextLabel(fp)],
+                        ownCc,
+                        fc
+                    ).quality();
+                    ownVol = min(ownVol, tetQual);
+                }
+            }
+            if (mesh.isInternalFace(facei))
+            {
+                const point& neiCc = mesh.cellCentres()[nei[facei]];
+                scalar& neiVol = minTetVolume[nei[facei]];
+                forAll(f, fp)
+                {
+                    scalar tetQual = tetPointRef
+                    (
+                        p[f[fp]],
+                        p[f.nextLabel(fp)],
+                        fc,
+                        neiCc
+                    ).quality();
+                    neiVol = min(neiVol, tetQual);
+                }
+            }
+        }
+
+        minTetVolume.correctBoundaryConditions();
+        Info<< "    Writing minTetVolume to " << minTetVolume.name() << endl;
+        minTetVolume.write();
+    }
+
+    if (selectedFields.found("cellRegion"))
+    {
+        volScalarField cellRegion
+        (
+            IOobject
+            (
+                "cellRegion",
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(dimless, Zero),
+            calculatedFvPatchScalarField::typeName
+        );
+
+        regionSplit rs(mesh);
+        forAll(rs, celli)
+        {
+            cellRegion[celli] = rs[celli];
+        }
+        cellRegion.correctBoundaryConditions();
+        Info<< "    Writing cell region to " << cellRegion.name() << endl;
+        cellRegion.write();
     }
 
     Info<< endl;

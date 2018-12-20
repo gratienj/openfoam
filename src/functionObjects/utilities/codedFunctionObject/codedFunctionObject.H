@@ -134,13 +134,11 @@ protected:
         virtual const dictionary& codeDict() const;
 
 
-private:
+        //- No copy construct
+        codedFunctionObject(const codedFunctionObject&) = delete;
 
-        //- Disallow default bitwise copy construct
-        codedFunctionObject(const codedFunctionObject&);
-
-        //- Disallow default bitwise assignment
-        void operator=(const codedFunctionObject&);
+        //- No copy assignment
+        void operator=(const codedFunctionObject&) = delete;
 
 
 public:

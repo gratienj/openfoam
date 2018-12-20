@@ -58,20 +58,17 @@ Foam::volScalarField& Foam::functionObjects::scalarTransport::transportedField()
 {
     if (!foundObject<volScalarField>(fieldName_))
     {
-        tmp<volScalarField> tfldPtr
+        auto tfldPtr = tmp<volScalarField>::New
         (
-            new volScalarField
+            IOobject
             (
-                IOobject
-                (
-                    fieldName_,
-                    mesh_.time().timeName(),
-                    mesh_,
-                    IOobject::MUST_READ,
-                    IOobject::AUTO_WRITE
-                ),
-                mesh_
-            )
+                fieldName_,
+                mesh_.time().timeName(),
+                mesh_,
+                IOobject::MUST_READ,
+                IOobject::AUTO_WRITE
+            ),
+            mesh_
         );
         store(fieldName_, tfldPtr);
 
@@ -81,10 +78,7 @@ Foam::volScalarField& Foam::functionObjects::scalarTransport::transportedField()
         }
     }
 
-    return const_cast<volScalarField&>
-    (
-        lookupObject<volScalarField>(fieldName_)
-    );
+    return lookupObjectRef<volScalarField>(fieldName_);
 }
 
 
@@ -94,93 +88,83 @@ Foam::tmp<Foam::volScalarField> Foam::functionObjects::scalarTransport::D
     const surfaceScalarField& phi
 ) const
 {
-    typedef incompressible::turbulenceModel icoModel;
-    typedef compressible::turbulenceModel cmpModel;
-
-    word Dname("D" + s.name());
+    const word Dname("D" + s.name());
 
     if (constantD_)
     {
-        tmp<volScalarField> tD
+        return tmp<volScalarField>::New
         (
-            new volScalarField
+            IOobject
             (
-                IOobject
-                (
-                    Dname,
-                    mesh_.time().timeName(),
-                    mesh_.time(),
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh_,
-                dimensionedScalar(Dname, phi.dimensions()/dimLength, D_)
-            )
+                Dname,
+                mesh_.time().timeName(),
+                mesh_.time(),
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh_,
+            dimensionedScalar(Dname, phi.dimensions()/dimLength, D_)
         );
-
-        return tD;
     }
-    else if (nutName_ != "none")
+
+    if (nutName_ != "none")
     {
         const volScalarField& nutMean =
             mesh_.lookupObject<volScalarField>(nutName_);
 
-        return tmp<volScalarField>
-        (
-            new volScalarField(Dname, nutMean)
-        );
+        return tmp<volScalarField>::New(Dname, nutMean);
     }
-    else if (foundObject<icoModel>(turbulenceModel::propertiesName))
-    {
-        const icoModel& model = lookupObject<icoModel>
-        (
-            turbulenceModel::propertiesName
-        );
 
-        return tmp<volScalarField>
-        (
-             new volScalarField
-             (
-                 Dname,
-                 alphaD_*model.nu() + alphaDt_*model.nut()
-             )
-        );
-    }
-    else if (foundObject<cmpModel>(turbulenceModel::propertiesName))
+    // Incompressible
     {
-        const cmpModel& model = lookupObject<cmpModel>
-        (
-            turbulenceModel::propertiesName
-        );
-
-        return tmp<volScalarField>
-        (
-             new volScalarField
-             (
-                 Dname,
-                 alphaD_*model.mu() + alphaDt_*model.mut()
-             )
-        );
-    }
-    else
-    {
-        return tmp<volScalarField>
-        (
-            new volScalarField
+        const auto* turb =
+            findObject<incompressible::turbulenceModel>
             (
-                IOobject
-                (
-                    Dname,
-                    mesh_.time().timeName(),
-                    mesh_.time(),
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh_,
-                dimensionedScalar(Dname, phi.dimensions()/dimLength, 0.0)
-            )
-        );
+                turbulenceModel::propertiesName
+            );
+
+        if (turb)
+        {
+            return tmp<volScalarField>::New
+            (
+                Dname,
+                alphaD_ * turb->nu() + alphaDt_ * turb->nut()
+            );
+        }
     }
+
+    // Compressible
+    {
+        const auto* turb =
+            findObject<compressible::turbulenceModel>
+            (
+                turbulenceModel::propertiesName
+            );
+
+        if (turb)
+        {
+            return tmp<volScalarField>::New
+            (
+                Dname,
+                alphaD_ * turb->mu() + alphaDt_ * turb->mut()
+            );
+        }
+    }
+
+
+    return tmp<volScalarField>::New
+    (
+        IOobject
+        (
+            Dname,
+            mesh_.time().timeName(),
+            mesh_.time(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh_,
+        dimensionedScalar(phi.dimensions()/dimLength, Zero)
+    );
 }
 
 
@@ -209,7 +193,7 @@ Foam::functionObjects::scalarTransport::scalarTransport
     resetOnStartUp_(false),
     schemesField_("unknown-schemesField"),
     fvOptions_(mesh_),
-    bounded01_(dict.lookupOrDefault<Switch>("bounded01", true))
+    bounded01_(dict.lookupOrDefault("bounded01", true))
 {
     read(dict);
 
@@ -219,7 +203,7 @@ Foam::functionObjects::scalarTransport::scalarTransport
 
     if (resetOnStartUp_)
     {
-        s == dimensionedScalar("zero", dimless, 0.0);
+        s == dimensionedScalar(dimless, Zero);
     }
 }
 

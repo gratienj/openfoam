@@ -61,9 +61,11 @@ class LESfilter
 
     // Private Member Functions
 
-        // Disallow default bitwise copy construct and assignment
-        LESfilter(const LESfilter&);
-        void operator=(const LESfilter&);
+        //- No copy construct
+        LESfilter(const LESfilter&) = delete;
+
+        //- No copy assignment
+        void operator=(const LESfilter&) = delete;
 
 
 protected:
@@ -79,7 +81,7 @@ protected:
     template<class GeoFieldType>
     void correctBoundaryConditions(const tmp<GeoFieldType>& tgf) const
     {
-        const_cast<GeoFieldType&>(tgf()).correctBoundaryConditions();
+        tgf.constCast().correctBoundaryConditions();
     }
 
 

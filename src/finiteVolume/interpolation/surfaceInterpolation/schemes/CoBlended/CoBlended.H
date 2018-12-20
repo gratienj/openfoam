@@ -105,11 +105,11 @@ class CoBlended
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        CoBlended(const CoBlended&);
+        //- No copy construct
+        CoBlended(const CoBlended&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const CoBlended&);
+        //- No copy assignment
+        void operator=(const CoBlended&) = delete;
 
 
 public:
@@ -249,7 +249,7 @@ public:
 
             return
                 bf*tScheme1_().weights(vf)
-              + (scalar(1.0) - bf)*tScheme2_().weights(vf);
+              + (scalar(1) - bf)*tScheme2_().weights(vf);
         }
 
 
@@ -265,7 +265,7 @@ public:
 
             return
                 bf*tScheme1_().interpolate(vf)
-              + (scalar(1.0) - bf)*tScheme2_().interpolate(vf);
+              + (scalar(1) - bf)*tScheme2_().interpolate(vf);
         }
 
 
@@ -294,7 +294,7 @@ public:
                     (
                         bf
                       * tScheme1_().correction(vf)
-                      + (scalar(1.0) - bf)
+                      + (scalar(1) - bf)
                       * tScheme2_().correction(vf)
                     );
                 }
@@ -311,7 +311,7 @@ public:
             {
                 return
                 (
-                    (scalar(1.0) - bf)
+                    (scalar(1) - bf)
                   * tScheme2_().correction(vf)
                 );
             }

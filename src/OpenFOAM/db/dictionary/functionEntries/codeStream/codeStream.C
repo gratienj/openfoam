@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -147,7 +147,8 @@ Foam::functionEntries::codeStream::getFunction
 
     if (!lib)
     {
-        Info<< "Using #codeStream with " << libPath << endl;
+        DetailInfo
+            << "Using #codeStream with " << libPath << endl;
     }
 
 
@@ -202,10 +203,8 @@ Foam::functionEntries::codeStream::getFunction
 
                 if (!dynCode.copyOrCreateFiles(true))
                 {
-                    FatalIOErrorInFunction
-                    (
-                        parentDict
-                    )   << "Failed writing files for" << nl
+                    FatalIOErrorInFunction(parentDict)
+                        << "Failed writing files for" << nl
                         << dynCode.libRelPath() << nl
                         << exit(FatalIOError);
                 }
@@ -213,10 +212,8 @@ Foam::functionEntries::codeStream::getFunction
 
             if (!dynCode.wmakeLibso())
             {
-                FatalIOErrorInFunction
-                (
-                    parentDict
-                )   << "Failed wmake " << dynCode.libRelPath() << nl
+                FatalIOErrorInFunction(parentDict)
+                    << "Failed wmake " << dynCode.libRelPath() << nl
                     << exit(FatalIOError);
             }
         }
@@ -265,10 +262,8 @@ Foam::functionEntries::codeStream::getFunction
 
                 if (mySize < masterSize)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        parentDict
-                    )   << "Cannot read (NFS mounted) library " << nl
+                    FatalIOErrorInFunction(parentDict)
+                        << "Cannot read (NFS mounted) library " << nl
                         << libPath << nl
                         << "on processor " << Pstream::myProcNo()
                         << " detected size " << mySize
@@ -303,10 +298,8 @@ Foam::functionEntries::codeStream::getFunction
 
             if (!dlLibs.open(libPath, false))
             {
-                FatalIOErrorInFunction
-                (
-                    parentDict
-                )   << "Failed loading library " << libPath << nl
+                FatalIOErrorInFunction(parentDict)
+                    << "Failed loading library " << libPath << nl
                     << "Did you add all libraries to the 'libs' entry"
                     << " in system/controlDict?"
                     << exit(FatalIOError);
@@ -333,10 +326,8 @@ Foam::functionEntries::codeStream::getFunction
 
     if (!haveLib)
     {
-        FatalIOErrorInFunction
-        (
-            parentDict
-        )   << "Failed loading library " << libPath
+        FatalIOErrorInFunction(parentDict)
+            << "Failed loading library " << libPath
             << " on some processors."
             << exit(FatalIOError);
     }
@@ -352,10 +343,8 @@ Foam::functionEntries::codeStream::getFunction
 
     if (!function)
     {
-        FatalIOErrorInFunction
-        (
-            parentDict
-        )   << "Failed looking up symbol " << dynCode.codeName()
+        FatalIOErrorInFunction(parentDict)
+            << "Failed looking up symbol " << dynCode.codeName()
             << " in library " << lib << exit(FatalIOError);
     }
 
@@ -372,7 +361,8 @@ bool Foam::functionEntries::codeStream::execute
     Istream& is
 )
 {
-    Info<< "Using #codeStream at line " << is.lineNumber()
+    DetailInfo
+        << "Using #codeStream at line " << is.lineNumber()
         << " in file " <<  parentDict.name() << endl;
 
     dynamicCode::checkSecurity
@@ -405,7 +395,8 @@ bool Foam::functionEntries::codeStream::execute
     Istream& is
 )
 {
-    Info<< "Using #codeStream at line " << is.lineNumber()
+    DetailInfo
+        << "Using #codeStream at line " << is.lineNumber()
         << " in file " <<  parentDict.name() << endl;
 
     dynamicCode::checkSecurity

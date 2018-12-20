@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -458,8 +458,11 @@ Foam::label Foam::faceCoupleInfo::mostAlignedCutEdge
 
             eVec /= magEVec;
 
-            vector eToEndPoint(localPoints[edgeEnd] - localPoints[otherPointi]);
-            eToEndPoint /= mag(eToEndPoint);
+            const vector eToEndPoint =
+                normalised
+                (
+                    localPoints[edgeEnd] - localPoints[otherPointi]
+                );
 
             scalar cosAngle = eVec & eToEndPoint;
 
@@ -905,7 +908,7 @@ void Foam::faceCoupleInfo::findPerfectMatchingFaces
             mesh0.faces(),
             mesh0.points(),
             mesh0.nInternalFaces(),
-            mesh0.nFaces() - mesh0.nInternalFaces()
+            mesh0.nBoundaryFaces()
         )
     );
 
@@ -916,7 +919,7 @@ void Foam::faceCoupleInfo::findPerfectMatchingFaces
             mesh1.faces(),
             mesh1.points(),
             mesh1.nInternalFaces(),
-            mesh1.nFaces() - mesh1.nInternalFaces()
+            mesh1.nBoundaryFaces()
         )
     );
 
@@ -981,11 +984,10 @@ void Foam::faceCoupleInfo::findSlavesCoveringMaster
 )
 {
     // Construct octree from all mesh0 boundary faces
-    labelList bndFaces(mesh0.nFaces()-mesh0.nInternalFaces());
-    forAll(bndFaces, i)
-    {
-        bndFaces[i] = mesh0.nInternalFaces() + i;
-    }
+    labelList bndFaces
+    (
+        identity(mesh0.nBoundaryFaces(), mesh0.nInternalFaces())
+    );
 
     treeBoundBox overallBb(mesh0.points());
 
@@ -1013,8 +1015,8 @@ void Foam::faceCoupleInfo::findSlavesCoveringMaster
 
     // Search nearest face for every mesh1 boundary face.
 
-    labelHashSet mesh0Set(mesh0.nFaces() - mesh0.nInternalFaces());
-    labelHashSet mesh1Set(mesh1.nFaces() - mesh1.nInternalFaces());
+    labelHashSet mesh0Set(mesh0.nBoundaryFaces());
+    labelHashSet mesh1Set(mesh1.nBoundaryFaces());
 
     for
     (
@@ -1484,12 +1486,13 @@ void Foam::faceCoupleInfo::perfectPointMatch
         // Faces do not have to be ordered (but all have
         // to match). Note: Faces will be already ordered if we enter here from
         // construct from meshes.
+
         matchedAllFaces = matchPoints
         (
             calcFaceCentres<List>
             (
                 cutFaces(),
-                cutPoints_,
+                cutFaces().points(),
                 0,
                 cutFaces().size()
             ),
@@ -1501,9 +1504,43 @@ void Foam::faceCoupleInfo::perfectPointMatch
                 slavePatch().size()
             ),
             scalarField(slavePatch().size(), absTol),
-            true,
+            false,
             cutToSlaveFaces_
         );
+
+        // If some of the face centres did not match, then try to match the
+        // point averages instead. There is no division by the face area in
+        // calculating the point average, so this is more stable when faces
+        // collapse onto a line or point.
+        if (!matchedAllFaces)
+        {
+            labelList cutToSlaveFacesTemp(cutToSlaveFaces_.size(), -1);
+
+            matchPoints
+            (
+                calcFacePointAverages<List>
+                (
+                    cutFaces(),
+                    cutFaces().points(),
+                    0,
+                    cutFaces().size()
+                ),
+                calcFacePointAverages<IndirectList>
+                (
+                    slavePatch(),
+                    slavePatch().points(),
+                    0,
+                    slavePatch().size()
+                ),
+                scalarField(slavePatch().size(), absTol),
+                true,
+                cutToSlaveFacesTemp
+            );
+
+            cutToSlaveFaces_ = max(cutToSlaveFaces_, cutToSlaveFacesTemp);
+
+            matchedAllFaces = min(cutToSlaveFaces_) != -1;
+        }
     }
 
 

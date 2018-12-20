@@ -56,7 +56,7 @@ inline void Foam::DynamicList<T, SizeMin>::assignDynList
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class T, int SizeMin>
-inline Foam::DynamicList<T, SizeMin>::DynamicList()
+inline constexpr Foam::DynamicList<T, SizeMin>::DynamicList() noexcept
 :
     capacity_(0)
 {}
@@ -170,17 +170,6 @@ template<class T, int SizeMin>
 inline Foam::DynamicList<T, SizeMin>::DynamicList
 (
     const UIndirectList<T>& lst
-)
-:
-    List<T>(lst),
-    capacity_(List<T>::size())
-{}
-
-
-template<class T, int SizeMin>
-inline Foam::DynamicList<T, SizeMin>::DynamicList
-(
-    const Xfer<List<T>>& lst
 )
 :
     List<T>(lst),
@@ -418,11 +407,7 @@ inline void Foam::DynamicList<T, SizeMin>::swap
     const label oldSize2 = lst.expandStorage();
 
     // Swap storage
-    Foam::Swap
-    (
-        static_cast<UList<T>&>(cur),
-        static_cast<UList<T>&>(lst)
-    );
+    UList<T>::swap(lst);
 
     // Match capacity to the underlying allocated list size
     cur.setCapacity(cur.size());
@@ -471,14 +456,6 @@ Foam::DynamicList<T, SizeMin>::transfer
     lst.shrink();  // Shrink away sort indices
     capacity_ = lst.size(); // Capacity after transfer == list size
     List<T>::transfer(lst);
-}
-
-
-template<class T, int SizeMin>
-inline Foam::Xfer<Foam::List<T>>
-Foam::DynamicList<T, SizeMin>::xfer()
-{
-    return xferMoveTo<List<T>>(*this);
 }
 
 

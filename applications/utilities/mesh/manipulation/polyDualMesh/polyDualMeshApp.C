@@ -28,8 +28,7 @@ Group
     grpMeshManipulationUtilities
 
 Description
-    Calculates the dual of a polyMesh. Adheres to all the feature and patch
-    edges.
+    Creates the dual of a polyMesh, adhering to all the feature and patch edges.
 
 Usage
     \b polyDualMesh featureAngle
@@ -47,8 +46,8 @@ Usage
         Normally only constructs a single face between two cells. This single
         face might be too distorted. splitAllFaces will create a single face for
         every original cell the face passes through. The mesh will thus have
-        multiple faces inbetween two cells! (so is not strictly upper-triangular
-        anymore - checkMesh will complain)
+        multiple faces in between two cells! (so is not strictly
+        upper-triangular anymore - checkMesh will complain)
 
       - \par -doNotPreserveFaceZones:
         By default all faceZones are preserved by marking all faces, edges and
@@ -67,7 +66,7 @@ Note
 #include "unitConversion.H"
 #include "polyTopoChange.H"
 #include "mapPolyMesh.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "meshTools.H"
 #include "OFstream.H"
 #include "meshDualiser.H"
@@ -87,7 +86,7 @@ using namespace Foam;
 void simpleMarkFeatures
 (
     const polyMesh& mesh,
-    const PackedBoolList& isBoundaryEdge,
+    const bitSet& isBoundaryEdge,
     const scalar featureAngle,
     const bool concaveMultiCells,
     const bool doNotPreserveFaceZones,
@@ -140,7 +139,7 @@ void simpleMarkFeatures
         SubList<face>
         (
             mesh.faces(),
-            mesh.nFaces()-mesh.nInternalFaces(),
+            mesh.nBoundaryFaces(),
             mesh.nInternalFaces()
         ),
         mesh.points()
@@ -238,7 +237,7 @@ void simpleMarkFeatures
     // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // Face centres that need inclusion in the dual mesh
-    labelHashSet featureFaceSet(mesh.nFaces()-mesh.nInternalFaces());
+    labelHashSet featureFaceSet(mesh.nBoundaryFaces());
     // A. boundary faces.
     for (label facei = mesh.nInternalFaces(); facei < mesh.nFaces(); facei++)
     {
@@ -360,48 +359,59 @@ void dumpFeatures
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Creates the dual of a polyMesh,"
+        " adhering to all the feature and patch edges."
+    );
+
     #include "addOverwriteOption.H"
     argList::noParallel();
 
-    argList::addArgument("featureAngle [0-180]");
+    argList::addArgument
+    (
+        "featureAngle",
+        "in degrees [0-180]"
+    );
+
     argList::addBoolOption
     (
         "splitAllFaces",
-        "have multiple faces inbetween cells"
+        "Have multiple faces in between cells"
     );
     argList::addBoolOption
     (
         "concaveMultiCells",
-        "split cells on concave boundary edges into multiple cells"
+        "Split cells on concave boundary edges into multiple cells"
     );
     argList::addBoolOption
     (
         "doNotPreserveFaceZones",
-        "disable the default behaviour of preserving faceZones by having"
-        " multiple faces inbetween cells"
+        "Disable the default behaviour of preserving faceZones by having"
+        " multiple faces in between cells"
     );
 
     #include "setRootCase.H"
     #include "createTime.H"
-    #include "createMesh.H"
+    #include "createNamedMesh.H"
 
     const word oldInstance = mesh.pointsInstance();
 
     // Mark boundary edges and points.
     // (Note: in 1.4.2 we can use the built-in mesh point ordering
     //  facility instead)
-    PackedBoolList isBoundaryEdge(mesh.nEdges());
+    bitSet isBoundaryEdge(mesh.nEdges());
     for (label facei = mesh.nInternalFaces(); facei < mesh.nFaces(); facei++)
     {
         const labelList& fEdges = mesh.faceEdges()[facei];
 
         forAll(fEdges, i)
         {
-            isBoundaryEdge.set(fEdges[i], 1);
+            isBoundaryEdge.set(fEdges[i]);
         }
     }
 
-    const scalar featureAngle = args.argRead<scalar>(1);
+    const scalar featureAngle = args.get<scalar>(1);
     const scalar minCos = Foam::cos(degToRad(featureAngle));
 
     Info<< "Feature:" << featureAngle << endl
@@ -409,7 +419,7 @@ int main(int argc, char *argv[])
         << endl;
 
 
-    const bool splitAllFaces = args.optionFound("splitAllFaces");
+    const bool splitAllFaces = args.found("splitAllFaces");
     if (splitAllFaces)
     {
         Info<< "Splitting all internal faces to create multiple faces"
@@ -417,12 +427,9 @@ int main(int argc, char *argv[])
             << endl;
     }
 
-    const bool overwrite = args.optionFound("overwrite");
-    const bool doNotPreserveFaceZones = args.optionFound
-    (
-        "doNotPreserveFaceZones"
-    );
-    const bool concaveMultiCells = args.optionFound("concaveMultiCells");
+    const bool overwrite = args.found("overwrite");
+    const bool doNotPreserveFaceZones = args.found("doNotPreserveFaceZones");
+    const bool concaveMultiCells = args.found("concaveMultiCells");
     if (concaveMultiCells)
     {
         Info<< "Generating multiple cells for points on concave feature edges."
@@ -534,7 +541,7 @@ int main(int argc, char *argv[])
     autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
 
     // Update fields
-    mesh.updateMesh(map);
+    mesh.updateMesh(map());
 
     // Optionally inflate mesh
     if (map().hasMotionPoints())
@@ -544,7 +551,7 @@ int main(int argc, char *argv[])
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
     else
     {

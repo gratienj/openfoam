@@ -89,11 +89,11 @@ class pointMapper
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        pointMapper(const pointMapper&);
+        //- No copy construct
+        pointMapper(const pointMapper&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const pointMapper&);
+        //- No copy assignment
+        void operator=(const pointMapper&) = delete;
 
 
         //- Calculate addressing for mapping with inserted points
@@ -142,7 +142,7 @@ public:
         //- Return interpolated addressing
         virtual const labelListList& addressing() const;
 
-        //- Return interpolaion weights
+        //- Return interpolation weights
         virtual const scalarListList& weights() const;
 
         //- Are there any inserted points

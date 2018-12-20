@@ -61,10 +61,10 @@ class IndirectListAddressing
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         IndirectListAddressing(const IndirectListAddressing&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const IndirectListAddressing&) = delete;
 
 
@@ -72,11 +72,11 @@ protected:
 
     // Constructors
 
-        //- Construct by copying the addressing array
-        explicit inline IndirectListAddressing(const labelUList& addr);
+        //- Copy construct from addressing array
+        inline explicit IndirectListAddressing(const labelUList& addr);
 
-        //- Construct by transferring addressing array
-        explicit inline IndirectListAddressing(const Xfer<List<label>>& addr);
+        //- Move construct from addressing array
+        inline explicit IndirectListAddressing(List<label>&& addr);
 
 
     // Member Functions
@@ -84,9 +84,11 @@ protected:
         //- Return the list addressing
         inline const List<label>& addressing() const;
 
-        //- Reset addressing
+        //- Copy reset addressing
         inline void resetAddressing(const labelUList& addr);
-        inline void resetAddressing(const Xfer<List<label>>& addr);
+
+        //- Move reset addressing
+        inline void resetAddressing(List<label>&& addr);
 
 };
 
@@ -103,10 +105,10 @@ class IndirectList
 {
     // Private Member Functions
 
-        //- Disallow default assignment operator
+        //- No copy assignment
         void operator=(const IndirectList<T>&) = delete;
 
-        //- Disallow assignment from UIndirectList
+        //- No copy assignment from UIndirectList
         void operator=(const UIndirectList<T>&) = delete;
 
 
@@ -114,25 +116,18 @@ public:
 
     // Constructors
 
-        //- Construct given the complete list and the addressing array
-        inline IndirectList
-        (
-            const UList<T>& completeList,
-            const labelUList& addr
-        );
+        //- Copy construct addressing, shallow copy values list reference.
+        inline IndirectList(const UList<T>& values, const labelUList& addr);
 
-        //- Construct given the complete list and by transferring addressing
-        inline IndirectList
-        (
-            const UList<T>& completeList,
-            const Xfer<List<label>>& addr
-        );
+        //- Move construct addressing, shallow copy values list reference.
+        inline IndirectList(const UList<T>& values, List<label>&& addr);
 
-        //- Copy constructor
-        inline IndirectList(const IndirectList<T>& lst);
+        //- Copy construct addressing, shallow copy values list reference.
+        inline IndirectList(const IndirectList<T>& list);
 
-        //- Construct from UIndirectList
-        explicit inline IndirectList(const UIndirectList<T>& lst);
+        //- Copy construct addressing, shallow copy values list reference
+        //- from UIndirectList
+        inline explicit IndirectList(const UIndirectList<T>& list);
 
 
     // Member Functions
@@ -140,7 +135,7 @@ public:
         //- Return the list addressing
         using UIndirectList<T>::addressing;
 
-        //- Reset addressing
+        //- Reset the list addressing
         using IndirectListAddressing::resetAddressing;
 
 

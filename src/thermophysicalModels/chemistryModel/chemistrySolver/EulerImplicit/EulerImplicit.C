@@ -26,19 +26,19 @@ License
 #include "EulerImplicit.H"
 #include "addToRunTimeSelectionTable.H"
 #include "simpleMatrix.H"
+#include "Reaction.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class ChemistryModel>
 Foam::EulerImplicit<ChemistryModel>::EulerImplicit
 (
-    const fvMesh& mesh,
-    const word& phaseName
+    typename ChemistryModel::reactionThermo& thermo
 )
 :
-    chemistrySolver<ChemistryModel>(mesh, phaseName),
+    chemistrySolver<ChemistryModel>(thermo),
     coeffsDict_(this->subDict("EulerImplicitCoeffs")),
-    cTauChem_(readScalar(coeffsDict_.lookup("cTauChem"))),
+    cTauChem_(coeffsDict_.get<scalar>("cTauChem")),
     eqRateLimiter_(coeffsDict_.lookup("equilibriumRateLimiter")),
     cTp_(this->nEqns())
 {}

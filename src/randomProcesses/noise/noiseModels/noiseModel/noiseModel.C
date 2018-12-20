@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015-2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,6 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "noiseModel.H"
+#include "functionObject.H"
+#include "argList.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -43,6 +45,9 @@ void Foam::noiseModel::readWriteOption
 ) const
 {
     dict.readIfPresent(lookup, option);
+
+    // Only writing on the master process
+    option = option && Pstream::master();
 
     if (option)
     {
@@ -136,17 +141,15 @@ Foam::label Foam::noiseModel::findStartTimeIndex
 
 Foam::fileName Foam::noiseModel::baseFileDir(const label dataseti) const
 {
-    fileName baseDir("$FOAM_CASE");
-    word datasetName("input" + Foam::name(dataseti));
-    baseDir =
-        baseDir.expand()
-       /"postProcessing"
-       /"noise"
-       /outputPrefix_
-       /type()
-       /datasetName;
-
-    return baseDir;
+    return
+    (
+        argList::envGlobalPath()
+      / functionObject::outputPrefix
+      / "noise"
+      / outputPrefix_
+      / type()
+      / ("input" + Foam::name(dataseti))
+    );
 }
 
 
@@ -177,12 +180,6 @@ Foam::noiseModel::noiseModel(const dictionary& dict, const bool readFields)
         read(dict);
     }
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::noiseModel::~noiseModel()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -236,6 +233,7 @@ bool Foam::noiseModel::read(const dictionary& dict)
     readWriteOption(optDict, "writePrmsf", writePrmsf_);
     readWriteOption(optDict, "writeSPL", writeSPL_);
     readWriteOption(optDict, "writePSD", writePSD_);
+    readWriteOption(optDict, "writePSDf", writePSDf_);
     readWriteOption(optDict, "writeOctaves", writeOctaves_);
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -211,6 +211,16 @@ class faceCoupleInfo
             //- Calculate face centres from (subset of) faces.
             template<template<class> class FaceList>
             static pointField calcFaceCentres
+            (
+                const FaceList<face>&,
+                const pointField&,
+                const label start,
+                const label size
+            );
+
+            //- Calculate face point averages from (subset of) faces.
+            template<template<class> class FaceList>
+            static pointField calcFacePointAverages
             (
                 const FaceList<face>&,
                 const pointField&,
@@ -441,19 +451,19 @@ public:
             //- Addressing engine for coupled faces on mesh0
             const indirectPrimitivePatch& masterPatch() const
             {
-                return masterPatchPtr_();
+                return *masterPatchPtr_;
             }
 
             //- Addressing engine for coupled faces on mesh1
             const indirectPrimitivePatch& slavePatch() const
             {
-                return slavePatchPtr_();
+                return *slavePatchPtr_;
             }
 
             //- Addressing engine for combined set of faces.
             const primitiveFacePatch& cutFaces() const
             {
-                return cutFacesPtr_();
+                return *cutFacesPtr_;
             }
 
             //- Points for combined set of faces.

@@ -252,11 +252,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        faFieldDecomposer(const faFieldDecomposer&);
+        //- No copy construct
+        faFieldDecomposer(const faFieldDecomposer&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faFieldDecomposer&);
+        //- No copy assignment
+        void operator=(const faFieldDecomposer&) = delete;
 
 
 public:
@@ -283,7 +283,7 @@ public:
 
         //- Decompose area field
         template<class Type>
-        tmp<GeometricField<Type, faPatchField, areaMesh> >
+        tmp<GeometricField<Type, faPatchField, areaMesh>>
         decomposeField
         (
             const GeometricField<Type, faPatchField, areaMesh>& field
@@ -291,7 +291,7 @@ public:
 
         //- Decompose surface field
         template<class Type>
-        tmp<GeometricField<Type, faePatchField, edgeMesh> >
+        tmp<GeometricField<Type, faePatchField, edgeMesh>>
         decomposeField
         (
             const GeometricField<Type, faePatchField, edgeMesh>& field

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,12 +50,12 @@ SourceFiles
 namespace Foam
 {
 
+// Forward declarations
+
 class Istream;
 class Ostream;
 class triPoints;
 class plane;
-
-// Forward declaration of friend functions and operators
 
 template<class Point, class PointRef> class triangle;
 
@@ -158,7 +158,7 @@ private:
         template<class AboveOp, class BelowOp>
         inline static void triSliceWithPlane
         (
-            const plane& pl,
+            const plane& pln,
             const triPoints& tri,
             AboveOp& aboveOp,
             BelowOp& belowOp
@@ -206,11 +206,21 @@ public:
             //- Return centre (centroid)
             inline Point centre() const;
 
+            //- The area normal - with magnitude equal to area of triangle
+            inline vector areaNormal() const;
+
+            //- Return unit normal
+            inline vector unitNormal() const;
+
+            //- Legacy name for areaNormal().
+            //  \deprecated(2018-06) Deprecated for new use
+            inline vector normal() const
+            {
+                return areaNormal();
+            }
+
             //- Return scalar magnitude
             inline scalar mag() const;
-
-            //- Return vector normal
-            inline vector normal() const;
 
             //- Return circum-centre
             inline Point circumCentre() const;
@@ -313,11 +323,19 @@ public:
                 pointHit& edgePoint
             ) const;
 
+            //- The sign for which side of the face plane the point is on.
+            //  Uses the supplied tolerance for rounding around zero.
+            //  \return
+            //  -  0: on plane
+            //  - +1: front-side
+            //  - -1: back-side
+            inline int sign(const point& p, const scalar tol = SMALL) const;
+
             //- Decompose triangle into triangles above and below plane
             template<class AboveOp, class BelowOp>
             inline void sliceWithPlane
             (
-                const plane& pl,
+                const plane& pln,
                 AboveOp& aboveOp,
                 BelowOp& belowOp
             ) const;

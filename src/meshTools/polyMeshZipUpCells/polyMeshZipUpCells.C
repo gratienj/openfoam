@@ -720,12 +720,9 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
         if (problemCells.size())
         {
             // This cycle has failed.  Print out the problem cells
-            labelList toc(problemCells.toc());
-            sort(toc);
-
             FatalErrorInFunction
                 << "Found " << problemCells.size() << " problem cells." << nl
-                << "Cells: " << toc
+                << "Cells: " << problemCells.sortedToc()
                 << abort(FatalError);
         }
 
@@ -753,10 +750,10 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
         // (patches guaranteed to be in increasing order)
         mesh.resetPrimitives
         (
-            Xfer<pointField>::null(),
-            xferMove(newFaces),
-            Xfer<labelList>::null(),
-            Xfer<labelList>::null(),
+            autoPtr<pointField>(),  // <- null: leaves points untouched
+            autoPtr<faceList>::New(std::move(newFaces)),
+            autoPtr<labelList>(),   // <- null: leaves owner untouched
+            autoPtr<labelList>(),   // <- null: leaves neighbour untouched
             patchSizes,
             patchStarts,
             true                // boundary forms valid boundary mesh.

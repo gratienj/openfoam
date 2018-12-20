@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,14 +31,14 @@ const Foam::Enum
 <
     Foam::coordSet::coordFormat
 >
-Foam::coordSet::coordFormatNames_
-{
+Foam::coordSet::coordFormatNames
+({
     { coordFormat::XYZ, "xyz" },
     { coordFormat::X, "x" },
     { coordFormat::Y, "y" },
     { coordFormat::Z, "z" },
-    { coordFormat::DISTANCE, "distance" }
-};
+    { coordFormat::DISTANCE, "distance" },
+});
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -61,13 +61,26 @@ void Foam::coordSet::checkDimensions() const
 Foam::coordSet::coordSet
 (
     const word& name,
+    const coordFormat axisType
+)
+:
+    pointField(),
+    name_(name),
+    axis_(axisType),
+    curveDist_()
+{}
+
+
+Foam::coordSet::coordSet
+(
+    const word& name,
     const word& axis
 )
 :
-    pointField(0),
+    pointField(),
     name_(name),
-    axis_(coordFormatNames_[axis]),
-    curveDist_(0)
+    axis_(coordFormatNames[axis]),
+    curveDist_()
 {}
 
 
@@ -81,8 +94,25 @@ Foam::coordSet::coordSet
 :
     pointField(points),
     name_(name),
-    axis_(coordFormatNames_[axis]),
+    axis_(coordFormatNames[axis]),
     curveDist_(curveDist)
+{
+    checkDimensions();
+}
+
+
+Foam::coordSet::coordSet
+(
+    const word& name,
+    const word& axis,
+    List<point>&& points,
+    scalarList&& curveDist
+)
+:
+    pointField(std::move(points)),
+    name_(name),
+    axis_(coordFormatNames[axis]),
+    curveDist_(std::move(curveDist))
 {
     checkDimensions();
 }
@@ -122,7 +152,7 @@ Foam::scalar Foam::coordSet::scalarCoord(const label index) const
             if (curveDist_.empty())
             {
                 FatalErrorInFunction
-                    << "Axis type '" << coordFormatNames_[axis_]
+                    << "Axis type '" << coordFormatNames[axis_]
                     << "' requested but curve distance has not been set"
                     << abort(FatalError);
             }
@@ -132,7 +162,7 @@ Foam::scalar Foam::coordSet::scalarCoord(const label index) const
         default:
         {
             FatalErrorInFunction
-                << "Illegal axis specification '" << coordFormatNames_[axis_]
+                << "Illegal axis specification '" << coordFormatNames[axis_]
                 << "' for sampling line " << name_
                 << exit(FatalError);
 
@@ -152,7 +182,7 @@ Foam::point Foam::coordSet::vectorCoord(const label index) const
 
 Foam::Ostream& Foam::coordSet::write(Ostream& os) const
 {
-    os  << "name:" << name_ << " axis:" << coordFormatNames_[axis_]
+    os  << "name:" << name_ << " axis:" << coordFormatNames[axis_]
         << nl
         << nl << "\t(coord)"
         << endl;

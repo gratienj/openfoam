@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,8 +57,46 @@ namespace functionEntries
         primitiveEntryIstream,
         include
     );
+
+    addNamedToMemberFunctionSelectionTable
+    (
+        functionEntry,
+        sincludeEntry,
+        execute,
+        dictionaryIstream,
+        sinclude
+    );
+
+    addNamedToMemberFunctionSelectionTable
+    (
+        functionEntry,
+        sincludeEntry,
+        execute,
+        primitiveEntryIstream,
+        sinclude
+    );
+
+    // Compat 1712 and earlier
+    addNamedToMemberFunctionSelectionTable
+    (
+        functionEntry,
+        sincludeEntry,
+        execute,
+        dictionaryIstream,
+        includeIfPresent
+    );
+
+    addNamedToMemberFunctionSelectionTable
+    (
+        functionEntry,
+        sincludeEntry,
+        execute,
+        primitiveEntryIstream,
+        includeIfPresent
+    );
 }
 }
+
 
 // * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * * //
 
@@ -97,13 +135,13 @@ bool Foam::functionEntries::includeEntry::execute
     const fileName fName(resolveFile(is.name().path(), rawName, parentDict));
 
     autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
-    ISstream& ifs = ifsPtr();
+    auto& ifs = *ifsPtr;
 
     if (ifs)
     {
         if (Foam::functionEntries::includeEntry::log)
         {
-            Info<< fName << endl;
+            DetailInfo << fName << endl;
         }
 
         // Add watch on included file
@@ -121,10 +159,8 @@ bool Foam::functionEntries::includeEntry::execute
         return true;
     }
 
-    FatalIOErrorInFunction
-    (
-        is
-    )   << "Cannot open include file "
+    FatalIOErrorInFunction(is)
+        << "Cannot open include file "
         << (ifs.name().size() ? ifs.name() : rawName)
         << " while reading dictionary " << parentDict.name()
         << exit(FatalIOError);
@@ -144,13 +180,13 @@ bool Foam::functionEntries::includeEntry::execute
     const fileName fName(resolveFile(is.name().path(), rawName, parentDict));
 
     autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
-    ISstream& ifs = ifsPtr();
+    auto& ifs = *ifsPtr;
 
     if (ifs)
     {
         if (Foam::functionEntries::includeEntry::log)
         {
-            Info<< fName << endl;
+            DetailInfo << fName << endl;
         }
 
         // Add watch on included file
@@ -168,15 +204,88 @@ bool Foam::functionEntries::includeEntry::execute
         return true;
     }
 
-    FatalIOErrorInFunction
-    (
-        is
-    )   << "Cannot open include file "
+    FatalIOErrorInFunction(is)
+        << "Cannot open include file "
         << (ifs.name().size() ? ifs.name() : rawName)
         << " while reading dictionary " << parentDict.name()
         << exit(FatalIOError);
 
     return false;
+}
+
+
+bool Foam::functionEntries::sincludeEntry::execute
+(
+    dictionary& parentDict,
+    Istream& is
+)
+{
+    const fileName rawName(is);
+    const fileName fName(resolveFile(is.name().path(), rawName, parentDict));
+
+    autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
+    auto& ifs = *ifsPtr;
+
+    if (ifs)
+    {
+        if (Foam::functionEntries::includeEntry::log)
+        {
+            DetailInfo << fName << endl;
+        }
+
+        // Add watch on included file
+        const dictionary& top = parentDict.topDict();
+        if (isA<regIOobject>(top))
+        {
+            regIOobject& rio = const_cast<regIOobject&>
+            (
+                dynamic_cast<const regIOobject&>(top)
+            );
+            rio.addWatch(fName);
+        }
+
+        parentDict.read(ifs);
+    }
+
+    return true; // Never fails
+}
+
+
+bool Foam::functionEntries::sincludeEntry::execute
+(
+    const dictionary& parentDict,
+    primitiveEntry& entry,
+    Istream& is
+)
+{
+    const fileName rawName(is);
+    const fileName fName(resolveFile(is.name().path(), rawName, parentDict));
+
+    autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
+    auto& ifs = *ifsPtr;
+
+    if (ifs)
+    {
+        if (Foam::functionEntries::includeEntry::log)
+        {
+            DetailInfo << fName << endl;
+        }
+
+        // Add watch on included file
+        const dictionary& top = parentDict.topDict();
+        if (isA<regIOobject>(top))
+        {
+            regIOobject& rio = const_cast<regIOobject&>
+            (
+                dynamic_cast<const regIOobject&>(top)
+            );
+            rio.addWatch(fName);
+        }
+
+        entry.read(parentDict, ifs);
+    }
+
+    return true; // Never fails
 }
 
 

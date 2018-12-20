@@ -111,7 +111,7 @@ inline Foam::label Foam::mappedPatchBase::sampleSize() const
         case NEARESTFACE:
         {
             const polyMesh& mesh = sampleMesh();
-            return mesh.nFaces() - mesh.nInternalFaces();
+            return mesh.nBoundaryFaces();
         }
         default:
         {
@@ -148,7 +148,7 @@ inline const Foam::mapDistribute& Foam::mappedPatchBase::map() const
         calcMapping();
     }
 
-    return mapPtr_();
+    return *mapPtr_;
 }
 
 
@@ -162,7 +162,7 @@ inline const Foam::AMIPatchToPatchInterpolation& Foam::mappedPatchBase::AMI
         calcAMI();
     }
 
-    return AMIPtr_();
+    return *AMIPtr_;
 }
 
 

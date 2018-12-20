@@ -64,12 +64,17 @@ int main(int argc, char *argv[])
         "list",
         "List directories or files to be checked"
     );
+    argList::addBoolOption
+    (
+        "list-all",
+        "List all directories (including non-existence ones)"
+    );
     argList::addArgument("file...");
 
     argList::addNote
     (
         "Locate user/group/other file with semantics similar to the "
-        "~OpenFOAM/fileName expansion."
+        "<etc>/fileName expansion."
     );
 
     argList args(argc, argv, false, true);
@@ -77,9 +82,15 @@ int main(int argc, char *argv[])
     // First handle no parameters
     if (args.size() == 1)
     {
-        if (args.optionFound("list"))
+        if (args.found("list-all"))
         {
-            fileNameList results = findEtcDirs();
+            fileNameList results = etcDirs(false);
+            printList(results);
+            return 0;
+        }
+        else if (args.found("list"))
+        {
+            fileNameList results = etcDirs();
             printList(results);
             return 0;
         }
@@ -91,7 +102,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    const bool listAll = (args.optionFound("all") || args.optionFound("list"));
+
+    // This should and will fail:
+    //// Info<<"find bad file:" << nl
+    ////     << findEtcFile("##BadName##", true) << "FAIL" << endl;
+
+
+    const bool listAll = (args.found("all") || args.found("list"));
 
     int error = 0;
 

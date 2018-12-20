@@ -49,13 +49,13 @@ int main(int argc, char *argv[])
         "Convert between edgeMesh formats"
     );
     argList::noParallel();
-    argList::addArgument("inputFile");
-    argList::addArgument("outputFile");
+    argList::addArgument("input", "The input edge file");
+    argList::addArgument("output", "The output edge file");
     argList::addOption
     (
         "scale",
         "factor",
-        "geometry scaling factor - default is 1"
+        "Geometry scaling factor - default is 1"
     );
 
     argList args(argc, argv);
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         << "\nwriting " << exportName;
 
     scalar scaleFactor = 0;
-    if (args.optionReadIfPresent("scale", scaleFactor) && scaleFactor > 0)
+    if (args.readIfPresent("scale", scaleFactor) && scaleFactor > 0)
     {
         Info<< " with scaling " << scaleFactor << endl;
         mesh.scalePoints(scaleFactor);

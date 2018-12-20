@@ -30,11 +30,15 @@ License
 
 // VTK includes
 #include "vtkActor.h"
+#include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
-#include "vtkPolyDataReader.h"
 #include "vtkProperty.h"
 #include "vtkRenderer.h"
 #include "vtkSmartPointer.h"
+
+// VTK Readers
+#include "vtkPolyDataReader.h"
+#include "vtkXMLPolyDataReader.h"
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
@@ -51,6 +55,44 @@ namespace runTimePostPro
 }
 
 
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+
+namespace
+{
+
+static vtkSmartPointer<vtkPolyData> getPolyDataFile(const Foam::fileName& fName)
+{
+    // Not extremely elegant...
+    vtkSmartPointer<vtkPolyData> dataset;
+
+    if (fName.ext() == "vtk")
+    {
+        auto reader = vtkSmartPointer<vtkPolyDataReader>::New();
+
+        reader->SetFileName(fName.c_str());
+        reader->Update();
+        dataset = reader->GetOutput();
+
+        return dataset;
+    }
+
+    if (fName.ext() == "vtp")
+    {
+        auto reader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
+
+        reader->SetFileName(fName.c_str());
+        reader->Update();
+        dataset = reader->GetOutput();
+
+        return dataset;
+    }
+
+    return dataset;
+}
+
+} // End anonymous namespace
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::functionObjects::runTimePostPro::functionObjectSurface::
@@ -58,7 +100,7 @@ functionObjectSurface
 (
     const runTimePostProcessing& parent,
     const dictionary& dict,
-    const HashPtrTable<Function1<vector>, word>& colours
+    const HashPtrTable<Function1<vector>>& colours
 )
 :
     geometrySurface(parent, dict, colours, List<fileName>()),
@@ -99,50 +141,44 @@ addGeometryToScene
     }
 
 
+    auto polyData = getPolyDataFile(fName);
+
+    if (!polyData || polyData->GetNumberOfPoints() == 0)
+    {
+        WarningInFunction
+            << "Could not read "<< fName << nl
+            << "Only VTK (.vtp, .vtk) files are supported"
+            << endl;
+        return;
+    }
+
     if (representation_ == rtGlyph)
     {
-        auto surf = vtkSmartPointer<vtkPolyDataReader>::New();
-        surf->SetFileName(fName.c_str());
-        surf->Update();
-
         addGlyphs
         (
             position,
             fieldName_,
             fieldName_,
             maxGlyphLength_,
-            surf->GetOutput(),
+            polyData,
             surfaceActor_,
             renderer
         );
     }
     else
     {
-        if (fName.ext() == "vtk")
-        {
-            auto surf = vtkSmartPointer<vtkPolyDataReader>::New();
-            surf->SetFileName(fName.c_str());
-            surf->Update();
+        addFeatureEdges(renderer, polyData);
 
-            addFeatureEdges(renderer, surf->GetOutput());
+        auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+        mapper->SetInputData(polyData);
 
-            auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-            mapper->SetInputConnection(surf->GetOutputPort());
+        setField(position, fieldName_, mapper, renderer, polyData);
 
-            setField(position, fieldName_, mapper, renderer, surf->GetOutput());
+        surfaceActor_->SetMapper(mapper);
 
-            surfaceActor_->SetMapper(mapper);
+        setRepresentation(surfaceActor_);
 
-            setRepresentation(surfaceActor_);
-
-            renderer->AddActor(surfaceActor_);
-        }
-        else
-        {
-            WarningInFunction
-                << "Only VTK file types are supported"
-                << endl;
-        }
+        renderer->AddActor(surfaceActor_);
     }
 }
 

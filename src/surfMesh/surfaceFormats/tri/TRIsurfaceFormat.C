@@ -98,8 +98,8 @@ bool Foam::fileFormats::TRIsurfaceFormat<Face>::read
     }
 
     // Retrieve the original zone information
-    List<label> sizes(reader.sizes().xfer());
-    List<label> zoneIds(reader.zoneIds().xfer());
+    List<label> sizes(std::move(reader.sizes()));
+    List<label> zoneIds(std::move(reader.zoneIds()));
 
     // Generate the (sorted) faces
     List<Face> faceLst(zoneIds.size());
@@ -161,7 +161,7 @@ void Foam::fileFormats::TRIsurfaceFormat<Face>::write
     const UList<Face>&   faceLst = surf.surfFaces();
     const UList<label>&  faceMap = surf.faceMap();
 
-    const UList<surfZone>& zones =
+    const surfZoneList zones =
     (
         surf.surfZones().empty()
       ? surfaceFormatsCore::oneZone(faceLst)

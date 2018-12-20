@@ -81,11 +81,11 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
         )
       : coeffDict()
     ),
-    patches_(wordReList(coeffDict().lookup("patches"))),
+    patches_(coeffDict().get<wordRes>("patches")),
     patchSet_(mesh.boundaryMesh().patchSet(patches_)),
-    di_(readScalar(coeffDict().lookup("innerDistance"))),
-    do_(readScalar(coeffDict().lookup("outerDistance"))),
-    test_(coeffDict().lookupOrDefault<Switch>("test", false)),
+    di_(coeffDict().get<scalar>("innerDistance")),
+    do_(coeffDict().get<scalar>("outerDistance")),
+    test_(coeffDict().lookupOrDefault("test", false)),
     rhoInf_(1.0),
     rhoName_(coeffDict().lookupOrDefault<word>("rho", "rho")),
     scale_
@@ -100,13 +100,13 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
             false
         ),
         pointMesh::New(mesh),
-        dimensionedScalar("zero", dimless, 0.0)
+        dimensionedScalar(dimless, Zero)
     ),
     curTimeIndex_(-1)
 {
     if (rhoName_ == "rhoInf")
     {
-        rhoInf_ = readScalar(coeffDict().lookup("rhoInf"));
+        coeffDict().readEntry("rhoInf", rhoInf_);
     }
 
     // Calculate scaling factor everywhere
@@ -149,13 +149,6 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
     }
 }
 
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::sixDoFRigidBodyMotionSolver::~sixDoFRigidBodyMotionSolver()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 const Foam::sixDoFRigidBodyMotion&
@@ -185,7 +178,7 @@ void Foam::sixDoFRigidBodyMotionSolver::solve()
             << " points." << exit(FatalError);
     }
 
-    // Store the motion state at the beginning of the time-stepbool
+    // Store the motion state at the beginning of the time-step
     bool firstIter = false;
     if (curTimeIndex_ != this->db().time().timeIndex())
     {
@@ -196,17 +189,17 @@ void Foam::sixDoFRigidBodyMotionSolver::solve()
 
     dimensionedVector g("g", dimAcceleration, Zero);
 
-    if (db().foundObject<uniformDimensionedVectorField>("g"))
+    if (db().time().foundObject<uniformDimensionedVectorField>("g"))
     {
-        g = db().lookupObject<uniformDimensionedVectorField>("g");
+        g = db().time().lookupObject<uniformDimensionedVectorField>("g");
     }
-    else if (coeffDict().found("g"))
+    else
     {
-        coeffDict().lookup("g") >> g;
+        coeffDict().readIfPresent("g", g);
     }
 
-    // scalar ramp = min(max((this->db().time().value() - 5)/10, 0), 1);
-    scalar ramp = 1.0;
+    // const scalar ramp = min(max((this->db().time().value() - 5)/10, 0), 1);
+    const scalar ramp = 1.0;
 
     if (test_)
     {

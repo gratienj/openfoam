@@ -30,7 +30,9 @@ License
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 const char* const Foam::word::typeName = "word";
+
 int Foam::word::debug(Foam::debug::debugSwitch(word::typeName, 0));
+
 const Foam::word Foam::word::null;
 
 
@@ -41,7 +43,7 @@ Foam::word Foam::word::validate(const std::string& s, const bool prefix)
     word out;
     out.resize(s.size() + (prefix ? 1 : 0));
 
-    std::string::size_type count = 0;
+    std::string::size_type len = 0;
 
     // As per validate, but optionally detect if the first character
     // is a digit, which we'd like to avoid having since this will
@@ -52,17 +54,51 @@ Foam::word Foam::word::validate(const std::string& s, const bool prefix)
 
         if (word::valid(c))
         {
-            if (!count && prefix && isdigit(c))
+            if (!len && prefix && isdigit(c))
             {
                 // First valid character was a digit - prefix with '_'
-                out[count++] = '_';
+                out[len++] = '_';
             }
 
-            out[count++] = c;
+            out[len++] = c;
         }
     }
 
-    out.resize(count);
+    out.resize(len);
+
+    return out;
+}
+
+
+Foam::word Foam::word::validate
+(
+    const char* first,
+    const char* last,
+    const bool prefix
+)
+{
+    std::string::size_type len = (last - first) + (prefix ? 1 : 0);
+
+    word out;
+    out.resize(len);
+
+    for (len=0; first != last; ++first)
+    {
+        const char c = *first;
+
+        if (word::valid(c))
+        {
+            if (!len && prefix && isdigit(c))
+            {
+                // First valid character was a digit - prefix with '_'
+                out[len++] = '_';
+            }
+
+            out[len++] = c;
+        }
+    }
+
+    out.resize(len);
 
     return out;
 }

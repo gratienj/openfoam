@@ -74,9 +74,9 @@ int main(int argc, char *argv[])
 
     const fileName decompFile = args[1];
 
-    const bool region     = args.optionFound("region");
-    const bool allRegions = args.optionFound("allRegions");
-    const bool verbose    = args.optionFound("verbose");
+    const bool region     = args.found("region");
+    const bool allRegions = args.found("allRegions");
+    const bool verbose    = args.found("verbose");
 
     // Set time from database
     #include "createTime.H"
@@ -84,8 +84,7 @@ int main(int argc, char *argv[])
     instantList times = timeSelector::selectIfPresent(runTime, args);
 
     // Allow override of decomposeParDict location
-    fileName decompDictFile;
-    args.optionReadIfPresent("decomposeParDict", decompDictFile);
+    const fileName decompDictFile = args.opt<fileName>("decomposeParDict", "");
 
     wordList regionNames;
     wordList regionDirs;
@@ -108,16 +107,12 @@ int main(int argc, char *argv[])
     }
     else
     {
-        word regionName;
-        if (args.optionReadIfPresent("region", regionName))
+        regionNames.resize(1, fvMesh::defaultRegion);
+        regionDirs.resize(1, word::null);
+
+        if (args.readIfPresent("region", regionNames.first()))
         {
-            regionNames = wordList(1, regionName);
-            regionDirs = regionNames;
-        }
-        else
-        {
-            regionNames = wordList(1, fvMesh::defaultRegion);
-            regionDirs = wordList(1, word::null);
+            regionDirs.first() = regionNames.first();
         }
     }
 

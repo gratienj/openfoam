@@ -41,6 +41,13 @@ void printInfo(const ListType& lst)
         << "addr: " << flatOutput(lst.addressing()) << nl
         << "list: " << flatOutput(lst) << nl
         << endl;
+
+    Info<<"for-range :";
+    for (const auto& val : lst)
+    {
+        Info<< " " << val;
+    }
+    Info<< nl;
 }
 
 
@@ -95,7 +102,7 @@ int main(int argc, char *argv[])
 
     inplaceReverseList(addresses);
 
-    idl1.resetAddressing(addresses.xfer());
+    idl1.resetAddressing(std::move(addresses));
 
     printInfo(idl1);
 
@@ -117,7 +124,7 @@ int main(int argc, char *argv[])
     printInfo(idl3);
 
     fileName binaryOutput;
-    if (args.optionReadIfPresent("binary", binaryOutput))
+    if (args.readIfPresent("binary", binaryOutput))
     {
         Info<<"Writing output to " << binaryOutput << endl;
 

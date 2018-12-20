@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -61,11 +61,11 @@ template<class Type> Ostream& operator<<(Ostream&, const Function1<Type>&);
 template<class Type>
 class Function1
 :
-    public tmp<Function1<Type>>::refCount
+    public refCount
 {
     // Private Member Functions
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const Function1<Type>&) = delete;
 
 
@@ -114,12 +114,13 @@ public:
     static autoPtr<Function1<Type>> New
     (
         const word& entryName,
-        const dictionary& dict
+        const dictionary& dict,
+        const word& redirectType = word::null
     );
 
 
     //- Destructor
-    virtual ~Function1();
+    virtual ~Function1() = default;
 
 
     // Member Functions
@@ -194,8 +195,7 @@ public:
 
 
     //- Destructor
-    virtual ~FieldFunction1()
-    {}
+    virtual ~FieldFunction1() = default;
 
 
     // Member Functions

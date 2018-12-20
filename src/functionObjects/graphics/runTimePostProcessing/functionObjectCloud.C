@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,9 +33,13 @@ License
 #include "vtkActor.h"
 #include "vtkRenderer.h"
 #include "vtkSmartPointer.h"
+#include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
-#include "vtkPolyDataReader.h"
 #include "vtkProperty.h"
+
+// VTK Readers
+#include "vtkPolyDataReader.h"
+#include "vtkXMLPolyDataReader.h"
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
@@ -58,13 +62,14 @@ Foam::functionObjects::runTimePostPro::functionObjectCloud::functionObjectCloud
 (
     const runTimePostProcessing& parent,
     const dictionary& dict,
-    const HashPtrTable<Function1<vector>, word>& colours
+    const HashPtrTable<Function1<vector>>& colours
 )
 :
     pointData(parent, dict, colours),
     functionObjectBase(parent, dict, colours),
-    cloudName_(dict.lookup("cloud")),
-    colourFieldName_(dict.lookup("colourField")),
+    cloudName_(dict.get<word>("cloud")),
+    inputFileName_(),
+    colourFieldName_(dict.get<word>("colourField")),
     actor_()
 {
     actor_ = vtkSmartPointer<vtkActor>::New();
@@ -92,23 +97,14 @@ addGeometryToScene
         return;
     }
 
-    const dictionary& cloudDict =
-        geometryBase::parent_.mesh().lookupObject<IOdictionary>
-        (
-            cloudName_ + "OutputProperties"
-        );
+    // The vtkCloud stores 'file' via the stateFunctionObject
+    // (lookup by cloudName).
+    // It only generates VTP format, which means there is a single file
+    // containing all fields.
 
-    fileName fName;
-    if (cloudDict.found("functionObjectCloud"))
-    {
-        const dictionary& foDict = cloudDict.subDict("cloudFunctionObject");
-        if (foDict.found(functionObjectName_))
-        {
-            foDict.subDict(functionObjectName_).readIfPresent("file", fName);
-        }
-    }
+    inputFileName_ = getFileName("file", cloudName_);
 
-    if (fName.empty())
+    if (inputFileName_.empty())
     {
         WarningInFunction
             << "Unable to find function object " << functionObjectName_
@@ -118,12 +114,35 @@ addGeometryToScene
         return;
     }
 
-    if (fName.ext() == "vtk")
-    {
-        auto points = vtkSmartPointer<vtkPolyDataReader>::New();
-        points->SetFileName(fName.c_str());
-        points->Update();
 
+    vtkSmartPointer<vtkPolyData> dataset;
+
+    if (inputFileName_.hasExt("vtp"))
+    {
+        auto reader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
+        reader->SetFileName(inputFileName_.c_str());
+        reader->Update();
+
+        dataset = reader->GetOutput();
+    }
+    else
+    {
+        // Invalid name - ignore.
+        // Don't support VTK legacy format at all - it is too wasteful
+        // and cumbersome.
+
+        WarningInFunction
+            << "Could not read "<< inputFileName_ << nl
+            << "Only VTK (.vtp) files are supported"
+            << ". Cloud will not be processed"
+            << endl;
+
+        inputFileName_.clear();
+    }
+
+
+    if (dataset)
+    {
         auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 
         actor_->SetMapper(mapper);
@@ -134,7 +153,7 @@ addGeometryToScene
             fieldName_,
             colourFieldName_,
             maxGlyphLength_,
-            points->GetOutput(),
+            dataset,
             actor_,
             renderer
         );
@@ -160,27 +179,10 @@ bool Foam::functionObjects::runTimePostPro::functionObjectCloud::clear()
 {
     if (functionObjectBase::clear())
     {
-        const dictionary& cloudDict =
-            geometryBase::parent_.mesh().lookupObject<IOdictionary>
-            (
-                cloudName_ & "OutputProperties"
-            );
-
-        if (cloudDict.found("functionObjectCloud"))
+        if (inputFileName_.size() && Foam::rm(inputFileName_))
         {
-            const dictionary& foDict = cloudDict.subDict("functionObjectCloud");
-            if (foDict.found(functionObjectName_))
-            {
-                const dictionary& functionDict =
-                    foDict.subDict(functionObjectName_);
-
-                fileName fName;
-                if (functionDict.readIfPresent("file", fName))
-                {
-                    Foam::rm(fName);
-                    return true;
-                }
-            }
+            inputFileName_.clear();
+            return true;
         }
     }
 

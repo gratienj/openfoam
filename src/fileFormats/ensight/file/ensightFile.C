@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -123,12 +123,6 @@ Foam::ensightFile::ensightFile
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::ensightFile::~ensightFile()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::ensightFile::allowUndef()
@@ -137,10 +131,10 @@ bool Foam::ensightFile::allowUndef()
 }
 
 
-bool Foam::ensightFile::allowUndef(bool value)
+bool Foam::ensightFile::allowUndef(bool enabled)
 {
     bool old = allowUndef_;
-    allowUndef_ = value;
+    allowUndef_ = enabled;
     return old;
 }
 
@@ -335,15 +329,15 @@ void Foam::ensightFile::writeList
     const UList<scalar>& field
 )
 {
-    forAll(field, i)
+    for (const scalar& val : field)
     {
-        if (std::isnan(field[i]))
+        if (std::isnan(val))
         {
             writeUndef();
         }
         else
         {
-            write(field[i]);
+            write(val);
         }
 
         newline();
@@ -359,15 +353,15 @@ void Foam::ensightFile::writeList
 {
     if (notNull(idList))
     {
-        forAll(idList, i)
+        for (const label idx : idList)
         {
-            if (idList[i] >= field.size() || std::isnan(field[idList[i]]))
+            if (idx >= field.size() || std::isnan(field[idx]))
             {
                 writeUndef();
             }
             else
             {
-                write(field[idList[i]]);
+                write(field[idx]);
             }
 
             newline();
@@ -375,7 +369,7 @@ void Foam::ensightFile::writeList
     }
     else
     {
-        // no idList => perNode
+        // No idList => perNode
         writeList(field);
     }
 }

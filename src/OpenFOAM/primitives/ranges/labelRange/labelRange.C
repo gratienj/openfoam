@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,14 +24,15 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "labelRange.H"
+#include "List.H"
 #include "token.H"
-
+#include <numeric>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-int labelRange::debug(debug::debugSwitch("labelRange", 0));
+    int labelRange::debug(debug::debugSwitch("labelRange", 0));
 }
 
 const Foam::labelRange Foam::labelRange::null;
@@ -50,23 +51,33 @@ Foam::labelRange::labelRange(Istream& is)
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::labelRange::adjust()
+Foam::List<Foam::label> Foam::labelRange::labels() const
+{
+    if (size_ <= 0)
+    {
+        return List<label>();
+    }
+
+    List<label> result(size_);
+    std::iota(result.begin(), result.end(), start_);
+
+    return result;
+}
+
+
+void Foam::labelRange::adjust() noexcept
 {
     if (start_ < 0)
     {
-        if (size_ <= 0)
-        {
-            size_ = 0;
-        }
-        else
+        if (size_ > 0)  // Second check needed to avoid (negative) overflow
         {
             size_ += start_;
         }
         start_ = 0;
     }
-    else if (size_ < 0)
+    if (size_ < 0)
     {
-        size_ = 0;
+        size_ = 0;  // No negative sizes
     }
 }
 
@@ -96,7 +107,7 @@ bool Foam::labelRange::overlaps(const labelRange& range, bool touches) const
 
 Foam::labelRange Foam::labelRange::join(const labelRange& range) const
 {
-    // trivial cases first
+    // Trivial cases first
     if (!size_)
     {
         return *this;
@@ -128,10 +139,8 @@ Foam::labelRange Foam::labelRange::subset(const labelRange& range) const
     {
         return labelRange(lower, total);
     }
-    else
-    {
-        return labelRange();
-    }
+
+    return labelRange();
 }
 
 
@@ -151,10 +160,8 @@ Foam::labelRange Foam::labelRange::subset
     {
         return labelRange(lower, total);
     }
-    else
-    {
-        return labelRange();
-    }
+
+    return labelRange();
 }
 
 
@@ -170,10 +177,8 @@ Foam::labelRange Foam::labelRange::subset0(const label size) const
     {
         return labelRange(lower, total);
     }
-    else
-    {
-        return labelRange();
-    }
+
+    return labelRange();
 }
 
 
@@ -185,21 +190,19 @@ Foam::Istream& Foam::operator>>(Istream& is, labelRange& range)
     is  >> range.start_ >> range.size_;
     is.readEnd("labelRange");
 
-    is.check(FUNCTION_NAME);
-
-    // Disallow invalid sizes
     if (range.size_ < 0)
     {
-        range.size_ = 0;
+        range.size_ = 0;  // No negative sizes
     }
 
+    is.check(FUNCTION_NAME);
     return is;
 }
 
 
 Foam::Ostream& Foam::operator<<(Ostream& os, const labelRange& range)
 {
-    // Write ASCII only for now
+    // Only write as ASCII for now
     os  << token::BEGIN_LIST
         << range.start() << token::SPACE << range.size()
         << token::END_LIST;

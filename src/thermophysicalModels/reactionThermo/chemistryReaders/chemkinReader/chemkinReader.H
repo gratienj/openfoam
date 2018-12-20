@@ -42,7 +42,6 @@ SourceFiles
 #include "chemistryReader.H"
 #include "fileName.H"
 #include "typeInfo.H"
-#include "Switch.H"
 #include "HashPtrTable.H"
 #include "ReactionList.H"
 #include "DynamicList.H"
@@ -187,7 +186,7 @@ private:
         dictionary transportDict_;
 
         //- Flag to indicate that file is in new format
-        Switch newFormat_;
+        bool newFormat_;
 
         //- Tolerance for element imbalance in a reaction
         scalar imbalanceTol_;
@@ -220,7 +219,7 @@ private:
             }
             else if (elementName[0] == 'E')
             {
-                elementName = 'e';
+                elementName = "e";
             }
         }
 
@@ -284,11 +283,11 @@ private:
             const fileName& transportFileName
         );
 
-        //- Disallow default bitwise copy construct
-        chemkinReader(const chemkinReader&);
+        //- No copy construct
+        chemkinReader(const chemkinReader&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const chemkinReader&);
+        //- No copy assignment
+        void operator=(const chemkinReader&) = delete;
 
 
 public:
@@ -314,8 +313,7 @@ public:
 
 
     //- Destructor
-    virtual ~chemkinReader()
-    {}
+    virtual ~chemkinReader() = default;
 
 
     // Member functions

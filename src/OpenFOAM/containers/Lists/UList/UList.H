@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,12 +45,16 @@ SourceFiles
 #include "bool.H"
 #include "label.H"
 #include "uLabel.H"
-#include "nullObject.H"
 #include "zero.H"
+#include "contiguous.H"
+#include "nullObject.H"
 #include "stdFoam.H"
 #include "Swap.H"
+#include "HashFwd.H"
 
 #include <initializer_list>
+#include <iterator>
+#include <type_traits>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -61,15 +65,14 @@ namespace Foam
 class labelRange;
 template<class T> class List;
 template<class T> class SubList;
-
-// Forward declaration of friend functions and operators
 template<class T> class UList;
 template<class T> Ostream& operator<<(Ostream&, const UList<T>&);
 template<class T> Istream& operator>>(Istream&, UList<T>&);
 
-// Commonly required list types
+// Common list types
 typedef UList<char> charUList;
 typedef UList<label> labelUList;
+
 
 /*---------------------------------------------------------------------------*\
                            Class UList Declaration
@@ -89,7 +92,7 @@ class UList
 
     // Private Member Functions
 
-        //- Disallow default shallow-copy assignment
+        //- No copy assignment (shallow copy)
         //
         //  Assignment of UList<T> may need to be either shallow (copy pointer)
         //  or deep (copy elements) depending on context or the particular type
@@ -97,7 +100,7 @@ class UList
         //  for the default assignment to be either.  The solution is to
         //  disallow default assignment and provide separate 'shallowCopy' and
         //  'deepCopy' member functions
-        void operator=(const UList<T>&) = delete;
+        UList<T>& operator=(const UList<T>&) = delete;
 
 
 protected:
@@ -107,6 +110,10 @@ protected:
         //- Override size to be inconsistent with allocated storage.
         //  Use with care
         inline void size(const label n);
+
+        //- True if there are two or more entries and all entries have
+        //  identical values.
+        inline bool uniform() const;
 
         //- Write the UList with its compound type
         void writeEntry(Ostream& os) const;
@@ -124,6 +131,42 @@ protected:
 
 public:
 
+    // STL type definitions
+
+        //- The value type the list contains
+        typedef T value_type;
+
+        //- The pointer type for non-const access to value_type items
+        typedef T* pointer;
+
+        //- The pointer type for const access to value_type items
+        typedef const T* const_pointer;
+
+        //- The type used for storing into value_type objects
+        typedef T& reference;
+
+        //- The type used for reading from constant value_type objects.
+        typedef const T& const_reference;
+
+        //- Random access iterator for traversing a UList
+        typedef T* iterator;
+
+        //- Random access iterator for traversing a UList
+        typedef const T* const_iterator;
+
+        //- The type to represent the size of a UList
+        typedef label size_type;
+
+        //- The difference between iterator objects
+        typedef label difference_type;
+
+        //- Reverse iterator (non-const access)
+        typedef std::reverse_iterator<iterator>  reverse_iterator;
+
+        //- Reverse iterator (const access)
+        typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+
+
     // Related types
 
         //- Declare friendship with the List class
@@ -135,7 +178,7 @@ public:
 
     // Static Member Functions
 
-        //- Return a null UList
+        //- Return a UList reference to a nullObject
         inline static const UList<T>& null();
 
 
@@ -169,7 +212,7 @@ public:
 
             bool operator()(const label a, const label b) const
             {
-                return values[a] > values[b];
+                return values[b] < values[a];
             }
         };
 
@@ -177,10 +220,10 @@ public:
     // Constructors
 
         //- Null constructor
-        inline UList();
+        inline constexpr UList() noexcept;
 
         //- Construct from components
-        inline UList(T* __restrict__ v, label size);
+        inline UList(T* __restrict__ v, label size) noexcept;
 
 
     // Member Functions
@@ -239,26 +282,26 @@ public:
 
         // Check
 
-            //- Check start is within valid range (0 ... size-1)
+            //- Check start is within valid range [0,size)
             inline void checkStart(const label start) const;
 
-            //- Check size is within valid range (0 ... size)
+            //- Check size is within valid range [0,size]
             inline void checkSize(const label size) const;
 
-            //- Check index i is within valid range (0 ... size-1)
+            //- Check index is within valid range [0,size)
             inline void checkIndex(const label i) const;
 
 
       // Search
 
-        //- Find index of the first occurence of the value.
-        //  When start is specified, any occurences before start are ignored.
+        //- Find index of the first occurrence of the value.
+        //  When start is specified, any occurrences before start are ignored.
         //  Linear search.
         //  \return position in list or -1 if not found.
         label find(const T& val, const label start=0) const;
 
-        //- Find index of the last occurence of the value.
-        //  When pos is specified, any occurences after pos are ignored.
+        //- Find index of the last occurrence of the value.
+        //  When pos is specified, any occurrences after pos are ignored.
         //  Linear search.
         //  \return position in list or -1 if not found.
         label rfind(const T& val, const label pos=-1) const;
@@ -288,10 +331,10 @@ public:
       // Copy
 
         //- Copy the pointer held by the given UList
-        inline void shallowCopy(const UList<T>& a);
+        inline void shallowCopy(const UList<T>& list);
 
         //- Copy elements of the given UList
-        void deepCopy(const UList<T>& a);
+        void deepCopy(const UList<T>& list);
 
 
     // Member operators
@@ -337,29 +380,7 @@ public:
         void operator=(const zero);
 
 
-    // STL type definitions
-
-        //- Type of values the UList contains
-        typedef T value_type;
-
-        //- The type used for storing into value_type objects
-        typedef T& reference;
-
-        //- The type used for reading from constant value_type objects.
-        typedef const T& const_reference;
-
-        //- The type that can represent the difference between any two
-        //- UList iterator objects
-        typedef label difference_type;
-
-        //- The type that can represent the size of a UList
-        typedef label size_type;
-
-
-    // STL iterator
-
-        //- Random access iterator for traversing UList
-        typedef T* iterator;
+    // Random access iterator (non-const)
 
         //- Return an iterator to begin traversing the UList
         inline iterator begin();
@@ -368,10 +389,7 @@ public:
         inline iterator end();
 
 
-    // STL const_iterator
-
-        //- Random access iterator for traversing UList
-        typedef const T* const_iterator;
+    // Random access iterator (const)
 
         //- Return const_iterator to begin traversing the constant UList
         inline const_iterator cbegin() const;
@@ -385,94 +403,8 @@ public:
         //- Return const_iterator to end traversing the constant UList
         inline const_iterator end() const;
 
-    // Reverse iterators
 
-        //- Generic const/non-const reverse iterator
-        template<bool Const>
-        class reverse_iterator_base
-        {
-        public:
-            //- The const/non-const type for entries
-            typedef typename std::conditional
-                <Const, const T, T>::type value_type;
-
-            //- A pointer to a const/non-const entry
-            typedef value_type* pointer;
-
-            //- A reference to a const/non-const entry
-            typedef value_type& reference;
-
-
-        private:
-
-            //- The element pointer
-            pointer ptr_;
-
-
-        public:
-
-            //- Construct null or from list element pointer
-            inline reverse_iterator_base(pointer ptr = nullptr)
-            :
-                ptr_(ptr)
-            {}
-
-
-            //- Copy construct
-            inline reverse_iterator_base(const reverse_iterator_base& iter)
-            :
-                ptr_(iter.ptr_)
-            {}
-
-
-            //- Reverse increment
-            inline void operator++()
-            {
-                --ptr_;
-            }
-
-            //- Reverse increment
-            inline reverse_iterator_base operator++(int)
-            {
-                reverse_iterator_base old(*this);
-                --ptr_;
-                return old;
-            }
-
-            //- Reverse increase
-            inline void operator+=(int n)
-            {
-                ptr_ -= n;
-            }
-
-            //- Dereference iterator
-            reference operator*() const
-            {
-                return *ptr_;
-            }
-
-            //- Dereference iterator
-            pointer operator->() const
-            {
-                return ptr_;
-            }
-
-            //- Equality
-            bool operator==(const reverse_iterator_base& iter) const
-            {
-                return ptr_ == iter.ptr_;
-            }
-
-            //- inequality
-            bool operator!=(const reverse_iterator_base& iter) const
-            {
-                return ptr_ != iter.ptr_;
-            }
-        };
-
-
-        //- STL reverse_iterator
-        typedef reverse_iterator_base<false> reverse_iterator;
+    // Reverse iterators (non-const)
 
         //- Return reverse_iterator to begin reverse traversing the UList
         inline reverse_iterator rbegin();
@@ -481,8 +413,7 @@ public:
         inline reverse_iterator rend();
 
 
-        //- STL const reverse iterator
-        typedef reverse_iterator_base<true> const_reverse_iterator;
+    // Reverse iterators (const)
 
         //- Return const_reverse_iterator to begin reverse traversing the UList
         inline const_reverse_iterator crbegin() const;
@@ -509,7 +440,7 @@ public:
         inline bool empty() const;
 
         //- Swap content with another UList of the same type in constant time
-        inline void swap(UList<T>& lst);
+        inline void swap(UList<T>& list);
 
 
     // STL member operators
@@ -523,7 +454,7 @@ public:
         bool operator!=(const UList<T>& a) const;
 
         //- Compare two ULists lexicographically. Takes linear time
-        bool operator<(const UList<T>& a) const;
+        bool operator<(const UList<T>& list) const;
 
         //- Compare two ULists lexicographically. Takes linear time
         bool operator>(const UList<T>& a) const;
@@ -552,7 +483,7 @@ public:
         friend Ostream& operator<< <T>
         (
             Ostream& os,
-            const UList<T>& lst
+            const UList<T>& list
         );
 
         //- Read List contents from Istream.
@@ -562,10 +493,76 @@ public:
             Istream& os,
             UList<T>& L
         );
+
+
+    // Special Methods
+
+        //- A bitSet::test() method for a list of bool
+        //
+        //  \return The element value, or false for out-of-range access
+        template<class TypeT = T>
+        typename std::enable_if<std::is_same<TypeT, bool>::value, bool>::type
+        inline test(const label i) const
+        {
+            return (i >= 0 && i < size() && v_[i]);
+        }
+
+        //- A bitSet::get() method for a list of bool
+        //
+        //  \return The element value, or false for out-of-range access
+        template<class TypeT = T>
+        typename std::enable_if<std::is_same<TypeT, bool>::value, bool>::type
+        inline get(const label i) const
+        {
+            return (i >= 0 && i < size_ && v_[i]);
+        }
+
+        //- A bitSet::unset() method for a list of bool
+        //
+        //  \return True if value changed and was not out-of-range
+        template<class TypeT = T>
+        typename std::enable_if<std::is_same<TypeT, bool>::value, bool>::type
+        inline unset(const label i)
+        {
+            if (i >= 0 && i < size_ && v_[i])
+            {
+                v_[i] = false;
+                return true;
+            }
+            return false;
+        }
+
+
+    // Other
+
+        //- Hashing function class for UList.
+        //  Can use this one (instead of the global Hash<>) for inheritance
+        //  in sub-classes
+        template<class HashT=Foam::Hash<T>>
+        struct Hash
+        {
+            inline unsigned operator()
+            (
+                const UList<T>& obj,
+                unsigned seed=0
+            ) const
+            {
+                if (contiguous<T>())
+                {
+                    return Hasher(obj.cdata(), obj.size()*sizeof(T), seed);
+                }
+
+                for (const T& val : obj)
+                {
+                    seed = HashT()(val, seed);
+                }
+                return seed;
+            }
+        };
 };
 
 
-// Global Functions
+// * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * * //
 
 template<class T>
 void sort(UList<T>& a);
@@ -584,15 +581,46 @@ void shuffle(UList<T>& a);
 
 // Reverse the first n elements of the list
 template<class T>
-inline void reverse(UList<T>& lst, const label n);
+inline void reverse(UList<T>& list, const label n);
 
 // Reverse all the elements of the list
 template<class T>
-inline void reverse(UList<T>& lst);
+inline void reverse(UList<T>& list);
 
 // Exchange contents of lists - see UList::swap().
 template<class T>
 inline void Swap(UList<T>& a, UList<T>& b);
+
+
+//- Hashing for UList data, which uses Hasher for contiguous data and
+//- element-wise incrementally hashing otherwise.
+template<class T>
+struct Hash<UList<T>>
+{
+    inline unsigned operator()(const UList<T>& obj, unsigned seed=0) const
+    {
+        if (contiguous<T>())
+        {
+            return Hasher(obj.cdata(), obj.size()*sizeof(T), seed);
+        }
+        for (const T& val : obj)
+        {
+            seed = Hash<T>()(val, seed);
+        }
+        return seed;
+    }
+};
+
+
+//- Extract size (as label) from an object, typically using its size() method.
+template<class T>
+struct sizeOp
+{
+    inline label operator()(const T& obj) const
+    {
+        return obj.size();
+    }
+};
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

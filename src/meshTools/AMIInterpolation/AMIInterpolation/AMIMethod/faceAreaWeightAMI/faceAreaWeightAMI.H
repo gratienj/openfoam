@@ -58,16 +58,22 @@ private:
         //- Flag to restart uncovered source faces
         const bool restartUncoveredSourceFace_;
 
+        //- Storage for src-side triangle decomposition
+        List<DynamicList<face>> srcTris_;
+
+        //- Storage for tgt-side triangle decomposition
+        List<DynamicList<face>> tgtTris_;
+
 
 protected:
 
     // Protected Member Functions
 
-        //- Disallow default bitwise copy construct
-        faceAreaWeightAMI(const faceAreaWeightAMI&);
+        //- No copy construct
+        faceAreaWeightAMI(const faceAreaWeightAMI&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faceAreaWeightAMI&);
+        //- No copy assignment
+        void operator=(const faceAreaWeightAMI&) = delete;
 
         // Marching front
 
@@ -107,7 +113,7 @@ protected:
             //- Set the source and target seed faces
             virtual void setNextFaces
             (
-                label& startSeedI,
+                label& startSeedi,
                 label& srcFacei,
                 label& tgtFacei,
                 const boolList& mapFlag,
@@ -126,6 +132,14 @@ protected:
                 const label tgtFacei
             ) const;
 
+            //- Return true if faces overlap
+            virtual bool overlaps
+            (
+                const label srcFacei,
+                const label tgtFacei,
+                const scalar threshold
+            ) const;
+
 
 public:
 
@@ -140,8 +154,6 @@ public:
         (
             const SourcePatch& srcPatch,
             const TargetPatch& tgtPatch,
-            const scalarField& srcMagSf,
-            const scalarField& tgtMagSf,
             const faceAreaIntersect::triangulationMode& triMode,
             const bool reverseTarget = false,
             const bool requireMatch = true,
@@ -168,8 +180,17 @@ public:
                 label tgtFacei = -1
             );
 
+            //- Set the face areas for parallel runs
+            virtual void setMagSf
+            (
+                const TargetPatch& tgtPatch,
+                const mapDistribute& map,
+                scalarList& srcMagSf,
+                scalarList& tgtMagSf
+            ) const;
+
             //- Normalise the weight. Can optionally subset addressing
-            //  (e.g. for mapNearest)
+            //- (e.g. for mapNearest)
             virtual void normaliseWeights
             (
                 const bool verbose,

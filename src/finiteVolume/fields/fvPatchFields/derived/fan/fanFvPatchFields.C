@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,11 +51,10 @@ void Foam::fanFvPatchField<Foam::scalar>::calcFanJump()
 
             if (nonDimensional_)
             {
-                // Create an adimensional volumetric flow rate
+                // Create an non-dimensional velocity
                 Un =
                     120.0*Un/pow3(constant::mathematical::pi)
-                  * patch().magSf()
-                  / pow3(dm_)/rpm_;
+                  / dm_/rpm_;
             }
         }
 
@@ -68,17 +67,17 @@ void Foam::fanFvPatchField<Foam::scalar>::calcFanJump()
         {
             scalarField deltap(this->jumpTable_->value(Un));
 
-            // Convert adimensional deltap from curve into deltaP
+            // Convert non-dimensional deltap from curve into deltaP
             scalarField pdFan
             (
                 deltap*pow4(constant::mathematical::pi)*sqr(dm_*rpm_)/1800.0
             );
 
-            this->jump_ = max(pdFan, scalar(0));
+            this->jump_ = pdFan;
         }
         else
         {
-            this->jump_ = max(this->jumpTable_->value(Un), scalar(0));
+            this->jump_ = this->jumpTable_->value(Un);
         }
     }
 }
@@ -97,8 +96,8 @@ Foam::fanFvPatchField<Foam::scalar>::fanFvPatchField
     uniformJumpFvPatchField<scalar>(p, iF),
     phiName_(dict.lookupOrDefault<word>("phi", "phi")),
     rhoName_(dict.lookupOrDefault<word>("rho", "rho")),
-    uniformJump_(dict.lookupOrDefault<bool>("uniformJump", false)),
-    nonDimensional_(dict.lookupOrDefault<Switch>("nonDimensional", false)),
+    uniformJump_(dict.lookupOrDefault("uniformJump", false)),
+    nonDimensional_(dict.lookupOrDefault("nonDimensional", false)),
     rpm_(dict.lookupOrDefault<scalar>("rpm", 0.0)),
     dm_(dict.lookupOrDefault<scalar>("dm", 0.0))
 {

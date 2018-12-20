@@ -51,7 +51,7 @@ Usage
     \table
         Property     | Description             | Required    | Default value
         type         | type name: DESModelRegions| yes       |
-        resultName   | Name of DES indicator field | no      | <function name>
+        resultName   | Name of DES indicator field | no      | \<function name\>
         log          | log to standard output  | no          | yes
     \endtable
 
@@ -97,10 +97,10 @@ protected:
         //- File header information
         virtual void writeFileHeader(Ostream& os) const;
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         DESModelRegions(const DESModelRegions&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const DESModelRegions&) = delete;
 
 

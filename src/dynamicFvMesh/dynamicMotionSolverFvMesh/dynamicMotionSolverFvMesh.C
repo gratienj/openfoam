@@ -51,6 +51,29 @@ Foam::dynamicMotionSolverFvMesh::dynamicMotionSolverFvMesh(const IOobject& io)
 {}
 
 
+Foam::dynamicMotionSolverFvMesh::dynamicMotionSolverFvMesh
+(
+    const IOobject& io,
+    pointField&& points,
+    faceList&& faces,
+    labelList&& allOwner,
+    labelList&& allNeighbour,
+    const bool syncPar
+)
+:
+    dynamicFvMesh
+    (
+        io,
+        std::move(points),
+        std::move(faces),
+        std::move(allOwner),
+        std::move(allNeighbour),
+        syncPar
+    ),
+    motionPtr_(motionSolver::New(*this))
+{}
+
+
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::dynamicMotionSolverFvMesh::~dynamicMotionSolverFvMesh()
@@ -61,7 +84,7 @@ Foam::dynamicMotionSolverFvMesh::~dynamicMotionSolverFvMesh()
 
 const Foam::motionSolver& Foam::dynamicMotionSolverFvMesh::motion() const
 {
-    return motionPtr_();
+    return *motionPtr_;
 }
 
 
@@ -69,11 +92,11 @@ bool Foam::dynamicMotionSolverFvMesh::update()
 {
     fvMesh::movePoints(motionPtr_->newPoints());
 
-    if (foundObject<volVectorField>("U"))
+    volVectorField* Uptr = getObjectPtr<volVectorField>("U");
+
+    if (Uptr)
     {
-        volVectorField& U =
-            const_cast<volVectorField&>(lookupObject<volVectorField>("U"));
-        U.correctBoundaryConditions();
+        Uptr->correctBoundaryConditions();
     }
 
     return true;

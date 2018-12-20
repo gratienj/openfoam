@@ -26,7 +26,7 @@ Class
 
 Description
 
-    Basic sub-grid obstacle flame-wrinking generation rate coefficient model.
+    Basic sub-grid obstacle flame-wrinkling generation rate coefficient model.
     Details supplied by J Puttock 2/7/06.
 
     \f$ G_{sub} \f$ denotes the generation coefficient and it is given by
@@ -82,11 +82,11 @@ class basicSubGrid
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        basicSubGrid(const basicSubGrid&);
+        //- No copy construct
+        basicSubGrid(const basicSubGrid&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const basicSubGrid&);
+        //- No copy assignment
+        void operator=(const basicSubGrid&) = delete;
 
 
 public:
@@ -113,7 +113,7 @@ public:
 
     // Member Functions
 
-        //- Return the flame-wrinking generation rate
+        //- Return the flame-wrinkling generation rate
         virtual tmp<volScalarField> G() const;
 
         //- Return the flame diffusivity

@@ -28,8 +28,8 @@ Group
     grpCompressibleSolvers
 
 Description
-    Density-based compressible flow solver based on central-upwind schemes of
-    Kurganov and Tadmor.
+    Density-based compressible flow solver based on central-upwind
+    schemes of Kurganov and Tadmor.
 
 \*---------------------------------------------------------------------------*/
 
@@ -45,10 +45,17 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Density-based compressible flow solver based on central-upwind"
+        " schemes of Kurganov and Tadmor."
+    );
+
     #define NO_CONTROL
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createFields.H"
@@ -61,7 +68,7 @@ int main(int argc, char *argv[])
 
     #include "readFluxScheme.H"
 
-    dimensionedScalar v_zero("v_zero", dimVolume/dimTime, 0.0);
+    const dimensionedScalar v_zero(dimVolume/dimTime, Zero);
 
     // Courant numbers used to adjust the time-step
     scalar CoNum = 0.0;
@@ -159,7 +166,7 @@ int main(int argc, char *argv[])
             #include "setDeltaT.H"
         }
 
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -254,9 +261,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << nl << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

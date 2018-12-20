@@ -106,21 +106,21 @@ Foam::twoPhaseSystem::twoPhaseSystem
             IOobject::AUTO_WRITE
         ),
         mesh,
-        dimensionedScalar("dgdt", dimless/dimTime, 0)
+        dimensionedScalar(dimless/dimTime, Zero)
     )
 {
     phase2_.volScalarField::operator=(scalar(1) - phase1_);
 
 
     // Blending
-    forAllConstIter(dictionary, subDict("blending"), iter)
+    for (const entry& dEntry : subDict("blending"))
     {
         blendingMethods_.insert
         (
-            iter().dict().dictName(),
+            dEntry.dict().dictName(),
             blendingMethod::New
             (
-                iter().dict(),
+                dEntry.dict(),
                 wordList(lookup("phases"))
             )
         );
@@ -177,13 +177,13 @@ Foam::twoPhaseSystem::twoPhaseSystem
             lookup("drag"),
             (
                 blendingMethods_.found("drag")
-              ? blendingMethods_["drag"]
-              : blendingMethods_["default"]
+              ? *(blendingMethods_["drag"])
+              : *(blendingMethods_["default"])
             ),
-            pair_,
-            pair1In2_,
-            pair2In1_,
-            false // Do not zero drag coefficent at fixed-flux BCs
+            *pair_,
+            *pair1In2_,
+            *pair2In1_,
+            false // Do not zero drag coefficient at fixed-flux BCs
         )
     );
 
@@ -194,12 +194,12 @@ Foam::twoPhaseSystem::twoPhaseSystem
             lookup("virtualMass"),
             (
                 blendingMethods_.found("virtualMass")
-              ? blendingMethods_["virtualMass"]
-              : blendingMethods_["default"]
+              ? *(blendingMethods_["virtualMass"])
+              : *(blendingMethods_["default"])
             ),
-            pair_,
-            pair1In2_,
-            pair2In1_
+            *pair_,
+            *pair1In2_,
+            *pair2In1_
         )
     );
 
@@ -210,12 +210,12 @@ Foam::twoPhaseSystem::twoPhaseSystem
             lookup("heatTransfer"),
             (
                 blendingMethods_.found("heatTransfer")
-              ? blendingMethods_["heatTransfer"]
-              : blendingMethods_["default"]
+              ? *(blendingMethods_["heatTransfer"])
+              : *(blendingMethods_["default"])
             ),
-            pair_,
-            pair1In2_,
-            pair2In1_
+            *pair_,
+            *pair1In2_,
+            *pair2In1_
         )
     );
 
@@ -226,12 +226,12 @@ Foam::twoPhaseSystem::twoPhaseSystem
             lookup("lift"),
             (
                 blendingMethods_.found("lift")
-              ? blendingMethods_["lift"]
-              : blendingMethods_["default"]
+              ? *(blendingMethods_["lift"])
+              : *(blendingMethods_["default"])
             ),
-            pair_,
-            pair1In2_,
-            pair2In1_
+            *pair_,
+            *pair1In2_,
+            *pair2In1_
         )
     );
 
@@ -242,12 +242,12 @@ Foam::twoPhaseSystem::twoPhaseSystem
             lookup("wallLubrication"),
             (
                 blendingMethods_.found("wallLubrication")
-              ? blendingMethods_["wallLubrication"]
-              : blendingMethods_["default"]
+              ? *(blendingMethods_["wallLubrication"])
+              : *(blendingMethods_["default"])
             ),
-            pair_,
-            pair1In2_,
-            pair2In1_
+            *pair_,
+            *pair1In2_,
+            *pair2In1_
         )
     );
 
@@ -258,12 +258,12 @@ Foam::twoPhaseSystem::twoPhaseSystem
             lookup("turbulentDispersion"),
             (
                 blendingMethods_.found("turbulentDispersion")
-              ? blendingMethods_["turbulentDispersion"]
-              : blendingMethods_["default"]
+              ? *(blendingMethods_["turbulentDispersion"])
+              : *(blendingMethods_["default"])
             ),
-            pair_,
-            pair1In2_,
-            pair2In1_
+            *pair_,
+            *pair1In2_,
+            *pair2In1_
         )
     );
 }
@@ -272,7 +272,7 @@ Foam::twoPhaseSystem::twoPhaseSystem
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 Foam::twoPhaseSystem::~twoPhaseSystem()
-{}
+{} // Define here (incomplete type in header)
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -360,8 +360,8 @@ void Foam::twoPhaseSystem::solve()
         alpha1.name()
     );
 
-    label nAlphaSubCycles(readLabel(alphaControls.lookup("nAlphaSubCycles")));
-    label nAlphaCorr(readLabel(alphaControls.lookup("nAlphaCorr")));
+    label nAlphaSubCycles(alphaControls.get<label>("nAlphaSubCycles"));
+    label nAlphaCorr(alphaControls.get<label>("nAlphaCorr"));
 
     word alphaScheme("div(phi," + alpha1.name() + ')');
     word alpharScheme("div(phir," + alpha1.name() + ')');
@@ -399,7 +399,7 @@ void Foam::twoPhaseSystem::solve()
                 mesh_
             ),
             mesh_,
-            dimensionedScalar("Sp", dgdt_.dimensions(), 0.0)
+            dimensionedScalar(dgdt_.dimensions(), Zero)
         );
 
         volScalarField::Internal Su

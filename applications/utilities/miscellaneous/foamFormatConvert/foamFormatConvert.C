@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -162,13 +162,13 @@ bool writeZones(const word& name, const fileName& meshDir, Time& runTime)
 }
 
 
-// Reduction for non-empty strings
-class uniqueEqOp
+// Reduction for non-empty strings.
+template<class StringType>
+struct uniqueEqOp
 {
-    public:
-    void operator()(stringList& x, const stringList& y) const
+    void operator()(List<StringType>& x, const List<StringType>& y) const
     {
-        stringList newX(x.size()+y.size());
+        List<StringType> newX(x.size()+y.size());
         label n = 0;
         forAll(x, i)
         {
@@ -215,8 +215,8 @@ bool writeOptionalMeshObject
     bool haveFile = io.typeHeaderOk<IOField<label>>(false);
 
     // Make sure all know if there is a valid class name
-    stringList classNames(1, io.headerClassName());
-    combineReduce(classNames, uniqueEqOp());
+    wordList classNames(1, io.headerClassName());
+    combineReduce(classNames, uniqueEqOp<word>());
 
     // Check for correct type
     if (classNames[0] == T::typeName)
@@ -235,23 +235,28 @@ bool writeOptionalMeshObject
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Converts all IOobjects associated with a case into the format"
+        " specified in the controlDict"
+    );
     timeSelector::addOptions();
     argList::addBoolOption
     (
         "noConstant",
-        "exclude the 'constant/' dir in the times list"
+        "Exclude the 'constant/' dir in the times list"
     );
     argList::addBoolOption
     (
         "enableFunctionEntries",
-        "enable expansion of dictionary directives - #include, #codeStream etc"
+        "Enable expansion of dictionary directives - #include, #codeStream etc"
     );
 
     #include "addRegionOption.H"
     #include "setRootCase.H"
 
     // enable noConstant by switching
-    if (!args.optionFound("noConstant"))
+    if (!args.found("noConstant"))
     {
         args.setOption("constant", "");
     }
@@ -266,7 +271,7 @@ int main(int argc, char *argv[])
     // Optional mesh (used to read Clouds)
     autoPtr<polyMesh> meshPtr;
 
-    const bool enableEntries = args.optionFound("enableFunctionEntries");
+    const bool enableEntries = args.found("enableFunctionEntries");
     if (enableEntries)
     {
         Info<< "Allowing dictionary preprocessing ('#include', '#codeStream')."
@@ -288,7 +293,7 @@ int main(int argc, char *argv[])
     fileName meshDir = polyMesh::meshSubDir;
     fileName regionPrefix = "";
     word regionName = polyMesh::defaultRegion;
-    if (args.optionReadIfPresent("region", regionName))
+    if (args.readIfPresent("region", regionName))
     {
         Info<< "Using region " << regionName << nl << endl;
         regionPrefix = regionName;
@@ -351,7 +356,7 @@ int main(int argc, char *argv[])
         // Get list of objects from the database
         IOobjectList objects(runTime, runTime.timeName(), regionPrefix);
 
-        forAllConstIter(IOobjectList, objects, iter)
+        forAllConstIters(objects, iter)
         {
             const word& headerClassName = iter()->headerClassName();
 
@@ -395,7 +400,7 @@ int main(int argc, char *argv[])
 
 
         // Check for lagrangian
-        stringList lagrangianDirs
+        fileNameList lagrangianDirs
         (
             1,
             fileHandler().filePath
@@ -406,7 +411,7 @@ int main(int argc, char *argv[])
             )
         );
 
-        combineReduce(lagrangianDirs, uniqueEqOp());
+        combineReduce(lagrangianDirs, uniqueEqOp<fileName>());
 
         if (!lagrangianDirs.empty())
         {
@@ -434,7 +439,7 @@ int main(int argc, char *argv[])
                 );
             }
 
-            stringList cloudDirs
+            fileNameList cloudDirs
             (
                 fileHandler().readDir
                 (
@@ -443,7 +448,7 @@ int main(int argc, char *argv[])
                 )
             );
 
-            combineReduce(cloudDirs, uniqueEqOp());
+            combineReduce(cloudDirs, uniqueEqOp<fileName>());
 
             forAll(cloudDirs, i)
             {
@@ -461,18 +466,18 @@ int main(int argc, char *argv[])
 
 
                 // Do local scan for valid cloud objects
-                IOobjectList sprayObjs(runTime, runTime.timeName(), dir);
+                wordList cloudFields
+                (
+                    IOobjectList(runTime, runTime.timeName(), dir).sortedNames()
+                );
 
                 // Combine with all other cloud objects
-                stringList sprayFields(sprayObjs.sortedToc());
-                combineReduce(sprayFields, uniqueEqOp());
+                combineReduce(cloudFields, uniqueEqOp<word>());
 
-                forAll(sprayFields, fieldi)
+                for (const word& name : cloudFields)
                 {
-                    const word& name = sprayFields[fieldi];
-
                     // Note: try the various field types. Make sure to
-                    //       exit once sucessful conversion to avoid re-read
+                    //       exit once successful conversion to avoid re-read
                     //       converted file.
 
                     if

@@ -2,8 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -249,7 +249,7 @@ Foam::MRFZone::MRFZone
     cellZoneID_(),
     excludedPatchNames_
     (
-        wordReList(coeffs_.lookupOrDefault("nonRotatingPatches", wordReList()))
+        coeffs_.lookupOrDefault<wordRes>("nonRotatingPatches", wordRes())
     ),
     origin_(coeffs_.lookup("origin")),
     axis_(coeffs_.lookup("axis")),
@@ -257,7 +257,7 @@ Foam::MRFZone::MRFZone
 {
     if (cellZoneName_ == word::null)
     {
-        coeffs_.lookup("cellZone") >> cellZoneName_;
+        coeffs_.readEntry("cellZone", cellZoneName_);
     }
 
     if (!active_)
@@ -278,9 +278,9 @@ Foam::MRFZone::MRFZone
         excludedPatchLabels_.setSize(excludedPatchSet.size());
 
         label i = 0;
-        forAllConstIter(labelHashSet, excludedPatchSet, iter)
+        for (const label patchi : excludedPatchSet)
         {
-            excludedPatchLabels_[i++] = iter.key();
+            excludedPatchLabels_[i++] = patchi;
         }
 
         bool cellZoneFound = (cellZoneID_ != -1);
@@ -593,10 +593,19 @@ bool Foam::MRFZone::read(const dictionary& dict)
     coeffs_ = dict;
 
     active_ = coeffs_.lookupOrDefault("active", true);
-    coeffs_.lookup("cellZone") >> cellZoneName_;
+    coeffs_.readEntry("cellZone", cellZoneName_);
     cellZoneID_ = mesh_.cellZones().findZoneID(cellZoneName_);
 
     return true;
+}
+
+
+void Foam::MRFZone::update()
+{
+    if (mesh_.topoChanging())
+    {
+        setMRFFaces();
+    }
 }
 
 

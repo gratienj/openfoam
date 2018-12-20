@@ -68,7 +68,7 @@ Foam::phase::phase
 Foam::autoPtr<Foam::phase> Foam::phase::clone() const
 {
     NotImplemented;
-    return autoPtr<phase>(nullptr);
+    return nullptr;
 }
 
 
@@ -84,7 +84,7 @@ bool Foam::phase::read(const dictionary& phaseDict)
 
     if (nuModel_->read(phaseDict_))
     {
-        phaseDict_.lookup("rho") >> rho_;
+        phaseDict_.readEntry("rho", rho_);
 
         return true;
     }

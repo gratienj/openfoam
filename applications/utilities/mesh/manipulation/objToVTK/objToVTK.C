@@ -28,7 +28,7 @@ Group
     grpMeshManipulationUtilities
 
 Description
-    Read obj line (not surface!) file and convert into vtk.
+    Read obj line (not surface) file and convert into legacy VTK file.
 
 \*---------------------------------------------------------------------------*/
 
@@ -110,9 +110,14 @@ labelList parseVertices(const string& line)
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Read obj line (not surface) file and convert into legacy VTK file"
+    );
+
     argList::noParallel();
-    argList::addArgument("OBJ file");
-    argList::addArgument("output VTK file");
+    argList::addArgument("obj-file", "The input obj line file");
+    argList::addArgument("vtk-file", "The output vtk file");
     argList args(argc, argv);
 
     const fileName objName = args[1];
@@ -200,13 +205,14 @@ int main(int argc, char *argv[])
         << objName << nl
         << "ASCII\n"
         << "DATASET POLYDATA\n"
-        << "POINTS " << points.size() << " float\n";
+        << "POINTS " << points.size() << " double\n";
 
-    forAll(points, i)
+    for (const point& pt : points)
     {
-        const point& pt = points[i];
-
-        outFile << pt.x() << ' ' << pt.y() << ' ' << pt.z() << nl;
+        outFile
+            << float(pt.x()) << ' '
+            << float(pt.y()) << ' '
+            << float(pt.z()) << nl;
     }
 
     outFile
@@ -265,7 +271,7 @@ int main(int argc, char *argv[])
 
     outFile
         << "POINT_DATA " << points.size() << nl
-        << "SCALARS pointID float 1\n"
+        << "SCALARS pointID double 1\n"
         << "LOOKUP_TABLE default\n";
 
     forAll(points, i)
@@ -284,13 +290,14 @@ int main(int argc, char *argv[])
 
     if (!pointNormals.empty())
     {
-        outFile << nl << "NORMALS pointNormals float\n";
+        outFile << nl << "NORMALS pointNormals double\n";
 
-        forAll(pointNormals, i)
+        for(const vector& n : pointNormals)
         {
-            const vector& n = pointNormals[i];
-
-            outFile << n.x() << ' ' << n.y() << ' ' << n.z() << nl;
+            outFile
+                << float(n.x()) << ' '
+                << float(n.y()) << ' '
+                << float(n.z()) << nl;
         }
     }
 

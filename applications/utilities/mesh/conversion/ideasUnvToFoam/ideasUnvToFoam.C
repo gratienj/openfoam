@@ -54,23 +54,7 @@ using namespace Foam;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
-    template<>
-    inline unsigned Hash<face>::operator()(const face& t, unsigned seed) const
-    {
-        return Hasher(t.cdata(),t.size()*sizeof(label), seed);
-    }
-
-    template<>
-    inline unsigned Hash<face>::operator()(const face& t) const
-    {
-        return Hash<face>::operator()(t, 0);
-    }
-}
-
 const string SEPARATOR("    -1");
-
 
 bool isSeparator(const std::string& line)
 {
@@ -227,12 +211,8 @@ void readPoints
         {
             hasWarned = true;
 
-            IOWarningInFunction
-            (
-                is
-            )   << "Points not in order starting at point " << pointi
-                //<< " at line " << is.lineNumber()
-                //<< abort(FatalError);
+            IOWarningInFunction(is)
+                << "Points not in order starting at point " << pointi
                 << endl;
         }
 
@@ -483,6 +463,13 @@ void readCells
 
     Info<< "Read " << cellVerts.size() << " cells"
         << " and " << boundaryFaces.size() << " boundary faces." << endl;
+
+    if (!cellVerts.size())
+    {
+        WarningInFunction
+            << "There are no cells in the mesh." << endl
+            << "    Note: 2D meshes are not supported."<< endl;
+    }
 }
 
 
@@ -661,12 +648,16 @@ label findPatch(const List<labelHashSet>& dofGroups, const face& f)
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Convert I-Deas unv format to OpenFOAM"
+    );
     argList::noParallel();
     argList::addArgument(".unv file");
     argList::addBoolOption
     (
         "dump",
-        "dump boundary faces as boundaryFaces.obj (for debugging)"
+        "Dump boundary faces as boundaryFaces.obj (for debugging)"
     );
 
     #include "setRootCase.H"
@@ -853,10 +844,10 @@ int main(int argc, char *argv[])
 
     labelList own(boundaryFaces.size(), -1);
     labelList nei(boundaryFaces.size(), -1);
-    HashTable<label, label> faceToCell[2];
+    Map<label> faceToCell[2];
 
     {
-        HashTable<label, face, Hash<face>> faceToFaceID(boundaryFaces.size());
+        HashTable<label, face, face::Hash<>> faceToFaceID(boundaryFaces.size());
         forAll(boundaryFaces, facei)
         {
             SortableList<label> sortedVerts(boundaryFaces[facei]);
@@ -869,12 +860,11 @@ int main(int argc, char *argv[])
             forAll(faces, i)
             {
                 SortableList<label> sortedVerts(faces[i]);
-                HashTable<label, face, Hash<face>>::const_iterator fnd =
-                    faceToFaceID.find(face(sortedVerts));
+                const auto fnd = faceToFaceID.find(face(sortedVerts));
 
-                if (fnd != faceToFaceID.end())
+                if (fnd.found())
                 {
-                    label facei = fnd();
+                    label facei = *fnd;
                     int stat = face::compare(faces[i], boundaryFaces[facei]);
 
                     if (stat == 1)
@@ -956,11 +946,7 @@ int main(int argc, char *argv[])
         forAll(dofVertIndices, patchi)
         {
             const labelList& foamVerts = dofVertIndices[patchi];
-
-            forAll(foamVerts, i)
-            {
-                dofGroups[patchi].insert(foamVerts[i]);
-            }
+            dofGroups[patchi].insert(foamVerts);
         }
 
         List<DynamicList<face>> dynPatchFaces(dofVertIndices.size());
@@ -1122,23 +1108,19 @@ int main(int argc, char *argv[])
 
 
     // For debugging: dump boundary faces as OBJ surface mesh
-    if (args.optionFound("dump"))
+    if (args.found("dump"))
     {
         Info<< "Writing boundary faces to OBJ file boundaryFaces.obj"
             << nl << endl;
 
         // Create globally numbered surface
-        meshedSurface rawSurface
-        (
-            xferCopy(polyPoints),
-            xferCopyTo<faceList>(boundaryFaces)
-        );
+        meshedSurface rawSurface(polyPoints, boundaryFaces);
 
         // Write locally numbered surface
         meshedSurface
         (
-            xferCopy(rawSurface.localPoints()),
-            xferCopy(rawSurface.localFaces())
+            rawSurface.localPoints(),
+            rawSurface.localFaces()
         ).write(runTime.path()/"boundaryFaces.obj");
     }
 
@@ -1171,14 +1153,14 @@ int main(int argc, char *argv[])
             runTime.constant(),
             runTime
         ),
-        xferMove(polyPoints),
+        std::move(polyPoints),
         cellVerts,
-        usedPatchFaceVerts,             // boundaryFaces,
-        usedPatchNames,                 // boundaryPatchNames,
+        usedPatchFaceVerts,     // boundaryFaces,
+        usedPatchNames,         // boundaryPatchNames,
         wordList(patchNames.size(), polyPatch::typeName), // boundaryPatchTypes,
-        "defaultFaces",             // defaultFacesName
-        polyPatch::typeName,        // defaultFacesType,
-        wordList(0)                 // boundaryPatchPhysicalTypes
+        "defaultFaces",         // defaultFacesName
+        polyPatch::typeName,    // defaultFacesType,
+        wordList()              // boundaryPatchPhysicalTypes
     );
 
     // Remove files now, to ensure all mesh files written are consistent.

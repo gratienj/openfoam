@@ -69,7 +69,7 @@ bool Foam::snappySnapDriver::isFeaturePoint
 (
     const scalar featureCos,
     const indirectPrimitivePatch& pp,
-    const PackedBoolList& isFeatureEdge,
+    const bitSet& isFeatureEdge,
     const label pointi
 ) const
 {
@@ -128,7 +128,7 @@ bool Foam::snappySnapDriver::isFeaturePoint
 
 void Foam::snappySnapDriver::smoothAndConstrain
 (
-    const PackedBoolList& isPatchMasterEdge,
+    const bitSet& isPatchMasterEdge,
     const indirectPrimitivePatch& pp,
     const labelList& meshEdges,
     const List<pointConstraint>& constraints,
@@ -271,11 +271,7 @@ void Foam::snappySnapDriver::calcNearestFace
                 << exit(FatalError);
         }
         const faceZone& fZone = mesh.faceZones()[zonei];
-        PackedBoolList isZonedFace(mesh.nFaces());
-        forAll(fZone, i)
-        {
-            isZonedFace[fZone[i]] = 1;
-        }
+        const bitSet isZonedFace(mesh.nFaces(), fZone);
 
         DynamicList<label> ppFaces(fZone.size());
         DynamicList<label> meshFaces(fZone.size());
@@ -332,9 +328,21 @@ void Foam::snappySnapDriver::calcNearestFace
             }
             else
             {
-                WarningInFunction
-                    << "Did not find surface near face centre " << fc[hiti]
+                static label nWarn = 0;
+
+                if (nWarn < 100)
+                {
+                    WarningInFunction
+                        << "Did not find surface near face centre " << fc[hiti]
                     << endl;
+                    nWarn++;
+                    if (nWarn == 100)
+                    {
+                        WarningInFunction
+                            << "Reached warning limit " << nWarn
+                            << ". Suppressing further warnings." << endl;
+                    }
+                }
             }
         }
     }
@@ -396,9 +404,22 @@ void Foam::snappySnapDriver::calcNearestFace
         }
         else
         {
-            WarningInFunction
-                << "Did not find surface near face centre " << fc[hiti]
-                << endl;
+            static label nWarn = 0;
+
+            if (nWarn < 100)
+            {
+                WarningInFunction
+                    << "Did not find surface near face centre " << fc[hiti]
+                    << endl;
+
+                nWarn++;
+                if (nWarn == 100)
+                {
+                    WarningInFunction
+                        << "Reached warning limit " << nWarn
+                        << ". Suppressing further warnings." << endl;
+                }
+            }
         }
     }
 
@@ -455,12 +476,12 @@ void Foam::snappySnapDriver::calcNearestFacePointProperties
     List<List<point>>& pointFaceSurfNormals,
     List<List<point>>& pointFaceDisp,
     List<List<point>>& pointFaceCentres,
-    List<labelList>&    pointFacePatchID
+    List<labelList>&  pointFacePatchID
 ) const
 {
     const fvMesh& mesh = meshRefiner_.mesh();
 
-    const PackedBoolList isMasterFace(syncTools::getMasterFaces(mesh));
+    const bitSet isMasterFace(syncTools::getMasterFaces(mesh));
 
 
     // For now just get all surrounding face data. Expensive - should just
@@ -562,7 +583,7 @@ void Foam::snappySnapDriver::calcNearestFacePointProperties
 
 
         // Mark all points on 'boundary' edges
-        PackedBoolList isBoundaryPoint(pp.nPoints());
+        bitSet isBoundaryPoint(pp.nPoints());
 
         const labelListList& edgeFaces = pp.edgeFaces();
         const edgeList& edges = pp.edges();
@@ -575,14 +596,14 @@ void Foam::snappySnapDriver::calcNearestFacePointProperties
             if (eFaces.size() == 1)
             {
                 // 'real' boundary edge
-                isBoundaryPoint[e[0]] = true;
-                isBoundaryPoint[e[1]] = true;
+                isBoundaryPoint.set(e[0]);
+                isBoundaryPoint.set(e[1]);
             }
             else if (eFaces.size() == 2 && bafflePair[eFaces[0]] == eFaces[1])
             {
                 // 'baffle' boundary edge
-                isBoundaryPoint[e[0]] = true;
-                isBoundaryPoint[e[1]] = true;
+                isBoundaryPoint.set(e[0]);
+                isBoundaryPoint.set(e[1]);
             }
         }
 
@@ -607,7 +628,7 @@ void Foam::snappySnapDriver::calcNearestFacePointProperties
                 {
                     label pointi = meshToPatchPoint[f[fp]];
 
-                    if (pointi != -1 && isBoundaryPoint[pointi])
+                    if (pointi != -1 && isBoundaryPoint.test(pointi))
                     {
                         List<point>& pNormals = pointFaceSurfNormals[pointi];
                         List<point>& pDisp = pointFaceDisp[pointi];
@@ -830,7 +851,7 @@ Foam::pointIndexHit Foam::snappySnapDriver::findMultiPatchPoint
                     label& patch = normalToPatch[faceToNormalBin[i]];
                     if (patch == -1)
                     {
-                        // First occurence
+                        // First occurrence
                         patch = patchIDs[i];
                     }
                     else if (patch == -2)
@@ -865,7 +886,7 @@ Foam::pointIndexHit Foam::snappySnapDriver::findMultiPatchPoint
 void Foam::snappySnapDriver::writeStats
 (
     const indirectPrimitivePatch& pp,
-    const PackedBoolList& isPatchMasterPoint,
+    const bitSet& isPatchMasterPoint,
     const List<pointConstraint>& patchConstraints
 ) const
 {
@@ -1434,7 +1455,7 @@ void Foam::snappySnapDriver::releasePointsNextToMultiPatch
 
 
     // 1. Mark points on multiple patches
-    PackedBoolList isMultiPatchPoint(pp.size());
+    bitSet isMultiPatchPoint(pp.size());
 
     forAll(pointFacePatchID, pointi)
     {
@@ -1444,13 +1465,13 @@ void Foam::snappySnapDriver::releasePointsNextToMultiPatch
             pointFacePatchID[pointi],
             pointFaceCentres[pointi]
         );
-        isMultiPatchPoint[pointi] = multiPatchPt.hit();
+        isMultiPatchPoint.set(pointi, multiPatchPt.hit());
     }
 
     // 2. Make sure multi-patch points are also attracted
     forAll(isMultiPatchPoint, pointi)
     {
-        if (isMultiPatchPoint[pointi])
+        if (isMultiPatchPoint.test(pointi))
         {
             if
             (
@@ -1488,11 +1509,11 @@ void Foam::snappySnapDriver::releasePointsNextToMultiPatch
             label pointi = f[fp];
             if
             (
-                isMultiPatchPoint[pointi]
+                isMultiPatchPoint.test(pointi)
              && patchConstraints[pointi].first() > 1
             )
             {
-                nMultiPatchPoints++;
+                ++nMultiPatchPoints;
             }
         }
 
@@ -1503,7 +1524,7 @@ void Foam::snappySnapDriver::releasePointsNextToMultiPatch
                 label pointi = f[fp];
                 if
                 (
-                   !isMultiPatchPoint[pointi]
+                   !isMultiPatchPoint.test(pointi)
                  && patchConstraints[pointi].first() > 1
                 )
                 {
@@ -1839,9 +1860,9 @@ Foam::labelPair Foam::snappySnapDriver::findDiagonalAttraction
                         isConcave
                         (
                             compact0.centre(points0),
-                            compact0.normal(points0),
+                            compact0.areaNormal(points0),
                             compact1.centre(points1),
-                            compact1.normal(points1),
+                            compact1.areaNormal(points1),
                             concaveCos
                         )
                     )
@@ -2859,7 +2880,7 @@ void Foam::snappySnapDriver::determineBaffleFeatures
 
 
     // Is edge on baffle
-    PackedBoolList isBaffleEdge(pp.nEdges());
+    bitSet isBaffleEdge(pp.nEdges());
     label nBaffleEdges = 0;
     // Is point on
     //  0 : baffle-edge (0)
@@ -2873,8 +2894,8 @@ void Foam::snappySnapDriver::determineBaffleFeatures
 
         if (efn.size() == 2 && (efn[0]&efn[1]) < baffleFeatureCos)
         {
-            isBaffleEdge[edgei] = true;
-            nBaffleEdges++;
+            isBaffleEdge.set(edgei);
+            ++nBaffleEdges;
             const edge& e = pp.edges()[edgei];
             pointStatus[e[0]] = 0;
             pointStatus[e[1]] = 0;
@@ -3287,9 +3308,22 @@ void Foam::snappySnapDriver::reverseAttractMeshPoints
                 }
                 else
                 {
-                    WarningInFunction
-                        << "Did not find pp point near " << featPt
-                        << endl;
+                    static label nWarn = 0;
+
+                    if (nWarn < 100)
+                    {
+                        WarningInFunction
+                            << "Did not find pp point near " << featPt
+                            << endl;
+                        nWarn++;
+                        if (nWarn == 100)
+                        {
+                            WarningInFunction
+                                << "Reached warning limit " << nWarn
+                                << ". Suppressing further warnings." << endl;
+                        }
+                    }
+
                 }
             }
         }
@@ -3399,7 +3433,7 @@ void Foam::snappySnapDriver::featureAttractionUsingFeatureEdges
     const refinementFeatures& features = meshRefiner_.features();
     const fvMesh& mesh = meshRefiner_.mesh();
 
-    const PackedBoolList isPatchMasterPoint
+    const bitSet isPatchMasterPoint
     (
         meshRefinement::getMasterPoints
         (
@@ -3837,8 +3871,8 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurfaceFeature
     const fvMesh& mesh = meshRefiner_.mesh();
 
 
-    //const PackedBoolList isMasterPoint(syncTools::getMasterPoints(mesh));
-    const PackedBoolList isPatchMasterPoint
+    //const bitSet isMasterPoint(syncTools::getMasterPoints(mesh));
+    const bitSet isPatchMasterPoint
     (
         meshRefinement::getMasterPoints
         (
@@ -4120,12 +4154,12 @@ Foam::vectorField Foam::snappySnapDriver::calcNearestSurfaceFeature
 
     if (featureAttract < 1-0.001)
     {
-        //const PackedBoolList isMasterEdge(syncTools::getMasterEdges(mesh));
+        //const bitSet isMasterEdge(syncTools::getMasterEdges(mesh));
         const labelList meshEdges
         (
             pp.meshEdges(mesh.edges(), mesh.pointEdges())
         );
-        const PackedBoolList isPatchMasterEdge
+        const bitSet isPatchMasterEdge
         (
             meshRefinement::getMasterEdges
             (

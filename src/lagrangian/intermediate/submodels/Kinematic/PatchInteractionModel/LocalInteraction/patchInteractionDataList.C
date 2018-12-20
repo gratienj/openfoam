@@ -24,7 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "patchInteractionDataList.H"
-#include "stringListOps.H"
 #include "emptyPolyPatch.H"
 
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
@@ -46,22 +45,20 @@ Foam::patchInteractionDataList::patchInteractionDataList
     patchGroupIDs_(this->size())
 {
     const polyBoundaryMesh& bMesh = mesh.boundaryMesh();
-    const wordList allPatchNames = bMesh.names();
-
     const List<patchInteractionData>& items = *this;
     forAllReverse(items, i)
     {
-        const word& patchName = items[i].patchName();
-        labelList patchIDs = findStrings(patchName, allPatchNames);
+        const keyType& patchName = items[i].patchName();
+        labelList ids = bMesh.indices(patchName);
 
-        if (patchIDs.empty())
+        if (ids.empty())
         {
             WarningInFunction
                 << "Cannot find any patch names matching " << patchName
                 << endl;
         }
 
-        patchGroupIDs_[i].transfer(patchIDs);
+        patchGroupIDs_[i].transfer(ids);
     }
 
     // Check that all patches are specified

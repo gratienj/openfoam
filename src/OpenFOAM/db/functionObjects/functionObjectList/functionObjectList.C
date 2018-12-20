@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,10 +29,8 @@ License
 #include "profiling.H"
 #include "argList.H"
 #include "timeControlFunctionObject.H"
-//#include "IFstream.H"
 #include "dictionaryEntry.H"
 #include "stringOps.H"
-#include "wordRes.H"
 #include "Tuple2.H"
 #include "etcFiles.H"
 #include "IOdictionary.H"
@@ -85,7 +83,7 @@ Foam::functionObject* Foam::functionObjectList::remove
         oldIndex = fnd();
 
         // Retrieve the pointer and remove it from the old list
-        ptr = this->set(oldIndex, 0).ptr();
+        ptr = this->set(oldIndex, nullptr).ptr();
         indices_.erase(fnd);
     }
     else
@@ -100,71 +98,59 @@ Foam::functionObject* Foam::functionObjectList::remove
 void Foam::functionObjectList::listDir
 (
     const fileName& dir,
-    HashSet<word>& foMap
+    wordHashSet& available
 )
 {
     // Search specified directory for functionObject configuration files
+    for (const fileName& f : fileHandler().readDir(dir))
     {
-        fileNameList foFiles(fileHandler().readDir(dir));
-        forAll(foFiles, f)
+        if (f.ext().empty())
         {
-            if (foFiles[f].ext().empty())
-            {
-                foMap.insert(foFiles[f]);
-            }
+            available.insert(f);
         }
     }
 
     // Recurse into sub-directories
+    for (const fileName& d : fileHandler().readDir(dir, fileName::DIRECTORY))
     {
-        fileNameList foDirs(fileHandler().readDir(dir, fileName::DIRECTORY));
-        forAll(foDirs, fd)
-        {
-            listDir(dir/foDirs[fd], foMap);
-        }
+        listDir(dir/d, available);
     }
 }
 
 
 void Foam::functionObjectList::list()
 {
-    HashSet<word> foMap;
+    wordHashSet available;
 
-    fileNameList etcDirs(findEtcDirs(functionObjectDictPath));
-
-    forAll(etcDirs, ed)
+    for (const fileName& d : findEtcDirs(functionObjectDictPath))
     {
-        listDir(etcDirs[ed], foMap);
+        listDir(d, available);
     }
 
     Info<< nl
         << "Available configured functionObjects:"
-        << foMap.sortedToc()
+        << available.sortedToc()
         << nl;
 }
 
 
 Foam::fileName Foam::functionObjectList::findDict(const word& funcName)
 {
-    // First check if there is a functionObject dictionary file in the
-    // case system directory
-    fileName dictFile = stringOps::expand("$FOAM_CASE")/"system"/funcName;
+    // First check for functionObject dictionary file in globalCase system/
+
+    fileName dictFile = stringOps::expand("<system>")/funcName;
 
     if (isFile(dictFile))
     {
         return dictFile;
     }
-    else
-    {
-        fileNameList etcDirs(findEtcDirs(functionObjectDictPath));
 
-        forAll(etcDirs, i)
+    for (const fileName& d : findEtcDirs(functionObjectDictPath))
+    {
+        dictFile = search(funcName, d);
+        if (!dictFile.empty())
         {
-            dictFile = search(funcName, etcDirs[i]);
-            if (!dictFile.empty())
-            {
-                return dictFile;
-            }
+            return dictFile;
         }
     }
 
@@ -313,11 +299,11 @@ bool Foam::functionObjectList::readFunctionObject
     }
     else if (funcDict.found("field"))
     {
-        requiredFields.insert(wordRe(funcDict.lookup("field")));
+        requiredFields.insert(funcDict.get<wordRe>("field"));
     }
     else if (funcDict.found("fields"))
     {
-        requiredFields.insert(wordReList(funcDict.lookup("fields")));
+        requiredFields.insert(funcDict.get<wordRes>("fields"));
     }
 
     // Insert named arguments
@@ -390,73 +376,73 @@ Foam::autoPtr<Foam::functionObjectList> Foam::functionObjectList::New
     HashSet<wordRe>& requiredFields
 )
 {
-    autoPtr<functionObjectList> functionsPtr;
-
+    // Merge any functions from the provided controlDict
     controlDict.add
     (
-        dictionaryEntry("functions", controlDict, dictionary::null)
+        dictionaryEntry("functions", controlDict, dictionary::null),
+        true
     );
 
     dictionary& functionsDict = controlDict.subDict("functions");
 
-    word region = word::null;
+    const word regionName = args.opt<word>("region", "");
 
-    // Set the region name if specified
-    if (args.optionFound("region"))
+    bool modifiedControlDict = false;
+
+    if (args.found("dict"))
     {
-        region = args["region"];
+        modifiedControlDict = true;
+
+        controlDict.merge
+        (
+            IOdictionary
+            (
+                IOobject
+                (
+                    args["dict"],
+                    runTime,
+                    IOobject::MUST_READ_IF_MODIFIED
+                )
+            )
+        );
     }
 
-    if
-    (
-        args.optionFound("dict")
-     || args.optionFound("func")
-     || args.optionFound("funcs")
-    )
+    if (args.found("func"))
     {
-        if (args.optionFound("dict"))
-        {
-            controlDict.merge
-            (
-                IOdictionary
-                (
-                    IOobject
-                    (
-                        args["dict"],
-                        runTime,
-                        IOobject::MUST_READ_IF_MODIFIED
-                    )
-                )
-            );
-        }
+        modifiedControlDict = true;
 
-        if (args.optionFound("func"))
+        readFunctionObject
+        (
+            args["func"],
+            functionsDict,
+            requiredFields,
+            regionName
+        );
+    }
+
+    if (args.found("funcs"))
+    {
+        modifiedControlDict = true;
+
+        wordList funcNames = args.getList<word>("funcs");
+
+        for (const word& funcName : funcNames)
         {
             readFunctionObject
             (
-                args["func"],
+                funcName,
                 functionsDict,
                 requiredFields,
-                region
+                regionName
             );
         }
+    }
 
-        if (args.optionFound("funcs"))
-        {
-            wordList funcs(args.optionLookup("funcs")());
 
-            forAll(funcs, i)
-            {
-                readFunctionObject
-                (
-                    funcs[i],
-                    functionsDict,
-                    requiredFields,
-                    region
-                );
-            }
-        }
+    autoPtr<functionObjectList> functionsPtr;
 
+    if (modifiedControlDict)
+    {
         functionsPtr.reset(new functionObjectList(runTime, controlDict));
     }
     else
@@ -468,12 +454,6 @@ Foam::autoPtr<Foam::functionObjectList> Foam::functionObjectList::New
 
     return functionsPtr;
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::functionObjectList::~functionObjectList()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -493,7 +473,7 @@ Foam::IOdictionary& Foam::functionObjectList::stateDict()
         createStateDict();
     }
 
-    return stateDictPtr_();
+    return *stateDictPtr_;
 }
 
 
@@ -504,7 +484,7 @@ const Foam::IOdictionary& Foam::functionObjectList::stateDict() const
         createStateDict();
     }
 
-    return stateDictPtr_();
+    return *stateDictPtr_;
 }
 
 
@@ -625,7 +605,7 @@ bool Foam::functionObjectList::execute(const label subIndex)
 
 bool Foam::functionObjectList::execute
 (
-    const wordRes& functionNames,
+    const UList<wordRe>& functionNames,
     const label subIndex
 )
 {
@@ -637,7 +617,7 @@ bool Foam::functionObjectList::execute
         {
             functionObject& funcObj = operator[](obji);
 
-            if (functionNames.match(funcObj.name()))
+            if (stringOps::match(functionNames, funcObj.name()))
             {
                 ok = funcObj.execute(subIndex) && ok;
             }
@@ -715,12 +695,8 @@ bool Foam::functionObjectList::read()
     }
 
     // Update existing and add new functionObjects
-    const entry* entryPtr = parentDict_.lookupEntryPtr
-    (
-        "functions",
-        false,
-        false
-    );
+    const entry* entryPtr =
+        parentDict_.findEntry("functions", keyType::LITERAL);
 
     if (entryPtr)
     {
@@ -751,11 +727,11 @@ bool Foam::functionObjectList::read()
         newPtrs.setSize(functionsDict.size());
         newDigs.setSize(functionsDict.size());
 
-        forAllConstIter(dictionary, functionsDict, iter)
+        for (const entry& dEntry : functionsDict)
         {
-            const word& key = iter().keyword();
+            const word& key = dEntry.keyword();
 
-            if (!iter().isDict())
+            if (!dEntry.isDict())
             {
                 if (key != "libs")
                 {
@@ -766,7 +742,8 @@ bool Foam::functionObjectList::read()
                 continue;
             }
 
-            const dictionary& dict = iter().dict();
+            const dictionary& dict = dEntry.dict();
+
             bool enabled = dict.lookupOrDefault("enabled", true);
 
             newDigs[nFunc] = dict.digest();
@@ -837,7 +814,9 @@ bool Foam::functionObjectList::read()
                 {
                     // Bit of trickery to get the original message
                     err.write(Warning, false);
-                    InfoInFunction << nl << endl;
+                    InfoInFunction << nl
+                        << "--> while loading function object '" << key << "'"
+                        << nl << endl;
                 }
 
                 // Restore previous exception throwing state

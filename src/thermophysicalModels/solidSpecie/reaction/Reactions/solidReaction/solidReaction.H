@@ -90,8 +90,8 @@ private:
         //- Return string representation of the right of the reaction
         void solidReactionStrRight(OStringStream&) const;
 
-        //- Disallow default bitwise assignment
-        void operator=(const solidReaction&);
+        //- No copy assignment
+        void operator=(const solidReaction&) = delete;
 
 
 public:
@@ -160,12 +160,11 @@ public:
 
         // Access
 
-
-            // - Acces to gas components of the reaction
+            //- Access to gas components of the reaction
             virtual const List<specieCoeffs>& grhs() const;
             virtual const List<specieCoeffs>& glhs() const;
 
-            // - Access to gas specie list
+            //- Access to gas specie list
             virtual const speciesTable& gasSpecies() const;
 
 

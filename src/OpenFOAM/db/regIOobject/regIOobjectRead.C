@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  | Copyright (C) 2015-2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -131,7 +131,7 @@ Foam::Istream& Foam::regIOobject::readStream(const bool valid)
         isPtr_ = fileHandler().readStream(*this, objPath, type(), valid);
     }
 
-    return isPtr_();
+    return *isPtr_;
 }
 
 
@@ -174,7 +174,7 @@ Foam::Istream& Foam::regIOobject::readStream
         }
     }
 
-    return isPtr_();
+    return *isPtr_;
 }
 
 
@@ -183,7 +183,8 @@ void Foam::regIOobject::close()
     if (IFstream::debug)
     {
         Pout<< "regIOobject::close() : "
-            << "finished reading " << isPtr_().name()
+            << "finished reading "
+            << (isPtr_.valid() ? isPtr_().name() : "dummy")
             << endl;
     }
 

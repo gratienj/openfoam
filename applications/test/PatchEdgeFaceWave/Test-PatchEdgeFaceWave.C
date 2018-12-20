@@ -29,10 +29,10 @@ Description
 #include "argList.H"
 #include "Time.H"
 #include "fvMesh.H"
-#include "volFields.H"
 #include "PatchEdgeFaceWave.H"
 #include "patchEdgeFaceInfo.H"
 #include "patchPatchDist.H"
+#include "fvCFD.H"
 
 using namespace Foam;
 
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("patchDist", dimLength, 0.0)
+            dimensionedScalar(dimLength, Zero)
         );
         scalarField pf(vsf.boundaryField()[patch.index()].size());
         forAll(pf, facei)
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
                 IOobject::AUTO_WRITE
             ),
             mesh,
-            dimensionedScalar("otherPatchDist", dimLength, 0.0)
+            dimensionedScalar(dimLength, Zero)
         );
         vsf.boundaryFieldRef()[patch.index()] = pwd;
 

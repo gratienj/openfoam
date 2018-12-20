@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,7 +55,7 @@ namespace Foam
 // Forward declarations
 class argList;
 class mapPolyMesh;
-class wordRes;
+class wordRe;
 
 /*---------------------------------------------------------------------------*\
                      Class functionObjectList Declaration
@@ -102,12 +102,12 @@ class functionObjectList
 
         //- Search the specified directory for functionObject
         //- configuration files, add to the given map and recurse
-        static void listDir(const fileName& dir, HashSet<word>& foMap);
+        static void listDir(const fileName& dir, wordHashSet& available);
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         functionObjectList(const functionObjectList&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const functionObjectList&) = delete;
 
 
@@ -115,8 +115,8 @@ public:
 
     // Static data members
 
-        //- Default relative path to the directory structure
-        //- containing the functionObject dictionary files
+        //- Default relative path ("caseDicts/postProcessing") to the
+        //- directory structure containing functionObject dictionary files.
         static fileName functionObjectDictPath;
 
 
@@ -160,7 +160,7 @@ public:
 
 
     //- Destructor
-    ~functionObjectList();
+    ~functionObjectList() = default;
 
 
     // Member Functions
@@ -189,49 +189,39 @@ public:
         //- Find the ID of a given function object by name
         label findObjectID(const word& name) const;
 
-        //- Print a list of functionObject configuration files in
-        //- user/group/shipped directories.
-        //  The search scheme allows for version-specific and
-        //  version-independent files using the following hierarchy:
-        //  - \b user settings:
-        //    - ~/.OpenFOAM/\<VERSION\>/caseDicts/postProcessing
-        //    - ~/.OpenFOAM/caseDicts/postProcessing
-        //  - \b group (site) settings (when $WM_PROJECT_SITE is set):
-        //    - $WM_PROJECT_SITE/\<VERSION\>/caseDicts/postProcessing
-        //    - $WM_PROJECT_SITE/caseDicts/postProcessing
-        //  - \b group (site) settings (when $WM_PROJECT_SITE is not set):
-        //    - $WM_PROJECT_INST_DIR/site/\<VERSION\>/caseDicts/postProcessing
-        //    - $WM_PROJECT_INST_DIR/site/caseDicts/postProcessing
-        //  - \b other (shipped) settings:
-        //    - $WM_PROJECT_DIR/etc/caseDicts/postProcessing
+        //- Print a list of functionObject configuration files in the
+        //- directories located using
+        //- Foam::findEtcDirs("caseDicts/postProcessing")
+        //
+        //  -# \b user settings
+        //    - ~/.OpenFOAM/{PROJECT_API}/"caseDicts/postProcessing"
+        //    - ~/.OpenFOAM/"caseDicts/postProcessing"
+        //  -# \b group settings
+        //    - $WM_PROJECT_SITE/{PROJECT_API}/"etc/caseDicts/postProcessing"
+        //    - $WM_PROJECT_SITE/"etc/caseDicts/postProcessing"
+        //  -# \b other (shipped) settings
+        //    - $WM_PROJECT_DIR/etc/"caseDicts/postProcessing"
+        //
+        // Where {PROJECT_API} is the value of the OPENFOAM define.
+        // See further notes in Foam::findEtcEntries()
         static void list();
 
-        //- Search for functionObject dictionary file in
-        //- user/group/shipped directories.
-        //  The search scheme allows for version-specific and
-        //  version-independent files using the following hierarchy:
-        //  - \b user settings:
-        //    - ~/.OpenFOAM/\<VERSION\>/caseDicts/postProcessing
-        //    - ~/.OpenFOAM/caseDicts/postProcessing
-        //  - \b group (site) settings (when $WM_PROJECT_SITE is set):
-        //    - $WM_PROJECT_SITE/\<VERSION\>/caseDicts/postProcessing
-        //    - $WM_PROJECT_SITE/caseDicts/postProcessing
-        //  - \b group (site) settings (when $WM_PROJECT_SITE is not set):
-        //    - $WM_PROJECT_INST_DIR/site/\<VERSION\>/caseDicts/postProcessing
-        //    - $WM_PROJECT_INST_DIR/site/caseDicts/postProcessing
-        //  - \b other (shipped) settings:
-        //    - $WM_PROJECT_DIR/etc/caseDicts/postProcessing
+        //- Find a functionObject dictionary file in the case
+        //- \<system\> directory or any directory located using
+        //- Foam::findEtcDirs("caseDicts/postProcessing")
         //
-        //  \return The path of the functionObject dictionary file if found
-        //  otherwise an empty path
+        //  \return The path of the functionObject dictionary file found
+        //     or an empty path
         static fileName findDict(const word& funcName);
 
         //- Read the specified functionObject configuration dictionary parsing
-        //  the optional arguments included in the name 'funcNameArgs0',
-        //  inserting 'field' or 'fields' entries as required and merging the
-        //  resulting functionObject dictionary into 'functionsDict'.  Any
-        //  fields required to execute the functionObject are added to
-        //  'requiredFields'
+        //- the optional arguments included in the name 'funcNameArgs0',
+        //- inserting 'field' or 'fields' entries as required and merging the
+        //- resulting functionObject dictionary into 'functionsDict'.  Any
+        //- fields required to execute the functionObject are added to
+        //- 'requiredFields'
+        //
+        //  Uses functionObjectList::findDict() for searching
         static bool readFunctionObject
         (
             const string& funcNameArgs0,
@@ -270,7 +260,7 @@ public:
         //      execute
         //  \param subIndex an execution sub-index corresponding to a
         //      sub-cycle or something similar
-        bool execute(const wordRes& functionNames, const label subIndex);
+        bool execute(const UList<wordRe>& functionNames, const label subIndex);
 
         //- Called when Time::run() determines that the time-loop exits
         bool end();

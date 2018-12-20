@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -83,7 +83,7 @@ string domainName();
 //- Return the user's login name
 string userName();
 
-//- Is user administrator
+//- Is the current user the administrator (root)
 bool isAdministrator();
 
 //- Return home directory path name for the current user
@@ -92,8 +92,16 @@ fileName home();
 //- Return home directory path name for a particular user
 fileName home(const std::string& userName);
 
-//- Return current working directory path name
+//- The physical or logical current working directory path name.
+//  The behaviour is controlled by the \c cwd optimisation Switch
+//  A value of 0 corresponds to the physical value, which is identical
+//  to what getcwd and pwd -P would deliver.
+//  A value of 1 corresponds to the logical value, which corresponds
+//  to the PWD environment value and to what pwd -L would deliver.
 fileName cwd();
+
+//- The physical or logical current working directory path name.
+fileName cwd(bool logical);
 
 //- Change current directory to the one specified and return true on success.
 //  Using an empty name is a no-op and always returns false.
@@ -208,34 +216,39 @@ bool ping(const std::string& host, const label timeOut=10);
 
 //- Execute the specified command via the shell.
 //  Uses vfork/execl internally.
+//  When Foam::infoDetailLevel is zero, redirects stdout to stderr.
+//
 //  Where possible, use the list version instead.
 //
-//  \param background return immediately to parent process instead of waiting
+//  \param bg return immediately to parent process instead of waiting
 //      for the child. Can be used (with moderation) to create background
 //      processes.
 //
 //  \note treats an empty command as a successful no-op.
-int system(const std::string& command, const bool background=false);
+//      When Foam::infoDetailLevel is zero, redirects stdout to stderr.
+int system(const std::string& command, const bool bg = false);
 
 //- Execute the specified command with arguments.
 //  Uses vfork/execvp internally
+//  When Foam::infoDetailLevel is zero, redirects stdout to stderr.
 //
-//  \param background return immediately to parent process instead of waiting
+//  \param bg return immediately to parent process instead of waiting
 //      for the child. Can be used (with moderation) to create background
 //      processes.
 //
 //  \note treats an empty command as a successful no-op.
-int system(const UList<string>& command, const bool background=false);
+int system(const UList<string>& command, const bool bg = false);
 
 //- Execute the specified command with arguments.
 //  Uses vfork/execvp internally
+//  When Foam::infoDetailLevel is zero, redirects stdout to stderr.
 //
-//  \param background return immediately to parent process instead of waiting
+//  \param bg return immediately to parent process instead of waiting
 //      for the child. Can be used (with moderation) to create background
 //      processes.
 //
 //  \note treats an empty command as a successful no-op.
-int system(const CStringList& command, const bool background=false);
+int system(const CStringList& command, const bool bg = false);
 
 //- Open a shared library and return handle to library.
 //  Print error message if library cannot be loaded (suppress with check=true)
@@ -254,57 +267,6 @@ bool dlSymFound(void* handle, const std::string& symbol);
 
 //- Return all loaded libraries
 fileNameList dlLoaded();
-
-
-// Low level random numbers. Use Random class instead.
-
-//- Seed random number generator.
-void osRandomSeed(const label seed);
-
-//- Return random integer (uniform distribution between 0 and 2^31)
-label osRandomInteger();
-
-//- Return random double precision (uniform distribution between 0 and 1)
-scalar osRandomDouble();
-
-//- Return the size of the buffer for re-entrant random number generator
-label osRandomBufferSize();
-
-//- Seed random number generator.
-void osRandomSeed(const label seed, List<char>& buffer);
-
-//- Return random integer (uniform distribution between 0 and 2^31)
-label osRandomInteger(List<char>& buffer);
-
-//- Return random double precision (uniform distribution between 0 and 1)
-scalar osRandomDouble(List<char>& buffer);
-
-
-// Thread handling
-
-//- Allocate a thread
-label allocateThread();
-
-//- Start a thread
-void createThread(const label, void *(*start_routine) (void *), void *arg);
-
-//- Wait for thread
-void joinThread(const label);
-
-//- Delete a thread
-void freeThread(const label);
-
-//- Allocate a mutex variable
-label allocateMutex();
-
-//- Lock a mutex variable
-void lockMutex(const label);
-
-//- Unlock a mutex variable
-void unlockMutex(const label);
-
-//- Free a mutex variable
-void freeMutex(const label);
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

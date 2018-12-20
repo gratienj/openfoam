@@ -225,7 +225,7 @@ Foam::label Foam::checkTopology
             points.write();
             if (setWriter.valid())
             {
-                mergeAndWrite(setWriter, points);
+                mergeAndWrite(setWriter(), points);
             }
         }
     }
@@ -528,7 +528,7 @@ Foam::label Foam::checkTopology
                 points.write();
                 if (setWriter.valid())
                 {
-                    mergeAndWrite(setWriter, points);
+                    mergeAndWrite(setWriter(), points);
                 }
             }
         }
@@ -639,7 +639,7 @@ Foam::label Foam::checkTopology
         points.write();
         if (setWriter.valid())
         {
-            mergeAndWrite(setWriter, points);
+            mergeAndWrite(setWriter(), points);
         }
     }
 
@@ -654,21 +654,26 @@ Foam::label Foam::checkTopology
         {
             Info<< "    "
                 << setw(20) << "CellZone"
-                << setw(9) << "Cells"
-                << setw(9) << "Points"
-                << ' ' << "BoundingBox" <<endl;
+                << setw(13) << "Cells"
+                << setw(13) << "Points"
+                << setw(13) << "Volume"
+                << "BoundingBox" << endl;
 
             const cellList& cells = mesh.cells();
             const faceList& faces = mesh.faces();
-            PackedBoolList isZonePoint(mesh.nPoints());
+            const scalarField& cellVolumes = mesh.cellVolumes();
+
+            bitSet isZonePoint(mesh.nPoints());
 
             for (const cellZone& cZone : cellZones)
             {
                 boundBox bb;
                 isZonePoint.reset();  // clears all bits (reset count)
+                scalar v = 0.0;
 
                 for (const label celli : cZone)
                 {
+                    v += cellVolumes[celli];
                     for (const label facei : cells[celli])
                     {
                         const face& f = faces[facei];
@@ -685,10 +690,13 @@ Foam::label Foam::checkTopology
                 bb.reduce();  // Global min/max
 
                 Info<< "    "
-                    << setw(20) << cZone.name()
-                    << setw(9) << returnReduce(cZone.size(), sumOp<label>())
-                    << setw(9)
+                    << setw(19) << cZone.name()
+                    << ' ' << setw(12)
+                    << returnReduce(cZone.size(), sumOp<label>())
+                    << ' ' << setw(12)
                     << returnReduce(isZonePoint.count(), sumOp<label>())
+                    << ' ' << setw(12)
+                    << returnReduce(v, sumOp<scalar>())
                     << ' ' << bb << endl;
             }
         }

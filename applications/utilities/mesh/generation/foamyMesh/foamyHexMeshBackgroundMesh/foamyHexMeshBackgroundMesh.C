@@ -41,7 +41,7 @@ Description
 #include "cellShape.H"
 #include "DynamicField.H"
 #include "isoSurfaceCell.H"
-#include "vtkSurfaceWriter.H"
+#include "foamVtkSurfaceWriter.H"
 #include "syncTools.H"
 #include "decompositionModel.H"
 
@@ -61,11 +61,10 @@ scalar getMergeDistance
     const boundBox& bb
 )
 {
-    scalar mergeTol = defaultMergeTol;
-    args.optionReadIfPresent("mergeTol", mergeTol);
+    const scalar mergeTol = args.opt<scalar>("mergeTol", defaultMergeTol);
 
     scalar writeTol =
-        Foam::pow(scalar(10.0), -scalar(IOstream::defaultPrecision()));
+        Foam::pow(scalar(10), -scalar(IOstream::defaultPrecision()));
 
     Info<< "Merge tolerance : " << mergeTol << nl
         << "Write tolerance : " << writeTol << endl;
@@ -119,7 +118,7 @@ void printMeshData(const polyMesh& mesh)
 
     // Print stats
 
-    globalIndex globalBoundaryFaces(mesh.nFaces()-mesh.nInternalFaces());
+    globalIndex globalBoundaryFaces(mesh.nBoundaryFaces());
 
     label maxProcCells = 0;
     label totProcFaces = 0;
@@ -282,20 +281,17 @@ autoPtr<polyMesh> generateHexMesh
     word defaultFacesType = polyPatch::typeName;
     wordList patchPhysicalTypes(0);
 
-    return autoPtr<polyMesh>
+    return autoPtr<polyMesh>::New
     (
-        new polyMesh
-        (
-            io,
-            xferMoveTo<pointField>(points),
-            cellShapes,
-            boundary,
-            patchNames,
-            patchTypes,
-            defaultFacesName,
-            defaultFacesType,
-            patchPhysicalTypes
-        )
+        io,
+        std::move(points),
+        cellShapes,
+        boundary,
+        patchNames,
+        patchTypes,
+        defaultFacesName,
+        defaultFacesType,
+        patchPhysicalTypes
     );
 }
 
@@ -390,21 +386,21 @@ int main(int argc, char *argv[])
     argList::addBoolOption
     (
         "writeMesh",
-        "write the resulting mesh and distance fields"
+        "Write the resulting mesh and distance fields"
     );
     argList::addOption
     (
         "mergeTol",
         "scalar",
-        "specify the merge distance relative to the bounding box size "
-        "(default 1e-6)"
+        "The merge distance relative to the bounding box size (default 1e-6)"
     );
+
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
 
-    const bool writeMesh = args.optionFound("writeMesh");
+    const bool writeMesh = args.found("writeMesh");
 
     if (writeMesh)
     {
@@ -517,13 +513,13 @@ int main(int argc, char *argv[])
     // Distribute the initial mesh
     if (Pstream::parRun())
     {
-        #include "createMesh.H"
+        #include "createNamedMesh.H"
         Info<< "Loaded mesh:" << endl;
         printMeshData(mesh);
 
         // Allow override of decomposeParDict location
-        fileName decompDictFile;
-        args.optionReadIfPresent("decomposeParDict", decompDictFile);
+        const fileName decompDictFile =
+            args.opt<fileName>("decomposeParDict", "");
 
         labelList decomp = decompositionModel::New
         (
@@ -574,7 +570,7 @@ int main(int argc, char *argv[])
 
     if (writeMesh)
     {
-        runTime++;
+        ++runTime;
         Info<< "Writing mesh to " << runTime.timeName() << endl;
         backgroundMesh.mesh().write();
     }
@@ -606,7 +602,7 @@ int main(int argc, char *argv[])
                 false
             ),
             fvm,
-            dimensionedScalar("zero", dimLength, 0)
+            dimensionedScalar(dimLength, Zero)
         );
 
         const searchableSurfaces& geometry = geometryToConformTo.geometry();
@@ -671,7 +667,7 @@ int main(int argc, char *argv[])
                 false
             ),
             pointMesh::New(fvm),
-            dimensionedScalar("zero", dimLength, 0)
+            dimensionedScalar(dimLength, Zero)
         );
         {
             scalarField pointDistSqr(fvm.nPoints(), -sqr(GREAT));
@@ -742,14 +738,18 @@ int main(int argc, char *argv[])
         pointMergeMap
     );
 
-    vtkSurfaceWriter writer;
-    writer.write
-    (
-        runTime.path(),
-        "iso",
-        mergedPoints,
-        mergedFaces
-    );
+    if (Pstream::master())
+    {
+        vtk::surfaceWriter writer
+        (
+            mergedPoints,
+            mergedFaces,
+            (runTime.path() / "iso"),
+            false // serial only
+        );
+
+        writer.writeGeometry();
+    }
 
     Info<< "End\n" << endl;
 

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,22 +55,15 @@ SourceFiles
 #define sigFpe_H
 
 #include <signal.h>
-
-#if defined(linux) || defined(linux64) || defined(linuxIA64) || \
-    defined(linuxARM7) || defined(linuxPPC64) || defined(linuxPPC64le)
-    #define LINUX
-#endif
-
-#if defined(LINUX) && defined(__GNUC__)
-    #define LINUX_GNUC
-#endif
-
-#include "UList.H"
+#include "scalar.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
+// Forward declarations
+template<class T> class UList;
 
 /*---------------------------------------------------------------------------*\
                            Class sigFpe Declaration
@@ -91,57 +84,102 @@ class sigFpe
         //- Flag to indicate floating point trapping is currently active
         static bool sigActive_;
 
+        //- Flag to indicate mallocNan is currently active
+        static bool nanActive_;
+
         //- Saved old signal trapping setting
         static struct sigaction oldAction_;
 
 
-    // Static data members
+    // Private Member Functions
 
-        #ifdef LINUX_GNUC
-        //- Handler for caught signals
+        //- Handler for caught signals.
+        //  Ends job and prints stack
         static void sigHandler(int);
-        #endif
 
 
 public:
 
-    // Public data
-
-        //- Flag to indicate mallocNan is enabled
-        static bool mallocNanActive_;
-
-
     // Constructors
 
-        //- Construct null
+        //- Constructor calls set() to activate the FPE signal handler if it
+        //- was was not previously activate and requested() returns true.
         sigFpe();
 
 
-    //- Destructor
+    //- Destructor calls unset() to deactivate the FPE signal handler
+    //- as required.
     ~sigFpe();
 
 
-    // Member functions
+    // Static Member Functions
 
         //- Check if SIGFPE signals handler is to be enabled.
         //  This is controlled by the trapFpe entry or the FOAM_SIGFPE
         //  environment variable
         static bool requested();
 
+        //- True if SIGFPE handling is currently active.
+        static inline bool active()
+        {
+            return sigActive_;
+        }
+
+        //- True if NaN memory initialisation is currently active.
+        static inline bool nanActive()
+        {
+            return nanActive_;
+        }
+
         //- Activate SIGFPE signal handler when FOAM_SIGFPE is %set
         //  Fill memory with NaN when FOAM_SETNAN is %set
-        static void set(const bool verbose);
+        static void set(bool verbose=false);
 
         //- Deactivate SIGFPE signal handler and NaN memory initialisation
-        static void unset(const bool verbose);
+        static void unset(bool verbose=false);
 
-        #ifdef LINUX
+        #ifdef __linux__
         //- Malloc function which initializes to NaN
         static void* mallocNan(size_t size);
         #endif
 
-        //- Fill block of data with NaN
-        static void fillNan(UList<scalar>& lst);
+        //- Fill data block with NaN values
+        static void fillNan(UList<scalar>& list);
+
+
+    // Helper classes
+
+        //- Helper to locally ignore SIGFPE handling.
+        //  Restores the original state of the SIGFPE handler on destruction.
+        class ignore
+        {
+            //- The signal handler state when entering
+            bool wasActive_;
+
+            //- No copy construct
+            ignore(const ignore&) = delete;
+
+            //- No copy assignment
+            void operator=(const ignore&) = delete;
+
+            //- No move construct
+            ignore(ignore&&) = delete;
+
+            //- No move assignment
+            void operator=(ignore&&) = delete;
+
+
+        public:
+
+            //- Constructor deactivates any previously active SIGFPE handler
+            ignore();
+
+            //- Destructor restores the original state of SIGFPE handler
+            ~ignore();
+
+            //- Restore the original state of SIGFPE handler
+            void restore();
+        };
 };
 
 

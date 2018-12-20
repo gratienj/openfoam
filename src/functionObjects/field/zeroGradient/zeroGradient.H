@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -76,7 +76,7 @@ SourceFiles
 #include "fvMeshFunctionObject.H"
 #include "volFieldsFwd.H"
 #include "OFstream.H"
-#include "wordReList.H"
+#include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -96,7 +96,7 @@ class zeroGradient
     // Private data
 
         //- Name of fields to process
-        wordReList selectFields_;
+        wordRes selectFields_;
 
         //- Formatting for the result fields.
         word resultName_;
@@ -108,7 +108,7 @@ class zeroGradient
     // Private Member Functions
 
         //- Check that the word contains the appropriate substitution token(s).
-        static bool checkFormatName(const word&);
+        static bool checkFormatName(const word& str);
 
 
         //- Accept unless field only has constraint patches
@@ -126,10 +126,10 @@ class zeroGradient
         int process(const word& inputName);
 
 
-        //- Disallow default bitwise copy construct
+        //- No copy construct
         zeroGradient(const zeroGradient&) = delete;
 
-        //- Disallow default bitwise assignment
+        //- No copy assignment
         void operator=(const zeroGradient&) = delete;
 
 
@@ -151,7 +151,7 @@ public:
 
 
     //- Destructor
-    virtual ~zeroGradient();
+    virtual ~zeroGradient() = default;
 
 
     // Member Functions

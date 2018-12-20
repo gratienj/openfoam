@@ -28,7 +28,7 @@ Group
     grpPostProcessingUtilities
 
 Description
-    Utility to perform noise analysis of pressure data.
+    Perform noise analysis of pressure data.
 
     The utility provides a light wrapper around the run-time selectable
     noise model.  Current options include:
@@ -55,8 +55,8 @@ Usage
         }
 
 
-        // Input file
-        inputFile   "postProcessing/faceSource1/surface/patch/patch.case";
+        // Input files list
+        files       ("postProcessing/faceSource1/surface/patch/patch.case";)
 
         // Surface reader
         reader      ensight;
@@ -102,9 +102,15 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Perform noise analysis of pressure data"
+    );
+
     argList::noCheckProcessorDirectories();
 
-    #include "addDictOption.H"
+    argList::addOption("dict", "file", "Use alternative noiseDict");
+
     #include "setRootCase.H"
     #include "createTime.H"
 

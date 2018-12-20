@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -47,7 +47,7 @@ Foam::sampledPatch::sampledPatch
 (
     const word& name,
     const polyMesh& mesh,
-    const wordReList& patchNames,
+    const UList<wordRe>& patchNames,
     const bool triangulate
 )
 :
@@ -66,15 +66,9 @@ Foam::sampledPatch::sampledPatch
 )
 :
     sampledSurface(name, mesh, dict),
-    patchNames_(dict.lookup("patches")),
+    patchNames_(dict.get<wordRes>("patches")),
     triangulate_(dict.lookupOrDefault("triangulate", false)),
     needsUpdate_(true)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::sampledPatch::~sampledPatch()
 {}
 
 
@@ -124,9 +118,8 @@ bool Foam::sampledPatch::update()
     }
 
     label sz = 0;
-    forAll(patchIDs(), i)
+    for (const label patchi : patchIDs())
     {
-        label patchi = patchIDs()[i];
         const polyPatch& pp = mesh().boundaryMesh()[patchi];
 
         if (isA<emptyPolyPatch>(pp))
@@ -150,7 +143,7 @@ bool Foam::sampledPatch::update()
 
     forAll(patchIDs(), i)
     {
-        label patchi = patchIDs()[i];
+        const label patchi = patchIDs()[i];
 
         patchStart_[i] = sz;
 
@@ -161,7 +154,7 @@ bool Foam::sampledPatch::update()
             patchIndex_[sz] = i;
             patchFaceLabels_[sz] = j;
             meshFaceLabels[sz] = pp.start()+j;
-            sz++;
+            ++sz;
         }
     }
 
@@ -229,46 +222,46 @@ void Foam::sampledPatch::remapFaces(const labelUList& faceMap)
 
 Foam::tmp<Foam::scalarField> Foam::sampledPatch::sample
 (
-    const volScalarField& vField
+    const interpolation<scalar>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::vectorField> Foam::sampledPatch::sample
 (
-    const volVectorField& vField
+    const interpolation<vector>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::sphericalTensorField> Foam::sampledPatch::sample
 (
-    const volSphericalTensorField& vField
+    const interpolation<sphericalTensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::symmTensorField> Foam::sampledPatch::sample
 (
-    const volSymmTensorField& vField
+    const interpolation<symmTensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::tensorField> Foam::sampledPatch::sample
 (
-    const volTensorField& vField
+    const interpolation<tensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
@@ -277,7 +270,7 @@ Foam::tmp<Foam::scalarField> Foam::sampledPatch::sample
     const surfaceScalarField& sField
 ) const
 {
-    return sampleField(sField);
+    return sampleOnFaces(sField);
 }
 
 
@@ -286,7 +279,7 @@ Foam::tmp<Foam::vectorField> Foam::sampledPatch::sample
     const surfaceVectorField& sField
 ) const
 {
-    return sampleField(sField);
+    return sampleOnFaces(sField);
 }
 
 
@@ -295,7 +288,7 @@ Foam::tmp<Foam::sphericalTensorField> Foam::sampledPatch::sample
     const surfaceSphericalTensorField& sField
 ) const
 {
-    return sampleField(sField);
+    return sampleOnFaces(sField);
 }
 
 
@@ -304,7 +297,7 @@ Foam::tmp<Foam::symmTensorField> Foam::sampledPatch::sample
     const surfaceSymmTensorField& sField
 ) const
 {
-    return sampleField(sField);
+    return sampleOnFaces(sField);
 }
 
 
@@ -313,7 +306,7 @@ Foam::tmp<Foam::tensorField> Foam::sampledPatch::sample
     const surfaceTensorField& sField
 ) const
 {
-    return sampleField(sField);
+    return sampleOnFaces(sField);
 }
 
 
@@ -322,7 +315,7 @@ Foam::tmp<Foam::scalarField> Foam::sampledPatch::interpolate
     const interpolation<scalar>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -331,7 +324,7 @@ Foam::tmp<Foam::vectorField> Foam::sampledPatch::interpolate
     const interpolation<vector>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -340,7 +333,7 @@ Foam::tmp<Foam::sphericalTensorField> Foam::sampledPatch::interpolate
     const interpolation<sphericalTensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -349,7 +342,7 @@ Foam::tmp<Foam::symmTensorField> Foam::sampledPatch::interpolate
     const interpolation<symmTensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -358,7 +351,7 @@ Foam::tmp<Foam::tensorField> Foam::sampledPatch::interpolate
     const interpolation<tensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,8 +28,8 @@ Group
     grpMultiphaseSolvers
 
 Description
-    Solver for a system of 2 compressible fluid phases with one phase
-    dispersed, e.g. gas bubbles in a liquid including heat-transfer.
+    Solver for a system of two compressible fluid phases with one dispersed
+    phase. Eg, gas bubbles in a liquid including heat-transfer.
 
 \*---------------------------------------------------------------------------*/
 
@@ -44,27 +44,34 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for a system of two compressible fluid phases with one"
+        " dispersed phase.\n"
+        "Eg, gas bubbles in a liquid including heat-transfer."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
     #include "createFields.H"
     #include "createFieldRefs.H"
-    #include "createFvOptions.H"
     #include "createTimeControls.H"
     #include "CourantNos.H"
     #include "setInitialDeltaT.H"
 
-    Switch faceMomentum
+    bool faceMomentum
     (
-        pimple.dict().lookupOrDefault<Switch>("faceMomentum", false)
+        pimple.dict().lookupOrDefault("faceMomentum", false)
     );
 
-    Switch implicitPhasePressure
+    bool implicitPhasePressure
     (
-        mesh.solverDict(alpha1.name()).lookupOrDefault<Switch>
+        mesh.solverDict(alpha1.name()).lookupOrDefault
         (
             "implicitPhasePressure", false
         )
@@ -83,7 +90,7 @@ int main(int argc, char *argv[])
         #include "CourantNos.H"
         #include "setDeltaT.H"
 
-        runTime++;
+        ++runTime;
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
         // --- Pressure-velocity PIMPLE corrector loop
@@ -117,9 +124,7 @@ int main(int argc, char *argv[])
 
         #include "write.H"
 
-        Info<< "ExecutionTime = "
-            << runTime.elapsedCpuTime()
-            << " s\n\n" << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

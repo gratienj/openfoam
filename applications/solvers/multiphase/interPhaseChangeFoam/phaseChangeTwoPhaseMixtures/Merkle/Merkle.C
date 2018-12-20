@@ -52,7 +52,7 @@ Foam::phaseChangeTwoPhaseMixtures::Merkle::Merkle
     Cc_("Cc", dimless, phaseChangeTwoPhaseMixtureCoeffs_),
     Cv_("Cv", dimless, phaseChangeTwoPhaseMixtureCoeffs_),
 
-    p0_("0", pSat().dimensions(), 0.0),
+    p0_(pSat().dimensions(), Zero),
 
     mcCoeff_(Cc_/(0.5*sqr(UInf_)*tInf_)),
     mvCoeff_(Cv_*rho1()/(0.5*sqr(UInf_)*tInf_*rho2()))
@@ -99,10 +99,10 @@ bool Foam::phaseChangeTwoPhaseMixtures::Merkle::read()
     {
         phaseChangeTwoPhaseMixtureCoeffs_ = optionalSubDict(type() + "Coeffs");
 
-        phaseChangeTwoPhaseMixtureCoeffs_.lookup("UInf") >> UInf_;
-        phaseChangeTwoPhaseMixtureCoeffs_.lookup("tInf") >> tInf_;
-        phaseChangeTwoPhaseMixtureCoeffs_.lookup("Cc") >> Cc_;
-        phaseChangeTwoPhaseMixtureCoeffs_.lookup("Cv") >> Cv_;
+        phaseChangeTwoPhaseMixtureCoeffs_.readEntry("UInf", UInf_);
+        phaseChangeTwoPhaseMixtureCoeffs_.readEntry("tInf", tInf_);
+        phaseChangeTwoPhaseMixtureCoeffs_.readEntry("Cc", Cc_);
+        phaseChangeTwoPhaseMixtureCoeffs_.readEntry("Cv", Cv_);
 
         mcCoeff_ = Cc_/(0.5*sqr(UInf_)*tInf_);
         mvCoeff_ = Cv_*rho1()/(0.5*sqr(UInf_)*tInf_*rho2());

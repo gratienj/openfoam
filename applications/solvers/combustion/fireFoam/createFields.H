@@ -1,24 +1,14 @@
-Info<< "Creating combustion model\n" << endl;
-
-autoPtr<combustionModels::psiCombustionModel> combustion
-(
-    combustionModels::psiCombustionModel::New
-    (
-        mesh
-    )
-);
-
 Info<< "Reading thermophysical properties\n" << endl;
-
-psiReactionThermo& thermo = combustion->thermo();
+autoPtr<psiReactionThermo> pThermo(psiReactionThermo::New(mesh));
+psiReactionThermo& thermo = pThermo();
 thermo.validate(args.executable(), "h", "e");
 
 SLGThermo slgThermo(mesh, thermo);
 
-basicMultiComponentMixture& composition = thermo.composition();
+basicSpecieMixture& composition = thermo.composition();
 PtrList<volScalarField>& Y = composition.Y();
 
-const word inertSpecie(thermo.lookup("inertSpecie"));
+const word inertSpecie(thermo.get<word>("inertSpecie"));
 if (!composition.species().found(inertSpecie))
 {
     FatalIOErrorIn(args.executable().c_str(), thermo)
@@ -74,8 +64,11 @@ autoPtr<compressible::turbulenceModel> turbulence
     )
 );
 
-// Set the turbulence into the combustion model
-combustion->setTurbulence(turbulence());
+Info<< "Creating combustion model\n" << endl;
+autoPtr<CombustionModel<psiReactionThermo>> combustion
+(
+    CombustionModel<psiReactionThermo>::New(thermo, turbulence())
+);
 
 
 #include "readGravitationalAcceleration.H"
@@ -109,28 +102,6 @@ forAll(Y, i)
 }
 fields.add(thermo.he());
 
-IOdictionary additionalControlsDict
-(
-    IOobject
-    (
-        "additionalControls",
-        runTime.constant(),
-        mesh,
-        IOobject::MUST_READ_IF_MODIFIED,
-        IOobject::NO_WRITE
-    )
-);
-
-Switch solvePrimaryRegion
-(
-    additionalControlsDict.lookup("solvePrimaryRegion")
-);
-
-Switch solvePyrolysisRegion
-(
-    additionalControlsDict.lookupOrDefault<bool>("solvePyrolysisRegion", true)
-);
-
 volScalarField Qdot
 (
     IOobject
@@ -142,7 +113,7 @@ volScalarField Qdot
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Qdot", dimEnergy/dimVolume/dimTime, 0.0)
+    dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
 );
 
 #include "createDpdt.H"
@@ -153,3 +124,4 @@ volScalarField Qdot
 #include "createSurfaceFilmModel.H"
 #include "createPyrolysisModel.H"
 #include "createRadiationModel.H"
+#include "createFvOptions.H"

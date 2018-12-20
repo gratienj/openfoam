@@ -47,7 +47,7 @@ SourceFiles
 #include "cellShapeControl.H"
 #include "cvControls.H"
 #include "DynamicList.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "Time.H"
 #include "polyMesh.H"
 #include "plane.H"
@@ -439,7 +439,7 @@ private:
         ) const;
 
         //- Check to see if dual cell specified by given vertex iterator
-        //  intersects the boundary and hence reqires a point-pair
+        //  intersects the boundary and hence requires a point-pair
         bool dualCellSurfaceAnyIntersection
         (
             const Delaunay::Finite_vertices_iterator& vit
@@ -606,7 +606,7 @@ private:
             pointField& cellCentres,
             labelList& cellToDelaunayVertex,
             labelListList& patchToDelaunayVertex,
-            PackedBoolList& boundaryFacesToRemove
+            bitSet& boundaryFacesToRemove
         );
 
         void calcNeighbourCellCentres
@@ -726,7 +726,7 @@ private:
 
         label classifyBoundaryPoint(Cell_handle cit) const;
 
-        //- Index all of the the Delaunay cells and calculate their dual points
+        //- Index all of the Delaunay cells and calculate their dual points
         void indexDualVertices
         (
             pointField& pts,
@@ -760,7 +760,7 @@ private:
             wordList& patchNames,
             PtrList<dictionary>& patchDicts,
             labelListList& patchPointPairSlaves,
-            PackedBoolList& boundaryFacesToRemove,
+            bitSet& boundaryFacesToRemove,
             bool includeEmptyPatches = false
         ) const;
 
@@ -791,7 +791,7 @@ private:
             faceList& faces,
             labelList& owner,
             PtrList<dictionary>& patchDicts,
-            PackedBoolList& boundaryFacesToRemove,
+            bitSet& boundaryFacesToRemove,
             const List<DynamicList<face>>& patchFaces,
             const List<DynamicList<label>>& patchOwners,
             const List<DynamicList<bool>>& indirectPatchFace
@@ -850,11 +850,11 @@ private:
 
         void writePointPairs(const fileName& fName) const;
 
-        //- Disallow default bitwise copy construct
-        conformalVoronoiMesh(const conformalVoronoiMesh&);
+        //- No copy construct
+        conformalVoronoiMesh(const conformalVoronoiMesh&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const conformalVoronoiMesh&);
+        //- No copy assignment
+        void operator=(const conformalVoronoiMesh&) = delete;
 
 
 public:
@@ -997,7 +997,7 @@ public:
                 const wordList& patchNames,
                 const PtrList<dictionary>& patchDicts,
                 const pointField& cellCentres,
-                PackedBoolList& boundaryFacesToRemove
+                bitSet& boundaryFacesToRemove
             ) const;
 
             //- Calculate and write a field of the target cell size,

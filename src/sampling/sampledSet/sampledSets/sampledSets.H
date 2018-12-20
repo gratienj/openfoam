@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,7 +26,7 @@ Class
 
 Description
     Set of sets to sample.
-    Call sampledSets.write() to sample&write files.
+    Call sampledSets.write() to sample and write files.
 
 SourceFiles
     sampledSets.C
@@ -43,14 +43,14 @@ SourceFiles
 #include "interpolation.H"
 #include "coordSet.H"
 #include "writer.H"
-#include "wordReList.H"
+#include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward declarations
 class Time;
 class objectRegistry;
 class dictionary;
@@ -175,7 +175,7 @@ class sampledSets
       // Read from dictonary
 
         //- Names of fields to sample
-        wordReList fieldSelection_;
+        wordRes fieldSelection_;
 
         //- Interpolation scheme to use
         word interpolationScheme_;
@@ -240,8 +240,10 @@ class sampledSets
         void sampleAndWrite(fieldGroup<Type>& fields);
 
 
-        //- Disallow default bitwise copy construct and assignment
+        //- No copy construct
         sampledSets(const sampledSets&) = delete;
+
+        //- No copy assignment
         void operator=(const sampledSets&) = delete;
 
 
@@ -273,7 +275,7 @@ public:
 
 
     //- Destructor
-    virtual ~sampledSets();
+    virtual ~sampledSets() = default;
 
 
     // Member Functions

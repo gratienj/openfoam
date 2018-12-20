@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,8 +23,6 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "stringOps.H"
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -41,6 +39,7 @@ const Scalar pTraits<Scalar>::rootMin = -ScalarROOTVGREAT;
 const Scalar pTraits<Scalar>::rootMax = ScalarROOTVGREAT;
 
 const char* const pTraits<Scalar>::componentNames[] = { "" };
+
 
 pTraits<Scalar>::pTraits(const Scalar& val)
 :
@@ -61,18 +60,6 @@ word name(const Scalar val)
     std::ostringstream buf;
     buf << val;
     return buf.str();
-}
-
-
-word name(const char* fmt, const Scalar val)
-{
-    return stringOps::name(fmt, val);
-}
-
-
-word name(const std::string& fmt, const Scalar val)
-{
-    return stringOps::name(fmt, val);
 }
 
 
@@ -106,7 +93,7 @@ Scalar ScalarRead(const char* buf)
 }
 
 
-bool readScalar(const char* buf, Scalar& val)
+bool ScalarRead(const char* buf, Scalar& val)
 {
     char* endptr = nullptr;
     errno = 0;
@@ -146,6 +133,9 @@ Istream& operator>>(Istream& is, Scalar& val)
 
     if (!t.good())
     {
+        FatalIOErrorInFunction(is)
+            << "Bad token - could not get scalar value"
+            << exit(FatalIOError);
         is.setBad();
         return is;
     }
@@ -156,11 +146,11 @@ Istream& operator>>(Istream& is, Scalar& val)
     }
     else
     {
-        is.setBad();
         FatalIOErrorInFunction(is)
-            << "wrong token type - expected Scalar, found " << t.info()
+            << "Wrong token type - expected scalar value, found "
+            << t.info()
             << exit(FatalIOError);
-
+        is.setBad();
         return is;
     }
 

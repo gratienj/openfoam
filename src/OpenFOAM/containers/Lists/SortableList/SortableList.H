@@ -65,11 +65,11 @@ public:
     // Constructors
 
         //- Null constructor, sort later (eg, after assignment or transfer)
-        inline SortableList();
+        inline constexpr SortableList() noexcept;
 
         //- Construct given size, sort later.
         //  The indices remain empty until the list is sorted
-        explicit inline SortableList(const label size);
+        inline explicit SortableList(const label size);
 
         //- Construct given size and initial value. Sort later on
         //  The indices remain empty until the list is sorted
@@ -94,9 +94,6 @@ public:
 
         //- Construct from an initializer list, sorting immediately
         SortableList(std::initializer_list<T> values);
-
-        //- Construct from transferred List, sorting immediately
-        explicit SortableList(const Xfer<List<T>>& values);
 
 
     // Member Functions
@@ -129,9 +126,6 @@ public:
         //- Swap content with another SortableList in constant time
         inline void swap(SortableList<T>& lst);
 
-        //- Transfer contents to the Xfer container as a plain List
-        inline Xfer<List<T>> xfer();
-
 
     // Member Operators
 
@@ -152,6 +146,7 @@ public:
 
         //- Assignment to an initializer list
         void operator=(std::initializer_list<T> lst);
+
 };
 
 

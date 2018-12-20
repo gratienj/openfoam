@@ -67,7 +67,7 @@ class faEdgeMapper
         const faMesh& mesh_;
 
         //- Reference to mapPolyMesh
-        const mapPolyMesh& mpm_;
+        //const mapPolyMesh& mpm_;
 
         //- Old mesh size
         label sizeBeforeMapping_;
@@ -83,11 +83,11 @@ class faEdgeMapper
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        faEdgeMapper(const faEdgeMapper&);
+        //- No copy construct
+        faEdgeMapper(const faEdgeMapper&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const faEdgeMapper&);
+        //- No copy assignment
+        void operator=(const faEdgeMapper&) = delete;
 
         //- Calculate addressing
         void calcAddressing() const;
@@ -141,7 +141,7 @@ public:
         //- Return interpolated addressing
         virtual const labelListList& addressing() const;
 
-        //- Return interpolaion weights
+        //- Return interpolation weights
         virtual const scalarListList& weights() const;
 
         //- Are there any inserted faces

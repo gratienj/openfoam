@@ -28,11 +28,12 @@ License
 template<class Type, class GeoMesh>
 inline Foam::SubDimensionedField<Type, GeoMesh>::SubDimensionedField
 (
-    const SubField<Type>& slist
+    const SubField<Type>& sfield
 )
 :
-    SubField<Type>(slist)
+    SubField<Type>(sfield)
 {}
+
 
 template<class Type, class GeoMesh>
 inline Foam::SubDimensionedField<Type, GeoMesh>::SubDimensionedField
@@ -60,10 +61,32 @@ inline Foam::SubDimensionedField<Type, GeoMesh>::SubDimensionedField
 template<class Type, class GeoMesh>
 inline Foam::SubDimensionedField<Type, GeoMesh>::SubDimensionedField
 (
+    const UList<Type>& list,
+    const labelRange& range
+)
+:
+    SubField<Type>(list, range)
+{}
+
+
+template<class Type, class GeoMesh>
+inline Foam::SubDimensionedField<Type, GeoMesh>::SubDimensionedField
+(
+    const labelRange& range,
+    const UList<Type>& list
+)
+:
+    SubField<Type>(range, list)
+{}
+
+
+template<class Type, class GeoMesh>
+inline Foam::SubDimensionedField<Type, GeoMesh>::SubDimensionedField
+(
     const SubDimensionedField<Type, GeoMesh>& sfield
 )
 :
-    tmp<SubDimensionedField<Type, GeoMesh>>::refCount(),
+    refCount(),
     SubField<Type>(sfield)
 {}
 

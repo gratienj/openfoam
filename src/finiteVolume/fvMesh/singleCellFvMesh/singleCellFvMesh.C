@@ -68,7 +68,7 @@ void Foam::singleCellFvMesh::agglomerateMesh
     // Check agglomeration is sync
     {
         // Get neighbouring agglomeration
-        labelList nbrAgglom(mesh.nFaces()-mesh.nInternalFaces());
+        labelList nbrAgglom(mesh.nBoundaryFaces());
         forAll(oldPatches, patchi)
         {
             const polyPatch& pp = oldPatches[patchi];
@@ -106,7 +106,7 @@ void Foam::singleCellFvMesh::agglomerateMesh
 
                     if (iter == localToNbr.end())
                     {
-                        // First occurence of this zone. Store correspondence
+                        // First occurrence of this zone. Store correspondence
                         // to remote zone number.
                         localToNbr.insert(myZone, nbrZone);
                     }
@@ -268,23 +268,19 @@ void Foam::singleCellFvMesh::agglomerateMesh
     }
     addFvPatches(newPatches);
 
-    // Owner, neighbour is trivial
-    labelList owner(patchFaces.size(), 0);
-    labelList neighbour(0);
+    const label nFace = patchFaces.size();
 
-
-    // actually change the mesh
+    // Actually change the mesh. // Owner, neighbour is trivial
     resetPrimitives
     (
-        xferMove(boundaryPoints),
-        xferMove(patchFaces),
-        xferMove(owner),
-        xferMove(neighbour),
+        autoPtr<pointField>::New(std::move(boundaryPoints)),
+        autoPtr<faceList>::New(std::move(patchFaces)),
+        autoPtr<labelList>::New(nFace, Zero),   // owner
+        autoPtr<labelList>::New(),              // neighbour
         patchSizes,
         patchStarts,
-        true                //syncPar
+        true                                    // syncPar
     );
-
 
     // Adapt the zones
     cellZones().clear();
@@ -394,15 +390,7 @@ Foam::singleCellFvMesh::singleCellFvMesh
     const fvMesh& mesh
 )
 :
-    fvMesh
-    (
-        io,
-        xferCopy(pointField()), //points
-        xferCopy(faceList()),   //faces
-        xferCopy(labelList()),  //allOwner
-        xferCopy(labelList()),  //allNeighbour
-        false                   //syncPar
-    ),
+    fvMesh(io, Zero, false),
     patchFaceAgglomeration_
     (
         IOobject
@@ -489,15 +477,7 @@ Foam::singleCellFvMesh::singleCellFvMesh
     const labelListList& patchFaceAgglomeration
 )
 :
-    fvMesh
-    (
-        io,
-        xferCopy(pointField()), //points
-        xferCopy(faceList()),   //faces
-        xferCopy(labelList()),  //allOwner
-        xferCopy(labelList()),  //allNeighbour
-        false                   //syncPar
-    ),
+    fvMesh(io, Zero, false),
     patchFaceAgglomeration_
     (
         IOobject
@@ -632,10 +612,6 @@ Foam::singleCellFvMesh::singleCellFvMesh(const IOobject& io)
         )
     )
 {}
-
-
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
-
 
 
 // ************************************************************************* //

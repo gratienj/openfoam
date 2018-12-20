@@ -70,7 +70,7 @@ bool Foam::polyMesh::checkFaceOrthogonality
 
 
     // Statistics only for internal and masters of coupled faces
-    PackedBoolList isMasterFace(syncTools::getInternalOrMasterFaces(*this));
+    bitSet isMasterFace(syncTools::getInternalOrMasterFaces(*this));
 
     forAll(ortho, facei)
     {
@@ -109,7 +109,7 @@ bool Foam::polyMesh::checkFaceOrthogonality
             }
         }
 
-        if (isMasterFace[facei])
+        if (isMasterFace.test(facei))
         {
             minDDotS = min(minDDotS, ortho[facei]);
             sumDDotS += ortho[facei];
@@ -203,7 +203,7 @@ bool Foam::polyMesh::checkFaceSkewness
     label nWarnSkew = 0;
 
     // Statistics only for all faces except slave coupled faces
-    PackedBoolList isMasterFace(syncTools::getMasterFaces(*this));
+    bitSet isMasterFace(syncTools::getMasterFaces(*this));
 
     forAll(skew, facei)
     {
@@ -235,9 +235,9 @@ bool Foam::polyMesh::checkFaceSkewness
                 }
             }
 
-            if (isMasterFace[facei])
+            if (isMasterFace.test(facei))
             {
-                nWarnSkew++;
+                ++nWarnSkew;
             }
         }
     }
@@ -518,7 +518,7 @@ bool Foam::polyMesh::checkFaceWeight
     label nSummed = 0;
 
     // Statistics only for internal and masters of coupled faces
-    PackedBoolList isMasterFace(syncTools::getInternalOrMasterFaces(*this));
+    bitSet isMasterFace(syncTools::getInternalOrMasterFaces(*this));
 
     forAll(faceWght, facei)
     {
@@ -534,7 +534,7 @@ bool Foam::polyMesh::checkFaceWeight
         }
 
         // Note: statistics only on master of coupled faces
-        if (isMasterFace[facei])
+        if (isMasterFace.test(facei))
         {
             minDet = min(minDet, faceWght[facei]);
             sumDet += faceWght[facei];
@@ -605,7 +605,7 @@ bool Foam::polyMesh::checkVolRatio
     label nSummed = 0;
 
     // Statistics only for internal and masters of coupled faces
-    PackedBoolList isMasterFace(syncTools::getInternalOrMasterFaces(*this));
+    bitSet isMasterFace(syncTools::getInternalOrMasterFaces(*this));
 
     forAll(volRatio, facei)
     {
@@ -621,7 +621,7 @@ bool Foam::polyMesh::checkVolRatio
         }
 
         // Note: statistics only on master of coupled faces
-        if (isMasterFace[facei])
+        if (isMasterFace.test(facei))
         {
             minDet = min(minDet, volRatio[facei]);
             sumDet += volRatio[facei];

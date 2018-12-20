@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -77,7 +77,7 @@ protected:
         labelList interpolationCells_;
 
         //- Fetch interpolated cells
-        mapDistribute cellInterpolationMap_;
+        autoPtr<mapDistribute> cellInterpolationMap_;
 
         //- Interpolation stencil
         labelListList cellStencil_;
@@ -156,11 +156,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        cellVolumeWeight(const cellVolumeWeight&);
+        //- No copy construct
+        cellVolumeWeight(const cellVolumeWeight&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const cellVolumeWeight&);
+        //- No copy assignment
+        void operator=(const cellVolumeWeight&) = delete;
 
 
 public:
@@ -205,6 +205,10 @@ public:
         //- Return a communication schedule
         virtual const mapDistribute& cellInterpolationMap() const
         {
+            if (!cellInterpolationMap_.valid())
+            {
+                const_cast<cellVolumeWeight&>(*this).update();
+            }
             return cellInterpolationMap_;
         }
 

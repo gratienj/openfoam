@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,7 +55,7 @@ Description
 #include "processorMeshes.H"
 #include "hexRef8.H"
 
-#ifdef FOAM_USE_ZOLTAN
+#ifdef HAVE_ZOLTAN
     #include "zoltanRenumber.H"
 #endif
 
@@ -63,7 +63,7 @@ Description
 using namespace Foam;
 
 
-// Create named field from labelList for postprocessing
+// Create named field from labelList for post-processing
 tmp<volScalarField> createScalarField
 (
     const fvMesh& mesh,
@@ -85,7 +85,7 @@ tmp<volScalarField> createScalarField
                 false
             ),
             mesh,
-            dimensionedScalar("zero", dimless, 0),
+            dimensionedScalar(dimless, Zero),
             zeroGradientFvPatchScalarField::typeName
         )
     );
@@ -461,10 +461,10 @@ autoPtr<mapPolyMesh> reorderMesh
 
     mesh.resetPrimitives
     (
-        Xfer<pointField>::null(),
-        xferMove(newFaces),
-        xferMove(newOwner),
-        xferMove(newNeighbour),
+        autoPtr<pointField>(),  // <- null: leaves points untouched
+        autoPtr<faceList>::New(std::move(newFaces)),
+        autoPtr<labelList>::New(std::move(newOwner)),
+        autoPtr<labelList>::New(std::move(newNeighbour)),
         patchSizes,
         patchStarts,
         true
@@ -518,39 +518,36 @@ autoPtr<mapPolyMesh> reorderMesh
     }
 
 
-    return autoPtr<mapPolyMesh>
+    return autoPtr<mapPolyMesh>::New
     (
-        new mapPolyMesh
-        (
-            mesh,                       // const polyMesh& mesh,
-            mesh.nPoints(),             // nOldPoints,
-            mesh.nFaces(),              // nOldFaces,
-            mesh.nCells(),              // nOldCells,
-            identity(mesh.nPoints()),   // pointMap,
-            List<objectMap>(0),         // pointsFromPoints,
-            faceOrder,                  // faceMap,
-            List<objectMap>(0),         // facesFromPoints,
-            List<objectMap>(0),         // facesFromEdges,
-            List<objectMap>(0),         // facesFromFaces,
-            cellOrder,                  // cellMap,
-            List<objectMap>(0),         // cellsFromPoints,
-            List<objectMap>(0),         // cellsFromEdges,
-            List<objectMap>(0),         // cellsFromFaces,
-            List<objectMap>(0),         // cellsFromCells,
-            identity(mesh.nPoints()),   // reversePointMap,
-            reverseFaceOrder,           // reverseFaceMap,
-            reverseCellOrder,           // reverseCellMap,
-            flipFaceFlux,               // flipFaceFlux,
-            patchPointMap,              // patchPointMap,
-            labelListList(0),           // pointZoneMap,
-            labelListList(0),           // faceZonePointMap,
-            labelListList(0),           // faceZoneFaceMap,
-            labelListList(0),           // cellZoneMap,
-            pointField(0),              // preMotionPoints,
-            patchStarts,                // oldPatchStarts,
-            oldPatchNMeshPoints,        // oldPatchNMeshPoints
-            autoPtr<scalarField>()      // oldCellVolumes
-        )
+        mesh,                       // const polyMesh& mesh,
+        mesh.nPoints(),             // nOldPoints,
+        mesh.nFaces(),              // nOldFaces,
+        mesh.nCells(),              // nOldCells,
+        identity(mesh.nPoints()),   // pointMap,
+        List<objectMap>(),          // pointsFromPoints,
+        faceOrder,                  // faceMap,
+        List<objectMap>(),          // facesFromPoints,
+        List<objectMap>(),          // facesFromEdges,
+        List<objectMap>(),          // facesFromFaces,
+        cellOrder,                  // cellMap,
+        List<objectMap>(),          // cellsFromPoints,
+        List<objectMap>(),          // cellsFromEdges,
+        List<objectMap>(),          // cellsFromFaces,
+        List<objectMap>(),          // cellsFromCells,
+        identity(mesh.nPoints()),   // reversePointMap,
+        reverseFaceOrder,           // reverseFaceMap,
+        reverseCellOrder,           // reverseCellMap,
+        flipFaceFlux,               // flipFaceFlux,
+        patchPointMap,              // patchPointMap,
+        labelListList(),            // pointZoneMap,
+        labelListList(),            // faceZonePointMap,
+        labelListList(),            // faceZoneFaceMap,
+        labelListList(),            // cellZoneMap,
+        pointField(),               // preMotionPoints,
+        patchStarts,                // oldPatchStarts,
+        oldPatchNMeshPoints,        // oldPatchNMeshPoints
+        autoPtr<scalarField>()      // oldCellVolumes
     );
 }
 
@@ -573,17 +570,16 @@ labelList regionRenumber
 
     label celli = 0;
 
-    forAll(regionToCells, regionI)
+    forAll(regionToCells, regioni)
     {
-        Info<< "    region " << regionI << " starts at " << celli << endl;
+        Info<< "    region " << regioni << " starts at " << celli << endl;
 
         // Make sure no parallel comms
-        bool oldParRun = UPstream::parRun();
+        const bool oldParRun = UPstream::parRun();
         UPstream::parRun() = false;
 
         // Per region do a reordering.
-        fvMeshSubset subsetter(mesh);
-        subsetter.setLargeCellSubset(cellToRegion, regionI);
+        fvMeshSubset subsetter(mesh, regioni, cellToRegion);
 
         const fvMesh& subMesh = subsetter.subMesh();
 
@@ -615,28 +611,30 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "Renumber mesh to minimise bandwidth"
+        "Renumber mesh cells to reduce the bandwidth"
     );
 
     #include "addRegionOption.H"
     #include "addOverwriteOption.H"
     #include "addTimeOptions.H"
-    #include "addDictOption.H"
+
+    argList::addOption("dict", "file", "Use alternative renumberMeshDict");
+
     argList::addBoolOption
     (
         "frontWidth",
-        "calculate the rms of the frontwidth"
+        "Calculate the rms of the front-width"
     );
 
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
 
 
     // Force linker to include zoltan symbols. This section is only needed since
     // Zoltan is a static library
-    #ifdef FOAM_USE_ZOLTAN
+    #ifdef HAVE_ZOLTAN
         Info<< "renumberMesh built with zoltan support." << nl << endl;
         (void)zoltanRenumber::typeName;
     #endif
@@ -651,11 +649,12 @@ int main(int argc, char *argv[])
     runTime.setTime(Times[startTime], startTime);
 
     #include "createNamedMesh.H"
+
     const word oldInstance = mesh.pointsInstance();
 
-    const bool readDict = args.optionFound("dict");
-    const bool doFrontWidth = args.optionFound("frontWidth");
-    const bool overwrite = args.optionFound("overwrite");
+    const bool readDict = args.found("dict");
+    const bool doFrontWidth = args.found("frontWidth");
+    const bool overwrite = args.found("overwrite");
 
     label band;
     scalar profile;
@@ -751,7 +750,7 @@ int main(int argc, char *argv[])
                 << endl;
         }
 
-        renumberDict.lookup("writeMaps") >> writeMaps;
+        renumberDict.readEntry("writeMaps", writeMaps);
         if (writeMaps)
         {
             Info<< "Writing renumber maps (new to old) to polyMesh." << nl
@@ -1053,7 +1052,7 @@ int main(int argc, char *argv[])
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
 
 
@@ -1089,7 +1088,7 @@ int main(int argc, char *argv[])
 
 
     // Update fields
-    mesh.updateMesh(map);
+    mesh.updateMesh(map());
 
     // Update proc maps
     if (cellProcAddressing.headerOk())
@@ -1134,9 +1133,8 @@ int main(int argc, char *argv[])
 
             // Detect any flips.
             const labelHashSet& fff = map().flipFaceFlux();
-            forAllConstIter(labelHashSet, fff, iter)
+            for (const label facei : fff)
             {
-                label facei = iter.key();
                 label masterFacei = faceProcAddressing[facei];
 
                 faceProcAddressing[facei] = -masterFacei;

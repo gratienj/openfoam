@@ -28,7 +28,7 @@ Group
     grpMeshConversionUtilities
 
 Description
-    Converts an ANSYS input mesh file, exported from I-DEAS,
+    Convert an ANSYS input mesh file (exported from I-DEAS)
     to OpenFOAM format.
 
 \*---------------------------------------------------------------------------*/
@@ -48,8 +48,6 @@ Description
 #include "scalar.H"
 #include "StringStream.H"
 
-using namespace Foam;
-
 #include "argList.H"
 #include "Time.H"
 #include "polyMesh.H"
@@ -58,6 +56,11 @@ using namespace Foam;
 #include "cellShape.H"
 #include "SLList.H"
 #include "SLPtrList.H"
+
+// Flex may use register, which is deprecated and incompatible with C++17
+#pragma clang diagnostic ignored "-Wdeprecated-register"
+
+using namespace Foam;
 
 SLList<point> slPoints;
 SLList<label> slPointMap;
@@ -295,13 +298,19 @@ label findFace(const polyMesh& mesh, const face& f)
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Convert an ANSYS input mesh file (exported from I-DEAS)"
+        " to OpenFOAM format"
+    );
+
     argList::noParallel();
     argList::addArgument("ANSYS input file");
     argList::addOption
     (
         "scale",
         "factor",
-        "geometry scaling factor - default is 1"
+        "Geometry scaling factor - default is 1"
     );
 
     argList args(argc, argv);
@@ -311,7 +320,7 @@ int main(int argc, char *argv[])
         FatalError.exit();
     }
 
-    const scalar scaleFactor = args.optionLookupOrDefault("scale", 1.0);
+    const scalar scaleFactor = args.opt<scalar>("scale", 1);
 
     #include "createTime.H"
 
@@ -443,27 +452,23 @@ int main(int argc, char *argv[])
     const word defaultFacesName = "defaultFaces";
     word defaultFacesType = emptyPolyPatch::typeName;
 
-    // Create dummy mesh just to find out what are internal/external
-    // faces
-    autoPtr<polyMesh> dummyMesh
+    // Create dummy mesh just to find out what are internal/external faces
+    auto dummyMesh = autoPtr<polyMesh>::New
     (
-        new polyMesh
+        IOobject
         (
-            IOobject
-            (
-                "dummyMesh",
-                runTime.constant(),
-                runTime
-            ),
-            xferCopy(points),
-            cellShapes,
-            faceListList(0),
-            wordList(0),
-            wordList(0),
-            defaultFacesName,
-            defaultFacesType,
-            wordList(0)
-        )
+            "dummyMesh",
+            runTime.constant(),
+            runTime
+        ),
+        pointField(points),  // copy
+        cellShapes,
+        faceListList(),
+        wordList(),
+        wordList(),
+        defaultFacesName,
+        defaultFacesType,
+        wordList()
     );
 
 
@@ -602,7 +607,7 @@ int main(int argc, char *argv[])
             runTime.constant(),
             runTime
         ),
-        xferMove(points),
+        std::move(points),
         cellShapes,
         patchFaces,
         patchNames,
@@ -612,7 +617,7 @@ int main(int argc, char *argv[])
     );
 
 
-    if (cellTypes.size() > 0 || patchNames.size() > 0)
+    if (cellTypes.size() || patchNames.size())
     {
         DynamicList<pointZone*> pz;
         DynamicList<faceZone*> fz;

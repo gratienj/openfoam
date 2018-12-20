@@ -25,7 +25,7 @@ Application
     compressibleInterFoam
 
 Description
-    Solver for 2 compressible, non-isothermal immiscible fluids using a VOF
+    Solver for two compressible, non-isothermal immiscible fluids using a VOF
     (volume of fluid) phase-fraction based interface capturing approach.
 
     The momentum and other fluid properties are of the "mixture" and a single
@@ -41,10 +41,8 @@ Description
 #include "localEulerDdtScheme.H"
 #include "CrankNicolsonDdtScheme.H"
 #include "subCycle.H"
-#include "rhoThermo.H"
-#include "twoPhaseMixture.H"
-#include "twoPhaseMixtureThermo.H"
-#include "turbulentFluidThermoModel.H"
+#include "compressibleInterPhaseTransportModel.H"
+#include "pimpleControl.H"
 #include "SLGThermo.H"
 #include "surfaceFilmModel.H"
 #include "pimpleControl.H"
@@ -55,17 +53,22 @@ Description
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Solver for two compressible, non-isothermal immiscible fluids"
+        " using VOF phase-fraction based interface capturing."
+    );
+
     #include "postProcess.H"
 
-    #include "setRootCase.H"
+    #include "addCheckCaseOptions.H"
+    #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createMesh.H"
     #include "createControl.H"
     #include "createTimeControls.H"
     #include "createFields.H"
-    #include "createAlphaFluxes.H"
     #include "createSurfaceFilmModel.H"
-    #include "createFvOptions.H"
 
     volScalarField& p = mixture.p();
     volScalarField& T = mixture.T();
@@ -73,8 +76,6 @@ int main(int argc, char *argv[])
     const volScalarField& psi2 = mixture.thermo2().psi();
 
     regionModels::surfaceFilmModel& surfaceFilm = tsurfaceFilm();
-
-    turbulence->validate();
 
     if (!LTS)
     {
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
             #include "setDeltaT.H"
         }
 
-        runTime++;
+        ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -113,6 +114,8 @@ int main(int argc, char *argv[])
         {
             #include "alphaControls.H"
             #include "compressibleAlphaEqnSubCycle.H"
+
+            turbulence.correctPhasePhi();
 
             volScalarField::Internal Srho(surfaceFilm.Srho());
             contErr -= posPart(Srho);
@@ -128,15 +131,13 @@ int main(int argc, char *argv[])
 
             if (pimple.turbCorr())
             {
-                turbulence->correct();
+                turbulence.correct();
             }
         }
 
         runTime.write();
 
-        Info<< "ExecutionTime = "
-            << runTime.elapsedCpuTime()
-            << " s\n\n" << endl;
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;

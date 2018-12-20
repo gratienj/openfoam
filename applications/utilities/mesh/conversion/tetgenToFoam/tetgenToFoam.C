@@ -28,7 +28,7 @@ Group
     grpMeshConversionUtilities
 
 Description
-    Converts .ele and .node and .face files, written by tetgen.
+    Convert tetgen .ele and .node and .face files to an OpenFOAM mesh.
 
     Make sure to use add boundary attributes to the smesh file
     (5 fifth column in the element section)
@@ -101,18 +101,23 @@ label findFace(const primitiveMesh& mesh, const face& f)
 
 int main(int argc, char *argv[])
 {
-    argList::addArgument("file prefix");
+    argList::addNote
+    (
+        "Convert tetgen .ele and .node and .face files to an OpenFOAM mesh"
+    );
+
+    argList::addArgument("prefix", "The prefix for the input tetgen files");
     argList::addBoolOption
     (
         "noFaceFile",
-        "skip reading .face file for boundary information"
+        "Skip reading .face file for boundary information"
     );
 
     #include "setRootCase.H"
     #include "createTime.H"
 
     const fileName prefix = args[1];
-    const bool readFaceFile = !args.optionFound("noFaceFile");
+    const bool readFaceFile = !args.found("noFaceFile");
 
     const fileName nodeFile(prefix + ".node");
     const fileName eleFile(prefix + ".ele");
@@ -318,27 +323,24 @@ int main(int argc, char *argv[])
     // Construct mesh with default boundary only
     //
 
-    autoPtr<polyMesh> meshPtr
+    auto meshPtr = autoPtr<polyMesh>::New
     (
-        new polyMesh
+        IOobject
         (
-            IOobject
-            (
-                polyMesh::defaultRegion,
-                runTime.constant(),
-                runTime
-            ),
-            xferCopy(points),
-            cells,
-            faceListList(0),
-            wordList(0),    // boundaryPatchNames
-            wordList(0),    // boundaryPatchTypes
-            "defaultFaces",
-            polyPatch::typeName,
-            wordList(0)
-        )
+            polyMesh::defaultRegion,
+            runTime.constant(),
+            runTime
+        ),
+        pointField(points),  // Copy of points
+        cells,
+        faceListList(),
+        wordList(),          // boundaryPatchNames
+        wordList(),          // boundaryPatchTypes
+        "defaultFaces",
+        polyPatch::typeName,
+        wordList()
     );
-    const polyMesh& mesh = meshPtr;
+    const polyMesh& mesh = *meshPtr;
 
 
     if (readFaceFile)
@@ -531,7 +533,7 @@ int main(int argc, char *argv[])
                     runTime.constant(),
                     runTime
                 ),
-                xferMove(points),
+                std::move(points),
                 cells,
                 patchFaces,
                 patchNames,

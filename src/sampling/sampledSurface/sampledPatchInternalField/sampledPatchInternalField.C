@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2013 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,20 +58,17 @@ Foam::sampledPatchInternalField::sampledPatchInternalField
     sampledPatch(name, mesh, dict),
     mappers_(patchIDs().size())
 {
-    mappedPatchBase::offsetMode mode = mappedPatchBase::NORMAL;
-    if (dict.found("offsetMode"))
-    {
-        mode = mappedPatchBase::offsetModeNames_.read
+    mappedPatchBase::offsetMode mode =
+        mappedPatchBase::offsetModeNames_.lookupOrDefault
         (
-            dict.lookup("offsetMode")
+            "offsetMode", dict, mappedPatchBase::NORMAL
         );
-    }
 
     switch (mode)
     {
         case mappedPatchBase::NORMAL:
         {
-            const scalar distance = readScalar(dict.lookup("distance"));
+            const scalar distance(dict.get<scalar>("distance"));
             forAll(patchIDs(), i)
             {
                 mappers_.set
@@ -92,7 +89,7 @@ Foam::sampledPatchInternalField::sampledPatchInternalField
 
         case mappedPatchBase::UNIFORM:
         {
-            const point offset(dict.lookup("offset"));
+            const point offset(dict.get<point>("offset"));
             forAll(patchIDs(), i)
             {
                 mappers_.set
@@ -113,7 +110,7 @@ Foam::sampledPatchInternalField::sampledPatchInternalField
 
         case mappedPatchBase::NONUNIFORM:
         {
-            const pointField offsets(dict.lookup("offsets"));
+            const pointField offsets(dict.get<pointField>("offsets"));
             forAll(patchIDs(), i)
             {
                 mappers_.set
@@ -135,55 +132,50 @@ Foam::sampledPatchInternalField::sampledPatchInternalField
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::sampledPatchInternalField::~sampledPatchInternalField()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 Foam::tmp<Foam::scalarField> Foam::sampledPatchInternalField::sample
 (
-    const volScalarField& vField
+    const interpolation<scalar>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::vectorField> Foam::sampledPatchInternalField::sample
 (
-    const volVectorField& vField
+    const interpolation<vector>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
+
 
 Foam::tmp<Foam::sphericalTensorField> Foam::sampledPatchInternalField::sample
 (
-    const volSphericalTensorField& vField
+    const interpolation<sphericalTensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::symmTensorField> Foam::sampledPatchInternalField::sample
 (
-    const volSymmTensorField& vField
+    const interpolation<symmTensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
 Foam::tmp<Foam::tensorField> Foam::sampledPatchInternalField::sample
 (
-    const volTensorField& vField
+    const interpolation<tensor>& sampler
 ) const
 {
-    return sampleField(vField);
+    return sampleOnFaces(sampler);
 }
 
 
@@ -192,7 +184,7 @@ Foam::tmp<Foam::scalarField> Foam::sampledPatchInternalField::interpolate
     const interpolation<scalar>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -201,7 +193,7 @@ Foam::tmp<Foam::vectorField> Foam::sampledPatchInternalField::interpolate
     const interpolation<vector>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -211,7 +203,7 @@ Foam::sampledPatchInternalField::interpolate
     const interpolation<sphericalTensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -220,7 +212,7 @@ Foam::tmp<Foam::symmTensorField> Foam::sampledPatchInternalField::interpolate
     const interpolation<symmTensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 
@@ -229,7 +221,7 @@ Foam::tmp<Foam::tensorField> Foam::sampledPatchInternalField::interpolate
     const interpolation<tensor>& interpolator
 ) const
 {
-    return interpolateField(interpolator);
+    return sampleOnPoints(interpolator);
 }
 
 

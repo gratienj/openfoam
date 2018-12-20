@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2012-2016 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +29,7 @@ License
 #include "stringIOList.H"
 #include "cellModel.H"
 #include "vectorIOField.H"
+#include "triPointRef.H"
 
 /* * * * * * * * * * * * * * * Static Member Data  * * * * * * * * * * * * * */
 
@@ -42,7 +43,7 @@ const Foam::Enum
     Foam::vtkUnstructuredReader::vtkDataType
 >
 Foam::vtkUnstructuredReader::vtkDataTypeNames
-{
+({
     { vtkDataType::VTK_INT, "int" },
     { vtkDataType::VTK_UINT, "unsigned_int" },
     { vtkDataType::VTK_LONG, "long" },
@@ -50,8 +51,8 @@ Foam::vtkUnstructuredReader::vtkDataTypeNames
     { vtkDataType::VTK_FLOAT, "float" },
     { vtkDataType::VTK_DOUBLE, "double" },
     { vtkDataType::VTK_STRING, "string" },
-    { vtkDataType::VTK_ID, "vtkIdType" }
-};
+    { vtkDataType::VTK_ID, "vtkIdType" },
+});
 
 
 const Foam::Enum
@@ -59,11 +60,11 @@ const Foam::Enum
     Foam::vtkUnstructuredReader::vtkDataSetType
 >
 Foam::vtkUnstructuredReader::vtkDataSetTypeNames
-{
+({
     { vtkDataSetType::VTK_FIELD, "FIELD" },
     { vtkDataSetType::VTK_SCALARS, "SCALARS" },
-    { vtkDataSetType::VTK_VECTORS, "VECTORS" }
-};
+    { vtkDataSetType::VTK_VECTORS, "VECTORS" },
+});
 
 
 const Foam::Enum
@@ -71,13 +72,13 @@ const Foam::Enum
     Foam::vtkUnstructuredReader::parseMode
 >
 Foam::vtkUnstructuredReader::parseModeNames
-{
+({
     { parseMode::NOMODE, "NOMODE" },
     { parseMode::UNSTRUCTURED_GRID, "UNSTRUCTURED_GRID" },
     { parseMode::POLYDATA, "POLYDATA" },
     { parseMode::CELL_DATA, "CELL_DATA" },
-    { parseMode::POINT_DATA, "POINT_DATA" }
-};
+    { parseMode::POINT_DATA, "POINT_DATA" },
+});
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -92,7 +93,7 @@ void Foam::vtkUnstructuredReader::warnUnhandledType
     if (warningGiven.insert(type))
     {
         IOWarningInFunction(inFile)
-            << "Skipping unknown cell type " << type << endl;
+            << "Skipping unknown cell type " << type << nl;
     }
 }
 
@@ -142,10 +143,8 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 1)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 1 for VTK_VERTEX but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 1 for VTK_VERTEX but found "
                         << nRead << exit(FatalIOError);
                 }
                 dataIndex += nRead;
@@ -166,10 +165,8 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 2)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 2 for VTK_LINE but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 2 for VTK_LINE but found "
                         << nRead << exit(FatalIOError);
                 }
                 lineMap_[lineI] = i;
@@ -202,10 +199,8 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 3)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 3 for VTK_TRIANGLE but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 3 for VTK_TRIANGLE but found "
                         << nRead << exit(FatalIOError);
                 }
                 f[0] = cellVertData[dataIndex++];
@@ -222,10 +217,8 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 4)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 4 for VTK_QUAD but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 4 for VTK_QUAD but found "
                         << nRead << exit(FatalIOError);
                 }
                 f[0] = cellVertData[dataIndex++];
@@ -253,10 +246,8 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 4)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 4 for VTK_TETRA but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 4 for VTK_TETRA but found "
                         << nRead << exit(FatalIOError);
                 }
                 tetPoints[0] = cellVertData[dataIndex++];
@@ -273,10 +264,8 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 5)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 5 for VTK_PYRAMID but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 5 for VTK_PYRAMID but found "
                         << nRead << exit(FatalIOError);
                 }
                 pyrPoints[0] = cellVertData[dataIndex++];
@@ -294,12 +283,11 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 6)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 6 for VTK_WEDGE but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 6 for VTK_WEDGE but found "
                         << nRead << exit(FatalIOError);
                 }
+                //- From mesh description in vtk documentation
                 prismPoints[0] = cellVertData[dataIndex++];
                 prismPoints[2] = cellVertData[dataIndex++];
                 prismPoints[1] = cellVertData[dataIndex++];
@@ -316,10 +304,8 @@ void Foam::vtkUnstructuredReader::extractCells
                 label nRead = cellVertData[dataIndex++];
                 if (nRead != 8)
                 {
-                    FatalIOErrorInFunction
-                    (
-                        inFile
-                    )   << "Expected size 8 for VTK_HEXAHEDRON but found "
+                    FatalIOErrorInFunction(inFile)
+                        << "Expected size 8 for VTK_HEXAHEDRON but found "
                         << nRead << exit(FatalIOError);
                 }
                 hexPoints[0] = cellVertData[dataIndex++];
@@ -342,10 +328,9 @@ void Foam::vtkUnstructuredReader::extractCells
         }
     }
 
-    if (debug)
-    {
-        Info<< "Read " << celli << " cells;" << facei << " faces." << endl;
-    }
+    DebugInfo
+        << "Read " << celli << " cells;" << facei << " faces." << nl;
+
     cells_.setSize(celli);
     cellMap_.setSize(celli);
     faces_.setSize(facei);
@@ -364,94 +349,81 @@ void Foam::vtkUnstructuredReader::readField
     const label size
 ) const
 {
-    switch (vtkDataTypeNames[dataType])
+    if (vtkDataTypeNames.found(dataType))
     {
-        case VTK_INT:
-        case VTK_UINT:
-        case VTK_LONG:
-        case VTK_ULONG:
-        case VTK_ID:
+        switch (vtkDataTypeNames[dataType])
         {
-            autoPtr<labelIOField> fieldVals
-            (
-                new labelIOField
-                (
-                    IOobject
-                    (
-                        arrayName,
-                        "",
-                        obj
-                    ),
-                    size
-                )
-            );
-            readBlock(inFile, fieldVals().size(), fieldVals());
-            regIOobject::store(fieldVals);
-        }
-        break;
-
-        case VTK_FLOAT:
-        case VTK_DOUBLE:
-        {
-            autoPtr<scalarIOField> fieldVals
-            (
-                new scalarIOField
-                (
-                    IOobject
-                    (
-                        arrayName,
-                        "",
-                        obj
-                    ),
-                    size
-                )
-            );
-            readBlock(inFile, fieldVals().size(), fieldVals());
-            regIOobject::store(fieldVals);
-        }
-        break;
-
-        case VTK_STRING:
-        {
-            if (debug)
+            case VTK_INT:
+            case VTK_UINT:
+            case VTK_LONG:
+            case VTK_ULONG:
+            case VTK_ID:
             {
-                Info<< "Reading strings:" << size << endl;
-            }
-            autoPtr<stringIOList> fieldVals
-            (
-                new stringIOList
+                auto fieldVals = autoPtr<labelIOField>::New
                 (
-                    IOobject
-                    (
-                        arrayName,
-                        "",
-                        obj
-                    ),
+                    IOobject(arrayName, "", obj),
                     size
-                )
-            );
-            // Consume current line.
-            inFile.getLine(fieldVals()[0]);
-
-            // Read without parsing
-            forAll(fieldVals(), i)
-            {
-                inFile.getLine(fieldVals()[i]);
+                );
+                readBlock(inFile, fieldVals().size(), fieldVals());
+                regIOobject::store(fieldVals);
             }
-            regIOobject::store(fieldVals);
-        }
-        break;
+            break;
 
-        default:
-        {
-            IOWarningInFunction(inFile)
-                << "Unhandled type " << vtkDataTypeNames[dataType] << endl
-                << "Skipping " << size
-                << " words." << endl;
-            scalarField fieldVals;
-            readBlock(inFile, size, fieldVals);
+            case VTK_FLOAT:
+            case VTK_DOUBLE:
+            {
+                auto fieldVals = autoPtr<scalarIOField>::New
+                (
+                    IOobject(arrayName, "", obj),
+                    size
+                );
+                readBlock(inFile, fieldVals().size(), fieldVals());
+                regIOobject::store(fieldVals);
+            }
+            break;
+
+            case VTK_STRING:
+            {
+                DebugInfo
+                    << "Reading strings:" << size << nl;
+
+                auto fieldVals = autoPtr<stringIOList>::New
+                (
+                    IOobject(arrayName, "", obj),
+                    size
+                );
+                // Consume current line.
+                inFile.getLine(fieldVals()[0]);
+
+                // Read without parsing
+                forAll(fieldVals(), i)
+                {
+                    inFile.getLine(fieldVals()[i]);
+                }
+                regIOobject::store(fieldVals);
+            }
+            break;
+
+            default:
+            {
+                IOWarningInFunction(inFile)
+                    << "Unhandled type " << dataType << nl
+                    << "Skipping " << size
+                    << " words." << nl;
+                scalarField fieldVals;
+                readBlock(inFile, size, fieldVals);
+            }
+            break;
         }
-        break;
+    }
+    else
+    {
+        IOWarningInFunction(inFile)
+            << "Unhandled type " << dataType << nl
+            << "Skipping " << size
+            << " words." << nl;
+        scalarField fieldVals;
+        readBlock(inFile, size, fieldVals);
     }
 }
 
@@ -466,14 +438,14 @@ Foam::wordList Foam::vtkUnstructuredReader::readFieldArray
     DynamicList<word> fields;
 
     word dataName(inFile);
-    if (debug)
-    {
-        Info<< "dataName:" << dataName << endl;
-    }
+
+    DebugInfo
+        << "dataName:" << dataName << nl;
+
     label numArrays(readLabel(inFile));
     if (debug)
     {
-        Pout<< "numArrays:" << numArrays << endl;
+        Pout<< "numArrays:" << numArrays << nl;
     }
     for (label i = 0; i < numArrays; i++)
     {
@@ -482,11 +454,9 @@ Foam::wordList Foam::vtkUnstructuredReader::readFieldArray
         label numTuples(readLabel(inFile));
         word dataType(inFile);
 
-        if (debug)
-        {
-            Info<< "Reading field " << arrayName
-                << " of " << numTuples << " tuples of rank " << numComp << endl;
-        }
+        DebugInfo
+            << "Reading field " << arrayName
+            << " of " << numTuples << " tuples of rank " << numComp << nl;
 
         if (wantedSize != -1 && numTuples != wantedSize)
         {
@@ -522,10 +492,8 @@ Foam::objectRegistry& Foam::vtkUnstructuredReader::selectRegistry
     {
         return pointData_;
     }
-    else
-    {
-        return otherData_;
-    }
+
+    return otherData_;
 }
 
 
@@ -548,25 +516,19 @@ Foam::vtkUnstructuredReader::vtkUnstructuredReader
 void Foam::vtkUnstructuredReader::read(ISstream& inFile)
 {
     inFile.getLine(header_);
-    if (debug)
-    {
-        Info<< "Header   : " << header_ << endl;
-    }
+    DebugInfo<< "Header   : " << header_ << nl;
+
     inFile.getLine(title_);
-    if (debug)
-    {
-        Info<< "Title    : " << title_ << endl;
-    }
+    DebugInfo<< "Title    : " << title_ << nl;
+
     inFile.getLine(dataType_);
-    if (debug)
-    {
-        Info<< "dataType : " << dataType_ << endl;
-    }
+    DebugInfo<< "dataType : " << dataType_ << nl;
 
     if (dataType_ == "BINARY")
     {
         FatalIOErrorInFunction(inFile)
-            << "Binary reading not supported " << exit(FatalIOError);
+            << "Binary reading not supported"
+            << exit(FatalIOError);
     }
 
     parseMode readMode = NOMODE;
@@ -576,28 +538,21 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
     // Temporary storage for vertices of cells.
     labelList cellVerts;
 
-    while (inFile.good())
+    token tok;
+
+    while (inFile.read(tok).good() && tok.isWord())
     {
-        word tag(inFile);
+        const word tag = tok.wordToken();
 
-        if (!inFile.good())
-        {
-            break;
-        }
-
-        if (debug)
-        {
-            Info<< "line:" << inFile.lineNumber()
-                << " tag:" << tag << endl;
-        }
+        DebugInfo
+            << "line:" << inFile.lineNumber()
+            << " tag:" << tag << nl;
 
         if (tag == "DATASET")
         {
             word geomType(inFile);
-            if (debug)
-            {
-                Info<< "geomType : " << geomType << endl;
-            }
+            DebugInfo<< "geomType : " << geomType << nl;
+
             readMode = parseModeNames[geomType];
             wantedSize = -1;
         }
@@ -605,11 +560,10 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
         {
             label nPoints(readLabel(inFile));
             points_.setSize(nPoints);    ///3);
-            if (debug)
-            {
-                Info<< "Reading " << nPoints << " numbers representing "
-                    << points_.size() << " coordinates." << endl;
-            }
+
+            DebugInfo
+                << "Reading " << nPoints << " numbers representing "
+                << points_.size() << " coordinates." << nl;
 
             word primitiveTag(inFile);
             if (primitiveTag != "float" && primitiveTag != "double")
@@ -619,19 +573,18 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
                     << primitiveTag
                     << exit(FatalIOError);
             }
-            forAll(points_, i)
+            for (point& p : points_)
             {
-                inFile >> points_[i].x() >> points_[i].y() >> points_[i].z();
+                inFile >> p.x() >> p.y() >> p.z();
             }
         }
         else if (tag == "CELLS")
         {
             label nCells(readLabel(inFile));
             label nNumbers(readLabel(inFile));
-            if (debug)
-            {
-                Info<< "Reading " << nCells << " cells or faces." << endl;
-            }
+            DebugInfo
+                << "Reading " << nCells << " cells or faces." << nl;
+
             readBlock(inFile, nNumbers, cellVerts);
         }
         else if (tag == "CELL_TYPES")
@@ -656,10 +609,9 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
         {
             label nLines(readLabel(inFile));
             label nNumbers(readLabel(inFile));
-            if (debug)
-            {
-                Info<< "Reading " << nLines << " lines." << endl;
-            }
+            DebugInfo
+                << "Reading " << nLines << " lines." << nl;
+
             labelList lineVerts;
             readBlock(inFile, nNumbers, lineVerts);
 
@@ -686,10 +638,9 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
 
             label nFaces(readLabel(inFile));
             label nNumbers(readLabel(inFile));
-            if (debug)
-            {
-                Info<< "Reading " << nFaces << " faces." << endl;
-            }
+            DebugInfo
+                << "Reading " << nFaces << " faces." << nl;
+
             labelList faceVerts;
             readBlock(inFile, nNumbers, faceVerts);
 
@@ -752,12 +703,10 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             word dataType(is);
             //label numComp(readLabel(inFile));
 
-            if (debug)
-            {
-                Info<< "Reading scalar " << dataName
-                    << " of type " << dataType
-                    << " from lookup table" << endl;
-            }
+            DebugInfo
+                << "Reading scalar " << dataName
+                << " of type " << dataType
+                << " from lookup table" << nl;
 
             word lookupTableTag(inFile);
             if (lookupTableTag != "LOOKUP_TABLE")
@@ -787,11 +736,9 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             IStringStream is(line);
             word dataName(is);
             word dataType(is);
-            if (debug)
-            {
-                Info<< "Reading vector " << dataName
-                    << " of type " << dataType << endl;
-            }
+            DebugInfo
+                << "Reading vector " << dataName
+                << " of type " << dataType << nl;
 
             objectRegistry& reg = selectRegistry(readMode);
 
@@ -813,18 +760,10 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
                 objectRegistry::iterator iter = reg.find(dataName);
                 scalarField s(*dynamic_cast<const scalarField*>(iter()));
                 reg.erase(iter);
-                autoPtr<vectorIOField> fieldVals
+                auto fieldVals = autoPtr<vectorIOField>::New
                 (
-                    new vectorIOField
-                    (
-                        IOobject
-                        (
-                            dataName,
-                            "",
-                            reg
-                        ),
-                        s.size()/3
-                    )
+                    IOobject(dataName, "", reg),
+                    s.size()/3
                 );
 
                 label elemI = 0;
@@ -847,12 +786,10 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             label dim(readLabel(is));
             word dataType(is);
 
-            if (debug)
-            {
-                Info<< "Reading texture coords " << dataName
-                    << " dimension " << dim
-                    << " of type " << dataType << endl;
-            }
+            DebugInfo
+                << "Reading texture coords " << dataName
+                << " dimension " << dim
+                << " of type " << dataType << nl;
 
             scalarField coords(dim*points_.size());
             readBlock(inFile, coords.size(), coords);
@@ -861,10 +798,9 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
         {
             label nStrips(readLabel(inFile));
             label nNumbers(readLabel(inFile));
-            if (debug)
-            {
-                Info<< "Reading " << nStrips << " triangle strips." << endl;
-            }
+            DebugInfo
+                << "Reading " << nStrips << " triangle strips." << nl;
+
             labelList faceVerts;
             readBlock(inFile, nNumbers, faceVerts);
 
@@ -907,11 +843,78 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
                 }
             }
         }
+        else if (tag == "METADATA")
+        {
+            word infoTag(inFile);
+            if (infoTag != "INFORMATION")
+            {
+                FatalIOErrorInFunction(inFile)
+                    << "Unsupported tag "
+                    << infoTag << exit(FatalIOError);
+            }
+            label nInfo(readLabel(inFile));
+            DebugInfo
+                << "Consuming " << nInfo << " metadata information." << nl;
+
+            string line;
+            // Consume rest of line
+            inFile.getLine(line);
+            for (label i = 0; i < 2*nInfo; i++)
+            {
+                inFile.getLine(line);
+            }
+        }
         else
         {
             FatalIOErrorInFunction(inFile)
                 << "Unsupported tag "
                 << tag << exit(FatalIOError);
+        }
+    }
+
+
+    // There is some problem with orientation of prisms - the point
+    // ordering seems to be different for some exports (e.g. of cgns)
+    {
+        const cellModel& prism = cellModel::ref(cellModel::PRISM);
+
+        label nSwapped = 0;
+
+        for (cellShape& shape : cells_)
+        {
+            if (shape.model() == prism)
+            {
+                const triPointRef bottom
+                (
+                    points_[shape[0]],
+                    points_[shape[1]],
+                    points_[shape[2]]
+                );
+                const triPointRef top
+                (
+                    points_[shape[3]],
+                    points_[shape[4]],
+                    points_[shape[5]]
+                );
+
+                const point bottomCc(bottom.centre());
+                const vector bottomNormal(bottom.areaNormal());
+                const point topCc(top.centre());
+
+                if (((topCc - bottomCc) & bottomNormal) < 0)
+                {
+                    // Flip top and bottom
+                    Swap(shape[0], shape[3]);
+                    Swap(shape[1], shape[4]);
+                    Swap(shape[2], shape[5]);
+                    nSwapped++;
+                }
+            }
+        }
+        if (nSwapped > 0)
+        {
+            WarningInFunction << "Swapped " << nSwapped << " prismatic cells"
+                << nl;
         }
     }
 
@@ -921,23 +924,23 @@ void Foam::vtkUnstructuredReader::read(ISstream& inFile)
             << " cellShapes:" << cells_.size()
             << " faces:" << faces_.size()
             << " lines:" << lines_.size()
-            << nl << endl;
+            << nl << nl;
 
-        Info<< "Cell fields:" << endl;
+        Info<< "Cell fields:" << nl;
         printFieldStats<vectorIOField>(cellData_);
         printFieldStats<scalarIOField>(cellData_);
         printFieldStats<labelIOField>(cellData_);
         printFieldStats<stringIOList>(cellData_);
-        Info<< nl << endl;
+        Info<< nl << nl;
 
-        Info<< "Point fields:" << endl;
+        Info<< "Point fields:" << nl;
         printFieldStats<vectorIOField>(pointData_);
         printFieldStats<scalarIOField>(pointData_);
         printFieldStats<labelIOField>(pointData_);
         printFieldStats<stringIOList>(pointData_);
-        Info<< nl << endl;
+        Info<< nl << nl;
 
-        Info<< "Other fields:" << endl;
+        Info<< "Other fields:" << nl;
         printFieldStats<vectorIOField>(otherData_);
         printFieldStats<scalarIOField>(otherData_);
         printFieldStats<labelIOField>(otherData_);

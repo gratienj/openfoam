@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  |
+     \\/     M anipulation  | Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -133,7 +133,7 @@ void Foam::movingConeTopoFvMesh::addZonesAndModifiers()
             zone1[nZoneFaces1] = facei;
             Info<< "face " << facei << " for zone 1.  Flip: "
                 << flipZone1[nZoneFaces1] << endl;
-            nZoneFaces1++;
+            ++nZoneFaces1;
         }
         else if
         (
@@ -150,7 +150,7 @@ void Foam::movingConeTopoFvMesh::addZonesAndModifiers()
 
             Info<< "face " << facei << " for zone 2.  Flip: "
                 << flipZone2[nZoneFaces2] << endl;
-            nZoneFaces2++;
+            ++nZoneFaces2;
         }
     }
 
@@ -173,23 +173,23 @@ void Foam::movingConeTopoFvMesh::addZonesAndModifiers()
         new faceZone
         (
             "rightExtrusionFaces",
-            zone1,
-            flipZone1,
+            std::move(zone1),
+            std::move(flipZone1),
             nFz,
             faceZones()
         );
-    nFz++;
+    ++nFz;
 
     fz[nFz] =
         new faceZone
         (
             "leftExtrusionFaces",
-            zone2,
-            flipZone2,
+            std::move(zone2),
+            std::move(flipZone2),
             nFz,
             faceZones()
         );
-    nFz++;
+    ++nFz;
 
     fz.setSize(nFz);
 
@@ -209,16 +209,10 @@ void Foam::movingConeTopoFvMesh::addZonesAndModifiers()
             nMods,
             topoChanger_,
             "rightExtrusionFaces",
-            readScalar
-            (
-                motionDict_.subDict("right").lookup("minThickness")
-            ),
-            readScalar
-            (
-                motionDict_.subDict("right").lookup("maxThickness")
-            )
+            motionDict_.subDict("right").get<scalar>("minThickness"),
+            motionDict_.subDict("right").get<scalar>("maxThickness")
         );
-    nMods++;
+    ++nMods;
 
     tm[nMods] = new layerAdditionRemoval
     (
@@ -226,16 +220,10 @@ void Foam::movingConeTopoFvMesh::addZonesAndModifiers()
         nMods,
         topoChanger_,
         "leftExtrusionFaces",
-        readScalar
-        (
-            motionDict_.subDict("left").lookup("minThickness")
-        ),
-        readScalar
-        (
-            motionDict_.subDict("left").lookup("maxThickness")
-        )
+        motionDict_.subDict("left").get<scalar>("minThickness"),
+        motionDict_.subDict("left").get<scalar>("maxThickness")
     );
-    nMods++;
+    ++nMods;
     tm.setSize(nMods);
 
     Info<< "Adding " << nMods << " mesh modifiers" << endl;
@@ -266,14 +254,14 @@ Foam::movingConeTopoFvMesh::movingConeTopoFvMesh(const IOobject& io)
         ).optionalSubDict(typeName + "Coeffs")
     ),
     motionVelAmplitude_(motionDict_.lookup("motionVelAmplitude")),
-    motionVelPeriod_(readScalar(motionDict_.lookup("motionVelPeriod"))),
+    motionVelPeriod_(motionDict_.get<scalar>("motionVelPeriod")),
     curMotionVel_
     (
         motionVelAmplitude_*sin(time().value()*pi/motionVelPeriod_)
     ),
-    leftEdge_(readScalar(motionDict_.lookup("leftEdge"))),
-    curLeft_(readScalar(motionDict_.lookup("leftObstacleEdge"))),
-    curRight_(readScalar(motionDict_.lookup("rightObstacleEdge")))
+    leftEdge_(motionDict_.get<scalar>("leftEdge")),
+    curLeft_(motionDict_.get<scalar>("leftObstacleEdge")),
+    curRight_(motionDict_.get<scalar>("rightObstacleEdge"))
 {
     Pout<< "Initial time:" << time().value()
         << " Initial curMotionVel_:" << curMotionVel_

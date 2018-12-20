@@ -70,11 +70,11 @@ private:
 
     // Private member functions
 
-        //- Disallow default bitwise copy construct
-        kinematicSingleLayer(const kinematicSingleLayer&);
+        //- No copy construct
+        kinematicSingleLayer(const kinematicSingleLayer&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const kinematicSingleLayer&);
+        //- No copy assignment
+        void operator=(const kinematicSingleLayer&) = delete;
 
 
 protected:
@@ -161,7 +161,7 @@ protected:
             // Note: need boundary value mapped from primary region, and then
             // pushed into the patch internal field
 
-                //- Momementum [kg/m/s2]
+                //- Momentum [kg/m/s2]
                 volVectorField USp_;
 
                 //- Pressure [Pa]
@@ -174,7 +174,7 @@ protected:
             // Primary region - registered to the primary region mesh
             // Internal use only - not read-in
 
-                //- Momementum [kg/m/s2]
+                //- Momentum [kg/m/s2]
                 volVectorField USpPrimary_;
 
                 //- Pressure [Pa]
@@ -423,7 +423,7 @@ public:
 
             // Primary region
 
-                //- Momementum [kg/m/s2]
+                //- Momentum [kg/m/s2]
                 inline volVectorField& USpPrimary();
 
                 //- Pressure [Pa]
@@ -488,9 +488,6 @@ public:
 
             //- Return the current film mass
             inline tmp<volScalarField> mass() const;
-
-            //- Return the net film mass available over the next integration
-            inline tmp<volScalarField> netMass() const;
 
             //- Return the change in film mass due to sources/sinks
             inline tmp<volScalarField> deltaMass() const;

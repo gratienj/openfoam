@@ -38,7 +38,7 @@ SourceFiles
 #include "face.H"
 #include "indexedOctree.H"
 #include "treeBoundBoxList.H"
-#include "PackedBoolList.H"
+#include "bitSet.H"
 #include "primitiveMesh.H"
 #include "volumeType.H"
 
@@ -64,7 +64,6 @@ class treeDataFace
         static scalar tolSqr;
 
 
-
     // Private data
 
         const primitiveMesh& mesh_;
@@ -73,7 +72,7 @@ class treeDataFace
         const labelList faceLabels_;
 
         //- Inverse of faceLabels. For every mesh whether face is in faceLabels.
-        PackedBoolList isTreeFace_;
+        bitSet isTreeFace_;
 
         //- Whether to precalculate and store face bounding box
         const bool cacheBb_;
@@ -150,27 +149,28 @@ public:
 
     // Constructors
 
+        //- Construct from mesh, copying subset of faces
         //- Construct from mesh and subset of faces.
         treeDataFace
         (
             const bool cacheBb,
-            const primitiveMesh&,
-            const labelUList&
+            const primitiveMesh& mesh,
+            const labelUList& faceLabels
         );
 
-        //- Construct from mesh and subset of faces, transferring contents
+        //- Construct from mesh, moving subset of faces
         treeDataFace
         (
             const bool cacheBb,
-            const primitiveMesh&,
-            const Xfer<labelList>&
+            const primitiveMesh& mesh,
+            labelList&& faceLabels
         );
 
         //- Construct from mesh. Uses all faces in mesh.
-        treeDataFace(const bool cacheBb, const primitiveMesh&);
+        treeDataFace(const bool cacheBb, const primitiveMesh& mesh);
 
         //- Construct from mesh. Uses all faces in patch.
-        treeDataFace(const bool cacheBb, const polyPatch&);
+        treeDataFace(const bool cacheBb, const polyPatch& patch);
 
 
     // Member Functions

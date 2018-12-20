@@ -2,14 +2,9 @@
 
 #include "readGravitationalAcceleration.H"
 
-Info<< "Creating combustion model\n" << endl;
-
-autoPtr<combustionModels::psiCombustionModel> combustion
-(
-    combustionModels::psiCombustionModel::New(mesh)
-);
-
-psiReactionThermo& thermo = combustion->thermo();
+Info<< "Reading thermophysical properties\n" << endl;
+autoPtr<psiReactionThermo> pThermo(psiReactionThermo::New(mesh));
+psiReactionThermo& thermo = pThermo();
 thermo.validate(args.executable(), "h", "e");
 
 SLGThermo slgThermo(mesh, thermo);
@@ -17,7 +12,7 @@ SLGThermo slgThermo(mesh, thermo);
 basicSpecieMixture& composition = thermo.composition();
 PtrList<volScalarField>& Y = composition.Y();
 
-const word inertSpecie(thermo.lookup("inertSpecie"));
+const word inertSpecie(thermo.get<word>("inertSpecie"));
 if (!composition.species().found(inertSpecie))
 {
     FatalIOErrorIn(args.executable().c_str(), thermo)
@@ -63,7 +58,7 @@ volScalarField rhoEffLagrangian
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", dimDensity, 0.0)
+    dimensionedScalar(dimDensity, Zero)
 );
 
 // dynamic pressure field - used externally (optional)
@@ -78,7 +73,7 @@ volScalarField pDyn
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", dimPressure, 0.0)
+    dimensionedScalar(dimPressure, Zero)
 );
 
 
@@ -112,8 +107,11 @@ autoPtr<compressible::turbulenceModel> turbulence
     )
 );
 
-// Set the turbulence into the combustion model
-combustion->setTurbulence(turbulence());
+Info<< "Creating combustion model\n" << endl;
+autoPtr<CombustionModel<psiReactionThermo>> combustion
+(
+    CombustionModel<psiReactionThermo>::New(thermo, turbulence())
+);
 
 volScalarField Qdot
 (
@@ -126,7 +124,7 @@ volScalarField Qdot
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Qdot", dimEnergy/dimVolume/dimTime, 0.0)
+    dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
 );
 
 #include "createDpdt.H"
@@ -136,3 +134,4 @@ volScalarField Qdot
 #include "createMRF.H"
 #include "createClouds.H"
 #include "createRadiationModel.H"
+#include "createFvOptions.H"

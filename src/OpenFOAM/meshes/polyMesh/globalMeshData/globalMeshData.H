@@ -90,14 +90,13 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
-
+// Forward declarations
 class polyMesh;
 class mapDistribute;
 template<class T> class EdgeMap;
 class globalIndex;
 class globalIndexAndTransform;
-class PackedBoolList;
+class bitSet;
 
 /*---------------------------------------------------------------------------*\
                       Class globalMeshData Declaration
@@ -171,7 +170,7 @@ class globalMeshData
             mutable autoPtr<globalIndex> globalEdgeNumberingPtr_;
             mutable autoPtr<labelListList> globalEdgeSlavesPtr_;
             mutable autoPtr<labelListList> globalEdgeTransformedSlavesPtr_;
-            mutable autoPtr<PackedBoolList> globalEdgeOrientationPtr_;
+            mutable autoPtr<bitSet> globalEdgeOrientationPtr_;
             mutable autoPtr<mapDistribute> globalEdgeSlavesMapPtr_;
 
 
@@ -304,11 +303,11 @@ class globalMeshData
             void calcGlobalCoPointSlaves() const;
 
 
-        //- Disallow default bitwise copy construct
-        globalMeshData(const globalMeshData&);
+        //- No copy construct
+        globalMeshData(const globalMeshData&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const globalMeshData&);
+        //- No copy assignment
+        void operator=(const globalMeshData&) = delete;
 
 
 public:
@@ -500,7 +499,7 @@ public:
             template<class Type, class CombineOp, class TransformOp>
             static void syncData
             (
-                List<Type>& pointData,
+                List<Type>& elems,
                 const labelListList& slaves,
                 const labelListList& transformedSlaves,
                 const mapDistribute& slavesMap,
@@ -513,7 +512,7 @@ public:
             template<class Type, class CombineOp>
             static void syncData
             (
-                List<Type>& pointData,
+                List<Type>& elems,
                 const labelListList& slaves,
                 const labelListList& transformedSlaves,
                 const mapDistribute& slavesMap,
@@ -545,7 +544,7 @@ public:
                 const labelListList& globalEdgeTransformedSlaves() const;
                 const mapDistribute& globalEdgeSlavesMap() const;
                 //- Is my edge same orientation as master edge
-                const PackedBoolList& globalEdgeOrientation() const;
+                const bitSet& globalEdgeOrientation() const;
 
             // Collocated point to collocated point
 

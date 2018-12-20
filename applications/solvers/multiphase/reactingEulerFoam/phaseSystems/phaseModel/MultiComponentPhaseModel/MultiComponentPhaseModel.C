@@ -93,7 +93,7 @@ void Foam::MultiComponentPhaseModel<BasePhaseModel>::correctThermo()
             this->fluid().mesh()
         ),
         this->fluid().mesh(),
-        dimensionedScalar("zero", dimless, 0)
+        dimensionedScalar(dimless, Zero)
     );
 
     PtrList<volScalarField>& Yi = Y();
@@ -152,7 +152,7 @@ Foam::MultiComponentPhaseModel<BasePhaseModel>::YiEqn
         )
     )
     {
-        return tmp<fvScalarMatrix>();
+        return nullptr;
     }
 
     const volScalarField& alpha = *this;
@@ -168,7 +168,7 @@ Foam::MultiComponentPhaseModel<BasePhaseModel>::YiEqn
       - fvm::laplacian
         (
             fvc::interpolate(alpha)
-           *fvc::interpolate(this->turbulence().nut()*rho/Sc_),
+           *fvc::interpolate(this->turbulence().muEff()/Sc_),
             Yi
         )
      ==

@@ -61,9 +61,9 @@ Foam::viscosityModels::powerLaw::calcNu() const
                 max
                 (
                     dimensionedScalar("one", dimTime, 1.0)*strainRate(),
-                    dimensionedScalar("VSMALL", dimless, VSMALL)
+                    dimensionedScalar("SMALL", dimless, SMALL)
                 ),
-                n_.value() - scalar(1.0)
+                n_.value() - scalar(1)
             )
         )
     );
@@ -112,10 +112,10 @@ bool Foam::viscosityModels::powerLaw::read
 
     powerLawCoeffs_ = viscosityProperties.optionalSubDict(typeName + "Coeffs");
 
-    powerLawCoeffs_.lookup("k") >> k_;
-    powerLawCoeffs_.lookup("n") >> n_;
-    powerLawCoeffs_.lookup("nuMin") >> nuMin_;
-    powerLawCoeffs_.lookup("nuMax") >> nuMax_;
+    powerLawCoeffs_.readEntry("k", k_);
+    powerLawCoeffs_.readEntry("n", n_);
+    powerLawCoeffs_.readEntry("nuMin", nuMin_);
+    powerLawCoeffs_.readEntry("nuMax", nuMax_);
 
     return true;
 }

@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,11 +50,11 @@ const Foam::Enum
     Foam::functionObjects::writeObjects::writeOption
 >
 Foam::functionObjects::writeObjects::writeOptionNames_
-{
+({
     { writeOption::AUTO_WRITE, "autoWrite" },
     { writeOption::NO_WRITE, "noWrite" },
     { writeOption::ANY_WRITE, "anyWrite" },
-};
+});
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -81,12 +81,6 @@ Foam::functionObjects::writeObjects::writeObjects
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::functionObjects::writeObjects::~writeObjects()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::functionObjects::writeObjects::read(const dictionary& dict)
@@ -95,16 +89,16 @@ bool Foam::functionObjects::writeObjects::read(const dictionary& dict)
 
     if (dict.found("field"))
     {
-        objectNames_.setSize(1);
-        dict.lookup("field") >> objectNames_[0];
+        objectNames_.resize(1);
+        dict.readEntry("field", objectNames_.first());
     }
     else if (dict.found("fields"))
     {
-        dict.lookup("fields") >> objectNames_;
+        dict.readEntry("fields", objectNames_);
     }
     else
     {
-        dict.lookup("objects") >> objectNames_;
+        dict.readEntry("objects", objectNames_);
     }
 
     writeOption_ = writeOptionNames_.lookupOrDefault
@@ -134,29 +128,26 @@ bool Foam::functionObjects::writeObjects::write()
     }
 
     DynamicList<word> allNames(obr_.toc().size());
-    forAll(objectNames_, i)
+    for (const wordRe& objName : objectNames_)
     {
-        wordList names(obr_.names<regIOobject>(objectNames_[i]));
+        wordList names(obr_.names<regIOobject>(objName));
 
         if (names.size())
         {
-            allNames.append(names);
+            allNames.append(std::move(names));
         }
         else
         {
             WarningInFunction
-                << "Object " << objectNames_[i] << " not found in "
+                << "Object " << objName << " not found in "
                 << "database. Available objects:" << nl << obr_.sortedToc()
                 << endl;
         }
     }
 
-    forAll(allNames, i)
+    for (const word& objName : allNames)
     {
-        regIOobject& obj = const_cast<regIOobject&>
-        (
-            obr_.lookupObject<regIOobject>(allNames[i])
-        );
+        regIOobject& obj = obr_.lookupObjectRef<regIOobject>(objName);
 
         switch (writeOption_)
         {

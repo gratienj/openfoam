@@ -3,7 +3,7 @@
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2016-2017 OpenCFD Ltd.
+     \\/     M anipulation  | Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,10 +28,10 @@ Group
     grpMeshAdvancedUtilities
 
 Description
-    Utility to refine cells next to patches.
+    Refine cells next to specified patches.
 
     Arguments:
-        1: List of patch name regular expressions
+        1: List of patch names or regular expressions
         2: The size of the refined cells as a fraction of the edge-length.
 
     Examples:
@@ -61,32 +61,45 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Refine cells next to specified patches."
+    );
+
     #include "addOverwriteOption.H"
-    argList::addArgument("patches");
-    argList::addArgument("edgeFraction");
+    argList::addArgument
+    (
+        "patches",
+        "The list of patch names or regex - Eg, '(top \"Wall.\")'"
+    );
+    argList::addArgument
+    (
+        "edgeFraction",
+        "The size of the refined cells as a fraction of the edge-length"
+        " on a (0,1) interval"
+    );
 
     argList::addOption
     (
         "useSet",
         "name",
-        "restrict cells to refine based on specified cellSet name"
+        "Restrict cells to refine based on specified cellSet name"
     );
 
+    argList::noFunctionObjects();  // Never use function objects
 
     #include "setRootCase.H"
     #include "createTime.H"
-    runTime.functionObjects().off();
-
     #include "createPolyMesh.H"
+
     const word oldInstance = mesh.pointsInstance();
 
     // Find set of patches from the list of regular expressions provided
-    const wordReList patches((IStringStream(args[1])()));
+    const wordRes patches(args.getList<wordRe>(1));
+    const scalar weight  = args.get<scalar>(2);
+    const bool overwrite = args.found("overwrite");
+
     const labelHashSet patchSet(mesh.boundaryMesh().patchSet(patches));
-
-    const scalar weight  = args.argRead<scalar>(2);
-    const bool overwrite = args.optionFound("overwrite");
-
     if (!patchSet.size())
     {
         FatalErrorInFunction
@@ -98,10 +111,10 @@ int main(int argc, char *argv[])
     label nPatchFaces = 0;
     label nPatchEdges = 0;
 
-    forAllConstIter(labelHashSet, patchSet, iter)
+    for (const label patchi : patchSet)
     {
-        nPatchFaces += mesh.boundaryMesh()[iter.key()].size();
-        nPatchEdges += mesh.boundaryMesh()[iter.key()].nEdges();
+        nPatchFaces += mesh.boundaryMesh()[patchi].size();
+        nPatchEdges += mesh.boundaryMesh()[patchi].nEdges();
     }
 
     // Construct from estimate for the number of cells to refine
@@ -112,27 +125,22 @@ int main(int argc, char *argv[])
     DynamicList<scalar> allCutEdgeWeights(nPatchEdges);
 
     // Find cells to refine
-    forAllConstIter(labelHashSet, patchSet, iter)
+    for (const label patchi : patchSet)
     {
-        const polyPatch& pp = mesh.boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh.boundaryMesh()[patchi];
         const labelList& meshPoints = pp.meshPoints();
 
-        forAll(meshPoints, pointi)
+        for (const label meshPointi : meshPoints)
         {
-            label meshPointi = meshPoints[pointi];
-
             const labelList& pCells = mesh.pointCells()[meshPointi];
 
-            forAll(pCells, pCelli)
-            {
-                cutCells.insert(pCells[pCelli]);
-            }
+            cutCells.insert(pCells);
         }
     }
 
     // Edit list of cells to refine according to specified set
     word setName;
-    if (args.optionReadIfPresent("useSet", setName))
+    if (args.readIfPresent("useSet", setName))
     {
         Info<< "Subsetting cells to cut based on cellSet"
             << setName << nl << endl;
@@ -143,49 +151,42 @@ int main(int argc, char *argv[])
             << cells.instance()/cells.local()/cells.name()
             << nl << endl;
 
-        forAllConstIter(cellSet, cells, iter)
-        {
-            cutCells.erase(iter.key());
-        }
+
+        cutCells.retain(cells);
+
         Info<< "Removed from cells to cut all the ones not in set "
             << setName << nl << endl;
     }
 
     // Mark all mesh points on patch
-    boolList vertOnPatch(mesh.nPoints(), false);
+    bitSet vertOnPatch(mesh.nPoints());
 
-    forAllConstIter(labelHashSet, patchSet, iter)
+    for (const label patchi : patchSet)
     {
-        const polyPatch& pp = mesh.boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh.boundaryMesh()[patchi];
         const labelList& meshPoints = pp.meshPoints();
 
-        forAll(meshPoints, pointi)
-        {
-            vertOnPatch[meshPoints[pointi]] = true;
-        }
+        vertOnPatch.set(meshPoints);
     }
 
-    forAllConstIter(labelHashSet, patchSet, iter)
+    for (const label patchi : patchSet)
     {
-        const polyPatch& pp = mesh.boundaryMesh()[iter.key()];
+        const polyPatch& pp = mesh.boundaryMesh()[patchi];
         const labelList& meshPoints = pp.meshPoints();
 
-        forAll(meshPoints, pointi)
+        for (const label meshPointi : meshPoints)
         {
-            label meshPointi = meshPoints[pointi];
-
             const labelList& pEdges = mesh.pointEdges()[meshPointi];
 
-            forAll(pEdges, pEdgeI)
+            for (const label edgei : pEdges)
             {
-                const label edgeI = pEdges[pEdgeI];
-                const edge& e = mesh.edges()[edgeI];
+                const edge& e = mesh.edges()[edgei];
 
                 label otherPointi = e.otherVertex(meshPointi);
 
-                if (!vertOnPatch[otherPointi])
+                if (!vertOnPatch.test(otherPointi))
                 {
-                    allCutEdges.append(edgeI);
+                    allCutEdges.append(edgei);
 
                     if (e.start() == meshPointi)
                     {
@@ -218,7 +219,7 @@ int main(int argc, char *argv[])
     (
         mesh,
         cutCells.toc(),     // cells candidate for cutting
-        labelList(0),       // cut vertices
+        labelList(),        // cut vertices
         allCutEdges,        // cut edges
         cutEdgeWeights      // weight on cut edges
     );
@@ -233,7 +234,7 @@ int main(int argc, char *argv[])
 
     if (!overwrite)
     {
-        runTime++;
+        ++runTime;
     }
 
     autoPtr<mapPolyMesh> morphMap = meshMod.changeMesh(mesh, false);

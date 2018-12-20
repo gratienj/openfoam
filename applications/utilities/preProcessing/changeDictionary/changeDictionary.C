@@ -93,25 +93,27 @@ namespace Foam
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // Extract groupPatch info from boundary file info
-HashTable<wordList, word> extractPatchGroups(const dictionary& boundaryDict)
+HashTable<wordList> extractPatchGroups(const dictionary& boundaryDict)
 {
-    HashTable<wordList, word> groupToPatch;
+    HashTable<wordList> groupToPatch;
 
-    forAllConstIter(dictionary, boundaryDict, iter)
+    for (const entry& dEntry : boundaryDict)
     {
-        const word& patchName = iter().keyword();
-        const dictionary& patchDict = iter().dict();
+        if (!dEntry.isDict())
+        {
+            continue;
+        }
+
+        const word& patchName = dEntry.keyword();
+        const dictionary& patchDict = dEntry.dict();
 
         wordList groups;
         if (patchDict.readIfPresent("inGroups", groups))
         {
             forAll(groups, i)
             {
-                HashTable<wordList, word>::iterator fndGroup = groupToPatch.find
-                (
-                    groups[i]
-                );
-                if (fndGroup == groupToPatch.end())
+                auto fndGroup = groupToPatch.find(groups[i]);
+                if (!fndGroup.found())
                 {
                     groupToPatch.insert(groups[i], wordList(1, patchName));
                 }
@@ -132,7 +134,7 @@ bool merge
     dictionary&,
     const dictionary&,
     const bool,
-    const HashTable<wordList, word>&
+    const HashTable<wordList>&
 );
 
 
@@ -143,7 +145,7 @@ bool addEntry
     entry& thisEntry,
     const entry& mergeEntry,
     const bool literalRE,
-    const HashTable<wordList, word>& shortcuts
+    const HashTable<wordList>& shortcuts
 )
 {
     bool changed = false;
@@ -178,11 +180,10 @@ bool addEntry
 }
 
 
-
 // List of indices into thisKeys
 labelList findMatches
 (
-    const HashTable<wordList, word>& shortcuts,
+    const HashTable<wordList>& shortcuts,
     const wordList& shortcutNames,
     const wordList& thisKeys,
     const keyType& key
@@ -194,19 +195,19 @@ labelList findMatches
     {
         // Wildcard match
         matches = findStrings(key, thisKeys);
-
     }
     else if (shortcuts.size())
     {
         // See if patchGroups expand to valid thisKeys
         labelList indices = findStrings(key, shortcutNames);
-        forAll(indices, i)
+
+        for (const label idx : indices)
         {
-            const word& name = shortcutNames[indices[i]];
+            const word& name = shortcutNames[idx];
             const wordList& keys = shortcuts[name];
             forAll(keys, j)
             {
-                label index = thisKeys.find(keys[j]);
+                const label index = thisKeys.find(keys[j]);
                 if (index != -1)
                 {
                     matches.append(index);
@@ -229,7 +230,7 @@ bool merge
     dictionary& thisDict,
     const dictionary& mergeDict,
     const bool literalRE,
-    const HashTable<wordList, word>& shortcuts
+    const HashTable<wordList>& shortcuts
 )
 {
     const wordList shortcutNames(shortcuts.toc());
@@ -237,20 +238,19 @@ bool merge
     bool changed = false;
 
     // Save current (non-wildcard) keys before adding items.
-    HashSet<word> thisKeysSet;
+    wordHashSet thisKeysSet;
     {
-        List<keyType> keys = thisDict.keys(false);
-        forAll(keys, i)
+        for (const word& k : thisDict.keys(false))
         {
-            thisKeysSet.insert(keys[i]);
+            thisKeysSet.insert(k);
         }
     }
 
     // Pass 1. All literal matches
 
-    forAllConstIter(IDLList<entry>, mergeDict, mergeIter)
+    for (const entry& mergeEntry : mergeDict)
     {
-        const keyType& key = mergeIter().keyword();
+        const keyType& key = mergeEntry.keyword();
 
         if (key[0] == '~')
         {
@@ -265,26 +265,21 @@ bool merge
         }
         else if (literalRE || !(key.isPattern() || shortcuts.found(key)))
         {
-            entry* entryPtr = thisDict.lookupEntryPtr
-            (
-                key,
-                false,              // recursive
-                false               // patternMatch
-            );
+            entry* eptr = thisDict.findEntry(key, keyType::LITERAL);
 
-            if (entryPtr)
+            if (eptr)
             {
                 // Mark thisDict entry as having been match for wildcard
                 // handling later on.
-                thisKeysSet.erase(entryPtr->keyword());
+                thisKeysSet.erase(eptr->keyword());
 
                 if
                 (
                     addEntry
                     (
                         thisDict,
-                       *entryPtr,
-                        mergeIter(),
+                       *eptr,
+                        mergeEntry,
                         literalRE,
                         shortcuts
                     )
@@ -297,8 +292,8 @@ bool merge
             {
                 if (addNonExisting)
                 {
-                    // not found - just add
-                    thisDict.add(mergeIter().clone(thisDict).ptr());
+                    // Not found - just add
+                    thisDict.add(mergeEntry.clone(thisDict).ptr());
                     changed = true;
                 }
                 else
@@ -314,14 +309,14 @@ bool merge
 
     // Pass 2. Wildcard or shortcut matches (if any) on any non-match keys.
 
-    if (!literalRE && thisKeysSet.size() > 0)
+    if (!literalRE && thisKeysSet.size())
     {
         // Pick up remaining dictionary entries
         wordList thisKeys(thisKeysSet.toc());
 
-        forAllConstIter(IDLList<entry>, mergeDict, mergeIter)
+        for (const entry& mergeEntry : mergeDict)
         {
-            const keyType& key = mergeIter().keyword();
+            const keyType& key = mergeEntry.keyword();
 
             if (key[0] == '~')
             {
@@ -340,10 +335,10 @@ bool merge
                 );
 
                 // Remove all matches
-                forAll(matches, i)
+                for (const label matchi : matches)
                 {
-                    const word& thisKey = thisKeys[matches[i]];
-                    thisKeysSet.erase(thisKey);
+                    const word& k = thisKeys[matchi];
+                    thisKeysSet.erase(k);
                 }
                 changed = true;
             }
@@ -362,25 +357,22 @@ bool merge
                 );
 
                 // Add all matches
-                forAll(matches, i)
+                for (const label matchi : matches)
                 {
-                    const word& thisKey = thisKeys[matches[i]];
+                    const word& k = thisKeys[matchi];
 
-                    entry& thisEntry = const_cast<entry&>
-                    (
-                        thisDict.lookupEntry(thisKey, false, false)
-                    );
+                    entry* eptr = thisDict.findEntry(k, keyType::LITERAL);
 
                     if
                     (
                         addEntry
                         (
                             thisDict,
-                            thisEntry,
-                            mergeIter(),
+                           *eptr,
+                            mergeEntry,
                             literalRE,
-                            HashTable<wordList, word>(0)    // no shortcuts
-                                                            // at deeper levels
+                            HashTable<wordList>(0)    // no shortcuts
+                                                      // at deeper levels
                         )
                     )
                     {
@@ -398,18 +390,25 @@ bool merge
 
 int main(int argc, char *argv[])
 {
-    #include "addDictOption.H"
+    argList::addNote
+    (
+        "Utility to change dictionary entries"
+        " (such as the patch type for fields and polyMesh/boundary files)."
+    );
+
+    argList::addOption("dict", "file", "Use alternative changeDictionaryDict");
+
     argList::addOption
     (
         "subDict",
         "name",
-        "specify the subDict name of the replacements dictionary"
+        "Specify the subDict name of the replacements dictionary"
     );
     argList::addOption
     (
         "instance",
         "name",
-        "override instance setting (default is the time name)"
+        "Override instance setting (default is the time name)"
     );
 
     // Add explicit time option
@@ -418,17 +417,17 @@ int main(int argc, char *argv[])
     argList::addBoolOption
     (
         "literalRE",
-        "treat regular expressions literally (i.e., as a keyword)"
+        "Treat regular expressions literally (i.e., as a keyword)"
     );
     argList::addBoolOption
     (
         "enableFunctionEntries",
-        "enable expansion of dictionary directives - #include, #codeStream etc"
+        "Enable expansion of dictionary directives - #include, #codeStream etc"
     );
     argList::addBoolOption
     (
         "disablePatchGroups",
-        "disable matching keys to patch groups"
+        "Disable matching keys to patch groups"
     );
 
     #include "addRegionOption.H"
@@ -446,7 +445,7 @@ int main(int argc, char *argv[])
     forAll(times, timei)
     {
         word instance;
-        if (args.optionFound("instance"))
+        if (args.readIfPresent("instance", instance))
         {
             if (times.size() > 1)
             {
@@ -454,8 +453,6 @@ int main(int argc, char *argv[])
                     << "Multiple times selected with 'instance' option"
                     << exit(FatalError);
             }
-
-            args.optionLookup("instance")() >> instance;
         }
         else
         {
@@ -465,7 +462,7 @@ int main(int argc, char *argv[])
 
         #include "createNamedMesh.H"
 
-        const bool literalRE = args.optionFound("literalRE");
+        const bool literalRE = args.found("literalRE");
         if (literalRE)
         {
             Info<< "Not interpreting any regular expressions (RE)"
@@ -474,10 +471,10 @@ int main(int argc, char *argv[])
                 << " not present." << endl;
         }
 
-        const bool enableEntries = args.optionFound("enableFunctionEntries");
+        const bool enableEntries = args.found("enableFunctionEntries");
         if (enableEntries)
         {
-            Info<< "Allowing dictionary preprocessing ('#include', '#codeStream')."
+            Info<< "Allowing dictionary preprocessing (#include, #codeStream)."
                 << endl;
         }
 
@@ -489,7 +486,7 @@ int main(int argc, char *argv[])
         }
 
 
-        const bool disablePatchGroups = args.optionFound("disablePatchGroups");
+        const bool disablePatchGroups = args.found("disablePatchGroups");
         if (disablePatchGroups)
         {
             Info<< "Not interpreting any keys in the changeDictionary"
@@ -498,7 +495,7 @@ int main(int argc, char *argv[])
         }
 
 
-        fileName regionPrefix = "";
+        fileName regionPrefix;
         if (regionName != fvMesh::defaultRegion)
         {
             regionPrefix = regionName;
@@ -518,10 +515,9 @@ int main(int argc, char *argv[])
 
         const dictionary* replaceDictsPtr = &dict;
 
-        if (args.optionFound("subDict"))
+        if (args.found("subDict"))
         {
-            word subDictName(args.optionLookup("subDict")());
-            replaceDictsPtr = &dict.subDict(subDictName);
+            replaceDictsPtr = &dict.subDict(args["subDict"]);
         }
 
         const dictionary& replaceDicts = *replaceDictsPtr;
@@ -566,9 +562,12 @@ int main(int argc, char *argv[])
 
         // Temporary convert to dictionary
         dictionary fieldDict;
-        forAll(dictList, i)
+        for (const entry& e : dictList)
         {
-            fieldDict.add(dictList[i].keyword(), dictList[i].dict());
+            if (e.isDict())
+            {
+                fieldDict.add(e.keyword(), e.dict());
+            }
         }
 
         if (dictList.size())
@@ -579,7 +578,7 @@ int main(int argc, char *argv[])
 
         // Extract any patchGroups information (= shortcut for set of
         // patches)
-        HashTable<wordList, word> patchGroups;
+        HashTable<wordList> patchGroups;
         if (!disablePatchGroups)
         {
             patchGroups = extractPatchGroups(fieldDict);
@@ -598,9 +597,17 @@ int main(int argc, char *argv[])
 
         // Every replacement is a dictionary name and a keyword in this
 
-        forAllConstIter(dictionary, replaceDicts, fieldIter)
+        for (const entry& replaceEntry : replaceDicts)
         {
-            const word& fieldName = fieldIter().keyword();
+            if (!replaceEntry.isDict())
+            {
+                // Could also warn
+                continue;
+            }
+
+            const word& fieldName = replaceEntry.keyword();
+            const dictionary& replaceDict = replaceEntry.dict();
+
             Info<< "Replacing entries in dictionary " << fieldName << endl;
 
             // Handle 'boundary' specially:
@@ -611,11 +618,8 @@ int main(int argc, char *argv[])
                 Info<< "Special handling of " << fieldName
                     << " as polyMesh/boundary file." << endl;
 
-                // Get the replacement dictionary for the field
-                const dictionary& replaceDict = fieldIter().dict();
-                Info<< "Merging entries from " << replaceDict.toc() << endl;
-
                 // Merge the replacements in. Do not add non-existing entries.
+                Info<< "Merging entries from " << replaceDict.toc() << endl;
                 merge(false, fieldDict, replaceDict, literalRE, patchGroups);
 
                 Info<< "fieldDict:" << fieldDict << endl;
@@ -634,8 +638,7 @@ int main(int argc, char *argv[])
                         fieldDict.lookupEntry
                         (
                             doneKeys[i],
-                            false,
-                            true
+                            keyType::REGEX
                         ).clone()
                     );
                     fieldDict.remove(doneKeys[i]);
@@ -644,16 +647,16 @@ int main(int argc, char *argv[])
                 // Add remaining entries
                 label sz = dictList.size();
                 dictList.setSize(nEntries);
-                forAllConstIter(dictionary, fieldDict, iter)
+                for (const entry& e : fieldDict)
                 {
-                    dictList.set(sz++, iter().clone());
+                    dictList.set(sz++, e.clone());
                 }
 
                 Info<< "Writing modified " << fieldName << endl;
                 dictList.writeObject
                 (
                     runTime.writeFormat(),
-                    runTime.writeFormat(),
+                    IOstream::currentVersion,
                     IOstream::UNCOMPRESSED,
                     true
                 );
@@ -689,11 +692,8 @@ int main(int argc, char *argv[])
                     Info<< "Loaded dictionary " << fieldName
                         << " with entries " << fieldDict.toc() << endl;
 
-                    // Get the replacement dictionary for the field
-                    const dictionary& replaceDict = fieldIter().dict();
-                    Info<< "Merging entries from " << replaceDict.toc() << endl;
-
                     // Merge the replacements in (allow adding)
+                    Info<< "Merging entries from " << replaceDict.toc() << endl;
                     merge(true, fieldDict, replaceDict, literalRE, patchGroups);
 
                     Info<< "Writing modified fieldDict " << fieldName << endl;

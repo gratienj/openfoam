@@ -1,9 +1,18 @@
 Info<< "Total cylinder mass: " << fvc::domainIntegrate(rho).value() << endl;
 
-OFstream logSummaryFile
-(
-    runTime.path()/("logSummary." + runTime.timeName() + ".dat")
-);
+autoPtr<OFstream> logSummaryFile;
 
-logSummaryFile
-    << "# CA" << "      p" << "        T" << "       u'" << endl;
+if (Pstream::master())
+{
+    logSummaryFile.reset
+    (
+        new OFstream
+        (
+            runTime.globalPath()
+           /("logSummary." + runTime.timeName() + ".dat")
+        )
+    );
+
+    logSummaryFile()
+        << "# CA" << "      p" << "        T" << "       u'" << endl;
+}

@@ -4,7 +4,7 @@
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
 #   \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
-#    \\/     M anipulation  | Copyright (C) 2017 OpenCFD Ltd.
+#    \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
 #-------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -14,51 +14,118 @@
 #     foamCleanPath
 #
 # Description
-#     Usage: foamCleanPath [OPTION] path [wildcard] .. [wildcard]
+#     Usage: foamCleanPath [OPTION] path [filter] .. [filter]
+#            foamCleanPath [OPTION] -env=name [filter] .. [filter]
 #
 #     Prints its argument (which should be a ':' separated path)
 #     without the following:
 #         - duplicate elements
-#         - elements whose start matches a wildcard
+#         - elements matching the specified filter(s)
 #         - inaccessible directories (with the -strip option)
 #
 # Note
-#     - this routine will fail when directories have embedded spaces
-#     - false matches possible if a wildcard contains '.' (sed regex)
-#     - the wildcards themselves can be written together and separated
-#       by colons or whitespace
+#     - false matches possible when the filter contains '.' (sed regex) etc.
+#     - a single composite filter can be passed in. This composite filter
+#       is assumed to be delimited by whitespace, colons or semi-colons.
+#     - will not filter out standard system paths (/usr/bin etc)
+#
+# Examples for cleaning the path:
+#
+#     - Using explicit arguments
+#       cleaned=$(foamCleanPath "$PATH" dir1:dir2) && PATH=$cleaned
+#
+#     - Variable to clean passed as an option
+#       cleaned=$(foamCleanPath -env=PATH dir1:dir2) && PATH=$cleaned
+#
+#     - Using shell evaluation for the output
+#       eval $(foamCleanPath -sh=PATH $PATH" dir1:dir2)
+#       eval "$(foamCleanPath -sh=PATH -env=PATH dir1:dir2)"
+#       eval "$(foamCleanPath -sh-env=PATH dir1:dir2)"
+#
+#     - Similarly for c-shell
+#       eval `foamCleanPath -csh-env=PATH dir1:dir2`
+#
 #------------------------------------------------------------------------------
 usage() {
     cat <<USAGE 1>&2
-Usage: ${0##*/} [OPTION] path [wildcard1] .. [wildcardN]
+Usage: foamCleanPath [OPTION] path [filter] .. [filter]
+       foamCleanPath [OPTION] -env=name [filter] .. [filter]
 options:
-  -debug            print debug information to stderr
-  -strip            remove inaccessible directories
-  -verbose          report some progress (input, output, ...)
-  -help             print the usage
+  -csh=NAME         Produce 'setenv NAME ...' output for csh eval
+  -sh=NAME          Produce 'NAME=...' output for sh eval
+  -csh-env=NAME     As per -csh, with -env for initial content
+  -sh-env=NAME      As per -sh,  with -env for initial content
+  -env=NAME         Evaluate NAME to obtain initial content
+  -debug            Print debug information to stderr
+  -strip            Remove inaccessible directories
+  -verbose          Report some progress (input, output, ...)
+  -help             Print the usage
 
 Prints its argument (which should be a ':' separated list) cleansed from
-  - duplicate elements
-  - elements whose start matches one of the wildcard(s)
-  - inaccessible directories (with the -strip option)
+  * duplicate elements
+  * elements whose start matches one of the filters
+  * inaccessible directories (the -strip option)
 
 Exit status
     0  on success
-    1  for miscellaneous errors.
+    1  general error
     2  initial value of 'path' is empty
 
 USAGE
     exit 1
 }
 
+# Report error and exit
+die()
+{
+    exec 1>&2
+    echo
+    echo "Error encountered:"
+    while [ "$#" -ge 1 ]; do echo "    $1"; shift; done
+    echo
+    echo "See 'foamCleanPath -help' for usage"
+    echo
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+
+# Input and outputs
+unset dirList shellOutput
 
 # Parse options
-unset optDebug optStrip optVerbose
+unset optDebug optEnvName optStrip optVerbose
 while [ "$#" -gt 0 ]
 do
     case "$1" in
     -h | -help*)
         usage
+        ;;
+    -csh=* | -sh=* | -csh-env=* | -sh-env=*)
+        name="${1#*=}"
+        [ -n "$name" ] || die "Option '$1' missing an ENVNAME"
+
+        # Output prefix
+        case "$1" in
+        -csh*)
+            shellOutput="setenv $name "     # eg, "setenv PATH xyz"
+            ;;
+        *)
+            shellOutput="$name="            # eg, "PATH=xyz"
+            ;;
+        esac
+
+        # For (-csh-env | -sh-env) also use name for input evaluation
+        case "$1" in
+        *-env=*)
+            optEnvName="$name"
+            ;;
+        esac
+        ;;
+    -env=*)
+        name="${1#*=}"
+        [ -n "$name" ] || die "Option '$1' missing an ENVNAME"
+        optEnvName="$name"
         ;;
     -debug)
         optDebug=true
@@ -76,11 +143,18 @@ do
     shift
 done
 
-# Basic checks, setup
-[ "$#" -ge 1 ] || usage
 
-dirList="$1"
-shift
+# Basic checks
+if [ -n "$optEnvName" ]
+then
+    eval "dirList=\$$optEnvName"
+elif [ "$#" -ge 1 ]
+then
+    dirList="$1"
+    shift
+else
+    die "Requires at least one argument, or use the -env option"
+fi
 
 [ -n "$dirList" ] || exit 2     # Quick exit on empty 'dirList'
 
@@ -94,19 +168,20 @@ else
     printDebug() { true; }      # No-op
 fi
 
-# Check directory existence (optional)
+# Optional test for directory existence
 if [ -n "$optStrip" ]
 then
-    isDir() { test -d "$1"; }   # Check for directory
+    isDir() { test -d "$1"; }   # Check for directory existence
 else
-    isDir() { true; }           # No check (always true)
+    isDir() { test -n "$1"; }   # Only check for non-zero string
 fi
 
-# The "wildcard1 ... wildcardN" may have been passed as a single parameter
-# or may contain ':' separators
+# The "filter ... filterN" may have been passed as a single parameter
+# or may contain ':' separators.
+# Currently (OCT-2018) also accept split on whitespace too.
 
-oldIFS="$IFS"   # Preserve initial IFS
-IFS=': '        # Split on colon, whitespace
+oldIFS="$IFS"       # Preserve initial IFS
+IFS=':; '           # Split on colon, semicolon, whitespace
 set -- $*
 
 if [ -n "$optVerbose" ]
@@ -117,21 +192,30 @@ fi
 
 printDebug "input>$dirList<"
 
-# Strip out wildcards via sed. Path and wildcard cannot contain '?'.
-for wildcard
+# Apply filters via sed. Path and filter cannot contain '?'.
+for filter
 do
-    if [ -n "$wildcard" ]
-    then
-        printDebug "remove>$wildcard<"
-        dirList=$(echo "$dirList:" | sed -e "s?${wildcard}[^:]*:??g")
-    fi
+    case "$filter" in
+    ( / | /bin | /sbin | /lib | /lib64 | /opt \
+        | /usr | /usr/bin | /usr/sbin | /usr/lib | /usr/lib64 \
+        | /usr/local | /usr/local/bin | /usr/local/lib | /usr/local/lib64 )
+        # Do not filter out system directories
+        printDebug "skip>$filter<"
+        ;;
+
+    (*)
+        if [ -n "$filter" ]
+        then
+            printDebug "remove>$filter<"
+            dirList=$(echo "$dirList:" | sed -e "s?${filter}[^:]*:??g")
+        fi
+        ;;
+    esac
 done
 printDebug "intermediate>$dirList<"
 
-IFS=': '        # Split on colon, whitespace (to avoid surprises)
+IFS=':'             # Split on colon. No split on whitespace.
 set -- $dirList
-
-IFS="$oldIFS"   # Restore initial IFS
 
 # Rebuild the list
 unset dirList
@@ -152,13 +236,27 @@ do
     fi
 done
 
-printDebug "output>$dirList<"
+IFS="$oldIFS"       # Restore initial IFS
 
+# Output:
+#
+# For eval mode, add quotes around the argument.
+# - eg,  <. PATH="path1;path2;...">
+#
+# With regular output, any quoting would be done on the caller side.
+# - eg,  <cleaned="($foamClean -env=PATH foo)
+
+printDebug "output>$dirList<"
 if [ -n "$optVerbose" ]
 then
-    echo "output: $dirList" 1>&2
+    echo "output: \"$dirList\"" 1>&2
 fi
 
-echo "$dirList"
+if [ -n "$shellOutput" ]
+then
+    echo "$shellOutput\"$dirList\""
+else
+    echo "$dirList"
+fi
 
 #------------------------------------------------------------------------------

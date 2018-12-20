@@ -59,8 +59,6 @@ class autoPatch
         const scalar featureAngle_;
 
 
-   // Private Member Functions
-
 public:
 
     //- Runtime type information
@@ -70,18 +68,18 @@ public:
     // Constructors
 
         //- Construct from dictionary
-        autoPatch(const searchableSurfaces&, const dictionary&);
+        autoPatch(const searchableSurfaces& geometry, const dictionary& dict);
 
         //- Clone
         autoPtr<searchableSurfaceModifier> clone() const
         {
             NotImplemented;
-            return autoPtr<searchableSurfaceModifier>(nullptr);
+            return nullptr;
         }
 
 
     //- Destructor
-    virtual ~autoPatch();
+    virtual ~autoPatch() = default;
 
 
     // Member Functions

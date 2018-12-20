@@ -26,6 +26,7 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "stringListOps.H"
+#include "FlatOutput.H"
 #include "IOstreams.H"
 #include "StringStream.H"
 
@@ -49,11 +50,11 @@ int main(int argc, char *argv[])
         "okkkey",
     };
 
-    wordReList reLst(IStringStream("( okey \"[hy]e+.*\" )")());
+    wordRes reLst(IStringStream("( okey \"[hy]e+.*\" )")());
 
     Info<< "stringList " << strLst << nl;
 
-    labelList matches = findStrings(".*ee.*", strLst);
+    labelList matches = findStrings(regExp(".*ee.*"), strLst);
 
     Info<< "matches found for regexp .*ee.* :" << nl << matches << nl;
     forAll(matches, i)
@@ -64,14 +65,17 @@ int main(int argc, char *argv[])
 
     matches = findStrings(reLst, strLst);
 
-    Info<< "matches found for " << reLst << nl << matches << nl;
+    Info<< "matching " << flatOutput(reLst) << " => "
+        << reLst.matching(strLst) << nl;
+    Info<< "matches found for " << flatOutput(reLst) << " => "
+        << matches << nl;
     forAll(matches, i)
     {
         Info<< " -> " << strLst[matches[i]] << nl;
     }
     Info<< endl;
 
-    stringList subLst = subsetStrings(".*ee.*", strLst);
+    stringList subLst = subsetStrings(regExp(".*ee.*"), strLst);
     Info<< "subset stringList: " << subLst << nl;
 
     subLst = subsetStrings(reLst, strLst);
@@ -80,7 +84,7 @@ int main(int argc, char *argv[])
     inplaceSubsetStrings(reLst, strLst);
     Info<< "subsetted stringList: " << strLst << nl;
 
-    inplaceSubsetStrings(".*l.*", strLst);
+    inplaceSubsetStrings(regExp(".*l.*"), strLst);
     Info<< "subsetted stringList: " << strLst << nl;
 
     Info<< "\nEnd\n" << endl;
