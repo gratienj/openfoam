@@ -72,7 +72,7 @@ alphatWallBoilingWallFunctionFvPatchScalarField
     alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(p, iF),
     otherPhaseName_("vapor"),
     phaseType_(liquidPhase),
-    relax_(0.5),
+    relax_(1),
     AbyV_(p.size(), 0),
     alphatConv_(p.size(), 0),
     dDep_(p.size(), 1e-5),
@@ -110,7 +110,7 @@ alphatWallBoilingWallFunctionFvPatchScalarField
     alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(p, iF, dict),
     otherPhaseName_(dict.lookup("otherPhase")),
     phaseType_(phaseTypeNames_.read(dict.lookup("phaseType"))),
-    relax_(dict.lookupOrDefault<scalar>("relax", 0.5)),
+    relax_(dict.lookupOrDefault<scalar>("relax", 1)),
     AbyV_(p.size(), 0),
     alphatConv_(p.size(), 0),
     dDep_(p.size(), 1e-5),
@@ -411,6 +411,7 @@ mDotL(const phasePairKey& phasePair) const
 
 void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
 {
+
     if (updated())
     {
         return;
@@ -522,14 +523,14 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                 {
                     this->operator[](i) =
                     (
-                        max
+                        //max
                         (
                             (1 - fLiquid[i])
                            *(
                                qFilm[i]/heSnGrad[i] - alphaw[i]
                               /max(vaporw[i], scalar(1e-8))
-                            ),
-                            1e-16
+                            )//,
+                            //1e-16
                         )
                     );
                 }
@@ -702,6 +703,7 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                     )
                 );
 
+                // Effect of sub-cooling to the CHF in saturated conditions
                 const scalarField CHFSubCool
                 (
                     CHFSoobModel_->CHFSubCool
@@ -772,7 +774,7 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
 
                 // htc for film transition boiling
 
-                // Indicator between CHF (phi = 1) and MHF (phi = 0)
+                // Indicator between CHF (phi = 0) and MHF (phi = 1)
                 const scalarField phi
                 (
                     min
@@ -904,6 +906,18 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                                     (1 - relax_)*qq_[i]
                                   + relax_*A2*hQ*max(Tw[i] - Tl[i], scalar(0))
                                 );
+
+                            this->operator[](i) =
+                            (
+                                max
+                                (
+                                    (
+                                        (qq_[i] + mDotL_[i]/AbyV_[i])
+                                    /max(hewSn[i], scalar(1e-16))
+                                    )/max(liquidw[i], scalar(1e-8)),
+                                    1e-8
+                                )
+                            );
                         }
                         else if (Tw[i] > tDNB[i] && Tw[i] < TLeiden[i])
                         {
@@ -915,51 +929,77 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                             // transient boiling
                             dmdt_[i] =
                                 fLiquid[i]
-                                *(
-                                    relax_*Qtb[i] + (1 - relax_)*dmdt_[i]
-                                )*AbyV_[i]/L[i];
+                               *(
+                                    relax_*Qtb[i]*AbyV_[i]/L[i]
+                                  + (1 - relax_)*dmdt_[i]
+                                );
 
                             mDotL_[i] = dmdt_[i]*L[i];
 
                             // No quenching flux
-                            qq_[i] = 0.0;
+                            //qq_[i] = 0.0;
+
+                            this->operator[](i) =
+                            (
+                                max
+                                (
+                                    (
+                                        mDotL_[i]/AbyV_[i]
+                                        /max(hewSn[i], scalar(1e-16))
+                                    )/max(liquidw[i], scalar(1e-8)),
+                                    1e-8
+                                )
+                            );
                         }
                         else if (Tw[i] > TLeiden[i])
                         {
-                            regimeTypes[i] = 2; // film boiling
+                            regimeTypes[i] = regimeType::film; // film boiling
 
                             // No convective heat tranfer
                             alphatConv_[i] = 0.0;
 
                             // Film boiling
                             dmdt_[i] =
-                                 fLiquid[i]
-                                *(
-                                    relax_*htcFilmBoiling[i]*max(Tw[i] - Tsatw[i], 0)
-                                  + (1 - relax_)*dmdt_[i]
-                                )*AbyV_[i]/L[i];
+                                fLiquid[i]
+                               *(
+                                    relax_*htcFilmBoiling[i]
+                                   *max(Tw[i] - Tsatw[i], 0)*AbyV_[i]/L[i]
+                                 + (1 - relax_)*dmdt_[i]
+                                );
 
                             mDotL_[i] = dmdt_[i]*L[i];
 
                             // No quenching flux
                             qq_[i] = 0.0;
+
+                            this->operator[](i) =
+                            (
+                                max
+                                (
+                                    (
+                                        mDotL_[i]/AbyV_[i]
+                                        /max(hewSn[i], scalar(1e-16)) - fLiquid[i]*alphaw[i]
+                                    )/max(liquidw[i], scalar(1e-8)),
+                                    1-fLiquid[i]*alphaw[i]
+                                )
+                            );
                         }
 
                         // Effective thermal diffusivity for boiling regimes.
                         // alphaw is substracted as it is added by
                         // kappaEff. These correlations take into account
                         // the total htc
-                        this->operator[](i) =
-                        (
-                            max
-                            (
-                                (
-                                    (qq_[i] + mDotL_[i]/AbyV_[i])
-                                   /max(hewSn[i], scalar(1e-16)) - alphaw[i]
-                                )/max(liquidw[i], scalar(1e-8)),
-                                1e-16
-                            )
-                        );
+//                         this->operator[](i) =
+//                         (
+//                             max
+//                             (
+//                                 (
+//                                     (qq_[i] + mDotL_[i]/AbyV_[i])
+//                                    /max(hewSn[i], scalar(1e-16)) //- fLiquid[i]*alphaw[i]
+//                                 )/max(liquidw[i], scalar(1e-8)),
+//                                 1e-8//-fLiquid[i]*alphaw[i]
+//                             )
+//                         );
                     }
                     else
                     {
@@ -982,21 +1022,6 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                     }
                 }
 
-                /*
-                operator==
-                (
-                    max
-                    (
-                        (
-                           fLiquid*A1*(alphatConv_ + alphaw)
-                         + (qq_ + qe())/max(hew.snGrad(), scalar(1e-16))
-                         - alphaw
-                        )/max(liquidw, scalar(1e-8)),
-                        1e-16
-                    )
-                );
-                */
-
                 scalarField TsupPrev(max((Tw - Tsatw), scalar(0)));
                 // NOTE: lagging Tw update.
                 //const_cast<fvPatchScalarField&>(Tw).evaluate();
@@ -1011,14 +1036,17 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         liquidw*(*this + alphaw)*hew.snGrad()
                     );
 
-                    Info<< "  alphatl: " << gMin(*this) << " - "
-                        << gMax(*this) << endl;
+                    Info<< "  alphatl: " << gMin((*this)) << " - "
+                        << gMax((*this)) << endl;
+
+                    Info<< "  dmdt: " << gMin((dmdt_)) << " - "
+                        << gMax((dmdt_)) << endl;
+
+                    Info<< "  alphatlEff: " << gMin((*this + alphaw)) << " - "
+                        << gMax((*this + alphaw)) << endl;
 
                     scalar Qeff = gSum(qEff*patch().magSf());
                     Info<< " Effective heat transfer rate to liquid:" << Qeff << endl;
-
-                    Info<< "  dmdtW: " << gMin(dmdt_) << " - "
-                        << gMax(dmdt_) << endl;
 
                     if (debug && 2)
                     {
@@ -1088,6 +1116,8 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         Info<< " Transient boiling heat transfer:" << Qtbtot << endl;
                         Info<< "  phi: " << gMin(nTransients*phi) << " - "
                             << gMax(nTransients*phi) << endl;
+
+                        Info<< " tDNB: " << gMin(tDNB) << " - " << gMax(tDNB) << endl;
 
                         scalar QsubCool= gSum
                         (

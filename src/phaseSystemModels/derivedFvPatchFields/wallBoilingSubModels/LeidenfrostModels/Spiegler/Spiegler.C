@@ -78,10 +78,13 @@ Foam::wallBoilingModels::LeidenfrostModels::Spiegler::TLeid
     const scalarField& L
 ) const
 {
-    return scalarField
+    return tmp<scalarField>
     (
-        liquid.thermo().p().boundaryField()[patchi].size(),
-        27*Tcrit_/32
+        new scalarField
+        (
+            liquid.thermo().p().boundaryField()[patchi].size(),
+            27*Tcrit_/32
+        )
     );
 }
 
