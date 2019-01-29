@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
+   \\    /   O peration     | Copyright (C) 2019 OpenCFD Ltd.
     \\  /    A nd           |
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
@@ -92,6 +92,15 @@ public:
         //- Map droplet cloud sources to surface
         template<class Type>
         tmp<Field<Type>> mapToSurface
+        (
+            const typename
+            GeometricField<Type, fvPatchField, volMesh>::Boundary& df
+        ) const;
+
+
+        //- Map patch internal field to surface
+        template<class Type>
+        tmp<Field<Type>> mapInternalToSurface
         (
             const typename
             GeometricField<Type, fvPatchField, volMesh>::Boundary& df

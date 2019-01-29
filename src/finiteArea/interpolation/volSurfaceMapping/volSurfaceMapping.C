@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
+   \\    /   O peration     | Copyright (C) 2019 OpenCFD Ltd.
     \\  /    A nd           |
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
@@ -60,6 +60,44 @@ Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
             faceID = bm[patchID].whichFace(faceLabels[i]);
 
             result[i] = df[patchID][faceID];
+        }
+    }
+
+    return tresult;
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapInternalToSurface
+(
+    const typename GeometricField<Type, fvPatchField, volMesh>::Boundary& df
+) const
+{
+    // Grab labels for all faces in faMesh
+    const labelList& faceLabels = mesh_.faceLabels();
+
+    tmp<Field<Type>> tresult
+    (
+        new Field<Type>(faceLabels.size(), Zero)
+    );
+    Field<Type>& result = tresult.ref();
+
+    // Get reference to volume mesh
+    const polyMesh& pMesh = mesh_();
+    const polyBoundaryMesh& bm = pMesh.boundaryMesh();
+
+    label patchID, faceID;
+
+    // Grab droplet cloud source by identifying patch and face
+    forAll(faceLabels, i)
+    {
+        // Escape if face is beyond active faces, eg belongs to a face zone
+        if (faceLabels[i] < pMesh.nFaces())
+        {
+            patchID = bm.whichPatch(faceLabels[i]);
+            faceID = bm[patchID].whichFace(faceLabels[i]);
+
+            result[i] = df[patchID].patchInternalField()()[faceID];
         }
     }
 
