@@ -523,14 +523,14 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                 {
                     this->operator[](i) =
                     (
-                        //max
+                        max
                         (
                             (1 - fLiquid[i])
                            *(
                                qFilm[i]/heSnGrad[i] - alphaw[i]
                               /max(vaporw[i], scalar(1e-8))
-                            )//,
-                            //1e-16
+                            ),
+                            1e-16
                         )
                     );
                 }
@@ -976,11 +976,12 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                             (
                                 max
                                 (
+                                    scalar(1e-16) +
                                     (
                                         mDotL_[i]/AbyV_[i]
-                                        /max(hewSn[i], scalar(1e-16)) - fLiquid[i]*alphaw[i]
+                                        /max(hewSn[i], scalar(1e-16)) - alphaw[i]
                                     )/max(liquidw[i], scalar(1e-8)),
-                                    1-fLiquid[i]*alphaw[i]
+                                    -alphaw[i]
                                 )
                             );
                         }
