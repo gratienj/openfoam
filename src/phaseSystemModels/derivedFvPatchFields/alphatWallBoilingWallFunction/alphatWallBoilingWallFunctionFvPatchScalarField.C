@@ -530,7 +530,7 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                                qFilm[i]/heSnGrad[i] - alphaw[i]
                               /max(vaporw[i], scalar(1e-8))
                             ),
-                            1e-16
+                            -alphaw[i]
                         )
                     );
                 }
