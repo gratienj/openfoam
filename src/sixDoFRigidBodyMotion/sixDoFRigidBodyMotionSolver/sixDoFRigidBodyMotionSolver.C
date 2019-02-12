@@ -79,7 +79,8 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
                 false
             )
         )
-      : coeffDict()
+      : coeffDict(),
+        mesh.time()
     ),
     patches_(coeffDict().get<wordRes>("patches")),
     patchSet_(mesh.boundaryMesh().patchSet(patches_)),

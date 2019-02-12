@@ -71,6 +71,9 @@ class sixDoFRigidBodyMotion
 
     // Private data
 
+        //- Reference to time database
+        const Time& time_;
+
         //- Motion state data object
         sixDoFRigidBodyMotionState motionState_;
 
@@ -170,8 +173,8 @@ class sixDoFRigidBodyMotion
             //- Return the orientation
             inline const tensor& Q() const;
 
-            //- Return the current acceleration
-            inline const vector& a() const;
+//             //- Return the current acceleration
+//             inline const vector& a() const;
 
             //- Return the current angular momentum
             inline const vector& pi() const;
@@ -209,13 +212,14 @@ public:
     // Constructors
 
         //- Construct null
-        sixDoFRigidBodyMotion();
+        sixDoFRigidBodyMotion(const Time&);
 
         //- Construct from constant and state dictionaries
         sixDoFRigidBodyMotion
         (
             const dictionary& dict,
-            const dictionary& stateDict
+            const dictionary& stateDict,
+            const Time& time
         );
 
         //- Construct as copy
@@ -259,10 +263,16 @@ public:
             //- Return the current velocity
             inline const vector& v() const;
 
+            //- Return the current linear acceleration
+            inline const vector& a() const;
+
             inline vector momentArm() const;
 
             //- Return the report Switch
             inline bool report() const;
+
+            //- Return time
+            inline const Time& time() const;
 
 
         // Edit

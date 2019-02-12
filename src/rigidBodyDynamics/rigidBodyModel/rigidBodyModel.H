@@ -268,6 +268,9 @@ public:
         //- Return the spatial velocity of the bodies
         inline const spatialVector& v(const label i) const;
 
+        //- Return the spatial acceleration of the bodies
+        inline const spatialVector& a(const label i) const;
+
         //- Join the given body to the parent with ID parentID via the given
         //  joint with transform from the parent frame to the joint frame XT.
         virtual label join
@@ -325,6 +328,9 @@ public:
 
         //- Return the current transform to the global frame for the given body
         spatialTransform X0(const label bodyId) const;
+
+        //- Return the Xlambda transform
+        spatialTransform Xlambda(const label bodyId) const;
 
         // Find the corresponding point in the master body frame
         vector masterPoint(const label bodyID, const vector& p) const;

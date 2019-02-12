@@ -46,7 +46,7 @@ uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
 )
 :
     fixedValuePointPatchField<vector>(p, iF),
-    motion_(),
+    motion_(db().time()),
     initialPoints_(p.localPoints()),
     curTimeIndex_(-1)
 {}
@@ -61,7 +61,7 @@ uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
 )
 :
     fixedValuePointPatchField<vector>(p, iF, dict),
-    motion_(dict, dict),
+    motion_(dict, dict, db().time()),
     curTimeIndex_(-1)
 {
     if (!dict.found("value"))

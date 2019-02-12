@@ -70,8 +70,9 @@ void Foam::sixDoFRigidBodyMotion::applyRestraints()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion()
+Foam::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion(const Time& time)
 :
+    time_(time),
     motionState_(),
     motionState0_(),
     restraints_(),
@@ -93,9 +94,11 @@ Foam::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion()
 Foam::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion
 (
     const dictionary& dict,
-    const dictionary& stateDict
+    const dictionary& stateDict,
+    const Time& time
 )
 :
+    time_(time),
     motionState_(stateDict),
     motionState0_(),
     restraints_(),
@@ -157,6 +160,7 @@ Foam::sixDoFRigidBodyMotion::sixDoFRigidBodyMotion
     const sixDoFRigidBodyMotion& sDoFRBM
 )
 :
+    time_(sDoFRBM.time_),
     motionState_(sDoFRBM.motionState_),
     motionState0_(sDoFRBM.motionState0_),
     restraints_(sDoFRBM.restraints_),

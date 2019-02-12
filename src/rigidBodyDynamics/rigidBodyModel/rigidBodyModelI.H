@@ -111,6 +111,11 @@ Foam::RBD::rigidBodyModel::v(const label i) const
     return v_[i];
 }
 
+inline const Foam::spatialVector&
+Foam::RBD::rigidBodyModel::a(const label i) const
+{
+    return a_[i];
+}
 
 inline bool Foam::RBD::rigidBodyModel::merged(label bodyID) const
 {

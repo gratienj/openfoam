@@ -389,6 +389,20 @@ Foam::spatialTransform Foam::RBD::rigidBodyModel::X0
 }
 
 
+Foam::spatialTransform Foam::RBD::rigidBodyModel::Xlambda
+(
+    const label bodyId
+) const
+{
+    if (merged(bodyId))
+    {
+        const subBody& mBody = mergedBody(bodyId);
+        return mBody.masterXT() & Xlambda_[mBody.masterID()];
+    }
+
+    return Xlambda_[bodyId];
+}
+
 void Foam::RBD::rigidBodyModel::write(Ostream& os) const
 {
     os.beginBlock("bodies");
