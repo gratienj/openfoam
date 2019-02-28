@@ -132,7 +132,6 @@ int main(int argc, char *argv[])
         "Execute functionObjects"
     );
 
-    #include "addRegionOption.H"
     #include "addCheckCaseOptions.H"
     #include "setRootCaseLists.H"
     #include "createTime.H"
