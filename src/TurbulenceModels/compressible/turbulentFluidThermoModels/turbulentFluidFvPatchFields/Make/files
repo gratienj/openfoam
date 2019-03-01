@@ -11,6 +11,7 @@ $(BCs)/outletMachNumberPressure/outletMachNumberPressureFvPatchScalarField.C
 $(BCs)/energyRegionCoupled/energyRegionCoupledFvPatchScalarField.C
 $(BCs)/temperatureCoupledBase/temperatureCoupledBase.C
 $(BCs)/turbulentTemperatureCoupledBaffleMixed/turbulentTemperatureCoupledBaffleMixedFvPatchScalarField.C
+$(BCs)/turbulentTemperatureTwoPhaseRadCoupledMixed/turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField.C
 $(BCs)/turbulentTemperatureRadCoupledMixed/turbulentTemperatureRadCoupledMixedFvPatchScalarField.C
 $(BCs)/lumpedMassWallTemperature/lumpedMassWallTemperatureFvPatchScalarField.C
 

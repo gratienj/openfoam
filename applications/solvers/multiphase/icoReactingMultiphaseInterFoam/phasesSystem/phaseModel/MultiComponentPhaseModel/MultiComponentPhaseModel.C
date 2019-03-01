@@ -302,8 +302,8 @@ void Foam::MultiComponentPhaseModel<BasePhaseModel, phaseThermo>::solveYi
                 phiYiCorr,
                 Sp[i],
                 Su[i],
-                1,
-                0,
+                oneField(),
+                zeroField(),
                 true
             );
         }
@@ -358,8 +358,8 @@ void Foam::MultiComponentPhaseModel<BasePhaseModel, phaseThermo>::solveYi
                         phiYiCorr,
                         Sp[i],
                         Su[i],
-                        1,
-                        0
+                        oneField(),
+                        zeroField()
                     );
                 }
             }
@@ -373,8 +373,8 @@ void Foam::MultiComponentPhaseModel<BasePhaseModel, phaseThermo>::solveYi
                     phiYiCorr,
                     Sp[i],
                     Su[i],
-                    1,
-                    0
+                    oneField(),
+                    zeroField()
                 );
             }
             Yt += Yi;

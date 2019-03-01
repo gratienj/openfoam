@@ -50,6 +50,7 @@ SourceFiles
 #include "zero.H"
 #include "zeroField.H"
 #include "UPtrList.H"
+#include "HashSet.H"
 #include "UniformField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -72,6 +73,14 @@ void explicitSolve
     const SuType& Su
 );
 
+template<class RhoType>
+void explicitSolve
+(
+    const RhoType& rho,
+    volScalarField& psi,
+    const surfaceScalarField& phiPsi
+);
+
 template<class RhoType, class SpType, class SuType>
 void explicitSolve
 (
@@ -82,26 +91,15 @@ void explicitSolve
     const SuType& Su
 );
 
-template<class RhoType, class SpType, class SuType>
+template<class RhoType, class PsiMaxType, class PsiMinType>
 void explicitSolve
 (
     const RhoType& rho,
     volScalarField& psi,
     const surfaceScalarField& phiBD,
     surfaceScalarField& phiPsi,
-    const SpType& Sp,
-    const SuType& Su,
-    const scalar psiMax,
-    const scalar psiMin
-);
-
-void explicitSolve
-(
-    volScalarField& psi,
-    const surfaceScalarField& phiBD,
-    surfaceScalarField& phiPsi,
-    const scalar psiMax,
-    const scalar psiMin
+    const PsiMaxType& psiMax,
+    const PsiMinType& psiMin
 );
 
 
@@ -125,21 +123,6 @@ void explicitSolve
     const PsiMinType& psiMin
 );
 
-
-template<class RdeltaTType, class RhoType, class SpType, class SuType>
-void limiter
-(
-    scalarField& allLambda,
-    const RdeltaTType& rDeltaT,
-    const RhoType& rho,
-    const volScalarField& psi,
-    const surfaceScalarField& phiBD,
-    const surfaceScalarField& phiCorr,
-    const SpType& Sp,
-    const SuType& Su,
-    const scalar psiMax,
-    const scalar psiMin
-);
 
 template
 <
@@ -162,21 +145,6 @@ void limiter
     const SuType& Su,
     const PsiMaxType& psiMax,
     const PsiMinType& psiMin
-);
-
-template<class RdeltaTType, class RhoType, class SpType, class SuType>
-void limit
-(
-    const RdeltaTType& rDeltaT,
-    const RhoType& rho,
-    const volScalarField& psi,
-    const surfaceScalarField& phi,
-    surfaceScalarField& phiPsi,
-    const SpType& Sp,
-    const SuType& Su,
-    const scalar psiMax,
-    const scalar psiMin,
-    const bool returnCorr
 );
 
 
