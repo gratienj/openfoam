@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus.feature-EulerEulerSolvers        |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/solid/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+3
+(
+    sides
+    {
+        type            symmetry;
+        inGroups        1(symmetry);
+        nFaces          1360;
+        startFace       58900;
+    }
+    innerWall
+    {
+        type            wall;
+        inGroups        1(wall);
+        nFaces          1020;
+        startFace       60260;
+    }
+    solid_to_water
+    {
+        type            mappedWall;
+        inGroups        1(wall);
+        nFaces          2220;
+        startFace       61280;
+        sampleMode      nearestPatchFace;
+        sampleRegion    water;
+        samplePatch     water_to_solid;
+    }
+)
+
+// ************************************************************************* //

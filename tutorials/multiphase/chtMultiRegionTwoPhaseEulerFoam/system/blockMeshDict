@@ -1,0 +1,108 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.0.x                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+scale 1;
+
+pi_4 #calc "constant::mathematical::pi/4";
+
+r0 7e-4;
+r1 4.76e-3;     //inner radius
+r2 35e-3;       //outer radius
+
+
+l 168e-3;
+
+r0m  #calc "$r0*cos($pi_4)";
+r1m  #calc "$r1*cos($pi_4)";
+r2m  #calc "$r2*cos($pi_4)";
+
+vertices
+(
+    ( $r0   0   0)     //0
+    ( $r1   0   0)
+    ( 0     $r1 0)     //2
+    ( 0     $r0 0)
+
+    ( $r2   0   0)      //4
+    ( 0    $r2   0)     //5
+
+    // Extruded vertices
+
+    ( $r0   0    $l)    //6
+    ( $r1   0    $l)    //7
+    ( 0     $r1  $l)    //8
+    ( 0     $r0  $l)
+
+    ( $r2   0   $l)     //10
+    ( 0    $r2   $l)    //11
+);
+
+blocks
+(
+    // cylinder
+    hex (0 1 2 3 6 7 8 9) (20 30 150) simpleGrading (1 1 1)
+
+    // cylinder exterior
+    hex (1 4 5 2 7 10 11 8) (50 30 150) simpleGrading (1.5 1 1)
+);
+
+edges
+(
+    arc 0 3 ($r0m $r0m 0)
+    arc 1 2 ($r1m $r1m 0)
+    arc 4 5 ($r2m $r2m 0)
+    arc 6 9 ($r0m $r0m $l)
+    arc 7 8 ($r1m $r1m $l)
+    arc 10 11 ($r2m $r2m $l)
+
+);
+
+patches
+(
+    symmetry sides
+    (
+        (0 1 7 6)
+        (3 2 8 9)
+        (1 4 10 7)
+        (2 5 11 8)
+    )
+
+    wall innerWall
+    (
+       (0 6 9 3)
+    )
+
+    wall externalWall
+    (
+        (4 5 11 10)
+    )
+
+    patch top
+    (
+        (6 7 8 9)
+        (7 10 11 8)
+    )
+
+    wall bottom
+    (
+        (0 1 2 3)
+        (1 4 5 2)
+    )
+
+);
+
+// ************************************************************************* //
+
