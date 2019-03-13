@@ -103,6 +103,9 @@ class polyTopoChange
         //  when adding/removing data.
         bool strict_;
 
+        //- Type of mesh to generate: 3D (default) or 2D (faMesh)
+        label nTopologicalD_;
+
 
         // Patches
 
@@ -408,10 +411,20 @@ public:
 
         //- Construct without mesh. Either specify nPatches or use
         //  setNumPatches before trying to make a mesh (makeMesh, changeMesh)
-        polyTopoChange(const label nPatches, const bool strict = true);
+        polyTopoChange
+        (
+            const label nPatches,
+            const bool strict = true,
+            const label nTopologicalD = 3
+        );
 
         //- Construct from mesh. Adds all points/face/cells from mesh.
-        polyTopoChange(const polyMesh& mesh, const bool strict = true);
+        polyTopoChange
+        (
+            const polyMesh& mesh,
+            const bool strict = true,
+            const label nTopologicalD = 3
+        );
 
 
     // Member Functions

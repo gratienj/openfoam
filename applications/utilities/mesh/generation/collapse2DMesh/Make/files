@@ -1,0 +1,3 @@
+collapse2DMesh.C
+
+EXE = $(FOAM_APPBIN)/collapse2DMesh
