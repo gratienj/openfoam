@@ -57,8 +57,7 @@ volScalarField rho
         IOobject::READ_IF_PRESENT,
         IOobject::AUTO_WRITE
     ),
-    alpha1*rho1 + alpha2*rho2,
-    alpha1.boundaryField().types()
+    alpha1*rho1 + alpha2*rho2
 );
 rho.oldTime();
 
@@ -123,17 +122,19 @@ volScalarField kappaEff
     thermo->kappa()
 );
 
-Info<< "Creating field pDivU\n" << endl;
-volScalarField pDivU
+
+// Need to store rho for ddt(rhoCp, U)
+volScalarField rhoCp
 (
     IOobject
     (
-        "pDivU",
+        "rhoCp",
         runTime.timeName(),
-        mesh
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
     ),
-    mesh,
-    dimensionedScalar(p.dimensions()/dimTime, Zero)
+    rho*thermo->Cp()
 );
 
 // Need to store rho for ddt(rhoCp, U)
@@ -149,4 +150,5 @@ volScalarField rhoCp
     ),
     rho*thermo->Cp()
 );
+
 rhoCp.oldTime();

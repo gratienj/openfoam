@@ -119,6 +119,29 @@ inline Foam::scalar Foam::adiabaticPerfectFluid<Specie>::Cp
 
 
 template<class Specie>
+inline Foam::scalar Foam::adiabaticPerfectFluid<Specie>::E
+(
+    scalar p,
+    scalar T
+) const
+{
+    // ***HGW This needs to be added, it is H - p/rho
+    return 0;
+}
+
+
+template<class Specie>
+inline Foam::scalar Foam::adiabaticPerfectFluid<Specie>::Cv
+(
+    scalar p,
+    scalar T
+) const
+{
+    return 0;
+}
+
+
+template<class Specie>
 inline Foam::scalar Foam::adiabaticPerfectFluid<Specie>::S
 (
     scalar p,
