@@ -284,6 +284,18 @@ void Foam::rigidBodyMeshMotion::solve()
                 functionObjects::forces f("forces", db(), forcesDict);
                 f.calcForcesMoment();
 
+                if (model_.report() && Pstream::master())
+                {
+                    if (i == nIter-1)
+                    {
+                        Info<< "Forces on body " << bodyMeshes_[bi].name_ << " : "
+                            << f.forceEff() << endl;
+
+                        Info<< "Moments on body " << bodyMeshes_[bi].name_ << " : "
+                            << f.momentEff() << endl;
+                    }
+                }
+
                 fx[bodyID] = ramp*spatialVector(f.momentEff(), f.forceEff());
             }
 
