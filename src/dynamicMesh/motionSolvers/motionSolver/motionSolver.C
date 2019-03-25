@@ -143,6 +143,51 @@ Foam::autoPtr<Foam::motionSolver> Foam::motionSolver::New
     return autoPtr<motionSolver>(cstrIter()(mesh, solverDict));
 }
 
+Foam::autoPtr<Foam::motionSolver> Foam::motionSolver::New
+(
+    const polyMesh& mesh,
+    const IOdictionary& IODict,
+    const dictionary& solverDict
+)
+{
+      // The change from "solver" to "motionSolver" has not been
+    // applied consistently. Accept both without complaint.
+    const word solverName
+    (
+        solverDict.getCompat<word>("motionSolver", {{"solver", -1612}})
+    );
+
+    Info<< "Selecting motion solver: " << solverName << nl;
+
+    const_cast<Time&>(mesh.time()).libs().open
+    (
+        IODict,
+        "motionSolverLibs",
+        dictionaryConstructorTablePtr_
+    );
+
+    if (!dictionaryConstructorTablePtr_)
+    {
+        FatalErrorInFunction
+            << "solver table is empty"
+            << exit(FatalError);
+    }
+
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(solverName);
+
+    if (!cstrIter.found())
+    {
+        FatalErrorInFunction
+            << "Unknown solver type "
+            << solverName << nl << nl
+            << "Valid solver types :" << nl
+            << dictionaryConstructorTablePtr_->sortedToc()
+            << exit(FatalError);
+    }
+
+    return autoPtr<motionSolver>(cstrIter()(mesh, IODict));
+}
+
 
 Foam::autoPtr<Foam::motionSolver> Foam::motionSolver::New(const polyMesh& mesh)
 {

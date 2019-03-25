@@ -101,6 +101,15 @@ public:
         //  was registered this will 'steal' that registration.
         static autoPtr<motionSolver> New(const polyMesh&, const IOdictionary&);
 
+        //- Select constructed from polyMesh, IOdictionary and sub-dictionary
+        // Used for dynamicMotionSolverList
+        static autoPtr<motionSolver> New
+        (
+            const polyMesh&,
+            const IOdictionary&,
+            const dictionary&
+        );
+
         //- Class used for the construction of PtrLists of motionSolvers
         class iNew
         {

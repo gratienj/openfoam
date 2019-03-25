@@ -51,22 +51,58 @@ Foam::dynamicMotionSolverListFvMesh::dynamicMotionSolverListFvMesh
 )
 :
     dynamicFvMesh(io),
-    motionSolvers_
+    motionSolvers_()
+{
+    IOdictionary dict
     (
-        IOdictionary
+        IOobject
         (
-            IOobject
-            (
-                "dynamicMeshDict",
-                time().constant(),
-                *this,
-                IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::AUTO_WRITE
-            )
-        ).lookup("solvers"),
-        motionSolver::iNew(*this)
-    )
-{}
+            "dynamicMeshDict",
+            time().constant(),
+            *this,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::AUTO_WRITE
+        )
+    );
+
+    if (dict.found("solvers"))
+    {
+
+        label i = 0;
+
+        const dictionary& solvertDict = dict.subDict("solvers");
+
+        //const word type = solvertDict.get<word>("motionSolver");
+
+        motionSolvers_.setSize(solvertDict.size());
+
+        for (const entry& dEntry : solvertDict)
+        {
+            if (dEntry.isDict())
+            {
+                IOdictionary solverDict
+                (
+                    IOobject
+                    (
+                        "dynamicMeshDict",
+                        time().constant(),
+                        *this,
+                        IOobject::NO_READ,
+                        IOobject::NO_WRITE
+                    ),
+                    dEntry.dict()
+                );
+
+                motionSolvers_.set
+                (
+                    i++,
+                    motionSolver::New(*this, solverDict)
+                );
+            }
+        }
+        motionSolvers_.setSize(i);
+    }
+}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
