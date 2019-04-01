@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,33 +21,21 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Typedef
-    Foam::complexVector
+InClass
+    Foam::complexFields
 
 Description
-    A Vector of complex values with 'scalar' precision.
-
-SourceFiles
-    complexVectorI.H
-    complexVector.C
+    Specialisations of Field\<T\> for complex and complexVector
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef complexVector_H
-#define complexVector_H
-
-#include "complex.H"
-#include "vector.H"
+#ifndef complexFields_H
+#define complexFields_H
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
-    typedef Vector<complex> complexVector;
-}
-
-// Functions
-#include "complexVectorI.H"
+#include "complexField.H"
+#include "complexVectorField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
