@@ -577,7 +577,7 @@ mode_t Foam::mode(const fileName& name, const bool followLink)
     if (!name.empty())
     {
         fileStat fileStatus(name, followLink);
-        if (fileStatus.isValid())
+        if (fileStatus.valid())
         {
             return fileStatus.status().st_mode;
         }
@@ -705,7 +705,7 @@ off_t Foam::fileSize(const fileName& name, const bool followLink)
     if (!name.empty())
     {
         fileStat fileStatus(name, followLink);
-        if (fileStatus.isValid())
+        if (fileStatus.valid())
         {
             return fileStatus.status().st_size;
         }
