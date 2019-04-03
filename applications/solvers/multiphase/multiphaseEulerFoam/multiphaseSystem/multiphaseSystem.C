@@ -775,6 +775,7 @@ Foam::tmp<Foam::surfaceScalarField> Foam::multiphaseSystem::surfaceTension
             )
         )
     );
+    tSurfaceTension.ref().setOriented();
 
     for (const phaseModel& phase2 : phases_)
     {
