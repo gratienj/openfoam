@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2018-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2014 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::cpuTime
+    Foam::cpuTimeCxx
 
 Description
     Starts timing CPU usage and return elapsed time from start.
@@ -33,16 +31,14 @@ See also
     clockTime
 
 SourceFiles
-    cpuTime.C
+    cpuTimeCxx.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef cpuTime_H
-#define cpuTime_H
+#ifndef cpuTimeCxx_H
+#define cpuTimeCxx_H
 
-#include <string>
 #include <ctime>
-#include <sys/times.h>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -50,14 +46,16 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class cpuTime Declaration
+                         Class cpuTimeCxx Declaration
 \*---------------------------------------------------------------------------*/
 
-class cpuTime
+class cpuTimeCxx
 {
     //- Time structure used, with additional methods
-    struct value_type : tms
+    struct value_type
     {
+        std::clock_t value;
+
         //- Construct with the current clock time
         value_type();
 
@@ -74,14 +72,11 @@ class cpuTime
         //- Last time when elapsedTime or timeIncrement was called
         mutable value_type last_;
 
-        //- Clock-ticks per second
-        static const long clockTicks_;
-
 
     // Private Member Functions
 
-        //- Difference between two times  (a - b)
-        static double diff(const value_type& a, const value_type& b);
+        //- Difference between two times (a - b)
+        static inline double diff(const value_type& a, const value_type& b);
 
 
 public:
@@ -89,7 +84,7 @@ public:
     // Constructors
 
         //- Construct with the current clock time
-        cpuTime();
+        cpuTimeCxx();
 
 
     // Member Functions
