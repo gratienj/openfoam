@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2018-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,8 +25,7 @@ Class
     Foam::clockValue
 
 Description
-    Access to clock value (approx. 2 microsecond resolution) with
-    some and basic operations.
+    Access to high-resolution clock value with some basic operations.
 
 SourceFiles
     clockValue.C
@@ -36,11 +35,8 @@ SourceFiles
 #ifndef clockValue_H
 #define clockValue_H
 
+#include <chrono>
 #include <string>
-#include <sys/types.h>
-#ifdef darwin
-    #include <sys/time.h>
-#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -56,19 +52,23 @@ class clockValue
     // Private Data
 
         //- Time structure used
-        typedef struct timeval value_type;
+        typedef std::chrono::high_resolution_clock::duration value_type;
 
         value_type value_;
+
 
 public:
 
     // Constructors
 
-        //- Construct null, zero initialized
+        //- Construct zero initialized
         clockValue();
 
+        //- Construct from duration with the same clock base
+        explicit clockValue(const value_type& value);
+
         //- Construct zero initialized or with current time
-        clockValue(bool useNow);
+        explicit clockValue(bool useNow);
 
 
     // Factory Methods
@@ -81,6 +81,12 @@ public:
 
 
     // Member Functions
+
+        //- Return the value
+        inline const value_type& value() const
+        {
+            return value_;
+        }
 
         //- Reset to zero
         void clear();
@@ -100,7 +106,7 @@ public:
 
     // Operators
 
-        //- Conversion operator to seconds
+        //- Conversion operator to seconds in floating point
         operator double() const;
 
         //- Subtract time value
