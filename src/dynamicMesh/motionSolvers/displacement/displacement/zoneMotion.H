@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,82 +22,76 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::solidBodyMotionSolver
+    Foam::zoneMotion
 
 Description
-    Solid-body motion of the mesh specified by a run-time selectable
-    motion function.
+
 
 SourceFiles
-    solidBodyMotionSolver.C
+    zoneMotion.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef solidBodyMotionSolver_H
-#define solidBodyMotionSolver_H
+#ifndef zoneMotion_H
+#define zoneMotion_H
 
-#include "points0MotionSolver.H"
-#include "solidBodyMotionFunction.H"
-#include "zoneMotion.H"
+#include "labelList.H"
+#include "dictionary.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
+class polyMesh;
+
 /*---------------------------------------------------------------------------*\
-                   Class solidBodyMotionSolver Declaration
+                           Class zoneMotion Declaration
 \*---------------------------------------------------------------------------*/
 
-class solidBodyMotionSolver
-:
-    public points0MotionSolver,
-    public zoneMotion
+class zoneMotion
 {
-    // Private data
+     // Private data
 
-        //- The motion control function
-        autoPtr<solidBodyMotionFunction> SBMFPtr_;
+
+        //- Points to move when cell zone is supplied
+        labelList pointIDs_;
+
+        //- Flag to indicate whether all cells should move
+        bool moveAllCells_;
 
 
     // Private Member Functions
 
         //- No copy construct
-        solidBodyMotionSolver(const solidBodyMotionSolver&) = delete;
+        zoneMotion(const zoneMotion&) = delete;
 
         //- No copy assignment
-        void operator=(const solidBodyMotionSolver&) = delete;
-
+        void operator=(const zoneMotion&) = delete;
 
 public:
 
-    //- Runtime type information
-    TypeName("solidBody");
+    // Member functions
 
+        //- Return pointsID
+        const labelList& pointIDs() const;
+
+        //- Return flag
+        bool moveAllCells() const;
 
     // Constructors
 
-        //- Construct from mesh and dictionary
-        solidBodyMotionSolver
+        //- Construct from dictionary
+        zoneMotion
         (
-            const polyMesh&,
-            const IOdictionary&
+            const dictionary&,
+            const polyMesh&
         );
 
 
     //- Destructor
-    ~solidBodyMotionSolver();
+    virtual ~zoneMotion();
 
-
-    // Member Functions
-
-
-        //- Return point location obtained from the current motion field
-        virtual tmp<pointField> curPoints() const;
-
-        //- Solve for motion
-        virtual void solve()
-        {}
 };
 
 

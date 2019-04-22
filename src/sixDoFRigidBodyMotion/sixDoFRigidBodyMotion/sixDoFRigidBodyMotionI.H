@@ -268,6 +268,7 @@ inline const Foam::Time& Foam::sixDoFRigidBodyMotion::time() const
     return time_;
 }
 
+
 inline bool Foam::sixDoFRigidBodyMotion::report() const
 {
     return report_;

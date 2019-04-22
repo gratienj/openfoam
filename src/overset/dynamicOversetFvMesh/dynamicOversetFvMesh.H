@@ -36,6 +36,7 @@ SourceFiles
 #define dynamicOversetFvMesh_H
 
 #include "dynamicMotionSolverFvMesh.H"
+#include "dynamicMotionSolverListFvMesh.H"
 #include "labelIOList.H"
 #include "fvMeshPrimitiveLduAddressing.H"
 #include "lduInterfaceFieldPtrsList.H"
@@ -55,7 +56,7 @@ class lduPrimitiveProcessorInterface;
 
 class dynamicOversetFvMesh
 :
-    public dynamicMotionSolverFvMesh
+    public dynamicMotionSolverListFvMesh
 {
 protected:
 

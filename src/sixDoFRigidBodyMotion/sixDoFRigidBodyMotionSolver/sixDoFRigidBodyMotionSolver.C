@@ -103,8 +103,27 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
         pointMesh::New(mesh),
         dimensionedScalar(dimless, Zero)
     ),
-    curTimeIndex_(-1)
+    curTimeIndex_(-1),
+    CofGvelocity_(coeffDict().lookupOrDefault<word>("CofGvelocity", "none"))
 {
+//     if (CofGvelocity_ != "none")
+//     {
+//         uniformDimensionedVectorField* CofGvelocityPtr  =
+//             new uniformDimensionedVectorField
+//             (
+//                 IOobject
+//                 (
+//                     CofGvelocity_,
+//                     mesh.time().constant(),
+//                     mesh.time(),
+//                     IOobject::NO_READ,
+//                     IOobject::NO_WRITE
+//                 ),
+//                 dimensionedVector(dimless, Zero)
+//             );
+//         CofGvelocityPtr->store();
+//     }
+
     if (rhoName_ == "rhoInf")
     {
         coeffDict().readEntry("rhoInf", rhoInf_);
@@ -162,7 +181,25 @@ Foam::sixDoFRigidBodyMotionSolver::motion() const
 Foam::tmp<Foam::pointField>
 Foam::sixDoFRigidBodyMotionSolver::curPoints() const
 {
-    return points0() + pointDisplacement_.primitiveField();
+    tmp<pointField> newPoints
+    (
+        points0() + pointDisplacement_.primitiveField()
+    );
+
+    if (moveAllCells())
+    {
+        return newPoints;
+    }
+    else
+    {
+        tmp<pointField> ttransformedPts(new pointField(mesh().points()));
+        pointField& transformedPts = ttransformedPts.ref();
+
+        UIndirectList<point>(transformedPts, pointIDs()) =
+            pointField(newPoints.ref(), pointIDs());
+
+        return ttransformedPts;
+    }
 }
 
 
@@ -239,6 +276,19 @@ void Foam::sixDoFRigidBodyMotionSolver::solve()
             t.deltaTValue(),
             t.deltaT0Value()
         );
+
+        if (CofGvelocity_ != "none")
+        {
+            if (db().time().foundObject<uniformDimensionedVectorField>(CofGvelocity_))
+            {
+                uniformDimensionedVectorField& vel =
+                    db().time().lookupObjectRef<uniformDimensionedVectorField>
+                    (
+                        CofGvelocity_
+                    );
+                vel = motion_.v();
+            }
+        }
     }
 
     // Update the displacements

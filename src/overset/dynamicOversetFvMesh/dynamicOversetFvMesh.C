@@ -50,7 +50,8 @@ bool Foam::dynamicOversetFvMesh::updateAddressing() const
     const labelListList& stencil = overlap.cellStencil();
 
     // Get the base addressing
-    const lduAddressing& baseAddr = dynamicMotionSolverFvMesh::lduAddr();
+    //const lduAddressing& baseAddr = dynamicMotionSolverFvMesh::lduAddr();
+    const lduAddressing& baseAddr = dynamicFvMesh::lduAddr();
 
     // Add to the base addressing
     labelList lowerAddr;
@@ -138,7 +139,8 @@ bool Foam::dynamicOversetFvMesh::updateAddressing() const
 
         patchAddr.setSize(fvp.size() + remoteStencilInterfaces_.size());
 
-        allInterfaces_ = dynamicMotionSolverFvMesh::interfaces();
+        //allInterfaces_ = dynamicMotionSolverFvMesh::interfaces();
+        allInterfaces_ = dynamicFvMesh::interfaces();
         allInterfaces_.setSize(patchAddr.size());
 
         forAll(fvp, patchI)
@@ -222,7 +224,7 @@ bool Foam::dynamicOversetFvMesh::updateAddressing() const
 
 Foam::dynamicOversetFvMesh::dynamicOversetFvMesh(const IOobject& io)
 :
-    dynamicMotionSolverFvMesh(io),
+    dynamicMotionSolverListFvMesh(io),
     active_(false)
 {
     // Load stencil (but do not update)
@@ -242,7 +244,8 @@ const Foam::lduAddressing& Foam::dynamicOversetFvMesh::lduAddr() const
 {
     if (!active_)
     {
-        return dynamicMotionSolverFvMesh::lduAddr();
+        //return dynamicMotionSolverFvMesh::lduAddr();
+        return dynamicFvMesh::lduAddr();
     }
     if (lduPtr_.empty())
     {
@@ -268,7 +271,8 @@ Foam::dynamicOversetFvMesh::primitiveLduAddr() const
 
 bool Foam::dynamicOversetFvMesh::update()
 {
-    if (dynamicMotionSolverFvMesh::update())
+    if (dynamicMotionSolverListFvMesh::update())
+    //if (dynamicMotionSolverFvMesh::update())
     {
         // Calculate the local extra faces for the interpolation. Note: could
         // let demand-driven lduAddr() trigger it but just to make sure.
@@ -332,7 +336,8 @@ bool Foam::dynamicOversetFvMesh::writeObject
     const bool valid
 ) const
 {
-    bool ok = dynamicMotionSolverFvMesh::writeObject(fmt, ver, cmp, valid);
+    //bool ok = dynamicMotionSolverFvMesh::writeObject(fmt, ver, cmp, valid);
+    bool ok = dynamicFvMesh::writeObject(fmt, ver, cmp, valid);
 
     // For postprocessing : write cellTypes and zoneID
     {

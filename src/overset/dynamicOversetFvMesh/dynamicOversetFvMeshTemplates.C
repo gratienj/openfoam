@@ -445,7 +445,7 @@ Foam::SolverPerformance<Type> Foam::dynamicOversetFvMesh::solve
                 << " bypassing matrix adjustment for field " << m.psi().name()
                 << endl;
         }
-        return dynamicMotionSolverFvMesh::solve(m, dict);
+        return dynamicFvMesh::solve(m, dict);
     }
 
     if (debug)
@@ -472,7 +472,7 @@ Foam::SolverPerformance<Type> Foam::dynamicOversetFvMesh::solve
     //write(Pout, m, lduAddr());
 
     // Use lower level solver
-    SolverPerformance<Type> s(dynamicMotionSolverFvMesh::solve(m, dict));
+    SolverPerformance<Type> s(dynamicFvMesh::solve(m, dict));
 
     // Restore matrix
     m.upper().transfer(oldUpper);

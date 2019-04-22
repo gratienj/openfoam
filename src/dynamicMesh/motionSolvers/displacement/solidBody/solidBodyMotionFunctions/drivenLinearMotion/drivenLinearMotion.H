@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,87 +22,110 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::solidBodyMotionSolver
+    Foam::solidBodyMotionFunctions::drivenLinearMotion
 
 Description
-    Solid-body motion of the mesh specified by a run-time selectable
-    motion function.
+    Variable velocity displacement. The velocity is read from a
+    uniformVectorField from the time registry with the name CofGvelocity.
+
+    Optional plane of motion can be added with the normal vector
+
 
 SourceFiles
-    solidBodyMotionSolver.C
+    drivenLinearMotion.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef solidBodyMotionSolver_H
-#define solidBodyMotionSolver_H
+#ifndef drivenLinearMotion_H
+#define drivenLinearMotion_H
 
-#include "points0MotionSolver.H"
 #include "solidBodyMotionFunction.H"
-#include "zoneMotion.H"
+#include "primitiveFields.H"
+#include "point.H"
+#include "uniformDimensionedFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+namespace solidBodyMotionFunctions
+{
 
 /*---------------------------------------------------------------------------*\
-                   Class solidBodyMotionSolver Declaration
+                          Class drivenLinearMotion Declaration
 \*---------------------------------------------------------------------------*/
 
-class solidBodyMotionSolver
+class drivenLinearMotion
 :
-    public points0MotionSolver,
-    public zoneMotion
+    public solidBodyMotionFunction
 {
     // Private data
 
-        //- The motion control function
-        autoPtr<solidBodyMotionFunction> SBMFPtr_;
+        //- Name of the meshObject to dum CofG velocity
+        word CofGvelocity_;
+
+        //- Normal plane direction to restrict movement on a plane
+        vector normal_;
+
+        //- Uniform vector to follow
+        uniformDimensionedVectorField CofGvel_;
 
 
     // Private Member Functions
 
         //- No copy construct
-        solidBodyMotionSolver(const solidBodyMotionSolver&) = delete;
+        drivenLinearMotion(const drivenLinearMotion&) = delete;
 
         //- No copy assignment
-        void operator=(const solidBodyMotionSolver&) = delete;
+        void operator=(const drivenLinearMotion&) = delete;
 
 
 public:
 
     //- Runtime type information
-    TypeName("solidBody");
+    TypeName("drivenLinearMotion");
 
 
     // Constructors
 
-        //- Construct from mesh and dictionary
-        solidBodyMotionSolver
+        //- Construct from components
+        drivenLinearMotion
         (
-            const polyMesh&,
-            const IOdictionary&
+            const dictionary& SBMFCoeffs,
+            const Time& runTime
         );
+
+        //- Construct and return a clone
+        virtual autoPtr<solidBodyMotionFunction> clone() const
+        {
+            return autoPtr<solidBodyMotionFunction>
+            (
+                new drivenLinearMotion
+                (
+                    SBMFCoeffs_,
+                    time_
+                )
+            );
+        }
 
 
     //- Destructor
-    ~solidBodyMotionSolver();
+    virtual ~drivenLinearMotion();
 
 
     // Member Functions
 
+        //- Return the solid-body motion transformation septernion
+        virtual septernion transformation() const;
 
-        //- Return point location obtained from the current motion field
-        virtual tmp<pointField> curPoints() const;
-
-        //- Solve for motion
-        virtual void solve()
-        {}
+        //- Update properties from given dictionary
+        virtual bool read(const dictionary& SBMFCoeffs);
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace solidBodyMotionFunctions
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

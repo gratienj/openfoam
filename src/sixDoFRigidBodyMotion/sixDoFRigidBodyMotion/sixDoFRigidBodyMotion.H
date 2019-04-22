@@ -173,9 +173,6 @@ class sixDoFRigidBodyMotion
             //- Return the orientation
             inline const tensor& Q() const;
 
-//             //- Return the current acceleration
-//             inline const vector& a() const;
-
             //- Return the current angular momentum
             inline const vector& pi() const;
 
@@ -193,9 +190,6 @@ class sixDoFRigidBodyMotion
 
             //- Return non-const access to the orientation
             inline tensor& Q();
-
-            //- Return non-const access to vector
-            inline vector& v();
 
             //- Return non-const access to acceleration
             inline vector& a();
@@ -263,9 +257,13 @@ public:
             //- Return the current velocity
             inline const vector& v() const;
 
+            //- Return non-const access to vector
+            inline vector& v();
+
             //- Return the current linear acceleration
             inline const vector& a() const;
 
+            //- Return the current momentArm
             inline vector momentArm() const;
 
             //- Return the report Switch

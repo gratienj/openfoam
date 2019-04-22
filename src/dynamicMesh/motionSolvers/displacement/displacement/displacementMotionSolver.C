@@ -44,6 +44,7 @@ Foam::displacementMotionSolver::displacementMotionSolver
 )
 :
     points0MotionSolver(mesh, dict, type),
+    zoneMotion(dict, mesh),
     pointDisplacement_
     (
         IOobject
@@ -69,6 +70,7 @@ Foam::displacementMotionSolver::displacementMotionSolver
 )
 :
     points0MotionSolver(mesh, dict, points0, type),
+    zoneMotion(dict, mesh),
     pointDisplacement_
     (
         IOobject(pointDisplacement, "pointDisplacement"),

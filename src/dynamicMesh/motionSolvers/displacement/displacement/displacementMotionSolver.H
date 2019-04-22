@@ -39,6 +39,7 @@ SourceFiles
 #define displacementMotionSolver_H
 
 #include "points0MotionSolver.H"
+#include "zoneMotion.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -51,7 +52,8 @@ namespace Foam
 
 class displacementMotionSolver
 :
-    public points0MotionSolver
+    public points0MotionSolver,
+    public zoneMotion
 {
 protected:
 
