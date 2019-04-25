@@ -183,6 +183,14 @@ void Foam::RBD::rigidBodyMotion::status(const label bodyID) const
 }
 
 
+const Foam::vector Foam::RBD::rigidBodyMotion::vCofR(const label bodyID) const
+{
+    const spatialVector velCofR(v(bodyID, Zero));
+
+    return velCofR.l();
+}
+
+
 Foam::tmp<Foam::pointField> Foam::RBD::rigidBodyMotion::transformPoints
 (
     const label bodyID,

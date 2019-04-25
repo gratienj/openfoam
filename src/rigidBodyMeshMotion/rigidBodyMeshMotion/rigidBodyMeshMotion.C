@@ -118,7 +118,9 @@ Foam::rigidBodyMeshMotion::rigidBodyMeshMotion
     rhoInf_(1.0),
     rhoName_(coeffDict().lookupOrDefault<word>("rho", "rho")),
     ramp_(nullptr),
-    curTimeIndex_(-1)
+    curTimeIndex_(-1),
+    CofGvelocity_(coeffDict().lookupOrDefault<word>("CofGvelocity", "none")),
+    bodyIdCofG_(coeffDict().lookupOrDefault<label>("bodyIdCofG", -1))
 {
     if (rhoName_ == "rhoInf")
     {
@@ -215,7 +217,22 @@ Foam::rigidBodyMeshMotion::rigidBodyMeshMotion
 Foam::tmp<Foam::pointField>
 Foam::rigidBodyMeshMotion::curPoints() const
 {
-    return points0() + pointDisplacement_.primitiveField();
+    tmp<pointField> newPoints(points0() + pointDisplacement_.primitiveField());
+
+    if (moveAllCells())
+    {
+        return newPoints;
+    }
+    else
+    {
+        tmp<pointField> ttransformedPts(new pointField(mesh().points()));
+        pointField& transformedPts = ttransformedPts.ref();
+
+        UIndirectList<point>(transformedPts, pointIDs()) =
+            pointField(newPoints.ref(), pointIDs());
+
+        return ttransformedPts;
+    }
 }
 
 
@@ -306,6 +323,19 @@ void Foam::rigidBodyMeshMotion::solve()
                 scalarField(model_.nDoF(), Zero),
                 fx
             );
+        }
+
+        if (CofGvelocity_ != "none")
+        {
+            if (t.foundObject<uniformDimensionedVectorField>(CofGvelocity_))
+            {
+                uniformDimensionedVectorField& vel =
+                    t.lookupObjectRef<uniformDimensionedVectorField>
+                    (
+                        CofGvelocity_
+                    );
+                vel = model_.vCofR(bodyMeshes_[bodyIdCofG_].bodyID_);
+            }
         }
     }
 

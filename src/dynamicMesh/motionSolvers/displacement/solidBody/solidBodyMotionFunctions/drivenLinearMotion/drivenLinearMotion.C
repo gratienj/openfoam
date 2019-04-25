@@ -89,12 +89,6 @@ Foam::solidBodyMotionFunctions::drivenLinearMotion::transformation() const
 {
     scalar t = time_.value();
 
-//     const uniformDimensionedVectorField& vel =
-//         time_.lookupObject<uniformDimensionedVectorField>
-//         (
-//             CofGvelocity_
-//         );
-
     vector velocity = CofGvel_.value();
 
     // Take out normal component

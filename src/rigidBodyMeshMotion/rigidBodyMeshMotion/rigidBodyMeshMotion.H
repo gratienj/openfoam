@@ -125,6 +125,12 @@ class rigidBodyMeshMotion
         //- Current time index (used for updating)
         label curTimeIndex_;
 
+        //- Name of the uniformVectorField for CofG velocity
+        word CofGvelocity_;
+
+        //- Body Id for the body to write CofG velocity
+        label bodyIdCofG_;
+
 
     // Private Member Functions
 

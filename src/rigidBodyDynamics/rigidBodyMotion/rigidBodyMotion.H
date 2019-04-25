@@ -187,6 +187,9 @@ public:
             //- Report the status of the motion of the given body
             void status(const label bodyID) const;
 
+            //- Report linear velocity of the given body
+            const vector vCofR(const label bodyID) const;
+
 
         // Transformations
 

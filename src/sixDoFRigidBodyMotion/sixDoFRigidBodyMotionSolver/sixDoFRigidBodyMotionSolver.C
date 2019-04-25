@@ -106,23 +106,6 @@ Foam::sixDoFRigidBodyMotionSolver::sixDoFRigidBodyMotionSolver
     curTimeIndex_(-1),
     CofGvelocity_(coeffDict().lookupOrDefault<word>("CofGvelocity", "none"))
 {
-//     if (CofGvelocity_ != "none")
-//     {
-//         uniformDimensionedVectorField* CofGvelocityPtr  =
-//             new uniformDimensionedVectorField
-//             (
-//                 IOobject
-//                 (
-//                     CofGvelocity_,
-//                     mesh.time().constant(),
-//                     mesh.time(),
-//                     IOobject::NO_READ,
-//                     IOobject::NO_WRITE
-//                 ),
-//                 dimensionedVector(dimless, Zero)
-//             );
-//         CofGvelocityPtr->store();
-//     }
 
     if (rhoName_ == "rhoInf")
     {
@@ -181,9 +164,13 @@ Foam::sixDoFRigidBodyMotionSolver::motion() const
 Foam::tmp<Foam::pointField>
 Foam::sixDoFRigidBodyMotionSolver::curPoints() const
 {
+//     tmp<pointField> newPoints
+//     (
+//         points0() + pointDisplacement_.primitiveField()
+//     );
     tmp<pointField> newPoints
     (
-        points0() + pointDisplacement_.primitiveField()
+        mesh().points() + pointDisplacement_.primitiveField()
     );
 
     if (moveAllCells())
