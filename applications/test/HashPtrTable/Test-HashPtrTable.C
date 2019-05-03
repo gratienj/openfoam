@@ -42,7 +42,7 @@ void printTable(const HashPtrTable<T>& table)
 
     forAllConstIters(table, iter)
     {
-        const T* ptr = iter.val();
+        const auto& ptr = iter.val();
         Info<< iter.key() << " = ";
         if (ptr)
         {

@@ -42,14 +42,14 @@ Foam::HashPtrTable<T, Key, Hash>::HashPtrTable
 {
     for (const_iterator iter = ht.begin(); iter != ht.end(); ++iter)
     {
-        const T* ptr = iter.val();
+        const auto& ptr = iter.val();
         if (ptr)
         {
-            this->set(iter.key(), new T(*ptr));
+            parent_type::set(iter.key(), autoPtr<T>(new T(*ptr)));
         }
         else
         {
-            this->set(iter.key(), nullptr);
+            parent_type::set(iter.key(), autoPtr<T>());
         }
     }
 }
@@ -65,15 +65,6 @@ Foam::HashPtrTable<T, Key, Hash>::HashPtrTable
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class T, class Key, class Hash>
-Foam::HashPtrTable<T, Key, Hash>::~HashPtrTable()
-{
-    clear();
-}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class T, class Key, class Hash>
@@ -81,8 +72,9 @@ Foam::autoPtr<T> Foam::HashPtrTable<T, Key, Hash>::remove(iterator& iter)
 {
     if (iter.good())
     {
-        autoPtr<T> aptr(iter.val());
-        this->parent_type::erase(iter);
+        autoPtr<T> aptr(iter.val().release());
+        parent_type::erase(iter);
+
         return aptr;
     }
 
@@ -93,50 +85,8 @@ Foam::autoPtr<T> Foam::HashPtrTable<T, Key, Hash>::remove(iterator& iter)
 template<class T, class Key, class Hash>
 Foam::autoPtr<T> Foam::HashPtrTable<T, Key, Hash>::remove(const Key& key)
 {
-    auto iter = this->find(key);
+    iterator iter(this->find(key));
     return this->remove(iter);
-}
-
-
-template<class T, class Key, class Hash>
-bool Foam::HashPtrTable<T, Key, Hash>::erase(iterator& iter)
-{
-    if (iter.good())
-    {
-        T* ptr = iter.val();
-
-        if (this->parent_type::erase(iter))
-        {
-            if (ptr)
-            {
-                delete ptr;
-            }
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
-
-template<class T, class Key, class Hash>
-bool Foam::HashPtrTable<T, Key, Hash>::erase(const Key& key)
-{
-    auto iter = this->find(key);
-    return this->erase(iter);
-}
-
-
-template<class T, class Key, class Hash>
-void Foam::HashPtrTable<T, Key, Hash>::clear()
-{
-    for (iterator iter = this->begin(); iter != this->end(); ++iter)
-    {
-        delete iter.val();
-    }
-
-    this->parent_type::clear();
 }
 
 
@@ -153,18 +103,18 @@ void Foam::HashPtrTable<T, Key, Hash>::operator=
         return;  // Self-assignment is a no-op
     }
 
-    this->clear();
+    parent_type::clear();
 
     for (const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter)
     {
-        const T* ptr = iter.val();
+        const auto& ptr = iter.val();
         if (ptr)
         {
-            this->set(iter.key(), new T(*ptr));
+            parent_type::set(iter.key(), autoPtr<T>(new T(*ptr)));
         }
         else
         {
-            this->set(iter.key(), nullptr);
+            parent_type::set(iter.key(), autoPtr<T>());
         }
     }
 }
@@ -181,8 +131,8 @@ void Foam::HashPtrTable<T, Key, Hash>::operator=
         return;  // Self-assignment is a no-op
     }
 
-    this->clear();
-    this->transfer(rhs);
+    parent_type::clear();
+    parent_type::transfer(rhs);
 }
 
 
