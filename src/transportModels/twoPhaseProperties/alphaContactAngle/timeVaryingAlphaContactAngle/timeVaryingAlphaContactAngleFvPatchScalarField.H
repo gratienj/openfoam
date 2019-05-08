@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+                            | Copyright (C) 2011-2013 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,24 +24,21 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::constantAlphaContactAngleFvPatchScalarField
+    Foam::timeVaryingAlphaContactAngleFvPatchScalarField
 
 Description
-    A constant alphaContactAngle scalar boundary condition.
-
-See also
-    Foam::alphaContactAngleFvPatchScalarField
-    Foam::temperatureDependentAlphaContactAngleFvPatchScalarField
+    A time-varying alphaContactAngle scalar boundary condition
+    (alphaContactAngleTwoPhaseFvPatchScalarField)
 
 SourceFiles
-    constantAlphaContactAngleFvPatchScalarField.C
+    timeVaryingAlphaContactAngleFvPatchScalarField.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef constantAlphaContactAngleFvPatchScalarField_H
-#define constantAlphaContactAngleFvPatchScalarField_H
+#ifndef timeVaryingAlphaContactAngleFvPatchScalarField_H
+#define timeVaryingAlphaContactAngleFvPatchScalarField_H
 
-#include "alphaContactAngleFvPatchScalarField.H"
+#include "alphaContactAngleTwoPhaseFvPatchScalarField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -49,36 +46,39 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class constantAlphaContactAngleFvPatch Declaration
+            Class timeVaryingAlphaContactAngleFvPatch Declaration
 \*---------------------------------------------------------------------------*/
 
-class constantAlphaContactAngleFvPatchScalarField
+class timeVaryingAlphaContactAngleFvPatchScalarField
 :
-    public alphaContactAngleFvPatchScalarField
+    public alphaContactAngleTwoPhaseFvPatchScalarField
 {
     // Private data
 
-        //- Equilibrium contact angle
-        scalar theta0_;
+        // Equilibrium contact angle control parameters
+        scalar t0_;
+        scalar thetaT0_;
+        scalar te_;
+        scalar thetaTe_;
 
 
 public:
 
     //- Runtime type information
-    TypeName("constantAlphaContactAngle");
+    TypeName("timeVaryingAlphaContactAngle");
 
 
     // Constructors
 
         //- Construct from patch and internal field
-        constantAlphaContactAngleFvPatchScalarField
+        timeVaryingAlphaContactAngleFvPatchScalarField
         (
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&
         );
 
         //- Construct from patch, internal field and dictionary
-        constantAlphaContactAngleFvPatchScalarField
+        timeVaryingAlphaContactAngleFvPatchScalarField
         (
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
@@ -86,20 +86,13 @@ public:
         );
 
         //- Construct by mapping given
-        //  constantAlphaContactAngleFvPatchScalarField
-        //  onto a new patch
-        constantAlphaContactAngleFvPatchScalarField
+        //  timeVaryingAlphaContactAngleFvPatchScalarField onto a new patch
+        timeVaryingAlphaContactAngleFvPatchScalarField
         (
-            const constantAlphaContactAngleFvPatchScalarField&,
+            const timeVaryingAlphaContactAngleFvPatchScalarField&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
-        );
-
-        //- Construct as copy
-        constantAlphaContactAngleFvPatchScalarField
-        (
-            const constantAlphaContactAngleFvPatchScalarField&
         );
 
         //- Construct and return a clone
@@ -107,14 +100,14 @@ public:
         {
             return tmp<fvPatchScalarField>
             (
-                new constantAlphaContactAngleFvPatchScalarField(*this)
+                new timeVaryingAlphaContactAngleFvPatchScalarField(*this)
             );
         }
 
         //- Construct as copy setting internal field reference
-        constantAlphaContactAngleFvPatchScalarField
+        timeVaryingAlphaContactAngleFvPatchScalarField
         (
-            const constantAlphaContactAngleFvPatchScalarField&,
+            const timeVaryingAlphaContactAngleFvPatchScalarField&,
             const DimensionedField<scalar, volMesh>&
         );
 
@@ -126,14 +119,14 @@ public:
         {
             return tmp<fvPatchScalarField>
             (
-                new constantAlphaContactAngleFvPatchScalarField(*this, iF)
+                new timeVaryingAlphaContactAngleFvPatchScalarField(*this, iF)
             );
         }
 
 
-    // Member functions
+    // Member Functions
 
-        //- Return the equilibrium contact-angle
+        //- Evaluate and return the time-varying equilibrium contact-angle
         virtual tmp<scalarField> theta
         (
             const fvPatchVectorField& Up,
