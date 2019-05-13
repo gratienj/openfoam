@@ -164,13 +164,9 @@ Foam::sixDoFRigidBodyMotionSolver::motion() const
 Foam::tmp<Foam::pointField>
 Foam::sixDoFRigidBodyMotionSolver::curPoints() const
 {
-//     tmp<pointField> newPoints
-//     (
-//         points0() + pointDisplacement_.primitiveField()
-//     );
     tmp<pointField> newPoints
     (
-        mesh().points() + pointDisplacement_.primitiveField()
+        points0() + pointDisplacement_.primitiveField()
     );
 
     if (moveAllCells())
@@ -311,7 +307,6 @@ bool Foam::sixDoFRigidBodyMotionSolver::writeObject
             false
         )
     );
-
     motion_.state().write(dict);
     return dict.regIOobject::write();
 }

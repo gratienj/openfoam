@@ -86,7 +86,7 @@ Foam::zoneMotion::zoneMotion
     }
 
     label nCells = returnReduce(cellIDs.size(), sumOp<label>());
-    moveAllCells_ = nCells == 0;
+    moveAllCells_ = (nCells == 0);
 
     if (moveAllCells_)
     {
@@ -94,8 +94,6 @@ Foam::zoneMotion::zoneMotion
     }
     else
     {
-        // collect point IDs of points in cell zone
-
         boolList movePts(mesh.nPoints(), false);
 
         forAll(cellIDs, i)

@@ -53,26 +53,22 @@ Foam::dynamicMotionSolverListFvMesh::dynamicMotionSolverListFvMesh
     dynamicFvMesh(io),
     motionSolvers_()
 {
-    IOdictionary dict
+    IOobject ioDict
     (
-        IOobject
-        (
-            "dynamicMeshDict",
-            time().constant(),
-            *this,
-            IOobject::MUST_READ_IF_MODIFIED,
-            IOobject::AUTO_WRITE
-        )
+        "dynamicMeshDict",
+        time().constant(),
+        *this,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE,
+        false
     );
+
+    IOdictionary dict(ioDict);
 
     if (dict.found("solvers"))
     {
-
         label i = 0;
-
         const dictionary& solvertDict = dict.subDict("solvers");
-
-        //const word type = solvertDict.get<word>("motionSolver");
 
         motionSolvers_.setSize(solvertDict.size());
 
@@ -80,7 +76,7 @@ Foam::dynamicMotionSolverListFvMesh::dynamicMotionSolverListFvMesh
         {
             if (dEntry.isDict())
             {
-                IOdictionary solverDict
+                IOdictionary IOsolverDict
                 (
                     IOobject
                     (
@@ -88,7 +84,7 @@ Foam::dynamicMotionSolverListFvMesh::dynamicMotionSolverListFvMesh
                         time().constant(),
                         *this,
                         IOobject::NO_READ,
-                        IOobject::NO_WRITE
+                        IOobject::AUTO_WRITE
                     ),
                     dEntry.dict()
                 );
@@ -96,7 +92,7 @@ Foam::dynamicMotionSolverListFvMesh::dynamicMotionSolverListFvMesh
                 motionSolvers_.set
                 (
                     i++,
-                    motionSolver::New(*this, solverDict)
+                    motionSolver::New(*this, IOsolverDict)
                 );
             }
         }

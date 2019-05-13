@@ -111,6 +111,7 @@ Foam::points0MotionSolver::points0MotionSolver
 )
 :
     motionSolver(mesh, dict, type),
+    zoneMotion(dict, mesh),
     points0_(points0IO(mesh))
 {
     if
@@ -154,6 +155,7 @@ Foam::points0MotionSolver::points0MotionSolver
 )
 :
     motionSolver(mesh, dict, type),
+    zoneMotion(dict, mesh),
     points0_(points0)
 {
     if (points0_.size() != mesh.nPoints())

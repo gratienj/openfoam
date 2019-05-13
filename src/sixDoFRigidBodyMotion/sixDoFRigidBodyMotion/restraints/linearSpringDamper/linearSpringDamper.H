@@ -72,12 +72,23 @@ class linearSpringDamper
         //- Damping factor
         scalar psi_;
 
-        //- Time damping factor [1/s]
-        scalar C_;
+        //- System frequency  [1/s]
+        scalar wn_;
+
+        //- Number of chains in the same system
+        scalar numberOfChains_;
 
         //- Rest length - length of spring when no forces are applied to it
         scalar restLength_;
 
+        //- Cache old restrain force
+        mutable vector oldRestraintForce_;
+
+        //- Relaxation factor
+        scalar frelax_;
+
+
+        /*
         //- Error between ideal length and actual length
         mutable scalar error_;
 
@@ -103,7 +114,7 @@ class linearSpringDamper
         vector f0_;
 
         mutable scalar wn_;
-
+        */
 
 
 public:

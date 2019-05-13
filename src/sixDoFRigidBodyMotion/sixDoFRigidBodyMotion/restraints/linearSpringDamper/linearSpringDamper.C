@@ -56,6 +56,7 @@ Foam::sixDoFRigidBodyMotionRestraints::linearSpringDamper::linearSpringDamper
 :
     sixDoFRigidBodyMotionRestraint(name, sDoFRBMRDict)
 {
+    oldRestraintForce_ = Zero;
     read(sDoFRBMRDict);
 }
 
@@ -98,80 +99,56 @@ void Foam::sixDoFRigidBodyMotionRestraints::linearSpringDamper::restrain
     vector rDir = r/(mag(r) + VSMALL);
 
     vector v = motion.velocity(restraintPosition);
-    //vector a = motion.a();
 
     scalar m = motion.mass();
 
-    restraintForce = f0_;
     restraintMoment = Zero;
 
-    scalar dt =  motion.time().deltaTValue();
+//     scalar dt =  motion.time().deltaTValue();
+//
+//     oldError_ = error_;
+//     oldErrorIntegral_ = errorIntegral_;
+//     error_ = (mag(r) - restLength_)/restLength_;
+//     errorIntegral_ =
+//         oldErrorIntegral_ + 0.5*(error_ + oldError_);
+//
+//     scalar errorDifferential = (error_ - oldError_)/dt;
 
     if (mag(r) > restLength_)
     {
-        oldError_ = error_;
-        oldErrorIntegral_ = errorIntegral_;
-        error_ = (mag(r) - restLength_)/restLength_;
-        errorIntegral_ =
-            oldErrorIntegral_ + 0.5*dt*(error_ + oldError_); //
 
-        scalar errorDifferential = (error_ - oldError_)/dt;
+//         factor_ =
+//             P_*error_ + I_*errorIntegral_ + D_*errorDifferential;
+//
+//         factor_ = max(factor_, -1);
 
-        scalar factor =
-            P_*error_ + I_*errorIntegral_ + D_*errorDifferential;
+        scalar damping = psi_*2*m*wn_/numberOfChains_;
+        scalar stiffness = sqr(wn_)*m/numberOfChains_;
 
-        wn_ *= (factor + 1);
-        //wn_ = 3.14/(15*dt);
+        restraintForce =
+            frelax_
+            *(
+                - damping*(rDir & v)*rDir
+                - stiffness*(mag(r) - restLength_)*rDir
+            )
+            + (1-frelax_)*oldRestraintForce_;
 
-        //scalar wn =  3.14/C_;
-        scalar damping = psi_*2*m*wn_;
-        scalar stiffness = sqr(wn_)*m;
-
-        if (error_ > 1e-3)
-        {
-            scalar magRest = mag(restraintForce)*(factor + 1);
-            restraintForce = -magRest*rDir;
-            //restraintForce =
-            //    - damping*(rDir & v)*rDir
-            //    - stiffness*(mag(r) - restLength_)*rDir;
-        }
-
-        //restraintMoment = (restraintPosition ^ restraintForce);
-
-        if (motion.report())
-        {
-            //Info<< " damping :"  << damping << endl;
-            //Info<< " stiffness :"  << stiffness << endl;
-            //Info<< " damping force:"  <<  -damping*(rDir & v)*rDir << endl;
-            //Info<< " stiffness force:"
-            //    <<  -stiffness*(mag(r) - restLength_)*rDir << endl;
-
-            //Info<< " factor :"  <<  factor << endl;
-            //Info<< " error :"  <<  error_ << endl;
-            //Info<< " errorIntegral :"  <<  errorIntegral_ << endl;
-            //Info<< " errorDifferential :"  <<  errorDifferential << endl;
-
-            Info<< " restraintPosition :"  <<  restraintPosition << endl;
-            Info<< " anchor :"  <<  anchor_->value(t) << endl;
-        }
+        oldRestraintForce_ = restraintForce;
     }
     else
     {
         restraintForce = Zero;
+        oldRestraintForce_ = Zero;
     }
-    /*
-    else if (mag(r) > 0.9*restLength_)
-    {
-        restraintForce =
-              damping*mag(motion.v())*rDir
-            - stiffness/10*(mag(r) - restLength_)*rDir;
-    }
-    */
 
 
     if (motion.report())
     {
-        //Info<< " force :"  << restraintForce << endl;
+        Info<< t << " " << restraintForce.x()   //2
+            << " " << restraintForce.y()        //3
+            << " " << restraintForce.z()        //4
+            << " " << mag(r) - restLength_      //5
+            << endl;
         //Info<< " distance :"  << mag(r) - restLength_ << endl;
         //Info<< " velocity :"  << v << endl;
     }
@@ -186,17 +163,11 @@ bool Foam::sixDoFRigidBodyMotionRestraints::linearSpringDamper::read
     sixDoFRigidBodyMotionRestraint::read(sDoFRBMRDict);
 
     sDoFRBMRCoeffs_.readEntry("refAttachmentPt", refAttachmentPt_);
-    sDoFRBMRCoeffs_.readEntry("psi", psi_);
-    sDoFRBMRCoeffs_.readEntry("C", C_);
+    psi_ = sDoFRBMRCoeffs_.lookupOrDefault<scalar>("psi", 1.0);
+    sDoFRBMRCoeffs_.readEntry("wn", wn_);
     sDoFRBMRCoeffs_.readEntry("restLength", restLength_);
-
-    sDoFRBMRCoeffs_.readEntry("P", P_);
-    sDoFRBMRCoeffs_.readEntry("I", I_);
-    sDoFRBMRCoeffs_.readEntry("D", D_);
-    sDoFRBMRCoeffs_.readEntry("f0", f0_);
-
-    wn_ = 3.14/C_;
-
+    sDoFRBMRCoeffs_.readEntry("numberOfChains", numberOfChains_);
+    frelax_ = sDoFRBMRCoeffs_.lookupOrDefault<scalar>("frelax", 0.8);
 
     return true;
 }
@@ -209,8 +180,11 @@ void Foam::sixDoFRigidBodyMotionRestraints::linearSpringDamper::write
 {
     os.writeEntry("refAttachmentPt", refAttachmentPt_);
     os.writeEntry("psi", psi_);
-    os.writeEntry("C", C_);
+    os.writeEntry("wn", wn_);
     os.writeEntry("restLength", restLength_);
+    os.writeEntry("numberOfChains", numberOfChains_);
+    os.writeEntryIfDifferent<scalar>("psi", 1.0, psi_);
+    os.writeEntryIfDifferent<scalar>("frelax", 0.8, frelax_);
 }
 
 

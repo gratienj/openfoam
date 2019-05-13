@@ -37,6 +37,7 @@ SourceFiles
 
 #include "labelList.H"
 #include "dictionary.H"
+#include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

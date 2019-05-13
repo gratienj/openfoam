@@ -39,6 +39,7 @@ SourceFiles
 #include "motionSolver.H"
 #include "pointFields.H"
 #include "pointIOField.H"
+#include "zoneMotion.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -53,7 +54,8 @@ class mapPolyMesh;
 
 class points0MotionSolver
 :
-    public motionSolver
+    public motionSolver,
+    public zoneMotion
 {
 protected:
 

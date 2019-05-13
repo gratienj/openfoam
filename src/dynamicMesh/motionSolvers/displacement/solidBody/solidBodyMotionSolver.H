@@ -38,7 +38,6 @@ SourceFiles
 
 #include "points0MotionSolver.H"
 #include "solidBodyMotionFunction.H"
-#include "zoneMotion.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -51,8 +50,7 @@ namespace Foam
 
 class solidBodyMotionSolver
 :
-    public points0MotionSolver,
-    public zoneMotion
+    public points0MotionSolver
 {
     // Private data
 

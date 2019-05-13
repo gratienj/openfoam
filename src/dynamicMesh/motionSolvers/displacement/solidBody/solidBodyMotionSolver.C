@@ -54,7 +54,6 @@ Foam::solidBodyMotionSolver::solidBodyMotionSolver
 )
 :
     points0MotionSolver(mesh, dict, typeName),
-    zoneMotion(dict, mesh),
     SBMFPtr_(solidBodyMotionFunction::New(coeffDict(), mesh.time()))
 {
 }
