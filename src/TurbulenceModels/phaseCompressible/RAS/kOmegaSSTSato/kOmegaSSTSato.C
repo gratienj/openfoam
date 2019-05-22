@@ -133,8 +133,7 @@ kOmegaSSTSato<BasicTurbulenceModel>::gasTurbulence() const
 template<class BasicTurbulenceModel>
 void kOmegaSSTSato<BasicTurbulenceModel>::correctNut
 (
-    const volScalarField& S2,
-    const volScalarField& F2
+    const volScalarField& S2
 )
 {
     const PhaseCompressibleTurbulenceModel<transportModel>& gasTurbulence =
@@ -150,7 +149,7 @@ void kOmegaSSTSato<BasicTurbulenceModel>::correctNut
        /max
         (
             this->a1_*this->omega_,
-            this->b1_*F2*sqrt(S2)
+            this->b1_*this->F23()*sqrt(S2)
         )
       + sqr(1 - exp(-yPlus/16.0))
        *Cmub_*gasTurbulence.transport().d()*gasTurbulence.alpha()

@@ -60,15 +60,10 @@ NonRandomTwoLiquid
         pair.phase1().mesh(),
         dimensionedScalar("one", dimless, 1)
     ),
-<<<<<<< HEAD:applications/solvers/multiphase/reactingEulerFoam/interfacialCompositionModels/interfaceCompositionModels/NonRandomTwoLiquid/NonRandomTwoLiquid.C
     alpha12_("alpha12", dimless, Zero),
     alpha21_("alpha21", dimless, Zero),
     beta12_("beta12", dimless/dimTemperature, Zero),
     beta21_("beta21", dimless/dimTemperature, Zero)
-=======
-    beta12_(dimless/dimTemperature),
-    beta21_(dimless/dimTemperature)
->>>>>>> INT: Org integration of VOF, Euler phase solvers and models.:src/phaseSystemModels/reactingEulerFoam/interfacialCompositionModels/interfaceCompositionModels/NonRandomTwoLiquid/NonRandomTwoLiquid.C
 {
     if (this->speciesNames_.size() != 2)
     {

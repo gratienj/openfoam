@@ -91,7 +91,7 @@ void Foam::diameterModels::isothermal::correct()
 {
     const volScalarField& p = phase_.db().lookupObject<volScalarField>("p");
 
-    return d0_*cbrt(p0_/p);
+    d_ = d0_*pow(p0_/p, 1.0/3.0);
 }
 
 

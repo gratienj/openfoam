@@ -122,21 +122,6 @@ volScalarField kappaEff
     thermo->kappa()
 );
 
-
-// Need to store rho for ddt(rhoCp, U)
-volScalarField rhoCp
-(
-    IOobject
-    (
-        "rhoCp",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    rho*thermo->Cp()
-);
-
 // Need to store rho for ddt(rhoCp, U)
 volScalarField rhoCp
 (

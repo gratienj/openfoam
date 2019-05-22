@@ -671,7 +671,6 @@ void Foam::multiphaseSystem::solve()
         phasei = 0;
         for (phaseModel& phase : phases())
         {
-            phaseModel& phase = phases()[phasei];
             if (phase.stationary()) continue;
 
             phase.alphaPhiRef() = alphaPhiSums[phasei]/nAlphaSubCycles;
@@ -684,7 +683,6 @@ void Foam::multiphaseSystem::solve()
 
     for (phaseModel& phase : phases())
     {
-        phaseModel& phase = phases()[phasei];
         if (phase.stationary()) continue;
 
         phase.alphaRhoPhiRef() =

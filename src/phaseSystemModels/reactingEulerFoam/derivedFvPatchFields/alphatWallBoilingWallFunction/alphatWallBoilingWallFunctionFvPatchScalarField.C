@@ -590,7 +590,8 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         (
                             (1 - fLiquid[i])
                            *(
-                               (qFilm[i]/heSnGrad[i])/max(vaporw[i], scalar(1e-8))
+                               (qFilm[i]/heSnGrad[i])
+                              /max(vaporw[i], scalar(1e-8))
                              - alphaw[i]
                             ),
                             -alphaw[i]
@@ -611,13 +612,14 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
             {
                 Info<< "alphat for vapour : " << nl << endl;
 
-                Info<< "  alphatEffv: " << gMin(vaporw*(*this + alphaw)) << " - "
-                    << gMax(vaporw*(*this + alphaw)) << endl;
+                Info<< "  alphatEffv: " << gMin(vaporw*(*this + alphaw))
+                    << " - " << gMax(vaporw*(*this + alphaw)) << endl;
 
                 const scalarField qEff(vaporw*(*this + alphaw)*hewv.snGrad());
 
                 scalar Qeff = gSum(qEff*patch().magSf());
-                Info<< " Effective heat transfer rate to vapor:" << Qeff << nl << endl;
+                Info<< " Effective heat transfer rate to vapor:" << Qeff
+                    << nl << endl;
             }
             break;
         }
@@ -936,7 +938,8 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         // Sub-cool boiling
                         if (Tw[i] < tDNB[i])
                         {
-                            regimeTypes[i] = regimeType::subcool; // Sub-cool boiling
+                            // Sub-cool boiling
+                            regimeTypes[i] = regimeType::subcool;
 
                             Tl = (Tw - (Tplus_y250/Tplus)*(Tw - Tc));
                             Tl = max(Tc - 40, Tl);
@@ -956,10 +959,15 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                             );
                             */
 
-                            // More simple method to calculate area affected by bubbles
+                            // More simple method to calculate area affected by
+                            // bubbles
                             const scalar A2
                             (
-                                min(fLiquid[i]*pi*sqr(dDep_[i])*N[i]*K_/4, scalar(1))
+                                min
+                                (
+                                    fLiquid[i]*pi*sqr(dDep_[i])*N[i]*K_/4,
+                                    scalar(1)
+                                )
                             );
 
                             A1[i] = max(1 - A2, 0.0);
@@ -967,11 +975,15 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                             // Following Bowring(1962)
                             const scalar A2E
                             (
-                                min(fLiquid[i]*pi*sqr(dDep_[i])*N[i], scalar(5))
+                                min
+                                (
+                                    fLiquid[i]*pi*sqr(dDep_[i])*N[i],
+                                    scalar(5)
+                                )
                             );
 
-                            // Volumetric mass source in the near wall cell due to the
-                            // wall boiling
+                            // Volumetric mass source in the near wall cell due
+                            // to the wall boiling
                             dmdt_[i] =
                                 (
                                     (1 - relax_)*dmdt_[i]
@@ -979,8 +991,8 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                                   * fDep[i]*AbyV_[i]
                                 );
 
-                            // Volumetric source in the near wall cell due to the wall
-                            // boiling
+                            // Volumetric source in the near wall cell due to
+                            // the wall boiling
                             mDotL_[i] = dmdt_[i]*L[i];
 
                             // Quenching heat transfer coefficient
@@ -1016,7 +1028,8 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         }
                         else if (Tw[i] > tDNB[i] && Tw[i] < TLeiden[i])
                         {
-                            regimeTypes[i] = regimeType::transient; // transient boiling
+                            // transient boiling
+                            regimeTypes[i] = regimeType::transient;
 
                             // No convective heat tranfer
                             alphatConv_[i] = 0.0;
@@ -1070,9 +1083,7 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
 
                             alphaFilm[i] =
                             (
-                                (
-                                    mDotL_[i]/AbyV_[i]/max(hewSn[i], scalar(1e-16))
-                                )
+                                mDotL_[i]/AbyV_[i]/max(hewSn[i], scalar(1e-16))
                             );
 
                             // alphat is added alphal and multiplied by phase
@@ -1130,13 +1141,14 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                     Info<< "  dmdt: " << gMin((dmdt_)) << " - "
                         << gMax((dmdt_)) << endl;
 
-                     Info<< "  alphatlEff: " << gMin(liquidw*(*this + alphaw)) << " - "
-                         << gMax(liquidw*(*this + alphaw)) << endl;
+                     Info<< "  alphatlEff: " << gMin(liquidw*(*this + alphaw))
+                        << " - " << gMax(liquidw*(*this + alphaw)) << endl;
 
                     scalar Qeff = gSum(qEff*patch().magSf());
-                    Info<< " Effective heat transfer rate to liquid:" << Qeff << endl;
+                    Info<< " Effective heat transfer rate to liquid:" << Qeff
+                        << endl;
 
-                    if (debug && 2)
+                    if (debug & 2)
                     {
                         scalar nSubCool(0);
                         scalar nTransient(0);
@@ -1182,7 +1194,8 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
 
                         const scalarField qc
                         (
-                            nNonBoilings*fLiquid*A1*(alphatConv_ + alphaw)*hew.snGrad()
+                            nNonBoilings*fLiquid*A1*(alphatConv_ + alphaw)
+                           *hew.snGrad()
                         );
 
                         scalar Qc = gSum(qc*patch().magSf());
@@ -1201,16 +1214,20 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                             << " - "
                             << gMax(nFilms*htcFilmBoiling) << endl;
 
-                        scalar Qtbtot= gSum(fLiquid*nTransients*Qtb*patch().magSf());
-                        Info<< " Transient boiling heat transfer:" << Qtbtot << endl;
+                        scalar Qtbtot =
+                            gSum(fLiquid*nTransients*Qtb*patch().magSf());
+                        Info<< " Transient boiling heat transfer:" << Qtbtot
+                            << endl;
 
-                        Info<< " tDNB: " << gMin(tDNB) << " - " << gMax(tDNB) << endl;
+                        Info<< " tDNB: " << gMin(tDNB) << " - " << gMax(tDNB)
+                            << endl;
 
-                        scalar QsubCool= gSum
+                        scalar QsubCool = gSum
                         (
                             fLiquid*nSubCools*(qq_ + qe())*patch().magSf()
                         );
-                        Info<< " Sub Cool boiling heat transfer:" << QsubCool << endl;
+                        Info<< " Sub Cool boiling heat transfer:" << QsubCool
+                            << endl;
 
                         Info<< "  N: " << gMin(nSubCools*N) << " - "
                             << gMax(nSubCools*N) << endl;

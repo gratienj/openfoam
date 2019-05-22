@@ -538,16 +538,7 @@ Foam::tmp<Foam::volScalarField> Foam::multiphaseSystem::Cvm
                 mesh_
             ),
             mesh_,
-<<<<<<< HEAD
             dimensionedScalar(dimDensity, Zero)
-=======
-            dimensionedScalar
-            (
-                "Cvm",
-                dimensionSet(1, -3, 0, 0, 0),
-                0
-            )
->>>>>>> INT: Org integration of VOF, Euler phase solvers and models.
         )
     );
 
