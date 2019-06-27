@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                            | Copyright (C) 2011-2018 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,7 +50,7 @@ void SLTSDdtScheme<Type>::relaxedDiag
 {
     const labelUList& owner = mesh().owner();
     const labelUList& neighbour = mesh().neighbour();
-    scalarField diag(rD.size(), 0.0);
+    scalarField diag(rD.size(), Zero);
 
     forAll(owner, facei)
     {

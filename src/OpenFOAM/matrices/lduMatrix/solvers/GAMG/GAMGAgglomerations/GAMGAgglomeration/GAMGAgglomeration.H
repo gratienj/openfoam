@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2016 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                            | Copyright (C) 2011-2016 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -488,7 +490,7 @@ public:
             labelList& newRestrict,
             label& nNewCoarse,
             const lduAddressing& fineAddressing,
-            const labelUList& restrict,
+            const labelUList& restriction,
             const label nCoarse
         );
 };
