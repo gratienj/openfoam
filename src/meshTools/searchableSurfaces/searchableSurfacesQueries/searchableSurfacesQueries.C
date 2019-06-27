@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011, 2015-2018 OpenCFD Ltd.
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                            | Copyright (C) 2011-2017 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -354,6 +356,13 @@ void Foam::searchableSurfacesQueries::findNearest
 {
     // Find nearest. Return -1 or nearest point
 
+    if (samples.size() != nearestDistSqr.size())
+    {
+        FatalErrorInFunction << "Inconsistent sizes. samples:" << samples.size()
+            << " search-radius:" << nearestDistSqr.size()
+            << exit(FatalError);
+    }
+
     // Initialise
     nearestSurfaces.setSize(samples.size());
     nearestSurfaces = -1;
@@ -404,6 +413,14 @@ void Foam::searchableSurfacesQueries::findNearest
 )
 {
     // Find nearest. Return -1 or nearest point
+
+    if (samples.size() != nearestDistSqr.size())
+    {
+        FatalErrorInFunction << "Inconsistent sizes. samples:" << samples.size()
+            << " search-radius:" << nearestDistSqr.size()
+            << exit(FatalError);
+    }
+
 
     if (regionIndices.empty())
     {
@@ -467,6 +484,15 @@ void Foam::searchableSurfacesQueries::findNearest
 )
 {
     // Multi-surface findNearest
+
+
+    if (start.size() != distSqr.size())
+    {
+        FatalErrorInFunction << "Inconsistent sizes. samples:" << start.size()
+            << " search-radius:" << distSqr.size()
+            << exit(FatalError);
+    }
+
 
     vectorField normal;
     List<pointIndexHit> info;

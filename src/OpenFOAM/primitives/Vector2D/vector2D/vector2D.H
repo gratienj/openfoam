@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,7 +27,7 @@ Typedef
     Foam::vector2D
 
 Description
-    vector2D obtained from generic Vector2D
+    A 2D vector of scalars obtained from the generic Vector2D.
 
 SourceFiles
     vector2D.C

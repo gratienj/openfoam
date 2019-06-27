@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2015-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2015-2019 OpenCFD Ltd.
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                            | Copyright (C) 2011-2015 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -110,7 +112,7 @@ Foam::tmp<Foam::scalarField> Foam::snappyLayerDriver::avgPointData
     const scalarField& pointFld
 )
 {
-    tmp<scalarField> tfaceFld(new scalarField(pp.size(), 0.0));
+    tmp<scalarField> tfaceFld(new scalarField(pp.size(), Zero));
     scalarField& faceFld = tfaceFld.ref();
 
     forAll(pp.localFaces(), facei)
@@ -232,10 +234,8 @@ bool Foam::snappyLayerDriver::unmarkExtrusion
         patchDisp[patchPointi] = Zero;
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 
@@ -314,18 +314,7 @@ void Foam::snappyLayerDriver::countCommonPoints
             if (facei < nbFacei)
             {
                 // Only check once for each combination of two faces.
-
-                Map<label>::iterator fnd = nCommonPoints.find(nbFacei);
-
-                if (fnd == nCommonPoints.end())
-                {
-                    // First common vertex found.
-                    nCommonPoints.insert(nbFacei, 1);
-                }
-                else
-                {
-                    fnd()++;
-                }
+                ++(nCommonPoints(nbFacei, 0));
             }
         }
     }
@@ -437,10 +426,10 @@ void Foam::snappyLayerDriver::checkCommonOrder
     List<extrudeMode>& extrudeStatus
 ) const
 {
-    forAllConstIter(Map<label>, nCommonPoints, iter)
+    forAllConstIters(nCommonPoints, iter)
     {
-        label nbFacei = iter.key();
-        label nCommon = iter();
+        const label nbFacei = iter.key();
+        const label nCommon = iter.val();
 
         const face& curFace = pp[facei];
         const face& nbFace = pp[nbFacei];
@@ -674,6 +663,71 @@ void Foam::snappyLayerDriver::handleNonManifolds
 
     Info<< "Set displacement to zero for all " << nNonManif
         << " non-manifold points" << endl;
+
+
+
+    // 4. Check for extrusion of baffles i.e. all edges of a face having the
+    //    same two neighbouring faces (one of which is the current face).
+    //    Note: this is detected locally already before - this test is for the
+    //          extremely rare occurence where the baffle faces are on different
+    //          processors.
+    {
+        label nBaffleFaces = 0;
+
+        const labelListList& faceEdges = pp.faceEdges();
+        forAll(pp, facei)
+        {
+            const labelList& fEdges = faceEdges[facei];
+
+            const labelList& globFaces0 = edgeGlobalFaces[fEdges[0]];
+            if (globFaces0.size() == 2)
+            {
+                const edge e0(globFaces0[0], globFaces0[1]);
+                bool isBaffle = true;
+                for (label fp = 1; fp < fEdges.size(); fp++)
+                {
+                    const labelList& globFaces = edgeGlobalFaces[fEdges[fp]];
+                    if
+                    (
+                        (globFaces.size() != 2)
+                     || (edge(globFaces[0], globFaces[1]) != e0)
+                    )
+                    {
+                        isBaffle = false;
+                        break;
+                    }
+                }
+
+                if (isBaffle)
+                {
+                    bool unextrude = unmarkExtrusion
+                    (
+                        pp.localFaces()[facei],
+                        patchDisp,
+                        patchNLayers,
+                        extrudeStatus
+                    );
+                    if (unextrude)
+                    {
+                        //Pout<< "Detected extrusion of baffle face "
+                        //    << pp.faceCentres()[facei]
+                        //    << " since all edges have the same neighbours "
+                        //    << e0 << endl;
+
+                        nBaffleFaces++;
+                    }
+                }
+            }
+        }
+
+        reduce(nBaffleFaces, sumOp<label>());
+
+        if (nBaffleFaces)
+        {
+            Info<< "Set displacement to zero for all points on " << nBaffleFaces
+                << " baffle faces" << endl;
+        }
+    }
 }
 
 
@@ -1350,10 +1404,10 @@ void Foam::snappyLayerDriver::determineSidePatches
         forAll(edgePatchID, i)
         {
             label patchi = edgePatchID[i];
-            Map<label>::const_iterator fnd = wantedToAddedPatch.find(patchi);
-            if (fnd != wantedToAddedPatch.end())
+            const auto fnd = wantedToAddedPatch.cfind(patchi);
+            if (fnd.found())
             {
-                edgePatchID[i] = fnd();
+                edgePatchID[i] = fnd.val();
             }
         }
 
@@ -1931,10 +1985,8 @@ bool Foam::snappyLayerDriver::sameEdgeNeighbour
     {
         return edge(myGlobalFacei, nbrGlobFacei) == edge(eFaces[0], eFaces[1]);
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 
@@ -2035,10 +2087,8 @@ Foam::label Foam::snappyLayerDriver::truncateDisplacement
 
     const Map<label>& meshPointMap = pp.meshPointMap();
 
-    forAllConstIter(faceSet, illegalPatchFaces, iter)
+    for (const label facei : illegalPatchFaces)
     {
-        label facei = iter.key();
-
         if (mesh.isInternalFace(facei))
         {
             FatalErrorInFunction
@@ -2052,9 +2102,10 @@ Foam::label Foam::snappyLayerDriver::truncateDisplacement
 
         forAll(f, fp)
         {
-            if (meshPointMap.found(f[fp]))
+            const auto fnd = meshPointMap.cfind(f[fp]);
+            if (fnd.found())
             {
-                label patchPointi = meshPointMap[f[fp]];
+                const label patchPointi = fnd.val();
 
                 if (extrudeStatus[patchPointi] != NOEXTRUDE)
                 {
@@ -2376,7 +2427,7 @@ void Foam::snappyLayerDriver::setupLayerInfoTruncation
     else
     {
         // Determine max point layers per face.
-        labelList maxLevel(pp.size(), 0);
+        labelList maxLevel(pp.size(), Zero);
 
         forAll(pp.localFaces(), patchFacei)
         {
@@ -2552,6 +2603,7 @@ bool Foam::snappyLayerDriver::cellsUseFace
             }
         }
     }
+
     return false;
 }
 
@@ -2583,7 +2635,8 @@ Foam::label Foam::snappyLayerDriver::checkAndUnmark
         meshQualityDict,
         identity(newMesh.nFaces()),
         baffles,
-        wrongFaces
+        wrongFaces,
+        false           // dryRun_
     );
     Info<< "Detected " << returnReduce(wrongFaces.size(), sumOp<label>())
         << " illegal faces"
@@ -2755,8 +2808,8 @@ Foam::List<Foam::labelPair> Foam::snappyLayerDriver::getBafflesOnAddedMesh
     {
         label oldFacei = newToOldFaces[facei];
 
-        Map<label>::const_iterator faceFnd = baffleSet.find(oldFacei);
-        if (faceFnd != baffleSet.end())
+        const auto faceFnd = baffleSet.find(oldFacei);
+        if (faceFnd.found())
         {
             label bafflei = faceFnd();
             labelPair& p = newBaffles[bafflei];
@@ -3120,7 +3173,7 @@ bool Foam::snappyLayerDriver::writeLayerData
                 );
 
                 // Convert patchReal to relative thickness
-                scalarField pfld(patchReal.size(), 0.0);
+                scalarField pfld(patchReal.size(), Zero);
                 forAll(patchReal, i)
                 {
                     if (patchWanted[i] > VSMALL)
@@ -3150,12 +3203,14 @@ Foam::snappyLayerDriver::snappyLayerDriver
 (
     meshRefinement& meshRefiner,
     const labelList& globalToMasterPatch,
-    const labelList& globalToSlavePatch
+    const labelList& globalToSlavePatch,
+    const bool dryRun
 )
 :
     meshRefiner_(meshRefiner),
     globalToMasterPatch_(globalToMasterPatch),
-    globalToSlavePatch_(globalToSlavePatch)
+    globalToSlavePatch_(globalToSlavePatch),
+    dryRun_(dryRun)
 {}
 
 
@@ -3164,7 +3219,8 @@ Foam::snappyLayerDriver::snappyLayerDriver
 void Foam::snappyLayerDriver::mergePatchFacesUndo
 (
     const layerParameters& layerParams,
-    const dictionary& motionDict
+    const dictionary& motionDict,
+    const meshRefinement::FaceMergeType mergeType
 )
 {
     // Clip to 30 degrees. Not helpful!
@@ -3205,7 +3261,8 @@ void Foam::snappyLayerDriver::mergePatchFacesUndo
         concaveCos,
         meshRefiner_.meshedPatches(),
         motionDict,
-        duplicateFace
+        duplicateFace,
+        mergeType   // How to merge co-planar patch faces
     );
 
     nChanged += meshRefiner_.mergeEdgesUndo(minCos, motionDict);
@@ -3366,7 +3423,7 @@ void Foam::snappyLayerDriver::addLayers
             // avoid truncation in syncPatchDisplacement because of
             // minThickness.
             vectorField patchDisp(pp().nPoints(), vector(GREAT, GREAT, GREAT));
-            labelList patchNLayers(pp().nPoints(), 0);
+            labelList patchNLayers(pp().nPoints(), Zero);
             label nIdealTotAddedCells = 0;
             List<extrudeMode> extrudeStatus(pp().nPoints(), EXTRUDE);
             // Get number of layers per point from number of layers per patch
@@ -3387,7 +3444,7 @@ void Foam::snappyLayerDriver::addLayers
             syncPatchDisplacement
             (
                 *pp,
-                scalarField(patchDisp.size(), 0.0), //minThickness,
+                scalarField(patchDisp.size(), Zero), //minThickness,
                 patchDisp,
                 patchNLayers,
                 extrudeStatus
@@ -3618,7 +3675,7 @@ void Foam::snappyLayerDriver::addLayers
 
     // Number of layers for all pp.localPoints. Note: only valid if
     // extrudeStatus = EXTRUDE.
-    labelList patchNLayers(pp().nPoints(), 0);
+    labelList patchNLayers(pp().nPoints(), Zero);
 
     // Ideal number of cells added
     label nIdealTotAddedCells = 0;
@@ -3782,7 +3839,7 @@ void Foam::snappyLayerDriver::addLayers
     // Per face actual overall layer thickness
     scalarField faceRealThickness;
     // Per face wanted overall layer thickness
-    scalarField faceWantedThickness(mesh.nFaces(), 0.0);
+    scalarField faceWantedThickness(mesh.nFaces(), Zero);
     {
         UIndirectList<scalar>(faceWantedThickness, pp->addressing()) =
             avgPointData(*pp, thickness);
@@ -3829,6 +3886,40 @@ void Foam::snappyLayerDriver::addLayers
                 internalBaffles,
                 displacement
             );
+
+
+            if (dryRun_)
+            {
+                string errorMsg(FatalError.message());
+                string IOerrorMsg(FatalIOError.message());
+
+                if (errorMsg.size() || IOerrorMsg.size())
+                {
+                    //errorMsg = "[dryRun] " + errorMsg;
+                    //errorMsg.replaceAll("\n", "\n[dryRun] ");
+                    //IOerrorMsg = "[dryRun] " + IOerrorMsg;
+                    //IOerrorMsg.replaceAll("\n", "\n[dryRun] ");
+
+                    IOWarningInFunction(combinedDict)
+                        << nl
+                        << "Missing/incorrect required dictionary entries:"
+                        << nl << nl
+                        << IOerrorMsg.c_str() << nl
+                        << errorMsg.c_str() << nl << nl
+                        << "Exiting dry-run" << nl << endl;
+
+                    if (Pstream::parRun())
+                    {
+                        Perr<< "\nFOAM parallel run exiting\n" << endl;
+                        Pstream::exit(0);
+                    }
+                    else
+                    {
+                        Perr<< "\nFOAM exiting\n" << endl;
+                        std::exit(0);
+                    }
+                }
+            }
         }
 
 
@@ -4470,8 +4561,8 @@ void Foam::snappyLayerDriver::addLayers
 
             // Make sure to keep the max since on two patches only one has
             // layers.
-            scalarField newFaceRealThickness(mesh.nFaces(), 0.0);
-            scalarField newFaceWantedThickness(mesh.nFaces(), 0.0);
+            scalarField newFaceRealThickness(mesh.nFaces(), Zero);
+            scalarField newFaceWantedThickness(mesh.nFaces(), Zero);
             forAll(newFaceRealThickness, facei)
             {
                 label oldFacei = faceMap[facei];
@@ -4527,14 +4618,17 @@ void Foam::snappyLayerDriver::addLayers
     // Write mesh data
     // ~~~~~~~~~~~~~~~
 
-    writeLayerData
-    (
-        mesh,
-        patchIDs,
-        cellNLayers,
-        faceWantedThickness,
-        faceRealThickness
-    );
+    if (!dryRun_)
+    {
+        writeLayerData
+        (
+            mesh,
+            patchIDs,
+            cellNLayers,
+            faceWantedThickness,
+            faceRealThickness
+        );
+    }
 }
 
 
@@ -4543,7 +4637,7 @@ void Foam::snappyLayerDriver::doLayers
     const dictionary& shrinkDict,
     const dictionary& motionDict,
     const layerParameters& layerParams,
-    const bool mergePatchFaces,
+    const meshRefinement::FaceMergeType mergeType,
     const bool preBalance,
     decompositionMethod& decomposer,
     fvMeshDistribute& distributor
@@ -4561,9 +4655,13 @@ void Foam::snappyLayerDriver::doLayers
     Info<< "Using mesh parameters " << motionDict << nl << endl;
 
     // Merge coplanar boundary faces
-    if (mergePatchFaces)
+    if
+    (
+        mergeType == meshRefinement::FaceMergeType::GEOMETRIC
+     || mergeType == meshRefinement::FaceMergeType::IGNOREPATCH
+    )
     {
-        mergePatchFacesUndo(layerParams, motionDict);
+        mergePatchFacesUndo(layerParams, motionDict, mergeType);
     }
 
 
@@ -4626,7 +4724,7 @@ void Foam::snappyLayerDriver::doLayers
         // Check initial mesh
         Info<< "Checking initial mesh ..." << endl;
         labelHashSet wrongFaces(mesh.nFaces()/100);
-        motionSmoother::checkMesh(false, mesh, motionDict, wrongFaces);
+        motionSmoother::checkMesh(false, mesh, motionDict, wrongFaces, dryRun_);
         const label nInitErrors = returnReduce
         (
             wrongFaces.size(),

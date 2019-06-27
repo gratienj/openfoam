@@ -62,7 +62,7 @@ void Foam::functionObjects::energySpectrum::calcAndWriteSpectrum
     const vectorField& C,
     const vector& c0,
     const vector& deltaC,
-    const Vector<label>& N,
+    const Vector<int>& N,
     const scalar kappaNorm
 )
 {
@@ -72,7 +72,7 @@ void Foam::functionObjects::energySpectrum::calcAndWriteSpectrum
         fft::forwardTransform
         (
             ReComplexField(U),
-            List<label>({N.x(), N.y(), N.z()})
+            List<int>({N.x(), N.y(), N.z()})
         )
        /scalar(cmptProduct(N))
     );
@@ -87,7 +87,7 @@ void Foam::functionObjects::energySpectrum::calcAndWriteSpectrum
     }
 
     Log << "Computing energy spectrum" << endl;
-    scalarField E(nMax, 0);
+    scalarField E(nMax, Zero);
     const scalarField Ec(0.5*magSqr(Uf));
     forAll(C, celli)
     {
@@ -159,7 +159,7 @@ bool Foam::functionObjects::energySpectrum::read(const dictionary& dict)
     const vector L(meshBb.max() - meshBb.min());
     const vector nCellXYZ(cmptDivide(L, cellBb.max() - cellBb.min()));
 
-    N_ = Vector<label>
+    N_ = Vector<int>
     (
         round(nCellXYZ.x()),
         round(nCellXYZ.z()),

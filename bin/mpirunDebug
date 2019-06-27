@@ -3,9 +3,11 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
-#   \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
-#    \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
+#   \\  /    A nd           | Copyright (C) 2004-2011, 2017-2018 OpenCFD Ltd.
+#    \\/     M anipulation  |
 #-------------------------------------------------------------------------------
+#                           | Copyright (C) 2011-2015 OpenFOAM Foundation
+#------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM.
 #
@@ -196,13 +198,13 @@ sourceFoam=false    # Fallback command
 
 # Same as foamEtcFile -mode=uo bashrc
 #
-# check ~/.$WM_PROJECT/$WM_PROJECT_API/
+# check ~/.$WM_PROJECT/$FOAM_API/
 # check ~/.$WM_PROJECT/
-# check <installedProject>/etc/
-if [ -n "$WM_PROJECT" ]
+# check projectDir/etc/
+if [ -n "$WM_PROJECT_DIR" ]
 then
     for i in \
-        "$HOME/.$WM_PROJECT/$WM_PROJECT_API" \
+        "$HOME/.$WM_PROJECT/$FOAM_API" \
         "$HOME/.$WM_PROJECT" \
         "$WM_PROJECT_DIR/etc" \
         ;

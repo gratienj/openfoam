@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2015 OpenFOAM Foundation
+    \\  /    A nd           |
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                            | Copyright (C) 2011-2015 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,9 +40,8 @@ namespace thermalBaffleModels
 
 autoPtr<thermalBaffleModel> thermalBaffleModel::New(const fvMesh& mesh)
 {
-    word modelType;
-    {
-        IOdictionary thermalBafflePropertiesDict
+    const word modelType =
+        IOdictionary
         (
             IOobject
             (
@@ -51,15 +52,7 @@ autoPtr<thermalBaffleModel> thermalBaffleModel::New(const fvMesh& mesh)
                 IOobject::NO_WRITE,
                 false
             )
-        );
-
-        word modelType =
-            thermalBafflePropertiesDict.lookupOrDefault<word>
-            (
-                "thermalBaffleModel",
-                "thermalBaffle"
-            );
-    }
+        ).lookupOrDefault<word>("thermalBaffleModel", "thermalBaffle");
 
     auto cstrIter = meshConstructorTablePtr_->cfind(modelType);
 
@@ -84,7 +77,7 @@ autoPtr<thermalBaffleModel> thermalBaffleModel::New
     const dictionary& dict
 )
 {
-    word modelType =
+    const word modelType =
         dict.lookupOrDefault<word>("thermalBaffleModel", "thermalBaffle");
 
     auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);

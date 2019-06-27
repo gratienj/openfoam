@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015 OpenFOAM Foundation
-     \\/     M anipulation  | Copyright (C) 2017-2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                            | Copyright (C) 2015 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,11 +28,10 @@ License
 #include "faceShading.H"
 #include "fvMesh.H"
 #include "boundaryRadiationProperties.H"
-#include "OFstream.H"
 #include "cyclicAMIPolyPatch.H"
 #include "volFields.H"
 #include "distributedTriSurfaceMesh.H"
-
+#include "OBJstream.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -41,7 +42,6 @@ namespace Foam
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-
 void Foam::faceShading::writeRays
 (
     const fileName& fName,
@@ -49,25 +49,14 @@ void Foam::faceShading::writeRays
     const pointField& myFc
 )
 {
-    OFstream str(fName);
-    label vertI = 0;
+    OBJstream os(fName);
 
-    Pout<< "Dumping rays to " << str.name() << endl;
+    Pout<< "Dumping rays to " << os.name() << endl;
 
     forAll(myFc, faceI)
     {
-        meshTools::writeOBJ(str, myFc[faceI]);
-        vertI++;
-        meshTools::writeOBJ(str, endCf[faceI]);
-        vertI++;
-        str << "l " << vertI-1 << ' ' << vertI << nl;
+        os.write(linePointRef(myFc[faceI], endCf[faceI]));
     }
-    str.flush();
-
-    Pout<< "cmd: objToVTK " << fName.c_str() << endl;
-
-    stringList cmd({"objToVTK", fName, fName.lessExt().ext("vtk")});
-    Foam::system(cmd);
 }
 
 
@@ -103,10 +92,8 @@ Foam::triSurface Foam::faceShading::triangulate
 
                 f.triangles(points, nTri, triFaces);
 
-                forAll(triFaces, triFaceI)
+                for (const face& f : triFaces)
                 {
-                    const face& f = triFaces[triFaceI];
-
                     triangles.append
                     (
                         labelledTri(f[0], f[1], f[2], newPatchI)
@@ -247,10 +234,7 @@ void Foam::faceShading::calculate()
             {
                 if (tau[faceI] == 0.0)
                 {
-                    includeAllFacesPerPatch[patchI].insert
-                    (
-                        faceI
-                    );
+                    includeAllFacesPerPatch[patchI].insert(faceI);
                 }
             }
         }
@@ -373,9 +357,8 @@ void Foam::faceShading::calculate()
         volScalarField::Boundary& hitFacesBf = hitFaces.boundaryFieldRef();
 
         hitFacesBf = 0.0;
-        forAll(rayStartFaces_, i)
+        for (const label faceI : rayStartFaces_)
         {
-            const label faceI = rayStartFaces_[i];
             label patchID = patches.whichPatch(faceI);
             const polyPatch& pp = patches[patchID];
             hitFacesBf[patchID][faceI - pp.start()] = 1.0;
@@ -406,7 +389,6 @@ Foam::faceShading::faceShading
 {}
 
 
-
 Foam::faceShading::faceShading
 (
     const fvMesh& mesh,
@@ -419,12 +401,6 @@ Foam::faceShading::faceShading
 {
     calculate();
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::faceShading::~faceShading()
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
