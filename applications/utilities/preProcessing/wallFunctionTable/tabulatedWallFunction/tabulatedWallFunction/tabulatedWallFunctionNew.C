@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -44,11 +44,12 @@ Foam::tabulatedWallFunctions::tabulatedWallFunction::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown tabulatedWallFunction type " << functionName
-            << nl << nl << "Valid tabulatedWallFunction types are:" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalErrorInLookup
+        (
+            "tabulatedWallFunction",
+            functionName,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalError);
     }
 
     return autoPtr<tabulatedWallFunction>(cstrIter()(dict, mesh));
