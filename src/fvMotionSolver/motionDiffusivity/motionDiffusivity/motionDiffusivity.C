@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -49,26 +49,27 @@ Foam::motionDiffusivity::motionDiffusivity(const fvMesh& mesh)
 Foam::autoPtr<Foam::motionDiffusivity> Foam::motionDiffusivity::New
 (
     const fvMesh& mesh,
-    Istream& mdData
+    Istream& is
 )
 {
-    const word motionType(mdData);
+    const word modelType(is);
 
-    Info<< "Selecting motion diffusion: " << motionType << endl;
+    Info<< "Selecting motion diffusion: " << modelType << endl;
 
-    auto cstrIter = IstreamConstructorTablePtr_->cfind(motionType);
+    auto cstrIter = IstreamConstructorTablePtr_->cfind(modelType);
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown diffusion type "
-            << motionType << nl << nl
-            << "Valid diffusion types :" << nl
-            << IstreamConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            is,
+            "diffusion",
+            modelType,
+            *IstreamConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
-    return autoPtr<motionDiffusivity>(cstrIter()(mesh, mdData));
+    return autoPtr<motionDiffusivity>(cstrIter()(mesh, is));
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2008-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -36,20 +36,27 @@ Foam::radiation::radiationModel::New
     const volScalarField& T
 )
 {
-    IOobject radIO
+    word modelType("none");
+
+    dictionary dict;
+
+    IOobject io
     (
         "radiationProperties",
         T.time().constant(),
         T.mesh(),
         IOobject::MUST_READ_IF_MODIFIED,
         IOobject::NO_WRITE,
-        false
+        false // Do not register
     );
 
-    word modelType("none");
-    if (radIO.typeHeaderOk<IOdictionary>(true))
+    if (io.typeHeaderOk<IOdictionary>(true))
     {
-        IOdictionary(radIO).readEntry("radiationModel", modelType);
+        IOdictionary propDict(io);
+
+        dict = std::move(propDict);
+
+        dict.readEntry("radiationModel", modelType);
     }
     else
     {
@@ -63,12 +70,13 @@ Foam::radiation::radiationModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown radiationModel type "
-            << modelType << nl << nl
-            << "Valid radiationModel types :" << nl
-            << TConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "radiationModel",
+            modelType,
+            *TConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<radiationModel>(cstrIter()(T));
@@ -90,12 +98,13 @@ Foam::radiation::radiationModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown radiationModel type "
-            << modelType << nl << nl
-            << "Valid radiationModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "radiationModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<radiationModel>(cstrIter()(dict, T));

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2015-2018 OpenFOAM Foundation
@@ -34,36 +34,34 @@ Foam::autoPtr<Foam::multiphaseSystem> Foam::multiphaseSystem::New
     const fvMesh& mesh
 )
 {
-    const word multiphaseSystemType
+    const IOdictionary dict
     (
-        IOdictionary
+        IOobject
         (
-            IOobject
-            (
-                propertiesName,
-                mesh.time().constant(),
-                mesh,
-                IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::NO_WRITE,
-                false
-            )
-        ).lookup("type")
+            propertiesName,
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE,
+            false // Do not register
+        )
     );
 
-    Info<< "Selecting multiphaseSystem "
-        << multiphaseSystemType << endl;
+    const word systemType(dict.get<word>("type"));
 
-    dictionaryConstructorTable::iterator cstrIter =
-        dictionaryConstructorTablePtr_->find(multiphaseSystemType);
+    Info<< "Selecting multiphaseSystem " << systemType << endl;
 
-    if (cstrIter == dictionaryConstructorTablePtr_->end())
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(systemType);
+
+    if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown multiphaseSystemType type "
-            << multiphaseSystemType << endl << endl
-            << "Valid multiphaseSystem types are : " << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "multiphaseSystem",
+            systemType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return cstrIter()(mesh);

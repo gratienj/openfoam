@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2012-2017 OpenFOAM Foundation
@@ -41,10 +41,10 @@ defineRunTimeSelectionTable(faceAreaWeightModel, dictionary);
 Foam::faceAreaWeightModel::faceAreaWeightModel
 (
     const word& type,
-    const dictionary& relaxationDict
+    const dictionary& dict
 )
 :
-    dictionary(relaxationDict),
+    dictionary(dict),
     coeffDict_(optionalSubDict(type + "Coeffs"))
 {}
 
@@ -53,10 +53,10 @@ Foam::faceAreaWeightModel::faceAreaWeightModel
 
 Foam::autoPtr<Foam::faceAreaWeightModel> Foam::faceAreaWeightModel::New
 (
-    const dictionary& relaxationDict
+    const dictionary& dict
 )
 {
-    const word modelType(relaxationDict.get<word>("faceAreaWeightModel"));
+    const word modelType(dict.get<word>("faceAreaWeightModel"));
 
     Info<< nl << "Selecting faceAreaWeightModel " << modelType << endl;
 
@@ -64,15 +64,16 @@ Foam::autoPtr<Foam::faceAreaWeightModel> Foam::faceAreaWeightModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown faceAreaWeightModel type "
-            << modelType << nl << nl
-            << "Valid faceAreaWeightModel types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "faceAreaWeightModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
-    return autoPtr<faceAreaWeightModel>(cstrIter()(relaxationDict));
+    return autoPtr<faceAreaWeightModel>(cstrIter()(dict));
 }
 
 

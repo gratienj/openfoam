@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,7 +34,9 @@ Foam::autoPtr<Foam::phaseModel> Foam::phaseModel::New
     const word& phaseName
 )
 {
-    const word modelType(fluid.subDict(phaseName).get<word>("type"));
+    const dictionary& dict = fluid.subDict(phaseName);
+
+    const word modelType(dict.get<word>("type"));
 
     Info<< "Selecting phaseModel for "
         << phaseName << ": " << modelType << endl;
@@ -43,12 +45,13 @@ Foam::autoPtr<Foam::phaseModel> Foam::phaseModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown phaseModel type "
-            << modelType << endl << endl
-            << "Valid phaseModel types are : " << endl
-            << phaseSystemConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "phaseModel",
+            modelType,
+            *phaseSystemConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return cstrIter()(fluid, phaseName);

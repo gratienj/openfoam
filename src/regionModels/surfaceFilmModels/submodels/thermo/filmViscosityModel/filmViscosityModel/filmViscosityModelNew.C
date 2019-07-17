@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2013-2017 OpenFOAM Foundation
@@ -53,12 +53,13 @@ autoPtr<filmViscosityModel> filmViscosityModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown filmViscosityModel type "
-            << modelType << nl << nl
-            << "Valid filmViscosityModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "filmViscosityModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<filmViscosityModel>(cstrIter()(model, dict, mu));

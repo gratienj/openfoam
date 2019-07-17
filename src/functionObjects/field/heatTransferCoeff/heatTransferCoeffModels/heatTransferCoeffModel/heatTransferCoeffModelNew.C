@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,12 +44,13 @@ Foam::autoPtr<Foam::heatTransferCoeffModel> Foam::heatTransferCoeffModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown heatTransferCoeffModel type "
-            << modelType << nl << nl
-            << "Valid heatTransferCoeffModels :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "heatTransferCoeffModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<heatTransferCoeffModel>(cstrIter()(dict, mesh, TName));

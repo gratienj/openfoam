@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2012-2015 OpenFOAM Foundation
@@ -43,12 +43,13 @@ Foam::autoPtr<Foam::trimModel> Foam::trimModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown " << typeName << " type "
-            << modelType << nl << nl
-            << "Valid " << typeName << " types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            typeName,
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<trimModel>(cstrIter()(rotor, dict));

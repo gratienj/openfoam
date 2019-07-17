@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -45,12 +45,13 @@ Foam::BinaryCollisionModel<CloudType>::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown BinaryCollisionModel type "
-            << modelType << nl << nl
-            << "Valid BinaryCollisionModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "BinaryCollisionModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<BinaryCollisionModel<CloudType>>

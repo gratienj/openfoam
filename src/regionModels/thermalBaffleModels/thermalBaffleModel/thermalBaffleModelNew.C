@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -40,31 +40,35 @@ namespace thermalBaffleModels
 
 autoPtr<thermalBaffleModel> thermalBaffleModel::New(const fvMesh& mesh)
 {
-    const word modelType =
-        IOdictionary
+    const IOdictionary dict
+    (
+        IOobject
         (
-            IOobject
-            (
-                "thermalBaffleProperties",
-                mesh.time().constant(),
-                mesh,
-                IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::NO_WRITE,
-                false
-            )
-        ).lookupOrDefault<word>("thermalBaffleModel", "thermalBaffle");
+            "thermalBaffleProperties",
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE,
+            false // Do not register
+        )
+    );
+
+    const word modelType
+    (
+        dict.getOrDefault<word>("thermalBaffleModel", "thermalBaffle")
+    );
 
     auto cstrIter = meshConstructorTablePtr_->cfind(modelType);
 
     if (!cstrIter.found())
     {
-
-        FatalErrorInFunction
-            << "Unknown thermalBaffleModel type "
-            << modelType << nl << nl
-            << "Valid thermalBaffleModel types :" << nl
-            << meshConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "thermalBaffleModel",
+            modelType,
+            *meshConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<thermalBaffleModel>(cstrIter()(modelType, mesh));
@@ -77,19 +81,22 @@ autoPtr<thermalBaffleModel> thermalBaffleModel::New
     const dictionary& dict
 )
 {
-    const word modelType =
-        dict.lookupOrDefault<word>("thermalBaffleModel", "thermalBaffle");
+    const word modelType
+    (
+        dict.getOrDefault<word>("thermalBaffleModel", "thermalBaffle")
+    );
 
     auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown thermalBaffleModel type "
-            << modelType << nl << nl
-            << "Valid thermalBaffleModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "thermalBaffleModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<thermalBaffleModel>(cstrIter()(modelType, mesh, dict));

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -45,12 +45,13 @@ Foam::WallInteractionModel<CloudType>::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown WallInteractionModel type "
-            << modelType << nl << nl
-            << "Valid WallInteractionModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "WallInteractionModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<WallInteractionModel<CloudType>>(cstrIter()(dict, owner));

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2014-2015 OpenFOAM Foundation
@@ -45,12 +45,13 @@ Foam::autoPtr<Foam::virtualMassModel> Foam::virtualMassModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown virtualMassModel type "
-            << modelType << nl << nl
-            << "Valid virtualMassModel types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "virtualMassModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return cstrIter()(dict, pair, true);

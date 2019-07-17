@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd
+    \\  /    A nd           | Copyright (C) 2018-2019 OpenCFD Ltd
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,22 +33,22 @@ Foam::wallBoilingModels::filmBoilingModel::New
     const dictionary& dict
 )
 {
-    word filmBoilingModelType(dict.lookup("type"));
+    const word modelType(dict.get<word>("type"));
 
     Info<< "Selecting filmBoilingModel: "
-        << filmBoilingModelType << endl;
+        << modelType << endl;
 
-    dictionaryConstructorTable::iterator cstrIter =
-        dictionaryConstructorTablePtr_->find(filmBoilingModelType);
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
 
-    if (cstrIter == dictionaryConstructorTablePtr_->end())
+    if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown filmBoilingModelType type "
-            << filmBoilingModelType << endl << endl
-            << "Valid filmBoilingModel types are : " << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "filmBoilingModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << abort(FatalIOError);
     }
 
     return cstrIter()(dict);

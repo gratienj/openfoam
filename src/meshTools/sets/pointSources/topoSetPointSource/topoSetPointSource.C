@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2018-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -57,12 +57,13 @@ Foam::autoPtr<Foam::topoSetPointSource> Foam::topoSetPointSource::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown topoSetPointSource type "
-            << sourceType << nl << nl
-            << "Valid types :" << endl
-            << wordConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "topoSetPointSource",
+            sourceType,
+            *wordConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<topoSetPointSource>(cstrIter()(mesh, dict));
@@ -80,12 +81,12 @@ Foam::autoPtr<Foam::topoSetPointSource> Foam::topoSetPointSource::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown topoSetPointSource type "
-            << sourceType << nl << nl
-            << "Valid types :" << endl
-            << istreamConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalErrorInLookup
+        (
+            "topoSetPointSource",
+            sourceType,
+            *istreamConstructorTablePtr_
+        ) << exit(FatalError);
     }
 
     return autoPtr<topoSetPointSource>(cstrIter()(mesh, is));

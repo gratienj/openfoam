@@ -119,12 +119,13 @@ autoPtr<objectiveManager> objectiveManager::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown objectiveManagerType type " << managerType
-            << nl << nl
-            << "Valid objectiveManagerTypes are :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "objectiveManagerType",
+            managerType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<objectiveManager>

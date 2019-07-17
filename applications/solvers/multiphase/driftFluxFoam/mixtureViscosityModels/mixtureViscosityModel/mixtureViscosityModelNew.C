@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2014-2015 OpenFOAM Foundation
@@ -34,12 +34,12 @@ License
 Foam::autoPtr<Foam::mixtureViscosityModel> Foam::mixtureViscosityModel::New
 (
     const word& name,
-    const dictionary& viscosityProperties,
+    const dictionary& dict,
     const volVectorField& U,
     const surfaceScalarField& phi
 )
 {
-    const word modelType(viscosityProperties.get<word>("transportModel"));
+    const word modelType(dict.get<word>("transportModel"));
 
     Info<< "Selecting incompressible transport model " << modelType << endl;
 
@@ -47,16 +47,17 @@ Foam::autoPtr<Foam::mixtureViscosityModel> Foam::mixtureViscosityModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown mixtureViscosityModel type "
-            << modelType << nl << nl
-            << "Valid mixtureViscosityModel types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "mixtureViscosityModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<mixtureViscosityModel>
-        (cstrIter()(name, viscosityProperties, U, phi));
+        (cstrIter()(name, dict, U, phi));
 }
 
 

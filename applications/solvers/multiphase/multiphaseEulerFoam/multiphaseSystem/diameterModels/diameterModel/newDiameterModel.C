@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -46,12 +46,13 @@ Foam::autoPtr<Foam::diameterModel> Foam::diameterModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-           << "Unknown diameterModel type "
-           << modelType << nl << nl
-           << "Valid diameterModel types :" << endl
-           << dictionaryConstructorTablePtr_->sortedToc()
-           << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "diameterModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return cstrIter()

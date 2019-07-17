@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,12 +37,13 @@ Foam::autoPtr<Foam::noiseModel> Foam::noiseModel::New(const dictionary& dict)
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown noiseModel type "
-            << modelType << nl << nl
-            << "Valid noiseModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "noiseModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<noiseModel>(cstrIter()(dict.subDict(modelType + "Coeffs")));

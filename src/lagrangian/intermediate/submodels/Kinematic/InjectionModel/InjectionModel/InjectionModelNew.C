@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2008-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -45,12 +45,13 @@ Foam::InjectionModel<CloudType>::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown injectionModel type "
-            << modelType << nl << nl
-            << "Valid injectionModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "injectionModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<InjectionModel<CloudType>>(cstrIter()(dict, owner));
@@ -73,12 +74,13 @@ Foam::InjectionModel<CloudType>::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown injection model type "
-            << modelType << nl << nl
-            << "Valid injection model types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "injectionModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return

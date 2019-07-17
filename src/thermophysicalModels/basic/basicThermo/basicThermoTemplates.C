@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2012-2017 OpenFOAM Foundation
@@ -39,62 +39,49 @@ typename Table::iterator Foam::basicThermo::lookupThermo
 )
 {
     // Lookup the thermo package
+
+    // Table iterator, not const_iterator
     auto cstrIter = tablePtr->find(thermoTypeName);
 
     // Print error message if package not found in the table
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown " << Thermo::typeName << " type " << nl
-            << "thermoType" << thermoTypeDict << nl << nl
-            << "Valid " << Thermo::typeName << " types are:"
-            << nl << nl;
-
-        // Get the list of all the suitable thermo packages available
-        wordList validThermoTypeNames
-        (
-            tablePtr->sortedToc()
-        );
+        const int nCmpt = cmptNames.size();
 
         // Build a table of the thermo packages constituent parts
         // Note: row-0 contains the names of constituent parts
-        List<wordList> validThermoTypeNameCmpts
-        (
-            validThermoTypeNames.size() + 1
-        );
+        List<wordList> validCmpts(tablePtr->size()+1);
 
-        const int nCmpt = cmptNames.size();
-        validThermoTypeNameCmpts[0].setSize(nCmpt);
-
-        label j = 0;
-        for (const char* cmptName : cmptNames)
-        {
-            validThermoTypeNameCmpts[0][j] = cmptName;
-            ++j;
-        }
+        // Header (row 0)
+        validCmpts[0].resize(nCmpt);
+        std::copy(cmptNames.begin(), cmptNames.end(), validCmpts[0].begin());
 
         // Split the thermo package names into their constituent parts
         // Removing incompatible entries from the list
-        j = 0;
-        forAll(validThermoTypeNames, i)
+        label rowi = 1;
+        for (const word& validName : tablePtr->sortedToc())
         {
-            wordList names
-            (
-                Thermo::splitThermoName(validThermoTypeNames[i], nCmpt)
-            );
+            validCmpts[rowi] = Thermo::splitThermoName(validName, nCmpt);
 
-            if (names.size())
+            if (validCmpts[rowi].size())
             {
-                validThermoTypeNameCmpts[j++] = names;
+                ++rowi;
             }
         }
-        validThermoTypeNameCmpts.setSize(j);
+        validCmpts.resize(rowi);
 
-        // Print the table of available packages
-        // in terms of their constituent parts
-        printTable(validThermoTypeNameCmpts, FatalError);
 
-        FatalError<< exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            thermoTypeDict,
+            Thermo::typeName,
+            word::null, // Suppress long name? Just output dictionary (above)
+            *tablePtr
+        );
+
+        // Table of available packages (as constituent parts)
+        printTable(validCmpts, FatalIOError)
+            << exit(FatalIOError);
     }
 
     return cstrIter;
@@ -110,7 +97,7 @@ typename Table::iterator Foam::basicThermo::lookupThermo
 {
     if (thermoDict.isDict("thermoType"))
     {
-        const dictionary& thermoTypeDict(thermoDict.subDict("thermoType"));
+        const dictionary& thermoTypeDict = thermoDict.subDict("thermoType");
 
         Info<< "Selecting thermodynamics package " << thermoTypeDict << endl;
 
@@ -181,16 +168,18 @@ typename Table::iterator Foam::basicThermo::lookupThermo
 
         Info<< "Selecting thermodynamics package " << thermoTypeName << endl;
 
+        // Table iterator, not const_iterator
         auto cstrIter = tablePtr->find(thermoTypeName);
 
         if (!cstrIter.found())
         {
-            FatalErrorInFunction
-                << "Unknown " << Thermo::typeName << " type "
-                << thermoTypeName << nl << nl
-                << "Valid " << Thermo::typeName << " types are:" << nl
-                << tablePtr->sortedToc() << nl
-                << exit(FatalError);
+            FatalIOErrorInLookup
+            (
+                thermoDict,
+                Thermo::typeName,
+                thermoTypeName,
+                *tablePtr
+            ) << exit(FatalIOError);
         }
 
         return cstrIter;

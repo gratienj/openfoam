@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2018-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,12 +41,13 @@ wallTransmissivityModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown wallTransmissivityModel type "
-            << modelType << nl << nl
-            << "Valid wallTransmissivityModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "wallTransmissivityModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<wallTransmissivityModel>(cstrIter()(dict, pp));

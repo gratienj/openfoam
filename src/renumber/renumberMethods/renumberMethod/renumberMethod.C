@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -43,10 +43,10 @@ namespace Foam
 
 Foam::autoPtr<Foam::renumberMethod> Foam::renumberMethod::New
 (
-    const dictionary& renumberDict
+    const dictionary& dict
 )
 {
-    const word methodType(renumberDict.get<word>("method"));
+    const word methodType(dict.get<word>("method"));
 
     //Info<< "Selecting renumberMethod " << methodType << endl;
 
@@ -54,15 +54,16 @@ Foam::autoPtr<Foam::renumberMethod> Foam::renumberMethod::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown renumberMethod "
-            << methodType << nl << nl
-            << "Valid renumberMethods are : " << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "renumberMethod",
+            methodType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
-    return autoPtr<renumberMethod>(cstrIter()(renumberDict));
+    return autoPtr<renumberMethod>(cstrIter()(dict));
 }
 
 

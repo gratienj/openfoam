@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2014-2015 OpenFOAM Foundation
@@ -45,12 +45,13 @@ Foam::autoPtr<Foam::wallLubricationModel> Foam::wallLubricationModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown wallLubricationModel type "
-            << modelType << nl << nl
-            << "Valid wallLubricationModel types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "wallLubricationModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return cstrIter()(dict, pair);

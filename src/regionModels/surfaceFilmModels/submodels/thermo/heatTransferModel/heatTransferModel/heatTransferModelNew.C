@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2010-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2010-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -52,12 +52,13 @@ autoPtr<heatTransferModel> heatTransferModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown heatTransferModel type "
-            << modelType << nl << nl
-            << "Valid heatTransferModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "heatTransferModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<heatTransferModel>(cstrIter()(model, dict));

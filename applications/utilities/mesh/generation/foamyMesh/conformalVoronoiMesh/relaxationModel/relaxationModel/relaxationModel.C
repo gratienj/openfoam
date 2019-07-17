@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2012-2017 OpenFOAM Foundation
@@ -42,11 +42,11 @@ defineRunTimeSelectionTable(relaxationModel, dictionary);
 Foam::relaxationModel::relaxationModel
 (
     const word& type,
-    const dictionary& relaxationDict,
+    const dictionary& dict,
     const Time& runTime
 )
 :
-    dictionary(relaxationDict),
+    dictionary(dict),
     runTime_(runTime),
     coeffDict_(optionalSubDict(type + "Coeffs"))
 {}
@@ -56,11 +56,11 @@ Foam::relaxationModel::relaxationModel
 
 Foam::autoPtr<Foam::relaxationModel> Foam::relaxationModel::New
 (
-    const dictionary& relaxationDict,
+    const dictionary& dict,
     const Time& runTime
 )
 {
-    const word modelType(relaxationDict.get<word>("relaxationModel"));
+    const word modelType(dict.get<word>("relaxationModel"));
 
     Info<< nl << "Selecting relaxationModel " << modelType << endl;
 
@@ -68,15 +68,16 @@ Foam::autoPtr<Foam::relaxationModel> Foam::relaxationModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown relaxationModel type "
-            << modelType << nl << nl
-            << "Valid relaxationModel types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "relaxationModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
-    return autoPtr<relaxationModel>(cstrIter()(relaxationDict, runTime));
+    return autoPtr<relaxationModel>(cstrIter()(dict, runTime));
 }
 
 

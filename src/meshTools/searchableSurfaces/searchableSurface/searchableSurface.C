@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011, 2018-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -49,12 +49,13 @@ Foam::autoPtr<Foam::searchableSurface> Foam::searchableSurface::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown searchableSurface type "
-            << searchableSurfaceType << nl << nl
-            << "Valid searchableSurface types :" << endl
-            << dictConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "searchableSurface",
+            searchableSurfaceType,
+            *dictConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<searchableSurface>(cstrIter()(io, dict));

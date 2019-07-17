@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd
+    \\  /    A nd           | Copyright (C) 2018-2019 OpenCFD Ltd
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2016 OpenFOAM Foundation
@@ -35,22 +35,21 @@ Foam::wallBoilingModels::MHFModel::New
     const dictionary& dict
 )
 {
-    word MHFModelType(dict.lookup("type"));
+    const word modelType(dict.get<word>("type"));
 
-    Info<< "Selecting MHFModel: "
-        << MHFModelType << endl;
+    Info<< "Selecting MHFModel: " << modelType << endl;
 
-    dictionaryConstructorTable::iterator cstrIter =
-        dictionaryConstructorTablePtr_->find(MHFModelType);
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
 
-    if (cstrIter == dictionaryConstructorTablePtr_->end())
+    if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown MHFModelType type "
-            << MHFModelType << endl << endl
-            << "Valid MHFModel types are : " << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "MHFModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << abort(FatalIOError);
     }
 
     return cstrIter()(dict);

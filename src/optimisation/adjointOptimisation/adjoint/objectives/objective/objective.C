@@ -155,11 +155,13 @@ autoPtr<objective> objective::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown objective type " << objectiveType << nl << nl
-            << "Valid types are :" << nl
-            << objectiveConstructorTablePtr_->toc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "objective",
+            objectiveType,
+            *objectiveConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<objective>

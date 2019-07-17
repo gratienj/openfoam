@@ -59,12 +59,13 @@ autoPtr<stepUpdate> stepUpdate::New(const dictionary& dict)
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown stepUpdate type " << modelType
-            << nl << nl
-            << "Valid stepUpdate types are : " << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "stepUpdate",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<stepUpdate>(cstrIter()(dict));

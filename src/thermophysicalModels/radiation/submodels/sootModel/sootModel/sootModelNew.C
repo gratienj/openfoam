@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2013-2015 OpenFOAM Foundation
@@ -48,12 +48,13 @@ Foam::radiation::sootModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown sootModel type "
-            << modelType << nl << nl
-            << "Valid sootModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "sootModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     const word className = modelType.substr(0, modelType.find('<'));

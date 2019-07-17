@@ -135,23 +135,22 @@ Foam::LESModel<BasicTurbulenceModel>::New
     const word& propertiesName
 )
 {
-    // get model name, but do not register the dictionary
-    // otherwise it is registered in the database twice
-    const word modelType
+    const IOdictionary modelDict
     (
-        IOdictionary
+        IOobject
         (
-            IOobject
-            (
-                IOobject::groupName(propertiesName, alphaRhoPhi.group()),
-                U.time().constant(),
-                U.db(),
-                IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::NO_WRITE,
-                false
-            )
-        ).subDict("LES").get<word>("LESModel")
+            IOobject::groupName(propertiesName, alphaRhoPhi.group()),
+            U.time().constant(),
+            U.db(),
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE,
+            false // Do not register
+        )
     );
+
+    const dictionary& dict = modelDict.subDict("LES");
+
+    const word modelType(dict.get<word>("LESModel"));
 
     Info<< "Selecting LES turbulence model " << modelType << endl;
 
@@ -159,12 +158,13 @@ Foam::LESModel<BasicTurbulenceModel>::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown LESModel type "
-            << modelType << nl << nl
-            << "Valid LESModel types:" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "LESModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<LESModel>

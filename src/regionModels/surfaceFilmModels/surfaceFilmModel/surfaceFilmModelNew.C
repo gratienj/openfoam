@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -44,32 +44,27 @@ autoPtr<surfaceFilmModel> surfaceFilmModel::New
     const word& regionType
 )
 {
-    word modelType;
+    word modelType(surfaceFilmModels::noFilm::typeName);
 
+    dictionary dict;
+
+    IOobject io
+    (
+        regionType + "Properties",
+        mesh.time().constant(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE,
+        false // Do not register
+    );
+
+    if (io.typeHeaderOk<IOdictionary>())
     {
-        IOobject surfaceFilmPropertiesDictHeader
-        (
-            regionType + "Properties",
-            mesh.time().constant(),
-            mesh,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE,
-            false
-        );
+        IOdictionary propDict(io);
 
-        if (surfaceFilmPropertiesDictHeader.typeHeaderOk<IOdictionary>())
-        {
-            IOdictionary surfaceFilmPropertiesDict
-            (
-                surfaceFilmPropertiesDictHeader
-            );
+        dict = std::move(propDict);
 
-            surfaceFilmPropertiesDict.readEntry("surfaceFilmModel", modelType);
-        }
-        else
-        {
-            modelType = surfaceFilmModels::noFilm::typeName;
-        }
+        dict.readEntry("surfaceFilmModel", modelType);
     }
 
     Info<< "Selecting surfaceFilmModel " << modelType << endl;
@@ -78,12 +73,13 @@ autoPtr<surfaceFilmModel> surfaceFilmModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown surfaceFilmModel type "
-            << modelType << nl << nl
-            << "Valid surfaceFilmModel types :" << nl
-            << meshConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "surfaceFilmModel",
+            modelType,
+            *meshConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<surfaceFilmModel>

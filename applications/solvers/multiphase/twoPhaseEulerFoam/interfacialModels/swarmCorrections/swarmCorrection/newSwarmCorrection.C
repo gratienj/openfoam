@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2014-2015 OpenFOAM Foundation
@@ -46,12 +46,13 @@ Foam::swarmCorrection::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown swarmCorrection type "
-            << modelType << nl << nl
-            << "Valid swarmCorrection types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "swarmCorrection",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return cstrIter()(dict, pair);

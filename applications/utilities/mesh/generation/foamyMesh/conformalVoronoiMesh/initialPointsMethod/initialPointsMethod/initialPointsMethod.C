@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2012-2017 OpenFOAM Foundation
@@ -71,7 +71,7 @@ Foam::initialPointsMethod::initialPointsMethod
 
 Foam::autoPtr<Foam::initialPointsMethod> Foam::initialPointsMethod::New
 (
-    const dictionary& initialPointsDict,
+    const dictionary& dict,
     const Time& runTime,
     Random& rndGen,
     const conformationSurfaces& geometryToConformTo,
@@ -79,21 +79,21 @@ Foam::autoPtr<Foam::initialPointsMethod> Foam::initialPointsMethod::New
     const autoPtr<backgroundMeshDecomposition>& decomposition
 )
 {
-    const word methodName(initialPointsDict.get<word>("initialPointsMethod"));
+    const word modelType(dict.get<word>("initialPointsMethod"));
 
-    Info<< nl << "Selecting initialPointsMethod "
-        << methodName << endl;
+    Info<< nl << "Selecting initialPointsMethod " << modelType << endl;
 
-    auto cstrIter = dictionaryConstructorTablePtr_->cfind(methodName);
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown initialPointsMethod type "
-            << methodName << nl << nl
-            << "Valid initialPointsMethod types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "initialPointsMethod",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return
@@ -101,7 +101,7 @@ Foam::autoPtr<Foam::initialPointsMethod> Foam::initialPointsMethod::New
         (
             cstrIter()
             (
-                initialPointsDict,
+                dict,
                 runTime,
                 rndGen,
                 geometryToConformTo,

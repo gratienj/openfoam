@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -31,14 +31,14 @@ License
 
 Foam::autoPtr<Foam::PDRDragModel> Foam::PDRDragModel::New
 (
-    const dictionary& PDRProperties,
+    const dictionary& dict,
     const compressible::RASModel& turbulence,
     const volScalarField& rho,
     const volVectorField& U,
     const surfaceScalarField& phi
 )
 {
-    const word modelType(PDRProperties.get<word>("PDRDragModel"));
+    const word modelType(dict.get<word>("PDRDragModel"));
 
     Info<< "Selecting drag model " << modelType << endl;
 
@@ -46,16 +46,17 @@ Foam::autoPtr<Foam::PDRDragModel> Foam::PDRDragModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown PDRDragModel type "
-            << modelType << nl << nl
-            << "Valid PDRDragModel types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "PDRDragModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<PDRDragModel>
-        (cstrIter()(PDRProperties, turbulence, rho, U, phi));
+        (cstrIter()(dict, turbulence, rho, U, phi));
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2009-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -46,22 +46,20 @@ autoPtr<pyrolysisModel> pyrolysisModel::New
     const word& regionType
 )
 {
-    // get model name, but do not register the dictionary
-    const word modelType
+    const IOdictionary dict
     (
-        IOdictionary
+        IOobject
         (
-            IOobject
-            (
-                regionType + "Properties",
-                mesh.time().constant(),
-                mesh,
-                IOobject::MUST_READ,
-                IOobject::NO_WRITE,
-                false
-            )
-        ).get<word>("pyrolysisModel")
+            regionType + "Properties",
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE,
+            false // Do not register
+        )
     );
+
+    const word modelType(dict.get<word>("pyrolysisModel"));
 
     Info<< "Selecting pyrolysisModel " << modelType << endl;
 
@@ -69,12 +67,13 @@ autoPtr<pyrolysisModel> pyrolysisModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown pyrolysisModel type "
-            << modelType << nl << nl
-            << "Valid pyrolysisModel types :" << nl
-            << meshConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "pyrolysisModel",
+            modelType,
+            *meshConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<pyrolysisModel>(cstrIter()(modelType, mesh, regionType));
@@ -97,12 +96,13 @@ autoPtr<pyrolysisModel> pyrolysisModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown pyrolysisModel type "
-            << modelType << nl << nl
-            << "Valid pyrolysisModel types :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "pyrolysisModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<pyrolysisModel>

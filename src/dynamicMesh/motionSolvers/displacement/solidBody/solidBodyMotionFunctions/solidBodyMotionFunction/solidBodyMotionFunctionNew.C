@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -31,11 +31,11 @@ License
 
 Foam::autoPtr<Foam::solidBodyMotionFunction> Foam::solidBodyMotionFunction::New
 (
-    const dictionary& SBMFCoeffs,
+    const dictionary& dict,
     const Time& runTime
 )
 {
-    const word motionType(SBMFCoeffs.get<word>("solidBodyMotionFunction"));
+    const word motionType(dict.get<word>("solidBodyMotionFunction"));
 
     Info<< "Selecting solid-body motion function " << motionType << endl;
 
@@ -43,15 +43,16 @@ Foam::autoPtr<Foam::solidBodyMotionFunction> Foam::solidBodyMotionFunction::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown solidBodyMotionFunction type "
-            << motionType << nl << nl
-            << "Valid solidBodyMotionFunction types :" << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "solidBodyMotionFunction",
+            motionType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
-    return autoPtr<solidBodyMotionFunction>(cstrIter()(SBMFCoeffs, runTime));
+    return autoPtr<solidBodyMotionFunction>(cstrIter()(dict, runTime));
 }
 
 

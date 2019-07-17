@@ -91,12 +91,13 @@ Foam::incompressiblePrimalSolver::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown incompressiblePrimalSolver type " << solverType
-            << nl << nl
-            << "Valid incompressiblePrimalSolver types are :" << nl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "incompressiblePrimalSolver",
+            solverType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return

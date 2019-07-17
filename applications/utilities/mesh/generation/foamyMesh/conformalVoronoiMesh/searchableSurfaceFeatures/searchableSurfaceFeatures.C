@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2013-2015 OpenFOAM Foundation
@@ -45,18 +45,19 @@ Foam::searchableSurfaceFeatures::New
     const dictionary& dict
 )
 {
-    const word featuresType = surface.type() + "Features";
+    const word modelType(surface.type() + "Features");
 
-    auto cstrIter = dictConstructorTablePtr_->cfind(featuresType);
+    auto cstrIter = dictConstructorTablePtr_->cfind(modelType);
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown searchableSurfaceFeatures type "
-            << featuresType << nl << nl
-            << "Valid searchableSurfaceFeatures types :" << endl
-            << dictConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "searchableSurfaceFeatures",
+            modelType,
+            *dictConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<searchableSurfaceFeatures>(cstrIter()(surface, dict));
@@ -80,9 +81,6 @@ Foam::searchableSurfaceFeatures::searchableSurfaceFeatures
 
 Foam::searchableSurfaceFeatures::~searchableSurfaceFeatures()
 {}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // ************************************************************************* //

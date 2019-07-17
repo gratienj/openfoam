@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -32,14 +32,14 @@ License
 Foam::autoPtr<Foam::barotropicCompressibilityModel>
 Foam::barotropicCompressibilityModel::New
 (
-    const dictionary& compressibilityProperties,
+    const dictionary& dict,
     const volScalarField& gamma,
     const word& psiName
 )
 {
     const word modelType
     (
-        compressibilityProperties.lookup("barotropicCompressibilityModel")
+        dict.get<word>("barotropicCompressibilityModel")
     );
 
     Info<< "Selecting compressibility model " << modelType << endl;
@@ -48,17 +48,18 @@ Foam::barotropicCompressibilityModel::New
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown barotropicCompressibilityModel type "
-            << modelType << nl << nl
-            << "Valid barotropicCompressibilityModel types : " << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "barotropicCompressibilityModel",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
     return autoPtr<barotropicCompressibilityModel>
     (
-        cstrIter()(compressibilityProperties, gamma, psiName)
+        cstrIter()(dict, gamma, psiName)
     );
 }
 

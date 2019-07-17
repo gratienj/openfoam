@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,38 +32,37 @@ Foam::autoPtr<Foam::multiphaseSystem> Foam::multiphaseSystem::New
     const fvMesh& mesh
 )
 {
-    const word multiphaseSystemType
+    const IOdictionary dict
     (
-        IOdictionary
+        IOobject
         (
-            IOobject
-            (
-                phasePropertiesName,
-                mesh.time().constant(),
-                mesh,
-                IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::NO_WRITE,
-                false
-            )
-        ).get<word>("type")
+            phasePropertiesName,
+            mesh.time().constant(),
+            mesh,
+            IOobject::MUST_READ_IF_MODIFIED,
+            IOobject::NO_WRITE,
+            false // Do not register
+        )
     );
 
-    Info<< "Selecting multiphaseSystem " << multiphaseSystemType << endl;
+    const word systemType(dict.get<word>("type"));
 
-    const auto cstrIter =
-        dictionaryConstructorTablePtr_->cfind(multiphaseSystemType);
+    Info<< "Selecting multiphaseSystem " << systemType << endl;
+
+    const auto cstrIter = dictionaryConstructorTablePtr_->cfind(systemType);
 
     if (!cstrIter.found())
     {
-        FatalErrorInFunction
-            << "Unknown multiphaseSystemType type "
-            << multiphaseSystemType << endl
-            << "Valid multiphaseSystem types are : " << endl
-            << dictionaryConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        FatalIOErrorInLookup
+        (
+            dict,
+            "multiphaseSystem",
+            systemType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
     }
 
-    return autoPtr<multiphaseSystem> (cstrIter()(mesh));
+    return autoPtr<multiphaseSystem>(cstrIter()(mesh));
 }
 
 
