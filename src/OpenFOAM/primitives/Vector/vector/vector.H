@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +37,6 @@ SourceFiles
 
 #include "scalar.H"
 #include "Vector.H"
-#include "contiguous.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -50,11 +47,7 @@ namespace Foam
 
 typedef Vector<scalar> vector;
 
-
-//- Data associated with vector type are contiguous
-template<>
-inline bool contiguous<vector>() {return true;}
-
+// Traits
 
 template<class Type>
 class flux

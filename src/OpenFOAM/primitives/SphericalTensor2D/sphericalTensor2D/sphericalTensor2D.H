@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +37,6 @@ SourceFiles
 
 #include "SphericalTensor2D.H"
 #include "tensor.H"
-#include "contiguous.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -55,12 +52,6 @@ static const sphericalTensor2D I2D(1);
 
 static const sphericalTensor2D oneThirdI2D(1.0/3.0);
 static const sphericalTensor2D twoThirdsI2D(2.0/3.0);
-
-
-//- Data associated with sphericalTensor2D type are contiguous
-template<>
-inline bool contiguous<sphericalTensor2D>() {return true;}
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

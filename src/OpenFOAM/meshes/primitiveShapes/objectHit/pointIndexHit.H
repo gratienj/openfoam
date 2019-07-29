@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -43,10 +41,8 @@ namespace Foam
 
 typedef PointIndexHit<point> pointIndexHit;
 
-
-//- Data associated with pointIndexHit type are contiguous
-template<>
-inline bool contiguous<pointIndexHit>() {return contiguous<point>();}
+//- Contiguous data for pointIndexHit
+template<> struct is_contiguous<pointIndexHit> : is_contiguous<point> {};
 
 }
 
