@@ -69,9 +69,21 @@ Foam::injectedParticle::injectedParticle
         {
             is  >> tag_ >> soi_ >> d_ >> U_;
         }
+        else if (!is.checkLabelSize<>() || !is.checkScalarSize<>())
+        {
+            // Non-native label or scalar size
+            is.beginRawRead();
+
+            readRawLabel(is, &tag_);
+            readRawScalar(is, &soi_);
+            readRawScalar(is, &d_);
+            readRawScalar(is, U_.data(), vector::nComponents);
+
+            is.endRawRead();
+        }
         else
         {
-            is.read(reinterpret_cast<char*>(&soi_), sizeofFields);
+            is.read(reinterpret_cast<char*>(&tag_), sizeofFields);
         }
     }
 
@@ -158,27 +170,50 @@ void Foam::injectedParticle::writeFields(const Cloud<injectedParticle>& c)
 }
 
 
+void Foam::injectedParticle::readObjects
+(
+    Cloud<injectedParticle>& c,
+    const objectRegistry& obr
+)
+{
+    particle::readObjects(c, obr);
+
+    if (!c.size()) return;
+
+    const auto& tag = cloud::lookupIOField<label>("tag", obr);
+    const auto& soi = cloud::lookupIOField<scalar>("soi", obr);
+    const auto& d = cloud::lookupIOField<scalar>("d", obr);
+    const auto& U = cloud::lookupIOField<vector>("U", obr);
+
+    label i = 0;
+
+    for (injectedParticle& p : c)
+    {
+         p.tag() = tag[i];
+         p.soi() = soi[i];
+         p.d() = d[i];
+         p.U() = U[i];
+
+        ++i;
+    }
+}
+
+
 void Foam::injectedParticle::writeObjects
 (
     const Cloud<injectedParticle>& c,
     objectRegistry& obr
 )
 {
-    // Force writing positions instead of coordinates
-    const bool oldWriteCoordinates = particle::writeLagrangianCoordinates;
-    const bool oldWritePositions = particle::writeLagrangianPositions;
-
-    particle::writeLagrangianCoordinates = false;
-    particle::writeLagrangianPositions = true;
-
+    // Always writes "position", not "coordinates"
     particle::writeObjects(c, obr);
 
-    label np = c.size();
+    const label np = c.size();
 
-    IOField<label>& tag(cloud::createIOField<label>("tag", np, obr));
-    IOField<scalar>& soi(cloud::createIOField<scalar>("soi", np, obr));
-    IOField<scalar>& d(cloud::createIOField<scalar>("d", np, obr));
-    IOField<vector>& U(cloud::createIOField<vector>("U", np, obr));
+    auto& tag = cloud::createIOField<label>("tag", np, obr);
+    auto& soi = cloud::createIOField<scalar>("soi", np, obr);
+    auto& d = cloud::createIOField<scalar>("d", np, obr);
+    auto& U = cloud::createIOField<vector>("U", np, obr);
 
     label i = 0;
 
@@ -191,10 +226,6 @@ void Foam::injectedParticle::writeObjects
 
         ++i;
     }
-
-    // Restore
-    particle::writeLagrangianCoordinates = oldWriteCoordinates;
-    particle::writeLagrangianPositions = oldWritePositions;
 }
 
 

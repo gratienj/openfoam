@@ -51,15 +51,9 @@ SeeAlso
 namespace Foam
 {
 
+// Forward declarations
 class injectedParticle;
-
-// Forward declaration of friend functions
-
-Ostream& operator<<
-(
-    Ostream&,
-    const injectedParticle&
-);
+Ostream& operator<<(Ostream&, const injectedParticle&);
 
 /*---------------------------------------------------------------------------*\
                          Class injectedParticle Declaration
@@ -113,6 +107,16 @@ public:
 
 
     // Constructors
+
+        //- Construct from a position and a cell.
+        //  Searches for the rest of the required topology.
+        //  Other properties are zero initialised.
+        inline injectedParticle
+        (
+            const polyMesh& mesh,
+            const vector& position,
+            const label celli = -1
+        );
 
         //- Construct from components
         inline injectedParticle
@@ -210,11 +214,18 @@ public:
 
         // I-O
 
-            //- Read
+            //- Read fields
             static void readFields(Cloud<injectedParticle>& c);
 
-            //- Write
+            //- Write fields
             static void writeFields(const Cloud<injectedParticle>& c);
+
+            //- Read particle fields as objects from the obr registry
+            static void readObjects
+            (
+                Cloud<injectedParticle>& c,
+                const objectRegistry& obr
+            );
 
             //- Write particle fields as objects into the obr registry
             static void writeObjects

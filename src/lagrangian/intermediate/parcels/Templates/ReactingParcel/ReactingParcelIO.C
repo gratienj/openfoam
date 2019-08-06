@@ -63,13 +63,24 @@ Foam::ReactingParcel<ParcelType>::ReactingParcel
 
         if (is.format() == IOstream::ASCII)
         {
-            is >> mass0_ >> Ymix;
+            is >> mass0_;
+        }
+        else if (!is.checkLabelSize<>() || !is.checkScalarSize<>())
+        {
+            // Non-native label or scalar size
+
+            is.beginRawRead();
+
+            readRawScalar(is, &mass0_);
+
+            is.endRawRead();
         }
         else
         {
             is.read(reinterpret_cast<char*>(&mass0_), sizeofFields);
-            is >> Ymix;
         }
+
+        is >> Ymix;
 
         Y_.transfer(Ymix);
     }
@@ -221,6 +232,18 @@ void Foam::ReactingParcel<ParcelType>::writeFields
 
 template<class ParcelType>
 template<class CloudType>
+void Foam::ReactingParcel<ParcelType>::readObjects
+(
+    CloudType& c,
+    const objectRegistry& obr
+)
+{
+    ParcelType::readObjects(c, obr);
+}
+
+
+template<class ParcelType>
+template<class CloudType>
 void Foam::ReactingParcel<ParcelType>::writeObjects
 (
     const CloudType& c,
@@ -228,6 +251,54 @@ void Foam::ReactingParcel<ParcelType>::writeObjects
 )
 {
     ParcelType::writeObjects(c, obr);
+}
+
+
+template<class ParcelType>
+template<class CloudType, class CompositionType>
+void Foam::ReactingParcel<ParcelType>::readObjects
+(
+    CloudType& c,
+    const CompositionType& compModel,
+    const objectRegistry& obr
+)
+{
+    ParcelType::readObjects(c, obr);
+
+    if (!c.size()) return;
+
+
+    auto& mass0 = cloud::lookupIOField<scalar>("mass0", obr);
+
+    label i = 0;
+    for (ReactingParcel<ParcelType>& p : c)
+    {
+        p.mass0_ = mass0[i];
+
+        ++i;
+    }
+
+    // The composition fractions
+    const wordList& phaseTypes = compModel.phaseTypes();
+    wordList stateLabels(phaseTypes.size(), "");
+    if (compModel.nPhase() == 1)
+    {
+        stateLabels = compModel.stateLabels()[0];
+    }
+
+    forAll(phaseTypes, j)
+    {
+        const word fieldName = "Y" + phaseTypes[j] + stateLabels[j];
+        auto& Y = cloud::lookupIOField<scalar>(fieldName, obr);
+
+        label i = 0;
+        for (ReactingParcel<ParcelType>& p : c)
+        {
+            p.Y()[j] = Y[i];
+
+            ++i;
+        }
+    }
 }
 
 
@@ -242,11 +313,11 @@ void Foam::ReactingParcel<ParcelType>::writeObjects
 {
     ParcelType::writeObjects(c, obr);
 
-    label np = c.size();
+    const label np = c.size();
 
     if (np > 0)
     {
-        IOField<scalar>& mass0(cloud::createIOField<scalar>("mass0", np, obr));
+        auto& mass0 = cloud::createIOField<scalar>("mass0", np, obr);
 
         label i = 0;
         for (const ReactingParcel<ParcelType>& p : c)
@@ -267,10 +338,7 @@ void Foam::ReactingParcel<ParcelType>::writeObjects
         forAll(phaseTypes, j)
         {
             const word fieldName = "Y" + phaseTypes[j] + stateLabels[j];
-            IOField<scalar>& Y
-            (
-                cloud::createIOField<scalar>(fieldName, np, obr)
-            );
+            auto& Y = cloud::createIOField<scalar>(fieldName, np, obr);
 
             label i = 0;
             for (const ReactingParcel<ParcelType>& p : c)
