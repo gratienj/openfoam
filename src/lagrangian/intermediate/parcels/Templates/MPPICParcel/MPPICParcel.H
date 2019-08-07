@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2013-2017 OpenFOAM Foundation
@@ -182,13 +182,6 @@ public:
             " (UCorrectx UCorrecty UCorrectz)"
         );
 
-        //- String representation of property types
-        AddToPropertyTypes
-        (
-            ParcelType,
-            "{vector}"
-        );
-
 
     // Constructors
 
@@ -313,6 +306,10 @@ public:
             //- Write
             template<class CloudType>
             static void writeFields(const CloudType& c);
+
+            //- Read particle fields as objects from the obr registry
+            template<class CloudType>
+            static void readObjects(CloudType& c, const objectRegistry& obr);
 
             //- Write particle fields as objects into the obr registry
             template<class CloudType>

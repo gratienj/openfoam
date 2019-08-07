@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -70,6 +70,17 @@ void printTokens(Istream& is)
     }
 
     Info<< count << " tokens" << endl;
+}
+
+
+// Generate some dictionary-like content
+template<class OS>
+void outputDict(OS& os)
+{
+    os.beginBlock("testDict");
+    os.writeEntry("bool",   "false");
+    os.writeEntry("scalar", 3.14159);
+    os.endBlock();
 }
 
 
@@ -147,7 +158,7 @@ int main(int argc, char *argv[])
 
     // Create from other storage types
 
-    List<char> written;
+    DynamicList<char> written;
     Info<< nl;
     {
         Info<<"create std::move(List)" << endl;
@@ -157,6 +168,11 @@ int main(int argc, char *argv[])
         toString(Info, list) << endl;
 
         OListStream buf1(std::move(list));
+
+        Info<<"orig:";
+        toString(Info, list) << endl;
+        printInfo(buf1);
+
         for (label i = 0; i < 26; ++i)
         {
             buf1 << char('A' +i);
@@ -178,6 +194,31 @@ int main(int argc, char *argv[])
     }
     Info<<"'captured' content ";
     toString(Info, written);
+
+    Info<< nl
+        << "content size=" << written.size()
+        << " capacity=" << written.capacity() << nl;
+
+
+    Info<< nl << "Test dictionary" << nl;
+    {
+        OListStream os1;
+
+        outputDict(os1);
+
+        Info<< "Regular" << nl;
+        printInfo(os1);
+    }
+
+    {
+        OListStream os2;
+        os2.indentSize() = 0;
+
+        outputDict(os2);
+
+        Info<< "Compact" << nl;
+        printInfo(os2);
+    }
 
 
     Info<< "\nEnd\n" << endl;

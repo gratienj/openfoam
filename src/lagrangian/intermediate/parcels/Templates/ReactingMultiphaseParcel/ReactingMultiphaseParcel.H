@@ -275,13 +275,6 @@ public:
           + " nSolid(Y1..YN)"
         );
 
-        //- String representation of property types
-        AddToPropertyTypes
-        (
-            ParcelType,
-            " scalars scalars scalars"
-        );
-
 
     // Constructors
 
@@ -467,6 +460,24 @@ public:
             //- Read - no composition
             template<class CloudType>
             static void writeFields(const CloudType& c);
+
+            //- Read particle fields as objects from the obr registry
+            //  - no composition
+            template<class CloudType>
+            static void readObjects
+            (
+                CloudType& c,
+                const objectRegistry& obr
+            );
+
+            //- Read particle fields as objects from the obr registry
+            template<class CloudType, class CompositionType>
+            static void readObjects
+            (
+                CloudType& c,
+                const CompositionType& compModel,
+                const objectRegistry& obr
+            );
 
             //- Write particle fields as objects into the obr registry
             //  - no composition

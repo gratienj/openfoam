@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2011, 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2011-2011, 2016-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -46,10 +46,11 @@ void Foam::particle::readFields(TrackCloudType& c)
 
     IOobject procIO(c.fieldIOobject("origProcId", IOobject::MUST_READ));
 
-    bool haveFile = procIO.typeHeaderOk<IOField<label>>(true);
+    const bool haveFile = procIO.typeHeaderOk<IOField<label>>(true);
 
     IOField<label> origProcId(procIO, valid && haveFile);
     c.checkFieldIOobject(c, origProcId);
+
     IOField<label> origId
     (
         c.fieldIOobject("origId", IOobject::MUST_READ),
@@ -58,13 +59,12 @@ void Foam::particle::readFields(TrackCloudType& c)
     c.checkFieldIOobject(c, origId);
 
     label i = 0;
-    forAllIters(c, iter)
+    for (particle& p : c)
     {
-        particle& p = iter();
-
         p.origProc_ = origProcId[i];
         p.origId_ = origId[i];
-        i++;
+
+        ++i;
     }
 }
 
@@ -73,11 +73,18 @@ template<class TrackCloudType>
 void Foam::particle::writeFields(const TrackCloudType& c)
 {
     const label np = c.size();
+    const bool valid = np;
 
     if (writeLagrangianCoordinates)
     {
         IOPosition<TrackCloudType> ioP(c);
-        ioP.write(np > 0);
+        ioP.write(valid);
+    }
+    else if (!writeLagrangianPositions)
+    {
+        FatalErrorInFunction
+            << "Must select coordinates and/or positions" << nl
+            << exit(FatalError);
     }
 
     // Optionally write positions file in v1706 format and earlier
@@ -88,7 +95,7 @@ void Foam::particle::writeFields(const TrackCloudType& c)
             c,
             cloud::geometryType::POSITIONS
         );
-        ioP.write(np > 0);
+        ioP.write(valid);
     }
 
     IOField<label> origProc
@@ -103,15 +110,65 @@ void Foam::particle::writeFields(const TrackCloudType& c)
     );
 
     label i = 0;
-    forAllConstIters(c, iter)
+    for (const particle& p : c)
     {
-        origProc[i] = iter().origProc_;
-        origId[i] = iter().origId_;
+        origProc[i] = p.origProc_;
+        origId[i] = p.origId_;
+
         ++i;
     }
 
-    origProc.write(np > 0);
-    origId.write(np > 0);
+    origProc.write(valid);
+    origId.write(valid);
+}
+
+
+template<class CloudType>
+void Foam::particle::readObjects(CloudType& c, const objectRegistry& obr)
+{
+    typedef typename CloudType::parcelType parcelType;
+
+    const auto* positionPtr = cloud::findIOPosition(obr);
+
+    const label np = c.size();
+    const label newNp = (positionPtr ? positionPtr->size() : 0);
+
+    // Remove excess parcels
+    for (label i = newNp; i < np; ++i)
+    {
+        parcelType* p = c.last();
+
+        c.deleteParticle(*p);
+    }
+
+    if (newNp)
+    {
+        const auto& position = *positionPtr;
+
+        const auto& origProcId = cloud::lookupIOField<label>("origProc", obr);
+        const auto& origId = cloud::lookupIOField<label>("origId", obr);
+
+        // Create new parcels
+        for (label i = np; i < newNp; ++i)
+        {
+            c.addParticle(new parcelType(c.pMesh(), position[i], -1));
+        }
+
+        label i = 0;
+        for (particle& p : c)
+        {
+            p.origProc_ = origProcId[i];
+            p.origId_ = origId[i];
+
+            if (i < np)
+            {
+                // Use relocate for old particles, not new ones
+                p.relocate(position[i]);
+            }
+
+            ++i;
+        }
+    }
 }
 
 
@@ -120,16 +177,17 @@ void Foam::particle::writeObjects(const CloudType& c, objectRegistry& obr)
 {
     const label np = c.size();
 
-    IOField<label>& origProc(cloud::createIOField<label>("origProc", np, obr));
-    IOField<label>& origId(cloud::createIOField<label>("origId", np, obr));
-    IOField<point>& position(cloud::createIOField<point>("position", np, obr));
+    auto& origProc = cloud::createIOField<label>("origProc", np, obr);
+    auto& origId = cloud::createIOField<label>("origId", np, obr);
+    auto& position = cloud::createIOField<point>("position", np, obr);
 
     label i = 0;
-    forAllConstIters(c, iter)
+    for (const particle& p : c)
     {
-        origProc[i] = iter().origProc_;
-        origId[i] = iter().origId_;
-        position[i] = iter().position();
+        origProc[i] = p.origProc_;
+        origId[i] = p.origId_;
+        position[i] = p.position();
+
         ++i;
     }
 }

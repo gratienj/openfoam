@@ -58,31 +58,49 @@ Foam::molecule::molecule
     rf_(Zero),
     special_(0),
     id_(0),
-    siteForces_(0),
-    sitePositions_(0)
+    siteForces_(),
+    sitePositions_()
 {
     if (readFields)
     {
         if (is.format() == IOstream::ASCII)
         {
-            is  >> Q_;
-            is  >> v_;
-            is  >> a_;
-            is  >> pi_;
-            is  >> tau_;
-            is  >> specialPosition_;
-            potentialEnergy_ = readScalar(is);
-            is  >> rf_;
-            special_ = readLabel(is);
-            id_ = readLabel(is);
-            is  >> siteForces_;
-            is  >> sitePositions_;
+            is  >> Q_
+                >> v_
+                >> a_
+                >> pi_
+                >> tau_
+                >> specialPosition_
+                >> potentialEnergy_
+                >> rf_
+                >> special_
+                >> id_;
+        }
+        else if (!is.checkLabelSize<>() || !is.checkScalarSize<>())
+        {
+            // Non-native label or scalar size
+
+            is.beginRawRead();
+
+            readRawScalar(is, Q_.data(), tensor::nComponents);
+            readRawScalar(is, v_.data(), vector::nComponents);
+            readRawScalar(is, a_.data(), vector::nComponents);
+            readRawScalar(is, pi_.data(), vector::nComponents);
+            readRawScalar(is, tau_.data(), vector::nComponents);
+            readRawScalar(is, specialPosition_.data(), vector::nComponents);
+            readRawScalar(is, &potentialEnergy_);
+            readRawScalar(is, rf_.data(), tensor::nComponents);
+            readRawLabel(is, &special_);
+            readRawLabel(is, &id_);
+
+            is.endRawRead();
         }
         else
         {
             is.read(reinterpret_cast<char*>(&Q_), sizeofFields);
-            is  >> siteForces_ >> sitePositions_;
         }
+
+        is  >> siteForces_ >> sitePositions_;
     }
 
     is.check(FUNCTION_NAME);
@@ -91,7 +109,7 @@ Foam::molecule::molecule
 
 void Foam::molecule::readFields(Cloud<molecule>& mC)
 {
-    bool valid = mC.size();
+    const bool valid = mC.size();
 
     particle::readFields(mC);
 
@@ -148,7 +166,8 @@ void Foam::molecule::writeFields(const Cloud<molecule>& mC)
 {
     particle::writeFields(mC);
 
-    label np = mC.size();
+    const label np = mC.size();
+    const bool valid = np;
 
     IOField<tensor> Q(mC.fieldIOobject("Q", IOobject::NO_READ), np);
     IOField<vector> v(mC.fieldIOobject("v", IOobject::NO_READ), np);
@@ -216,8 +235,6 @@ void Foam::molecule::writeFields(const Cloud<molecule>& mC)
 
         ++i;
     }
-
-    const bool valid = np > 0;
 
     Q.write(valid);
     v.write(valid);

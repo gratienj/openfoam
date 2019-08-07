@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011, 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -53,11 +53,9 @@ Description
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward Declarations
 class particle;
-
 class polyPatch;
-
 class cyclicPolyPatch;
 class cyclicAMIPolyPatch;
 class cyclicACMIPolyPatch;
@@ -67,16 +65,8 @@ class symmetryPolyPatch;
 class wallPolyPatch;
 class wedgePolyPatch;
 
-// Forward declaration of friend functions and operators
-
-Ostream& operator<<
-(
-    Ostream&,
-    const particle&
-);
-
+Ostream& operator<<(Ostream&, const particle&);
 bool operator==(const particle&, const particle&);
-
 bool operator!=(const particle&, const particle&);
 
 /*---------------------------------------------------------------------------*\
@@ -352,12 +342,6 @@ public:
             "celli tetFacei tetPti facei stepFraction origProc origId"
         );
 
-        //- String representation of property types
-        DefinePropertyTypes
-        (
-            "{vector label label scalar label label label label}"
-        );
-
         //- Cumulative particle counter - used to provide unique ID
         static label particleCount_;
 
@@ -366,7 +350,7 @@ public:
         static bool writeLagrangianCoordinates;
 
         //- Write particle positions file (v1706 format and earlier)
-        //- Default is false
+        //- Default is true (disable in etc/controlDict)
         static bool writeLagrangianPositions;
 
 
@@ -382,16 +366,16 @@ public:
             const label tetPti
         );
 
-        //- Construct from a position and a cell, searching for the rest of the
-        //  required topology
+        //- Construct from a position and a cell.
+        //  Searches for the rest of the required topology.
         particle
         (
             const polyMesh& mesh,
             const vector& position,
-            const label celli
+            const label celli = -1
         );
 
-        //- Construct from components
+        //- Construct from position components
         particle
         (
             const polyMesh& mesh,
@@ -424,8 +408,7 @@ public:
             return autoPtr<particle>::New(*this);
         }
 
-        //- Factory class to read-construct particles used for
-        //  parallel transfer
+        //- Factory class to read-construct particles (for parallel transfer)
         class iNew
         {
             const polyMesh& mesh_;
@@ -676,9 +659,8 @@ public:
         //- Map after a topology change
         void autoMap(const vector& position, const mapPolyMesh& mapper);
 
-        //- Set the addressing based on the provided position and current cell
-        //  Used for e.g. redistributePar
-        void relocate(const point& position);
+        //- Set the addressing based on the provided position
+        void relocate(const point& position, const label celli = -1);
 
 
     // I-O
@@ -691,15 +673,20 @@ public:
         template<class TrackCloudType>
         static void writeFields(const TrackCloudType& c);
 
+        //- Read particle fields as objects from the obr registry
+        template<class CloudType>
+        static void readObjects(CloudType& c, const objectRegistry& obr);
+
         //- Write particle fields as objects into the obr registry
+        //  Always writes "position", not "coordinate"
         template<class CloudType>
         static void writeObjects(const CloudType& c, objectRegistry& obr);
 
         //- Write the particle barycentric coordinates and cell info
-        void writeCoordinates(Ostream&) const;
+        void writeCoordinates(Ostream& os) const;
 
-        //- Write the particle position and cell
-        virtual void writePosition(Ostream&) const;
+        //- Write the particle position and cell id
+        virtual void writePosition(Ostream& os) const;
 
 
     // Friend Operators

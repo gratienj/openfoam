@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -51,15 +51,9 @@ SeeAlso
 namespace Foam
 {
 
+// Forward declarations
 class injectedParticle;
-
-// Forward declaration of friend functions
-
-Ostream& operator<<
-(
-    Ostream&,
-    const injectedParticle&
-);
+Ostream& operator<<(Ostream&, const injectedParticle&);
 
 /*---------------------------------------------------------------------------*\
                          Class injectedParticle Declaration
@@ -69,12 +63,6 @@ class injectedParticle
 :
     public particle
 {
-public:
-
-    //- Size in bytes of the fields
-    static const std::size_t sizeofFields;
-
-
 protected:
 
     // Protected data
@@ -99,7 +87,10 @@ protected:
 
 public:
 
-    // Static data members
+    // Static Data Members
+
+        //- Size in bytes of the fields
+        static const std::size_t sizeofFields;
 
         //- Runtime type information
         TypeName("injectedParticle");
@@ -114,18 +105,18 @@ public:
           + " (Ux Uy Uz)";
         );
 
-        //- String representation of property types
-        AddToPropertyTypes
-        (
-            particle,
-            "{label"
-          + " scalar"
-          + " scalar"
-          + " vector}"
-        );
-
 
     // Constructors
+
+        //- Construct from a position and a cell.
+        //  Searches for the rest of the required topology.
+        //  Other properties are zero initialised.
+        inline injectedParticle
+        (
+            const polyMesh& mesh,
+            const vector& position,
+            const label celli = -1
+        );
 
         //- Construct from components
         inline injectedParticle
@@ -223,11 +214,18 @@ public:
 
         // I-O
 
-            //- Read
+            //- Read fields
             static void readFields(Cloud<injectedParticle>& c);
 
-            //- Write
+            //- Write fields
             static void writeFields(const Cloud<injectedParticle>& c);
+
+            //- Read particle fields as objects from the obr registry
+            static void readObjects
+            (
+                Cloud<injectedParticle>& c,
+                const objectRegistry& obr
+            );
 
             //- Write particle fields as objects into the obr registry
             static void writeObjects
