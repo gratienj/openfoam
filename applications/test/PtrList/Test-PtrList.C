@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2018-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -107,7 +105,7 @@ Ostream& printAddr
 
     for (label i=0; i < len; ++i)
     {
-        os << "addr=" << uintptr_t(list(i)) << nl;
+        os << "addr=" << name(list(i)) << nl;
     }
 
     // End delimiter
@@ -193,7 +191,7 @@ Ostream& print
         {
             const T* ptr = list(i);
 
-            os << "unused " << uintptr_t(ptr) << nl;
+            os << "unused " << name(ptr) << nl;
         }
     }
 

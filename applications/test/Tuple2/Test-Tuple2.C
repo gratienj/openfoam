@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -75,8 +73,8 @@ void printTuple2(const Tuple2<word, word>& t)
 {
     Info<< "tuple: " << t << nl;
 
-    Info<< "first  @: " << uintptr_t(t.first().data()) << nl;
-    Info<< "second @: " << uintptr_t(t.second().data()) << nl;
+    Info<< "first  @: " << name(t.first().data()) << nl;
+    Info<< "second @: " << name(t.second().data()) << nl;
 }
 
 
@@ -85,8 +83,8 @@ void printTuple2(const Pair<word>& t)
 {
     Info<< "tuple: " << t << nl;
 
-    Info<< "first  @: " << uintptr_t(t.first().data()) << nl;
-    Info<< "second @: " << uintptr_t(t.second().data()) << nl;
+    Info<< "first  @: " << name(t.first().data()) << nl;
+    Info<< "second @: " << name(t.second().data()) << nl;
 }
 
 
@@ -191,30 +189,30 @@ int main()
         word word1("hello");
         word word2("word");
 
-        Info<< "create with " << word1 << " @ " << uintptr_t(word1.data())
-            << " " << word2 << " @ " << uintptr_t(word2.data()) << nl;
+        Info<< "create with " << word1 << " @ " << name(word1.data())
+            << " " << word2 << " @ " << name(word2.data()) << nl;
 
         Tuple2<word, word> tup(std::move(word2), std::move(word1));
 
         printTuple2(tup);
 
-        Info<< "input is now " << word1 << " @ " << uintptr_t(word1.data())
-            << " " << word2 << " @ " << uintptr_t(word2.data()) << nl;
+        Info<< "input is now " << word1 << " @ " << name(word1.data())
+            << " " << word2 << " @ " << name(word2.data()) << nl;
     }
 
     {
         word word1("hello");
         word word2("word");
 
-        Info<< "create with " << word1 << " @ " << uintptr_t(word1.data())
-            << " " << word2 << " @ " << uintptr_t(word2.data()) << nl;
+        Info<< "create with " << word1 << " @ " << name(word1.data())
+            << " " << word2 << " @ " << name(word2.data()) << nl;
 
         Pair<word> tup(std::move(word2), std::move(word1));
 
         printTuple2(tup);
 
-        Info<< "input is now " << word1 << " @ " << uintptr_t(word1.data())
-            << " " << word2 << " @ " << uintptr_t(word2.data()) << nl;
+        Info<< "input is now " << word1 << " @ " << name(word1.data())
+            << " " << word2 << " @ " << name(word2.data()) << nl;
     }
 
     Info<< "\nEnd\n" << endl;
