@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011, 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -26,7 +26,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "trackedParticle.H"
-
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -99,6 +98,20 @@ Foam::trackedParticle::trackedParticle
         if (is.format() == IOstream::ASCII)
         {
             is >> start_ >> end_ >> level_ >> i_ >> j_ >> k_;
+        }
+        else if (!is.checkLabelSize<>() || !is.checkScalarSize<>())
+        {
+            // Non-native label or scalar size
+            is.beginRawRead();
+
+            readRawScalar(is, start_.data(), vector::nComponents);
+            readRawScalar(is, end_.data(), vector::nComponents);
+            readRawLabel(is, &level_);
+            readRawLabel(is, &i_);
+            readRawLabel(is, &j_);
+            readRawLabel(is, &k_);
+
+            is.endRawRead();
         }
         else
         {

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011, 2018-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -79,7 +79,7 @@ Foam::Istream& Foam::operator>>(Istream& is, List<T>& list)
 
         // Read list contents depending on data format
 
-        if (is.format() == IOstream::ASCII || !contiguous<T>())
+        if (is.format() == IOstream::ASCII || !is_contiguous<T>::value)
         {
             // Read beginning of contents
             const char delimiter = is.readBeginList("List");
@@ -126,7 +126,12 @@ Foam::Istream& Foam::operator>>(Istream& is, List<T>& list)
         {
             // Non-empty, binary, contiguous
 
-            is.read(reinterpret_cast<char*>(list.data()), len*sizeof(T));
+            Detail::readContiguous<T>
+            (
+                is,
+                reinterpret_cast<char*>(list.data()),
+                len*sizeof(T)
+            );
 
             is.fatalCheck
             (
