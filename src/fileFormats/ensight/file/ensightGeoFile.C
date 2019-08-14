@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2011, 2016-2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2008-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ensightGeoFile.H"
-#include "macros.H"
+#include "foamVersion.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -39,11 +37,7 @@ void Foam::ensightGeoFile::initialize()
     newline();
 
     // Description line 2
-    #if OPENFOAM
-    write("Written by OpenFOAM " STRING_QUOTE(OPENFOAM));
-    #else
-    write("Written by OpenFOAM");
-    #endif
+    write(string("Written by OpenFOAM " + std::to_string(foamVersion::api)));
     newline();
 
     write("node id assign");
