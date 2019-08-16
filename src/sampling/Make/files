@@ -33,6 +33,7 @@ surface/isoSurface/isoSurfaceCell.C
 surface/isoSurface/isoSurfaceTopo.C
 surface/thresholdCellFaces/thresholdCellFaces.C
 surface/triSurfaceMesh/discreteSurface.C
+surface/interface/interface.C
 
 sampledSurface/sampledNone/sampledNone.C
 sampledSurface/sampledPatch/sampledPatch.C
@@ -50,6 +51,7 @@ sampledSurface/sampledSurfaces/sampledSurfaces.C
 sampledSurface/sampledTriSurfaceMesh/sampledTriSurfaceMesh.C
 sampledSurface/sampledTriSurfaceMesh/sampledTriSurfaceMeshNormal.C
 sampledSurface/thresholdCellFaces/sampledThresholdCellFaces.C
+sampledSurface/sampledInterface/sampledInterface.C
 
 /* Proof-of-concept: */
 /* sampledSurface/triSurfaceMesh/sampledDiscreteSurface.C */
