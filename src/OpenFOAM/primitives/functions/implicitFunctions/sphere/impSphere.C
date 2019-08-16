@@ -44,12 +44,12 @@ namespace Foam
 
 Foam::implicitFunction::impSphere::impSphere
 (
-    const point& centre,
+    const point& origin,
     const scalar radius,
     const scalar scale
 )
 :
-    centre_(centre),
+    origin_(origin),
     radius_(radius),
     scale_(scale)
 {
@@ -62,7 +62,7 @@ Foam::implicitFunction::impSphere::impSphere
     const dictionary& dict
 )
 :
-    centre_(dict.lookup("centre")),
+    origin_(dict.lookup("origin")),
     radius_(readScalar(dict.lookup("radius"))),
     scale_(dict.lookupOrDefault<scalar>("scale",1))
 {

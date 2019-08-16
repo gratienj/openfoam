@@ -49,7 +49,7 @@ Foam::implicitFunction::impSin::impSin
     const scalar amplitude,
     const vector direction,
     const vector up,
-    const vector centre
+    const vector origin
 )
 :
     period_(period),
@@ -57,7 +57,7 @@ Foam::implicitFunction::impSin::impSin
     amplitude_(amplitude),
     up_(up),
     direction_(direction),
-    centre_(centre)
+    origin_(origin)
 {
 
 }
@@ -69,11 +69,11 @@ Foam::implicitFunction::impSin::impSin
 )
 :
     period_(readScalar(dict.lookup("period"))),
-    phase_(readScalar(dict.lookup("phase"))),
+    phase_(dict.lookupOrDefault<scalar>("phase",0.0)),
     amplitude_(readScalar(dict.lookup("amplitude"))),
     up_(dict.lookup("up")),
     direction_(dict.lookup("direction")),
-    centre_(dict.lookup("centre"))
+    origin_(dict.lookup("origin"))
 {
     direction_ /= mag(direction_);
     up_ /= mag(up_);

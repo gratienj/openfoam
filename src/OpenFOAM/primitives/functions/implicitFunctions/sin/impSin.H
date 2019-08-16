@@ -58,7 +58,7 @@ private:
 
     // Private Member Data
 
-        //- Centre point
+        //- origin point
         const scalar period_;
 
         //- Radius
@@ -70,7 +70,7 @@ private:
 
         vector direction_;
 
-        vector centre_;
+        vector origin_;
 
     // Private Member Functions
 
@@ -97,7 +97,7 @@ public:
             const scalar amplitude,
             vector direction,
             vector up,
-            vector centre
+            vector origin
         );
 
         //- Construct from dictionary (used by implicitFunctions)
@@ -112,8 +112,8 @@ public:
     virtual scalar value(const vector p) 
     {
 
-        scalar x = (p - centre_) & direction_;
-        scalar z = (p - centre_) & up_;
+        scalar x = (p - origin_) & direction_;
+        scalar z = (p - origin_) & up_;
 
         return z - amplitude_*Foam::sin(2*constant::mathematical::pi*x/period_ + phase_);
     }

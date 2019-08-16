@@ -57,8 +57,8 @@ private:
 
     // Private Member Data
 
-        //- Centre point
-        const point centre_;
+        //- origin point
+        const point origin_;
 
         //- Radius
         const scalar radius_;
@@ -98,17 +98,17 @@ public:
 
     virtual scalar value(const vector p) 
     {
-          return (-mag(p-centre_)+radius_)*scale_;
+          return (-mag(p-origin_)+radius_)*scale_;
     }
 
     virtual vector grad(const vector p) 
     {
-        return (centre_-p)*scale_;
+        return (origin_-p)*scale_;
     }
 
     virtual scalar distanceToSurfaces(const vector p) 
     {
-        return mag(mag(p-centre_)-radius_)*scale_;
+        return mag(mag(p-origin_)-radius_)*scale_;
     }
 
 

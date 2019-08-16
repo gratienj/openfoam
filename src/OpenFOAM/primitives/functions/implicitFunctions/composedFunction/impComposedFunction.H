@@ -37,7 +37,7 @@ Usage
         plane
         {
             function plane;
-            centre (0 1. 0);
+            origin (0 1. 0);
             normal (0 1 0);
             
         }
@@ -46,7 +46,7 @@ Usage
         {
             function sphere;
             radius 0.4;
-            centre (0.5 1.5 0.5);
+            origin (0.5 1.5 0.5);
             scale 1;
         }
 
@@ -54,7 +54,7 @@ Usage
         {
             function sphere;
             radius 0.4;
-            centre (0.5 0.5 0.5);
+            origin (0.5 0.5 0.5);
             scale -1;
         }
     }
@@ -144,7 +144,7 @@ public:
         // //- Construct from components
         // impComposedFunction
         // (
-        //     const vector centre,
+        //     const vector origin,
         //     const vector normal,
         //     const vector tangent,
         //     const scalar k1,

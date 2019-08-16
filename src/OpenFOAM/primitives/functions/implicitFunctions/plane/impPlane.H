@@ -61,7 +61,7 @@ private:
 
         //- ax^2 + bx*y + cy^2
     // reference point of the impPlane
-        vector centre_;
+        vector origin_;
     // normal vector of the impPlane
         vector normal_;
 
@@ -86,7 +86,7 @@ public:
     // Constructors
 
         //- Construct from components
-        impPlane(const vector centre,const vector normal);
+        impPlane(const vector origin,const vector normal);
 
         //- Construct from dictionary (used by implicitFunctions)
         impPlane
@@ -99,7 +99,7 @@ public:
 
     virtual scalar value(const vector p) 
     {
-        return normal_ & (centre_ - p);
+        return normal_ & (origin_ - p);
     }
 
     virtual vector grad(const vector p) 
@@ -111,7 +111,7 @@ public:
     virtual scalar distanceToSurfaces(const vector p) 
     {
         // normal_ has the length of one
-        return mag((p - centre_) & normal_);
+        return mag((p - origin_) & normal_);
     }
 
 

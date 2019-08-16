@@ -59,11 +59,11 @@ private:
 
     // Private Member Data
 
-        //- Centre point
+        //- origin point
         vector semiAxis_;
 
-        //- Centre point
-        vector centre_;
+        //- origin point
+        vector origin_;
 
 
 
@@ -98,7 +98,7 @@ public:
 
     virtual scalar value(const vector p) 
     {
-          return -sqrt(sqr((p.x()-centre_.x())/semiAxis_.x())+sqr((p.y()-centre_.y())/semiAxis_.y())+sqr((p.z()-centre_.z())/semiAxis_.z())) + 1;
+          return -sqrt(sqr((p.x()-origin_.x())/semiAxis_.x())+sqr((p.y()-origin_.y())/semiAxis_.y())+sqr((p.z()-origin_.z())/semiAxis_.z())) + 1;
     }
 
     virtual vector grad(const vector p) 
@@ -106,9 +106,9 @@ public:
         // normal_ has the length of one
         return vector
         (
-            2*(p.x()-centre_.x())/sqr(semiAxis_.x()),
-            2*(p.y()-centre_.y())/sqr(semiAxis_.y()),
-            2*(p.z()-centre_.z())/sqr(semiAxis_.z())
+            2*(p.x()-origin_.x())/sqr(semiAxis_.x()),
+            2*(p.y()-origin_.y())/sqr(semiAxis_.y()),
+            2*(p.z()-origin_.z())/sqr(semiAxis_.z())
         );
     }
 

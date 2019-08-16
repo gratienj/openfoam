@@ -1,14 +1,9 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-                isoAdvector | Copyright (C) 2016-2017 DHI
+            Copyright (c) 2017-2019, German Aerospace Center (DLR)
 -------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of the VoFLibrary source code library, which is an 
+	unofficial extension to OpenFOAM.
 
     OpenFOAM is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by
@@ -24,94 +19,196 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    setAlphaField
+    initAlphaField
 
 Description
-    Uses isoCutCell to create a volume fraction field from either a cylinder,
+    Uses cellCellIso to create a volume fraction field from either a cylinder, 
     a sphere or a plane.
 
-    Original code supplied by Johan Roenby, DHI (2016)
+Author
+    Henning Scheufler, DLR, all rights reserved.
+    Johan Roenby, DHI, all rights reserved.
+
 
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
-#include "cutFaceIso.H"
-#include "cutCellIso.H"
-#include "Enum.H"
-#include "mathematicalConstants.H"
+// #include "searchableCylinder.H"
+// #include "searchableSurface.H"
+// #include "mathematicalConstants.H"
+// #include "SortableList.H"
 
-using namespace Foam::constant;
+#include "triSurface.H"
+#include "triSurfaceTools.H"
+
+//#include "cutFace.H"
+//#include "cutCell.H"
+
+#include "implicitFunctions.H"
+#include "cutCellIso.H"
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-class shapeSelector
+void isoFacesToFile
+(
+    const DynamicList< List<point> >& faces,
+    const word filNam,
+    const word filDir
+)
 {
-    public:
+    //Writing isofaces to vtk file for inspection in paraview
 
-        enum class shapeType
+    mkDir(filDir);
+    autoPtr<OFstream> vtkFilePtr;
+    if (Pstream::parRun())
+    {
+        // Collect points from all the processors
+        List<DynamicList<List<point>>> allProcFaces(Pstream::nProcs());
+        allProcFaces[Pstream::myProcNo()] = faces;
+        Pstream::gatherList(allProcFaces);
+
+        if (Pstream::master())
         {
-            PLANE,
-            SPHERE,
-            CYLINDER,
-            SIN
-        };
+            Info << "Writing file: " << (filDir + "/" + filNam + ".vtk") << endl;
+            vtkFilePtr.reset(new OFstream(filDir + "/" + filNam + ".vtk"));
+            vtkFilePtr() << "# vtk DataFile Version 2.0" << endl;
+            vtkFilePtr() << filNam << endl;
+            vtkFilePtr() << "ASCII" << endl;
+            vtkFilePtr() << "DATASET POLYDATA" << endl;
+            //label nPoints(0);
 
-    static const Foam::Enum<shapeType> shapeTypeNames;
-};
+            face f;
+            label nPoints(0);
+            label fSize = 0;
+            forAll(allProcFaces, proci)
+            {
+                const DynamicList<List<point>>& procFaces = allProcFaces[proci];
 
 
-const Foam::Enum
-<
-    shapeSelector::shapeType
->
-shapeSelector::shapeTypeNames
-({
-    { shapeSelector::shapeType::PLANE, "plane" },
-    { shapeSelector::shapeType::SPHERE, "sphere" },
-    { shapeSelector::shapeType::CYLINDER, "cylinder" },
-    { shapeSelector::shapeType::SIN, "sin" },
-});
+                forAll(procFaces,fi)
+                {
+                    nPoints += procFaces[fi].size();
+                    fSize++ ;
+                }
+
+            }
+
+            vtkFilePtr() << "POINTS " << nPoints << " float" << endl;
+
+            forAll(allProcFaces, proci)
+            {
+                const DynamicList<List<point>>& procFaces = allProcFaces[proci];
+
+                forAll(procFaces,fi)
+                {
+                    List<point> pf = procFaces[fi];
+                    forAll(pf,pi)
+                    {
+                        point p = pf[pi];
+                        vtkFilePtr() << p[0] << " " << p[1] << " " << p[2] << endl;
+                    }
+                }
+
+            }
+
+            vtkFilePtr() << "POLYGONS " << fSize << " " << nPoints + fSize << endl;
+
+            label np = 0;
+
+            forAll(allProcFaces, proci)
+            {
+                const DynamicList<List<point>>& procFaces = allProcFaces[proci];
+
+
+                forAll(procFaces,fi)
+                {
+                    nPoints = procFaces[fi].size();
+                    vtkFilePtr() << nPoints;
+                    for (label pi = np; pi < np + nPoints; pi++ )
+                    {
+                        vtkFilePtr() << " " << pi;
+                    }
+                    vtkFilePtr() << "" << endl;
+                    np += nPoints;
+                }
+
+            }
+        }
+    }
+    else
+    {
+        Info << "Writing file: " << (filDir + "/" + filNam + ".vtk") << endl;
+        vtkFilePtr.reset(new OFstream(filDir + "/" + filNam + ".vtk"));
+        vtkFilePtr() << "# vtk DataFile Version 2.0" << endl;
+        vtkFilePtr() << filNam << endl;
+        vtkFilePtr() << "ASCII" << endl;
+        vtkFilePtr() << "DATASET POLYDATA" << endl;
+        label nPoints(0);
+        forAll(faces,fi)
+        {
+            nPoints += faces[fi].size();
+        }
+
+        vtkFilePtr() << "POINTS " << nPoints << " float" << endl;
+        forAll(faces,fi)
+        {
+            List<point> pf = faces[fi];
+            forAll(pf,pi)
+            {
+                point p = pf[pi];
+                vtkFilePtr() << p[0] << " " << p[1] << " " << p[2] << endl;
+            }
+        }
+        vtkFilePtr() << "POLYGONS " << faces.size() << " " << nPoints + faces.size() << endl;
+
+        label np = 0;
+        forAll(faces,fi)
+        {
+            nPoints = faces[fi].size();
+            vtkFilePtr() << nPoints;
+            for (label pi = np; pi < np + nPoints; pi++ )
+            {
+                vtkFilePtr() << " " << pi;
+            }
+            vtkFilePtr() << "" << endl;
+            np += nPoints;
+        }
+    }
+}
 
 
 int main(int argc, char *argv[])
 {
-    argList::addNote
-    (
-        "Uses isoCutCell to create a volume fraction field from a"
-        " cylinder, sphere or a plane."
-    );
-
+    #include "addRegionOption.H"
     #include "setRootCase.H"
     #include "createTime.H"
-    #include "createNamedMesh.H"
+//    #include "createMesh.H"
+    #include "createNamedMesh.H" // works with regions
 
-    Info<< "Reading setAlphaFieldDict\n" << endl;
 
-    IOdictionary dict
-    (
-        IOobject
-        (
+    IOdictionary setAlphaFieldDict
+	(
+		IOobject
+		(
             "setAlphaFieldDict",
-            runTime.system(),
-            mesh,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE
-        )
-    );
+			runTime.system(),
+			mesh,
+			IOobject::MUST_READ,
+			IOobject::NO_WRITE
+		)
+	);
 
-    const shapeSelector::shapeType surfType
-    (
-        shapeSelector::shapeTypeNames.get("type", dict)
-    );
-    const vector origin(dict.getCompat<vector>("origin", {{"centre", 1806}}));
-    const word fieldName(dict.get<word>("field"));
+    Info<< "Reading field alpha1\n" << endl;
+    const word nameField (setAlphaFieldDict.lookup("field"));
+    const bool invert = setAlphaFieldDict.lookupOrDefault<bool>("invert",false);
+    const bool writeVTK = setAlphaFieldDict.lookupOrDefault<bool>("writeVTK",true);;
 
-    Info<< "Reading field " << fieldName << "\n" << endl;
     volScalarField alpha1
     (
         IOobject
         (
-            fieldName,
+            nameField,
             runTime.timeName(),
             mesh,
             IOobject::MUST_READ,
@@ -120,84 +217,81 @@ int main(int argc, char *argv[])
         mesh
     );
 
-    scalar f0 = 0;
-    scalarField f(mesh.points().size());
+    Info<< "Reading setAlphaFieldDict" << endl;
 
-    Info<< "Processing type '" << shapeSelector::shapeTypeNames[surfType]
-        << "'" << endl;
+    Foam::autoPtr<Foam::implicitFunctions> func = implicitFunctions::New
+    (
+        setAlphaFieldDict.get<word>("type"),
+        setAlphaFieldDict
+    );
 
-    switch (surfType)
+    scalarField f(mesh.nPoints(),0.0);
+
+    forAll(f,pi)
     {
-        case shapeSelector::shapeType::PLANE:
+        f[pi] = func->value(mesh.points()[pi]);
+    };
+
+    cutCellIso cutCell(mesh,f);
+
+    DynamicList< List<point> > facePts;
+
+    DynamicList <triSurface> surface;
+
+    surfaceScalarField cellToCellDist(mag(mesh.delta()));
+
+
+    forAll(alpha1,cellI)
+    {
+        label cellStatus = cutCell.calcSubCell(cellI,0.0);
+
+        if(cellStatus == -1)
         {
-            const vector direction(dict.get<vector>("direction"));
-
-            f = -(mesh.points() - origin) & (direction/mag(direction));
-            f0 = 0;
-            break;
+            alpha1[cellI] = 1;
         }
-        case shapeSelector::shapeType::SPHERE:
+        else if(cellStatus == 1)
         {
-            const scalar radius(dict.get<scalar>("radius"));
-
-            f = -mag(mesh.points() - origin);
-            f0 = -radius;
-            break;
+            alpha1[cellI] = 0;
         }
-        case shapeSelector::shapeType::CYLINDER:
+        else if(cellStatus == 0)
         {
-            const scalar radius(dict.get<scalar>("radius"));
-            const vector direction(dict.get<vector>("direction"));
-
-            f = -sqrt
-            (
-                sqr(mag(mesh.points() - origin))
-              - sqr(mag((mesh.points() - origin) & direction))
-            );
-            f0 = -radius;
-            break;
+            if(mag(cutCell.faceArea()) != 0)
+            {
+                alpha1[cellI]= max(min(cutCell.VolumeOfFluid(),1),0);
+                if (writeVTK  && (mag(cutCell.faceArea()) >= 1e-14))
+                {
+                    facePts.append(cutCell.facePoints());
+                }
+            }
         }
-        case shapeSelector::shapeType::SIN:
-        {
-            const scalar period(dict.get<scalar>("period"));
-            const scalar amplitude(dict.get<scalar>("amplitude"));
-            const vector up(dict.get<vector>("up"));
-            const vector direction(dict.get<vector>("direction"));
 
-            const scalarField xx
-            (
-                (mesh.points() - origin) & direction/mag(direction)
-            );
-            const scalarField zz((mesh.points() - origin) & up/mag(up));
-
-            f = amplitude*Foam::sin(2*mathematical::pi*xx/period) - zz;
-            f0 = 0;
-            break;
-        }
     }
 
-
-    // Define function on mesh points and isovalue
-
-    // Calculating alpha1 volScalarField from f = f0 isosurface
-    cutCellIso icc(mesh, f);
-    //icc.VolumeOfFluid(alpha1, f0);
-
-    if (dict.lookupOrDefault("invertAlpha", false))
+    if (writeVTK)
     {
-        alpha1 = 1 - alpha1;
+        std::ostringstream os ;
+        os << "AlphaInit" ;
+        isoFacesToFile(facePts, os.str() , "AlphaInit");
     }
 
-    // Writing volScalarField alpha1
-    ISstream::defaultPrecision(18);
-    alpha1.write();
+    // alpha1.correctBoundaryConditions();
 
-    Info<< nl << "Phase-1 volume fraction = "
-        << alpha1.weightedAverage(mesh.Vsc()).value()
-        << "  Min(" << alpha1.name() << ") = " << min(alpha1).value()
-        << "  Max(" << alpha1.name() << ") - 1 = " << max(alpha1).value() - 1
-        << nl << endl;
+	
+	ISstream::defaultPrecision(18);
 
+    if(invert)
+    {
+        alpha1 = scalar(1) - alpha1;
+        // alpha1.correctBoundaryConditions();
+    }
+    
+    alpha1.write(); //Writing volScalarField alpha1
+
+    const scalarField& alpha = alpha1.internalField();
+	Info << "sum(alpha*V) = " << gSum(mesh.V()*alpha)
+	 << ", 1-max(alpha1) = " << 1 - gMax(alpha)
+	 << "\t min(alpha1) = " << gMin(alpha) << endl;
+	
     Info<< "End\n" << endl;
 
     return 0;

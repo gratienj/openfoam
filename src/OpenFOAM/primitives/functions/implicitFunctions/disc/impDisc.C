@@ -44,13 +44,13 @@ namespace Foam
 
 Foam::implicitFunction::impDisc::impDisc
 (
-    const point& centre,
+    const point& origin,
     const scalar radius,
     const scalar scale,
     const vector direction
 )
 :
-    centre_(centre),
+    origin_(origin),
     radius_(radius),
     scale_(scale),
     direction_(direction)
@@ -65,7 +65,7 @@ Foam::implicitFunction::impDisc::impDisc
     const dictionary& dict
 )
 :
-    centre_(dict.lookup("centre")),
+    origin_(dict.lookup("origin")),
     radius_(readScalar(dict.lookup("radius"))),
     scale_(dict.lookupOrDefault<scalar>("scale",1)),
     direction_(dict.lookup("direction"))

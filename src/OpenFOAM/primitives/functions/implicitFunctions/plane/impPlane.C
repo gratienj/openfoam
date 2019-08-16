@@ -44,11 +44,11 @@ namespace Foam
 
 Foam::implicitFunction::impPlane::impPlane
 (
-    const vector centre,
+    const vector origin,
     const vector normal
 )
 :
-    centre_(centre),
+    origin_(origin),
     normal_(normal)
 {
 
@@ -60,7 +60,7 @@ Foam::implicitFunction::impPlane::impPlane
     const dictionary& dict
 )
 :
-    centre_(dict.lookup("centre")),
+    origin_(dict.lookup("origin")),
     normal_(dict.lookup("normal"))
 {
     normal_ /= mag(normal_);
