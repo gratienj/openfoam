@@ -1,15 +1,15 @@
 # Intergration VoFLib
 
 * implicitFunction -> src/OpenFoam/primitives/functions
-* VoFLibCore -> src/finiteVolume/geometricVoF
+* VoFLibCore -> src/transportModels/geometricVoF
 * interface -> src/sampling/surfaces
-* markRegion -> functionObjects
+* markRegion -> src/transportModels/geometricVoF
 * compressibleInterIsoFoam -> apps/solvers/multiphase/
 * mod(interIsoFoam)
 * mod(setAlphaField) -> should be compatible with the old version without changes of the dictionaries
-* exchangeField -> src/finiteVolume/extendedStencil
-* leastSquare -> src/finiteVolume/finiteVolumen
-* RDF -> 
+* exchangeField -> src/finiteVolume/fvMesh
+* leastSquare -> src/finiteVolume/fvMatrices/solvers
+* RDF -> src/transportModels/geometricVoF
 
 
 ## TODO
