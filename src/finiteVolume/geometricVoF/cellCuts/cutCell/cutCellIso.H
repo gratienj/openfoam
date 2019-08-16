@@ -1,16 +1,9 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
-     \\/     M anipulation  |
+    Modified work | Copyright (c) 2017-2019, German Aerospace Center (DLR)
 -------------------------------------------------------------------------------
-                isoAdvector | Copyright (C) 2016-2017 DHI
-              Modified work | Copyright (C) 2018 Johan Roenby
--------------------------------------------------------------------------------
-
 License
-    This file is part of OpenFOAM.
+    This file is part of the VoFLibrary source code library, which is an 
+	unofficial extension to OpenFOAM.
 
     OpenFOAM is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by
@@ -26,34 +19,47 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::isoCutCell
+    Foam::cutCellIso
 
 Description
     Class for cutting a cell, celli, of an fvMesh, mesh_, at its intersection
-    with an isosurface defined by the mesh point values f_ and the isovalue,
+    with an isosurface defined by the mesh point values f_ and the cutValue,
     isoValue_.
 
     Reference:
-        \verbatim
-            Roenby, J., Bredmose, H. and Jasak, H. (2016).
-            A computational method for sharp interface advection
-            Royal Society Open Science, 3
-            doi 10.1098/rsos.160405
-        \endverbatim
+    \verbatim
+        Roenby, J., Bredmose, H. and Jasak, H. (2016).
+        A computational method for sharp interface advection
+        Royal Society Open Science, 3
+        doi 10.1098/rsos.160405
 
-    Original code supplied by Johan Roenby, DHI (2016)
+        Henning Scheufler, Johan Roenby,
+        Accurate and efficient surface reconstruction from volume
+        fraction data on general meshes,
+        Journal of Computational Physics, 2019,
+        doi 10.1016/j.jcp.2019.01.009
+
+    \endverbatim
+    
+Author
+    Johan Roenby, DHI, all rights reserved.
+    Modifications: Henning Scheufler, DLR, all rights reserved.
 
 SourceFiles
-    isoCutCell.C
+    cutCellIso.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef isoCutCell_H
-#define isoCutCell_H
+#ifndef cutCellIso_H
+#define cutCellIso_H
 
+#include "OFstream.H"
+#include "cutCell.H"
+#include "cutFaceIso.H"
 #include "fvMesh.H"
-#include "volFieldsFwd.H"
-#include "isoCutFace.H"
+#include "scalarMatrices.H"
+#include "surfaceFields.H"
+#include "volFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -61,10 +67,12 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                         Class isoCutCell Declaration
+                        Class cutCellIso Declaration
 \*---------------------------------------------------------------------------*/
 
-class isoCutCell
+class cutCellIso
+:
+    public cutCell
 {
     // Private data
 
@@ -79,35 +87,29 @@ class isoCutCell
         scalarField& f_;
 
         //- Isovalue used to cut cell
-        scalar isoValue_;
+        scalar cutValue_;
 
-        //- An isoCutFace object to get access to its face cutting functionality
-        isoCutFace isoCutFace_;
+        //- An cutFaceIso object to get access to its face cutting functionality
+        cutFaceIso cutFace_;
 
-        //- List of face labels of isoCutFaces
-        DynamicList<label> isoCutFaces_;
-
-        //- List of point lists each defining an isoCutFace
-        DynamicList<DynamicList<point>> isoCutFacePoints_;
-
-        //- List of face centres for isoCutFaces
-        DynamicList<point> isoCutFaceCentres_;
+        //- List of face centres for CutFaces
+        DynamicList<point> cutFaceCentres_;
 
         //- List of face area vectors for isoCutFaces
-        DynamicList<vector> isoCutFaceAreas_;
+        DynamicList<vector> cutFaceAreas_;
 
         //- Storage for subFace edges belonging to isoFace
         DynamicList<DynamicList<point>> isoFaceEdges_;
 
         //- Points constituting the cell-isosurface intersection (isoface)
-        DynamicList<point> isoFacePoints_;
+        DynamicList<point> facePoints_;
 
-        //- Face centre of the isoface
-        point isoFaceCentre_;
+        //- Face centre of the cutFace
+        point faceCentre_;
 
         //- Face normal of the isoface by convention pointing from high to low
         //  values (i.e. opposite of the gradient vector).
-        vector isoFaceArea_;
+        vector faceArea_;
 
         //- Cell centre of the subcell of celli which is "fully submerged", i.e.
         //  where the function value is higher than the isoValue_
@@ -116,11 +118,8 @@ class isoCutCell
         //- Volume of fully submerged subcell
         scalar subCellVolume_;
 
-        //- Volume of Fluid for celli (subCellVolume_/mesh_.V()[celli])
+        //- Volume of Fluid for cellI (subCellVolume_/mesh_.V()[cellI])
         scalar VOF_;
-
-        //- List of fully submerged faces
-        DynamicList<label> fullySubFaces_;
 
         //- A cell status label taking one of the values:
         //
@@ -129,66 +128,48 @@ class isoCutCell
         //  - +1: cell is fully above the isosurface
         label cellStatus_;
 
-        //- Boolean telling if subcell centre and volume have been calculated
-        bool subCellCentreAndVolumeCalculated_;
-
-        //- Boolean telling if isoface centre and area have been calculated
-        bool isoFaceCentreAndAreaCalculated_;
-
-
     // Private Member Functions
 
-            void calcSubCellCentreAndVolume();
-
-            void calcIsoFaceCentreAndArea();
-
-            void calcIsoFacePointsFromEdges();
-
-
-public:
-
+  public:
     // Constructors
 
         //- Construct from fvMesh and a scalarField
         //  Length of scalarField should equal number of mesh points
-        isoCutCell(const fvMesh&, scalarField&);
+        cutCellIso(const fvMesh&, scalarField& f);
 
-    // Static data
+        // Member functions
 
-        static int debug;
+        //- sets internal values and returns face status
+        label calcSubCell(const label& cellI, const scalar cutValue);
 
+        //- returns subCellCentre
+        point subCellCentre();
 
-    // Member functions
-
-        label calcSubCell(const label celli, const scalar isoValue);
-
-        const point& subCellCentre();
-
+        //- returns subCellVolume
         scalar subCellVolume();
 
-        const DynamicList<point>& isoFacePoints();
+        //- returns the points of the cutting isoface
+        DynamicList<point> facePoints();
 
-        const point& isoFaceCentre();
+        //- returns the centre of the cutting isoface
+        point faceCentre();
 
-        const vector& isoFaceArea();
+        //- returns the area normal vector of the cutting isoface
+        vector faceArea();
 
-        scalar volumeOfFluid();
+        //- returns cellStatus
+        label cellStatus();
 
-        scalar isoValue() const;
+        //- returns volume of fluid value
+        scalar VolumeOfFluid();
 
+        //- returns cutValue
+        scalar cutValue() const;
+
+        //- resets internal values
         void clearStorage();
 
-        label vofCutCell
-        (
-            const label celli,
-            const scalar alpha1,
-            const scalar tol,
-            const label maxIter
-        );
-
-        void volumeOfFluid(volScalarField& alpha1, const scalar f0);
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

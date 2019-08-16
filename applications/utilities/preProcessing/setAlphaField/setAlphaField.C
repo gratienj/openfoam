@@ -35,8 +35,8 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
-#include "isoCutFace.H"
-#include "isoCutCell.H"
+#include "cutFaceIso.H"
+#include "cutCellIso.H"
 #include "Enum.H"
 #include "mathematicalConstants.H"
 
@@ -180,8 +180,8 @@ int main(int argc, char *argv[])
     // Define function on mesh points and isovalue
 
     // Calculating alpha1 volScalarField from f = f0 isosurface
-    isoCutCell icc(mesh, f);
-    icc.volumeOfFluid(alpha1, f0);
+    cutCellIso icc(mesh, f);
+    //icc.VolumeOfFluid(alpha1, f0);
 
     if (dict.lookupOrDefault("invertAlpha", false))
     {

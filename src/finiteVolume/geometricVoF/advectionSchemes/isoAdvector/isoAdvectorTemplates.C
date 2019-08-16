@@ -1,15 +1,9 @@
 /*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
-     \\/     M anipulation  |
+    Modified work | Copyright (c) 2017-2019, German Aerospace Center (DLR)
 -------------------------------------------------------------------------------
-                isoAdvector | Copyright (C) 2016-2017 DHI
--------------------------------------------------------------------------------
-
 License
-    This file is part of OpenFOAM.
+    This file is part of the VoFLibrary source code library, which is an 
+	unofficial extension to OpenFOAM.
 
     OpenFOAM is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by
@@ -26,12 +20,12 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "isoAdvection.H"
+#include "isoAdvector.H"
 
 // ************************************************************************* //
 
 template<typename Type>
-Type Foam::isoAdvection::faceValue
+Type Foam::advection::isoAdvector::faceValue
 (
     const GeometricField<Type, fvsPatchField, surfaceMesh>& f,
     const label facei
@@ -46,7 +40,7 @@ Type Foam::isoAdvection::faceValue
         const polyBoundaryMesh& pbm = mesh_.boundaryMesh();
 
         // Boundary face. Find out which face of which patch
-        const label patchi = pbm.patchID()[facei - mesh_.nInternalFaces()];
+        const label patchi = pbm.whichPatch(facei);
 
         if (patchi < 0 || patchi >= pbm.size())
         {
@@ -69,7 +63,7 @@ Type Foam::isoAdvection::faceValue
 
 
 template<typename Type>
-void Foam::isoAdvection::setFaceValue
+void Foam::advection::isoAdvector::faceValue
 (
     GeometricField<Type, fvsPatchField, surfaceMesh>& f,
     const label facei,
@@ -85,7 +79,7 @@ void Foam::isoAdvection::setFaceValue
         const polyBoundaryMesh& pbm = mesh_.boundaryMesh();
 
         // Boundary face. Find out which face of which patch
-        const label patchi = pbm.patchID()[facei - mesh_.nInternalFaces()];
+        const label patchi = pbm.whichPatch(facei);
 
         if (patchi < 0 || patchi >= pbm.size())
         {

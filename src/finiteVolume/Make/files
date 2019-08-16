@@ -255,10 +255,29 @@ fields/surfaceFields/surfaceFields.C
 fvMatrices/fvMatrices.C
 fvMatrices/fvScalarMatrix/fvScalarMatrix.C
 fvMatrices/solvers/MULES/MULES.C
-fvMatrices/solvers/isoAdvection/isoCutCell/isoCutCell.C
-fvMatrices/solvers/isoAdvection/isoCutFace/isoCutFace.C
-fvMatrices/solvers/isoAdvection/isoAdvection/isoAdvection.C
 fvMatrices/solvers/GAMGSymSolver/GAMGAgglomerations/faceAreaPairGAMGAgglomeration/faceAreaPairGAMGAgglomeration.C
+
+/*VoFLib*/
+geometricVoF/cellCuts/cutCell/cutCell.C
+geometricVoF/cellCuts/cutCell/cutCellPLIC.C
+geometricVoF/cellCuts/cutCell/cutCellIso.C
+geometricVoF/cellCuts/cutFace/cutFace.C
+geometricVoF/cellCuts/cutFace/cutFacePLIC.C
+geometricVoF/cellCuts/cutFace/cutFaceAdvect.C
+geometricVoF/cellCuts/cutFace/cutFaceIso.C
+geometricVoF/surfaceIterators/surfaceIteratorPLIC.C
+geometricVoF/surfaceIterators/surfaceIteratorIso.C
+
+
+geometricVoF/reconstructionSchemes/newReconstructionSchemes.C
+geometricVoF/reconstructionSchemes/reconstructionSchemes.C
+geometricVoF/reconstructionSchemes/isoSchemes/isoAlpha/isoAlpha.C
+
+geometricVoF/advectionSchemes/newAdvectionSchemes.C
+geometricVoF/advectionSchemes/advectionSchemes.C
+
+geometricVoF/advectionSchemes/isoAdvector/isoAdvector.C
+
 
 interpolation = interpolation/interpolation
 $(interpolation)/interpolation/interpolations.C
