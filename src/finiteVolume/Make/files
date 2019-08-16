@@ -95,6 +95,11 @@ $(faceToCell)/extendedFaceToCellStencil.C
 $(faceToCell)/extendedCentredFaceToCellStencil.C
 $(faceToCell)/MeshObjects/centredCFCFaceToCellStencilObject.C
 
+fvMesh/zoneDistribute/zoneStencils/zoneCellStencils.C
+fvMesh/zoneDistribute/zoneStencils/zoneCPCStencil.C
+fvMesh/zoneDistribute/zoneDistribute.C
+fvMesh/zoneDistribute/zoneDistributePoints.C
+
 functionObjects/fvMeshFunctionObject/fvMeshFunctionObject.C
 functionObjects/volRegion/volRegion.C
 functionObjects/fieldSelections/fieldSelection/fieldSelection.C
