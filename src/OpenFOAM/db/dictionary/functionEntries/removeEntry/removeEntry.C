@@ -2,10 +2,8 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2019 OpenCFD Ltd.
      \\/     M anipulation  |
--------------------------------------------------------------------------------
-                            | Copyright (C) 2011 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,8 +42,8 @@ namespace functionEntries
         dictionaryIstream,
         remove
     );
-}
-}
+} // End namespace functionEntries
+} // End namespace Foam
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
