@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2008-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +40,7 @@ Foam::Function1Types::Table<Type>::Table
 :
     TableBase<Type>(entryName, dict)
 {
-    Istream& is(dict.lookup(entryName));
+    Istream& is = dict.lookup(entryName);
     word entryType(is);
     is  >> this->table_;
     TableBase<Type>::check();
@@ -50,13 +51,6 @@ template<class Type>
 Foam::Function1Types::Table<Type>::Table(const Table<Type>& tbl)
 :
     TableBase<Type>(tbl)
-{}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class Type>
-Foam::Function1Types::Table<Type>::~Table()
 {}
 
 
