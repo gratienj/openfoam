@@ -274,7 +274,7 @@ void Foam::functionObjects::writeFile::writeHeader
 }
 
 
-void Foam::functionObjects::writeFile::writeTime(Ostream& os) const
+void Foam::functionObjects::writeFile::writeCurrentTime(Ostream& os) const
 {
     const scalar timeValue =
     (

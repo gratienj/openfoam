@@ -600,7 +600,7 @@ void Foam::functionObjects::forces::writeIntegratedForceMoment
     {
         Ostream& os = osPtr();
 
-        writeTime(os);
+        writeCurrentTime(os);
 
         os  << tab << total
             << tab << pressure
@@ -667,7 +667,7 @@ void Foam::functionObjects::forces::writeBinnedForceMoment
 
     Ostream& os = osPtr();
 
-    writeTime(os);
+    writeCurrentTime(os);
 
     forAll(f[0], i)
     {

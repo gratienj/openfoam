@@ -159,7 +159,7 @@ bool Foam::functionObjects::fieldValues::fieldValueDelta::write()
     region1Ptr_->write();
     region2Ptr_->write();
 
-    writeTime(file());
+    writeCurrentTime(file());
 
     Log << type() << " " << name() << " write:" << endl;
 

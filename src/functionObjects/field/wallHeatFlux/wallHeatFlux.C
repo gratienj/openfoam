@@ -284,7 +284,7 @@ bool Foam::functionObjects::wallHeatFlux::write()
 
         if (Pstream::master())
         {
-            writeTime(file());
+            writeCurrentTime(file());
 
             file()
                 << token::TAB << pp.name()

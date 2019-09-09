@@ -181,7 +181,7 @@ bool Foam::functionObjects::solverInfo::execute()
         initialised_ = true;
     }
 
-    writeTime(file());
+    writeCurrentTime(file());
 
     for (const word& fieldName : fieldSet_.selectionNames())
     {

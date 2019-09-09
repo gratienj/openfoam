@@ -49,7 +49,7 @@ void Foam::functionObjects::fieldMinMax::output
 
     if (location_)
     {
-        writeTime(file());
+        writeCurrentTime(file);
 
         writeTabbed(file, fieldName);
 

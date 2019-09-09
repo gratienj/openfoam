@@ -146,7 +146,7 @@ bool Foam::functionObjects::cloudInfo::write()
         {
             auto& os = files(cloudi);
 
-            writeTime(os);
+            writeCurrentTime(os);
             os
                 << token::TAB << nTotParcels
                 << token::TAB << totMass
