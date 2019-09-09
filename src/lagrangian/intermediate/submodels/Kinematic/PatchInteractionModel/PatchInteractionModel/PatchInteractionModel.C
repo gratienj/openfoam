@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2011, 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2008-2011, 2016-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -37,6 +37,20 @@ Foam::wordList Foam::PatchInteractionModel<CloudType>::interactionTypeNames_
 {
     "rebound", "stick", "escape"
 };
+
+
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+
+template<class CloudType>
+void Foam::PatchInteractionModel<CloudType>::writeFileHeader(Ostream& os)
+{
+    this->writeHeader(os, "Particle patch interaction");
+    this->writeHeaderValue(os, "Model", this->modelType());
+
+    this->writeCommented(os, "Time");
+    this->writeTabbed(os, "escapedParcels");
+    this->writeTabbed(os, "escapedMass");
+}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -119,6 +133,7 @@ Foam::PatchInteractionModel<CloudType>::PatchInteractionModel
 )
 :
     CloudSubModelBase<CloudType>(owner),
+    functionObjects::writeFile(owner, this->localPath(), typeName, false),
     UName_("unknown_U"),
     escapedParcels_(0),
     escapedMass_(0.0)
@@ -134,6 +149,14 @@ Foam::PatchInteractionModel<CloudType>::PatchInteractionModel
 )
 :
     CloudSubModelBase<CloudType>(owner, dict, typeName, type),
+    functionObjects::writeFile
+    (
+        owner,
+        this->localPath(),
+        type,
+        this->coeffDict(),
+        false                   // Do not write by default
+    ),
     UName_(this->coeffDict().lookupOrDefault("U", word("U"))),
     escapedParcels_(0),
     escapedMass_(0.0)
@@ -147,6 +170,7 @@ Foam::PatchInteractionModel<CloudType>::PatchInteractionModel
 )
 :
     CloudSubModelBase<CloudType>(pim),
+    functionObjects::writeFile(pim),
     UName_(pim.UName_),
     escapedParcels_(pim.escapedParcels_),
     escapedMass_(pim.escapedMass_)
@@ -169,7 +193,7 @@ void Foam::PatchInteractionModel<CloudType>::addToEscapedParcels
 )
 {
     escapedMass_ += mass;
-    escapedParcels_++;
+    ++escapedParcels_;
 }
 
 
@@ -189,6 +213,18 @@ void Foam::PatchInteractionModel<CloudType>::info(Ostream& os)
     os  << "    Parcel fate: system (number, mass)" << nl
         << "      - escape                      = " << escapedParcelsTotal
         << ", " << escapedMassTotal << endl;
+
+    if (!this->writtenHeader_)
+    {
+        this->writeFileHeader(this->file());
+        this->writtenHeader_ = true;
+        this->file() << endl;
+    }
+
+    this->writeCurrentTime(this->file());
+    this->file()
+        << tab << escapedParcelsTotal << tab << escapedMassTotal;
+
 
     if (this->writeTime())
     {

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2011, 2015-2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2008-2011, 2015-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -27,6 +27,29 @@ License
 
 #include "LocalInteraction.H"
 
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+
+template<class CloudType>
+void Foam::LocalInteraction<CloudType>::writeFileHeader(Ostream& os)
+{
+    PatchInteractionModel<CloudType>::writeFileHeader(os);
+
+    forAll(nEscape_, patchi)
+    {
+        const word& patchName = patchData_[patchi].patchName();
+
+        forAll(nEscape_[patchi], injectori)
+        {
+            const word suffix = Foam::name(injectori);
+            this->writeTabbed(os, patchName + "_nEscape_" + suffix);
+            this->writeTabbed(os, patchName + "_massEscape_" + suffix);
+            this->writeTabbed(os, patchName + "_nStick_" + suffix);
+            this->writeTabbed(os, patchName + "_massStick_" + suffix);
+        }
+    }
+}
+
+
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
 
 template<class CloudType>
@@ -47,8 +70,8 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
     massEscapePtr_(nullptr),
     massStickPtr_(nullptr)
 {
-    const bool outputByInjectorId
-        = this->coeffDict().lookupOrDefault("outputByInjectorId", false);
+    const bool outputByInjectorId =
+        this->coeffDict().lookupOrDefault("outputByInjectorId", false);
 
     if (writeFields_)
     {
@@ -355,7 +378,7 @@ void Foam::LocalInteraction<CloudType>::info(Ostream& os)
 
     if (injIdToIndex_.size())
     {
-        // Since injIdToIndex_ is a one-to-one mapping (starting as zero),
+        // Since injIdToIndex_ is a one-to-one mapping (starting at zero),
         // can simply invert it.
         labelList indexToInjector(injIdToIndex_.size());
         forAllConstIters(injIdToIndex_, iter)
@@ -363,33 +386,51 @@ void Foam::LocalInteraction<CloudType>::info(Ostream& os)
             indexToInjector[iter.val()] = iter.key();
         }
 
-        forAll(patchData_, i)
+        forAll(patchData_, patchi)
         {
-            forAll(mpe[i], idx)
+            forAll(mpe[patchi], indexi)
             {
-                os  << "    Parcel fate: patch " <<  patchData_[i].patchName()
+                const word& patchName = patchData_[patchi].patchName();
+
+                os  << "    Parcel fate: patch " << patchName
                     << " (number, mass)" << nl
-                    << "      - escape  (injector " << indexToInjector[idx]
-                    << " )  = " << npe[i][idx]
-                    << ", " << mpe[i][idx] << nl
-                    << "      - stick   (injector " << indexToInjector[idx]
-                    << " )  = " << nps[i][idx]
-                    << ", " << mps[i][idx] << nl;
+                    << "      - escape  (injector " << indexToInjector[indexi]
+                    << " )  = " << npe[patchi][indexi]
+                    << ", " << mpe[patchi][indexi] << nl
+                    << "      - stick   (injector " << indexToInjector[indexi]
+                    << " )  = " << nps[patchi][indexi]
+                    << ", " << mps[patchi][indexi] << nl;
             }
         }
     }
     else
     {
-        forAll(patchData_, i)
+        forAll(patchData_, patchi)
         {
-            os  << "    Parcel fate: patch " <<  patchData_[i].patchName()
+            const word& patchName = patchData_[patchi].patchName();
+
+            os  << "    Parcel fate: patch " <<  patchName
                 << " (number, mass)" << nl
                 << "      - escape                      = "
-                << npe[i][0] << ", " << mpe[i][0] << nl
+                << npe[patchi][0] << ", " << mpe[patchi][0] << nl
                 << "      - stick                       = "
-                << nps[i][0] << ", " << mps[i][0] << nl;
+                << nps[patchi][0] << ", " << mps[patchi][0] << nl;
         }
     }
+
+    forAll(npe, patchi)
+    {
+        forAll(npe[patchi], injectori)
+        {
+            this->file()
+                << tab << npe[patchi][injectori]
+                << tab << mpe[patchi][injectori]
+                << tab << nps[patchi][injectori]
+                << tab << mps[patchi][injectori];
+        }
+    }
+
+    this->file() << endl;
 
     if (this->writeTime())
     {

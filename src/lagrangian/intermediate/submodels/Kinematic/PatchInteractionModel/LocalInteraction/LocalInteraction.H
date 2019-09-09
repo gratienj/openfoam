@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2011, 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2008-2011, 2018-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -60,19 +60,21 @@ class LocalInteraction
         //- List of participating patches
         const patchInteractionDataList patchData_;
 
-    // Bookkeeping for particle fates
 
-        //- Number of parcels escaped
-        List<List<label>> nEscape_;
+        // Bookkeeping for particle fates
 
-        //- Mass of parcels escaped
-        List<List<scalar>> massEscape_;
+            //- Number of parcels escaped
+            List<List<label>> nEscape_;
 
-        //- Number of parcels stuck to patches
-        List<List<label>> nStick_;
+            //- Mass of parcels escaped
+            List<List<scalar>> massEscape_;
 
-        //- Mass of parcels stuck to patches
-        List<List<scalar>> massStick_;
+            //- Number of parcels stuck to patches
+            List<List<label>> nStick_;
+
+            //- Mass of parcels stuck to patches
+            List<List<scalar>> massStick_;
+
 
         //- Flag to output data as fields
         bool writeFields_;
@@ -87,6 +89,13 @@ class LocalInteraction
         //- Mass stick field
         autoPtr<volScalarField> massStickPtr_;
 
+
+protected:
+
+    // Protected Member Functions
+
+        //- Output file header information
+        virtual void writeFileHeader(Ostream& os);
 
 
 public:

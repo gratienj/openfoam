@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2008-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -48,6 +48,7 @@ SourceFiles
 #include "wallPolyPatch.H"
 #include "tetIndices.H"
 #include "CloudSubModelBase.H"
+#include "writeFile.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -61,7 +62,8 @@ namespace Foam
 template<class CloudType>
 class PatchInteractionModel
 :
-    public CloudSubModelBase<CloudType>
+    public CloudSubModelBase<CloudType>,
+    public functionObjects::writeFile
 {
 public:
 
@@ -82,7 +84,7 @@ public:
 
 protected:
 
-    // Private data
+    // Protected data
 
         //- Name of velocity field - default = "U"
         const word UName_;
@@ -96,6 +98,11 @@ protected:
             //- Mass of parcels escaped
             scalar escapedMass_;
 
+
+    // Protected Member Functions
+
+        //- Output file header information
+        virtual void writeFileHeader(Ostream& os);
 
 
 public:

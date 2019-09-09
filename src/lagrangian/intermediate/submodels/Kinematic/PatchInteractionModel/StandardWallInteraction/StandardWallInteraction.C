@@ -27,6 +27,30 @@ License
 
 #include "StandardWallInteraction.H"
 
+
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+
+template<class CloudType>
+void Foam::StandardWallInteraction<CloudType>::writeFileHeader(Ostream& os)
+{
+    PatchInteractionModel<CloudType>::writeFileHeader(os);
+
+    forAll(nEscape_, patchi)
+    {
+        const word& patchName = mesh_.boundary()[patchi].name();
+
+        forAll(nEscape_[patchi], injectori)
+        {
+            const word suffix = Foam::name(injectori);
+            this->writeTabbed(os, patchName + "_nEscape_" + suffix);
+            this->writeTabbed(os, patchName + "_massEscape_" + suffix);
+            this->writeTabbed(os, patchName + "_nStick_" + suffix);
+            this->writeTabbed(os, patchName + "_massStick_" + suffix);
+        }
+    }
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class CloudType>
@@ -50,8 +74,8 @@ Foam::StandardWallInteraction<CloudType>::StandardWallInteraction
     massStick_(nEscape_.size()),
     injIdToIndex_()
 {
-    const bool outputByInjectorId
-        = this->coeffDict().lookupOrDefault("outputByInjectorId", false);
+    const bool outputByInjectorId =
+        this->coeffDict().lookupOrDefault("outputByInjectorId", false);
 
     switch (interactionType_)
     {
@@ -288,8 +312,14 @@ void Foam::StandardWallInteraction<CloudType>::info(Ostream& os)
                     << "      - stick   (injector " << indexToInjector[idx]
                     << ")  = " << nps[i][idx]
                     << ", " << mps[i][idx] << nl;
+
+                this->file()
+                    << tab << npe[i][idx] << tab << mpe[i][idx]
+                    << tab << nps[i][idx] << tab << mps[i][idx];
             }
         }
+
+        this->file() << endl;
     }
     else
     {
@@ -302,7 +332,12 @@ void Foam::StandardWallInteraction<CloudType>::info(Ostream& os)
                 << "      - stick                       = "
                 << nps[i][0] << ", " << mps[i][0] << nl;
 
+            this->file()
+                << tab << npe[i][0] << tab << mpe[i][0]
+                << tab << nps[i][0] << tab << mps[i][0];
         }
+
+        this->file() << endl;
     }
 
     if (this->writeTime())
