@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2010-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2010-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -120,7 +120,7 @@ public:
 
 
     //- Destructor
-    virtual ~subModelBase();
+    virtual ~subModelBase() = default;
 
 
     // Member Functions
@@ -156,6 +156,9 @@ public:
 
             //- Flag to indicate when to write a property
             virtual bool writeTime() const;
+
+            //- Output directory
+            virtual fileName localPath() const;
 
 
         // Edit

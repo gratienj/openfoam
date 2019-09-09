@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -93,7 +93,7 @@ public:
 
 
     //- Destructor
-    virtual ~CloudSubModelBase();
+    virtual ~CloudSubModelBase() = default;
 
     //- Type of cloud this model was instantiated for
     typedef CloudType cloudType;
@@ -108,6 +108,9 @@ public:
 
             //- Flag to indicate when to write a property
             virtual bool writeTime() const;
+
+            //- Output directory
+            virtual fileName localPath() const;
 
 
         // Edit

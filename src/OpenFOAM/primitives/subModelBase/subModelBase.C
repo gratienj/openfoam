@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2010-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2010-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -95,12 +95,6 @@ Foam::subModelBase::subModelBase(const subModelBase& smb)
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::subModelBase::~subModelBase()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 const Foam::word& Foam::subModelBase::modelName() const
@@ -166,6 +160,17 @@ void Foam::subModelBase::cacheFields(const bool)
 bool Foam::subModelBase::writeTime() const
 {
     return active();
+}
+
+
+Foam::fileName Foam::subModelBase::localPath() const
+{
+    if (modelName_ != word::null)
+    {
+        return modelName_;
+    }
+
+    return baseName_;
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -26,6 +26,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "CloudSubModelBase.H"
+#include "cloud.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -92,13 +93,6 @@ Foam::CloudSubModelBase<CloudType>::CloudSubModelBase
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class CloudType>
-Foam::CloudSubModelBase<CloudType>::~CloudSubModelBase()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class CloudType>
@@ -122,6 +116,18 @@ bool Foam::CloudSubModelBase<CloudType>::writeTime() const
         active()
      && owner_.solution().transient()
      && owner_.db().time().writeTime();
+}
+
+
+template<class CloudType>
+Foam::fileName Foam::CloudSubModelBase<CloudType>::localPath() const
+{
+    if (modelName_ != word::null)
+    {
+        return cloud::prefix/owner_.name()/modelName_;
+    }
+
+    return cloud::prefix/owner_.name()/baseName_;
 }
 
 
