@@ -67,7 +67,7 @@ protected:
         const objectRegistry& fileObr_;
 
         //- Prefix
-        const word prefix_;
+        const fileName prefix_;
 
         //- Name of file
         word fileName_;
@@ -123,9 +123,6 @@ protected:
         Omanip<int> valueWidth(const label offset = 0) const;
 
 
-        //- No copy construct
-        writeFile(const writeFile&) = delete;
-
         //- No copy assignment
         void operator=(const writeFile&) = delete;
 
@@ -142,8 +139,9 @@ public:
         writeFile
         (
             const objectRegistry& obr,
-            const word& prefix,
-            const word& file = "undefined"
+            const fileName& prefix,
+            const word& name = "undefined",
+            const bool writeToFile = true
         );
 
         //- Construct from objectRegistry, prefix, fileName
@@ -151,10 +149,14 @@ public:
         writeFile
         (
             const objectRegistry& obr,
-            const word& prefix,
-            const word& file,
-            const dictionary& dict
+            const fileName& prefix,
+            const word& name,
+            const dictionary& dict,
+            const bool writeToFile = true
         );
+
+        //- Construct copy
+        writeFile(const writeFile& wf);
 
 
     //- Destructor
