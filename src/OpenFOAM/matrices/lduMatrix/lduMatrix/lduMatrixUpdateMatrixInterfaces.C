@@ -53,6 +53,8 @@ void Foam::lduMatrix::initMatrixInterfaces
                 (
                     result,
                     add,
+                    lduMesh_.lduAddr(),
+                    interfacei,
                     psiif,
                     coupleCoeffs[interfacei],
                     cmpt,
@@ -80,6 +82,8 @@ void Foam::lduMatrix::initMatrixInterfaces
                 (
                     result,
                     add,
+                    lduMesh_.lduAddr(),
+                    interfacei,
                     psiif,
                     coupleCoeffs[interfacei],
                     cmpt,
@@ -118,6 +122,8 @@ void Foam::lduMatrix::updateMatrixInterfaces
                 (
                     result,
                     add,
+                    lduMesh_.lduAddr(),
+                    interfacei,
                     psiif,
                     coupleCoeffs[interfacei],
                     cmpt,
@@ -147,6 +153,8 @@ void Foam::lduMatrix::updateMatrixInterfaces
                             (
                                 result,
                                 add,
+                                lduMesh_.lduAddr(),
+                                interfacei,
                                 psiif,
                                 coupleCoeffs[interfacei],
                                 cmpt,
@@ -199,6 +207,8 @@ void Foam::lduMatrix::updateMatrixInterfaces
                 (
                     result,
                     add,
+                    lduMesh_.lduAddr(),
+                    interfacei,
                     psiif,
                     coupleCoeffs[interfacei],
                     cmpt,
@@ -224,6 +234,8 @@ void Foam::lduMatrix::updateMatrixInterfaces
                     (
                         result,
                         add,
+                        lduMesh_.lduAddr(),
+                        interfacei,
                         psiif,
                         coupleCoeffs[interfacei],
                         cmpt,
@@ -236,6 +248,8 @@ void Foam::lduMatrix::updateMatrixInterfaces
                     (
                         result,
                         add,
+                        lduMesh_.lduAddr(),
+                        interfacei,
                         psiif,
                         coupleCoeffs[interfacei],
                         cmpt,
@@ -260,6 +274,8 @@ void Foam::lduMatrix::updateMatrixInterfaces
                 (
                     result,
                     add,
+                    lduMesh_.lduAddr(),
+                    interfacei,
                     psiif,
                     coupleCoeffs[interfacei],
                     cmpt,

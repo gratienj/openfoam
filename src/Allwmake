@@ -53,9 +53,10 @@ wmake $targetType genericPatchFields
 wmake $targetType mesh/extrudeModel
 wmake $targetType dynamicMesh
 
-wmake $targetType parallel/decompose/decompositionMethods
 
 # Make dummy decomposition methods (dummyThirdParty)
+wmakeLnInclude -u regionModels/regionModel
+wmakeLnInclude -u regionCoupled
 parallel/decompose/AllwmakeLnInclude
 dummyThirdParty/Allwmake $targetType $*
 
@@ -63,6 +64,8 @@ wmakeLnInclude -u fvOptions
 
 wmake $targetType lagrangian/basic
 wmake $targetType lagrangian/distributionModels
+
+wmake $targetType regionCoupled
 
 parallel/Allwmake $targetType $*
 
@@ -95,7 +98,7 @@ fvAgglomerationMethods/Allwmake $targetType $*
 wmake $targetType waveModels
 
 wmake $targetType engine
-wmake $targetType regionCoupled
+
 
 conversion/Allwmake $targetType $*
 functionObjects/Allwmake $targetType $*

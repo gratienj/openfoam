@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -391,6 +391,9 @@ public:
             (
                 const bool forceUpdate = false
             ) const;
+
+            //- Is it owner
+            inline bool owner() const;
 
             //- Return a pointer to the AMI projection surface
             const autoPtr<Foam::searchableSurface>& surfPtr() const;

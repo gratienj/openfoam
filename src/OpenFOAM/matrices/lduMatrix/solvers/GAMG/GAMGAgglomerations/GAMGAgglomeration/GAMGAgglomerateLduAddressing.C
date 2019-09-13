@@ -28,6 +28,7 @@ License
 #include "GAMGAgglomeration.H"
 #include "GAMGInterface.H"
 #include "processorGAMGInterface.H"
+#include "cyclicLduInterface.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -279,15 +280,29 @@ void Foam::GAMGAgglomeration::agglomerateLduAddressing
 
 
     // Initialise transfer of restrict addressing on the interface
+    // The finest mesh uses patchAddr from the original lduAdressing.
+    // the coarser levels create their own adressing for faceCells
     forAll(fineInterfaces, inti)
     {
         if (fineInterfaces.set(inti))
         {
-            fineInterfaces[inti].initInternalFieldTransfer
-            (
-                Pstream::commsTypes::nonBlocking,
-                restrictMap
-            );
+            if (fineLevelIndex == 0)
+            {
+                fineInterfaces[inti].initInternalFieldTransfer
+                (
+                    Pstream::commsTypes::nonBlocking,
+                    restrictMap,
+                    fineMeshAddr.patchAddr(inti)
+                );
+            }
+            else
+            {
+                fineInterfaces[inti].initInternalFieldTransfer
+                (
+                    Pstream::commsTypes::nonBlocking,
+                    restrictMap
+                );
+            }
         }
     }
 
@@ -317,6 +332,48 @@ void Foam::GAMGAgglomeration::agglomerateLduAddressing
     {
         if (fineInterfaces.set(inti))
         {
+            tmp<labelField> restrictMapInternalField;
+            tmp<labelField> nbrRestrictMapInternalField;
+
+            // The finest mesh uses patchAddr from the original lduAdressing.
+            // the coarser levels create thei own adressing for faceCells
+            if (fineLevelIndex == 0)
+            {
+                restrictMapInternalField =
+                    fineInterfaces[inti].interfaceInternalField
+                    (
+                        restrictMap,
+                        fineMeshAddr.patchAddr(inti)
+                    );
+            }
+            else
+            {
+                restrictMapInternalField =
+                    fineInterfaces[inti].interfaceInternalField(restrictMap);
+            }
+
+            nbrRestrictMapInternalField =
+                fineInterfaces[inti].internalFieldTransfer
+                (
+                    Pstream::commsTypes::nonBlocking,
+                    restrictMap
+                );
+
+            coarseInterfaces.set
+            (
+                inti,
+                GAMGInterface::New
+                (
+                    inti,
+                    meshLevels_[fineLevelIndex].rawInterfaces(),
+                    fineInterfaces[inti],
+                    restrictMapInternalField(),
+                    nbrRestrictMapInternalField(),
+                    fineLevelIndex,
+                    fineMesh.comm()
+                ).ptr()
+            );
+            /*
             coarseInterfaces.set
             (
                 inti,
@@ -335,7 +392,7 @@ void Foam::GAMGAgglomeration::agglomerateLduAddressing
                     fineMesh.comm()
                 ).ptr()
             );
-
+            */
             nPatchFaces[inti] = coarseInterfaces[inti].faceCells().size();
             patchFineToCoarse[inti] = refCast<const GAMGInterface>
             (

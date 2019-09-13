@@ -1,0 +1,85 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+    class           volScalarField;
+    object          p_rgh;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [1 -1 -2 0 0 0 0];
+
+internalField   uniform 101325;
+
+boundaryField
+{
+
+    FAN_SHROUD
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+
+    CABINET
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+
+    FINS
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+
+    PROCESSOR
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+
+    FAN
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+
+    MRF_region
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+
+    OUTLET_01
+    {
+        type            fixedValue;
+        value           uniform 101325;
+    }
+
+    OUTLET_02
+    {
+        type            fixedValue;
+        value           uniform 101325;
+    }
+
+    domain0_to_v_CPU
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+
+    domain0_to_v_fins
+    {
+        type            fixedFluxPressure;
+        value           $internalField;
+    }
+}
+

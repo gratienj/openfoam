@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2018 OpenFOAM Foundation
@@ -240,6 +240,15 @@ public:
             //- Return given internal field next to patch as patch field
             template<class Type>
             tmp<Field<Type>> patchInternalField(const UList<Type>&) const;
+
+            //- Return given internal field next to patch as patch field
+            // using faceCells mapping
+            template<class Type>
+            tmp<Field<Type>> patchInternalField
+            (
+                const UList<Type>&,
+                const labelUList& faceCells
+            ) const;
 
             //- Return given internal field next to patch as patch field
             template<class Type>

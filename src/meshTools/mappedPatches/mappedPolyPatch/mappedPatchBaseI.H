@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -167,5 +167,15 @@ inline const Foam::AMIPatchToPatchInterpolation& Foam::mappedPatchBase::AMI
     return *AMIPtr_;
 }
 
+
+inline bool Foam::mappedPatchBase::owner() const
+{
+    bool owner(false);
+    if (patch_.boundaryMesh().mesh().name() < sampleRegion())
+    {
+        owner = true;
+    }
+    return owner;
+}
 
 // ************************************************************************* //

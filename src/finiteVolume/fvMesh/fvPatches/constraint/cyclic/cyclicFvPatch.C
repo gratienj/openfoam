@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -101,6 +101,16 @@ Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::interfaceInternalField
 }
 
 
+Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::interfaceInternalField
+(
+    const labelUList& internalData,
+    const labelUList& faceCells
+) const
+{
+    return patchInternalField(internalData, faceCells);
+}
+
+
 Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::internalFieldTransfer
 (
     const Pstream::commsTypes commsType,
@@ -110,5 +120,16 @@ Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::internalFieldTransfer
     return neighbFvPatch().patchInternalField(iF);
 }
 
+
+
+Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList& iF,
+    const labelUList& nbrFaceCells
+) const
+{
+    return patchInternalField(iF, nbrFaceCells);
+}
 
 // ************************************************************************* //

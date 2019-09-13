@@ -75,6 +75,8 @@ class calculatedFvPatchField;
 template<class Type>
 class fvMatrix;
 
+class fvMatrixAssemble;
+
 template<class Type>
 Ostream& operator<<(Ostream&, const fvPatchField<Type>&);
 
@@ -525,6 +527,14 @@ public:
             (
                 fvMatrix<Type>& matrix,
                 const scalarField& weights
+            );
+
+            //- Manipulate fvMatrixAssemble
+            virtual void manipulateMatrix
+            (
+                fvMatrixAssemble& matrix,
+                const labelList& faceMap,
+                const label cellOffSet
             );
 
 

@@ -207,6 +207,20 @@ Foam::calculatedProcessorGAMGInterface::internalFieldTransfer
 }
 
 
+Foam::tmp<Foam::labelField>
+Foam::calculatedProcessorGAMGInterface::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList& iF,
+    const labelUList& faceCells
+) const
+{
+    notImplemented("internalFieldTransfer");
+
+    return  tmp<Field<label>>(new Field<label>(this->size(), 0));
+}
+
+
 void Foam::calculatedProcessorGAMGInterface::write(Ostream& os) const
 {
     GAMGInterface::write(os);

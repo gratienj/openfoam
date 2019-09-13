@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2014 OpenFOAM Foundation
@@ -110,6 +110,17 @@ Foam::tmp<Foam::labelField> Foam::processorFvPatch::interfaceInternalField
 }
 
 
+Foam::tmp<Foam::labelField> Foam::processorFvPatch::interfaceInternalField
+(
+    const labelUList& internalData,
+    const labelUList& faceCells
+) const
+{
+
+    return patchInternalField(internalData, faceCells);
+}
+
+
 void Foam::processorFvPatch::initInternalFieldTransfer
 (
     const Pstream::commsTypes commsType,
@@ -120,9 +131,31 @@ void Foam::processorFvPatch::initInternalFieldTransfer
 }
 
 
+void Foam::processorFvPatch::initInternalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList& iF,
+    const labelUList& faceCell
+) const
+{
+    send(commsType, interfaceInternalField(iF, faceCell)());
+}
+
+
 Foam::tmp<Foam::labelField> Foam::processorFvPatch::internalFieldTransfer
 (
     const Pstream::commsTypes commsType,
+    const labelUList&
+) const
+{
+    return receive<label>(commsType, this->size());
+}
+
+
+Foam::tmp<Foam::labelField> Foam::processorFvPatch::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList&,
     const labelUList&
 ) const
 {

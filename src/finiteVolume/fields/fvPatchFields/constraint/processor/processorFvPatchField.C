@@ -312,13 +312,22 @@ void Foam::processorFvPatchField<Type>::initInterfaceMatrixUpdate
 (
     solveScalarField&,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField&,
     const direction,
     const Pstream::commsTypes commsType
 ) const
 {
-    this->patch().patchInternalField(psiInternal, scalarSendBuf_);
+    //this->patch().patchInternalField(psiInternal, scalarSendBuf_);
+
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+    scalarSendBuf_.setSize(this->patch().size());
+    forAll(scalarSendBuf_, facei)
+    {
+        scalarSendBuf_[facei] = psiInternal[faceCells[facei]];
+    }
 
     if
     (
@@ -373,6 +382,8 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField&,
     const scalarField& coeffs,
     const direction cmpt,
@@ -383,6 +394,8 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
     {
         return;
     }
+
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
 
     if
     (
@@ -411,7 +424,14 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
         }
 
         // Multiply the field by coefficients and add into the result
-        this->addToInternalField(result, !add, coeffs, scalarReceiveBuf_);
+        this->addToInternalField
+        (
+            result,
+            !add,
+            faceCells,
+            coeffs,
+            scalarReceiveBuf_
+        );
     }
     else
     {
@@ -431,7 +451,7 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
         }
 
         // Multiply the field by coefficients and add into the result
-        this->addToInternalField(result, !add, coeffs, pnf);
+        this->addToInternalField(result, !add, faceCells, coeffs, pnf);
     }
 
     const_cast<processorFvPatchField<Type>&>(*this).updatedMatrix() = true;
@@ -443,12 +463,22 @@ void Foam::processorFvPatchField<Type>::initInterfaceMatrixUpdate
 (
     Field<Type>&,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const Field<Type>& psiInternal,
     const scalarField&,
     const Pstream::commsTypes commsType
 ) const
 {
-    this->patch().patchInternalField(psiInternal, sendBuf_);
+    //this->patch().patchInternalField(psiInternal, sendBuf_);
+    sendBuf_.setSize(this->patch().size());
+
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+
+    forAll(sendBuf_, facei)
+    {
+        sendBuf_[facei] = psiInternal[faceCells[facei]];
+    }
 
     if
     (
@@ -503,6 +533,8 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
 (
     Field<Type>& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const Field<Type>&,
     const scalarField& coeffs,
     const Pstream::commsTypes commsType
@@ -512,6 +544,8 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
     {
         return;
     }
+
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
 
     if
     (
@@ -538,7 +572,7 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
         transformCoupleField(receiveBuf_);
 
         // Multiply the field by coefficients and add into the result
-        this->addToInternalField(result, !add, coeffs, receiveBuf_);
+        this->addToInternalField(result, !add, faceCells, coeffs, receiveBuf_);
     }
     else
     {
@@ -551,7 +585,7 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
         transformCoupleField(pnf);
 
         // Multiply the field by coefficients and add into the result
-        this->addToInternalField(result, !add, coeffs, pnf);
+        this->addToInternalField(result, !add, faceCells, coeffs, pnf);
     }
 
     const_cast<processorFvPatchField<Type>&>(*this).updatedMatrix() = true;

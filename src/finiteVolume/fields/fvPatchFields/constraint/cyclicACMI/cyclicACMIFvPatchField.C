@@ -217,18 +217,18 @@ void Foam::cyclicACMIFvPatchField<Type>::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
     const Pstream::commsTypes
 ) const
 {
-    const cyclicACMIPolyPatch& cpp = cyclicACMIPatch_.cyclicACMIPatch();
-
     // note: only applying coupled contribution
 
-    const labelUList& nbrFaceCellsCoupled =
-        cpp.neighbPatch().faceCells();
+    label nbrPatchId = cyclicACMIPatch_.cyclicACMIPatch().neighbPatchID();
+    const labelUList& nbrFaceCellsCoupled = lduAddr.patchAddr(nbrPatchId);
 
     solveScalarField pnf(psiInternal, nbrFaceCellsCoupled);
 
@@ -237,7 +237,9 @@ void Foam::cyclicACMIFvPatchField<Type>::updateInterfaceMatrix
 
     pnf = cyclicACMIPatch_.interpolate(pnf);
 
-    this->addToInternalField(result, !add, coeffs, pnf);
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+
+    this->addToInternalField(result, !add, faceCells, coeffs, pnf);
 }
 
 
@@ -246,16 +248,15 @@ void Foam::cyclicACMIFvPatchField<Type>::updateInterfaceMatrix
 (
     Field<Type>& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const Field<Type>& psiInternal,
     const scalarField& coeffs,
     const Pstream::commsTypes
 ) const
 {
-    const cyclicACMIPolyPatch& cpp = cyclicACMIPatch_.cyclicACMIPatch();
-
-    // note: only applying coupled contribution
-
-    const labelUList& nbrFaceCellsCoupled = cpp.neighbPatch().faceCells();
+    label nbrPatchId = cyclicACMIPatch_.cyclicACMIPatch().neighbPatchID();
+    const labelUList& nbrFaceCellsCoupled = lduAddr.patchAddr(nbrPatchId);
 
     Field<Type> pnf(psiInternal, nbrFaceCellsCoupled);
 
@@ -264,7 +265,9 @@ void Foam::cyclicACMIFvPatchField<Type>::updateInterfaceMatrix
 
     pnf = cyclicACMIPatch_.interpolate(pnf);
 
-    this->addToInternalField(result, !add, coeffs, pnf);
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+
+    this->addToInternalField(result, !add, faceCells, coeffs, pnf);
 }
 
 

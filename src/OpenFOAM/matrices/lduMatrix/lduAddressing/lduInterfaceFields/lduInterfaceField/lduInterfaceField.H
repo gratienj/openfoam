@@ -41,6 +41,7 @@ SourceFiles
 #include "lduInterface.H"
 #include "primitiveFieldsFwd.H"
 #include "Pstream.H"
+#include "lduAddressing.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -139,6 +140,8 @@ public:
             (
                 solveScalarField& result,
                 const bool add,
+                const lduAddressing&,
+                const label,
                 const solveScalarField& psiInternal,
                 const scalarField& coeffs,
                 const direction cmpt,
@@ -152,6 +155,8 @@ public:
             (
                 solveScalarField& result,
                 const bool add,
+                const lduAddressing&,
+                const label,
                 const solveScalarField& psiInternal,
                 const scalarField& coeffs,
                 const direction cmpt,
@@ -165,6 +170,7 @@ public:
             (
                 Field<Type>& result,
                 const bool add,
+                const labelUList& faceCells,
                 const scalarField& coeffs,
                 const Field<Type>& vals
             ) const;

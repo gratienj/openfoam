@@ -48,7 +48,14 @@ turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
 )
 :
     mixedFvPatchScalarField(p, iF),
-    temperatureCoupledBase(patch(), "undefined", "undefined", "undefined-K"),
+    temperatureCoupledBase
+    (
+        patch(),
+        "undefined",
+        "undefined",
+        "undefined-K",
+        "undefined-alpha"
+    ),
     TnbrName_("undefined-Tnbr"),
     thicknessLayers_(0),
     kappaLayers_(0),
@@ -102,6 +109,13 @@ turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
             << " in file " << internalField().objectPath()
             << exit(FatalError);
     }
+
+    WarningInFunction
+        << "This BC has been superseded by "
+        << "compressible::turbulentTemperatureRadCoupledMixed "
+        << "which has more functionalities and it can handle "
+        << "the assemble coupled option for energy. "
+        << endl;
 
     if (dict.readIfPresent("thicknessLayers", thicknessLayers_))
     {
@@ -252,6 +266,22 @@ void turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::updateCoeffs()
 
     // Restore tag
     UPstream::msgType() = oldTag;
+}
+
+
+void turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::manipulateMatrix
+(
+    fvMatrixAssemble& matrix,
+    const labelList& faceMap,
+    const label cellOffSet
+)
+{
+    FatalErrorInFunction
+        << "This BC does not support energy coupling "
+        << "Use compressible::turbulentTemperatureRadCoupledMixed "
+        << "which has more functionalities and it can handle "
+        << "the assemble coupled option for energy. "
+        << abort(FatalError);
 }
 
 

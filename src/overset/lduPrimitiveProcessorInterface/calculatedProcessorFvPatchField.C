@@ -215,6 +215,8 @@ void Foam::calculatedProcessorFvPatchField<Type>::initInterfaceMatrixUpdate
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
@@ -222,7 +224,10 @@ void Foam::calculatedProcessorFvPatchField<Type>::initInterfaceMatrixUpdate
 ) const
 {
     // Bypass patchInternalField since uses fvPatch addressing
-    const labelList& fc = procInterface_.faceCells();
+    //const labelList& fc = procInterface_.faceCells();
+
+    const labelList& fc = lduAddr.patchAddr(patchId);
+
     scalarSendBuf_.setSize(fc.size());
     forAll(fc, i)
     {
@@ -301,6 +306,8 @@ void Foam::calculatedProcessorFvPatchField<Type>::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
@@ -323,6 +330,8 @@ void Foam::calculatedProcessorFvPatchField<Type>::updateInterfaceMatrix
     // Recv finished so assume sending finished as well.
     outstandingSendRequest_ = -1;
     outstandingRecvRequest_ = -1;
+
+
 
     // Consume straight from scalarReceiveBuf_. Note use of our own
     // helper to avoid using fvPatch addressing

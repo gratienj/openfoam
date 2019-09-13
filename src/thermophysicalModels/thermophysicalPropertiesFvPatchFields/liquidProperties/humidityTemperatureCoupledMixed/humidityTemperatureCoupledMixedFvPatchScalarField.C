@@ -128,7 +128,14 @@ humidityTemperatureCoupledMixedFvPatchScalarField
 )
 :
     mixedFvPatchScalarField(p, iF),
-    temperatureCoupledBase(patch(), "fluidThermo", "undefined", "undefined-K"),
+    temperatureCoupledBase
+    (
+        patch(),
+        "fluidThermo",
+        "undefined",
+        "undefined-K",
+        "undefined-alpha"
+    ),
     mode_(mtConstantMass),
     pName_("p"),
     UName_("U"),

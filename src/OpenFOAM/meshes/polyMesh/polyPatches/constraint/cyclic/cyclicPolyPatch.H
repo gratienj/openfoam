@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2015 OpenFOAM Foundation
@@ -236,6 +236,15 @@ public:
 
         //- Construct as copy, resetting the boundary mesh
         cyclicPolyPatch(const cyclicPolyPatch&, const polyBoundaryMesh&);
+
+
+        //- Construct as copy, resetting the nbrPatchID and faceCells
+        cyclicPolyPatch
+        (
+            const cyclicPolyPatch&,
+            label nbrPatchID,
+            const labelList& faceCells
+        );
 
         //- Construct given the original patch and resetting the
         //  face list and boundary mesh information

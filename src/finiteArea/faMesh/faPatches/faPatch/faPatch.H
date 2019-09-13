@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2016-2017 Wikki Ltd
@@ -335,6 +335,15 @@ public:
             //- Return given internal field next to patch as patch field
             template<class Type>
             tmp<Field<Type>> patchInternalField(const UList<Type>&) const;
+
+            //- Return given internal field next to patch as patch field
+            // Using edgeFaces
+            template<class Type>
+            tmp<Field<Type>> patchInternalField
+            (
+                const UList<Type>&,
+                const labelUList& edgeFaces
+            ) const;
 
             //- Return the corresponding patchField of the named field
             template<class GeometricField, class Type>

@@ -96,6 +96,8 @@ void Foam::processorGAMGInterfaceField::initInterfaceMatrixUpdate
 (
     solveScalarField&,
     const bool,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField&,
     const direction,
@@ -147,6 +149,8 @@ void Foam::processorGAMGInterfaceField::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField&,
     const scalarField& coeffs,
     const direction cmpt,
@@ -157,6 +161,8 @@ void Foam::processorGAMGInterfaceField::updateInterfaceMatrix
     {
         return;
     }
+
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
 
     if
     (
@@ -183,7 +189,7 @@ void Foam::processorGAMGInterfaceField::updateInterfaceMatrix
         transformCoupleField(scalarReceiveBuf_, cmpt);
 
         // Multiply the field by coefficients and add into the result
-        addToInternalField(result, !add, coeffs, scalarReceiveBuf_);
+        addToInternalField(result, !add, faceCells, coeffs, scalarReceiveBuf_);
     }
     else
     {
@@ -197,7 +203,7 @@ void Foam::processorGAMGInterfaceField::updateInterfaceMatrix
         );
         transformCoupleField(pnf, cmpt);
 
-        addToInternalField(result, !add, coeffs, pnf);
+        addToInternalField(result, !add, faceCells, coeffs, pnf);
     }
 
     const_cast<processorGAMGInterfaceField&>(*this).updatedMatrix() = true;

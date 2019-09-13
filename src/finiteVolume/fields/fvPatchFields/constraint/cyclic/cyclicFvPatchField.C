@@ -174,22 +174,27 @@ void Foam::cyclicFvPatchField<Type>::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
     const Pstream::commsTypes
 ) const
 {
-    const labelUList& nbrFaceCells =
-        cyclicPatch().cyclicPatch().neighbPatch().faceCells();
+    label nbrPatchId = this->cyclicPatch().neighbPatchID();
+
+    const labelUList& nbrFaceCells = lduAddr.patchAddr(nbrPatchId);
 
     solveScalarField pnf(psiInternal, nbrFaceCells);
 
     // Transform according to the transformation tensors
     transformCoupleField(pnf, cmpt);
 
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+
     // Multiply the field by coefficients and add into the result
-    this->addToInternalField(result, !add, coeffs, pnf);
+    this->addToInternalField(result, !add, faceCells, coeffs, pnf);
 }
 
 
@@ -198,21 +203,25 @@ void Foam::cyclicFvPatchField<Type>::updateInterfaceMatrix
 (
     Field<Type>& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const Field<Type>& psiInternal,
     const scalarField& coeffs,
     const Pstream::commsTypes
 ) const
 {
-    const labelUList& nbrFaceCells =
-        cyclicPatch().cyclicPatch().neighbPatch().faceCells();
+    label nbrPathid = this->cyclicPatch().neighbPatchID();
+    const labelList& nbrFaceCells = lduAddr.patchAddr(nbrPathid);
 
     Field<Type> pnf(psiInternal, nbrFaceCells);
 
     // Transform according to the transformation tensors
     transformCoupleField(pnf);
 
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+
     // Multiply the field by coefficients and add into the result
-    this->addToInternalField(result, !add, coeffs, pnf);
+    this->addToInternalField(result, !add, faceCells, coeffs, pnf);
 }
 
 

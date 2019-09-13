@@ -112,6 +112,8 @@ void Foam::cyclicGAMGInterfaceField::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
@@ -119,14 +121,17 @@ void Foam::cyclicGAMGInterfaceField::updateInterfaceMatrix
 ) const
 {
     // Get neighbouring field
-    solveScalarField pnf
-    (
-        cyclicInterface_.neighbPatch().interfaceInternalField(psiInternal)
-    );
+    label nbrPathid = cyclicInterface_.neighbPatchID();
+
+    const labelList& nbrFaceCells = lduAddr.patchAddr(nbrPathid);
+
+    scalarField pnf(psiInternal, nbrFaceCells);
 
     transformCoupleField(pnf, cmpt);
 
-    this->addToInternalField(result, !add, coeffs, pnf);
+    const labelList& faceCells = lduAddr.patchAddr(patchId);
+
+    this->addToInternalField(result, !add, faceCells, coeffs, pnf);
 }
 
 

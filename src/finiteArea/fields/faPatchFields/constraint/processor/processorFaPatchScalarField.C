@@ -43,6 +43,8 @@ void Foam::processorFaPatchField<Foam::scalar>::initInterfaceMatrixUpdate
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction,
@@ -62,6 +64,8 @@ void Foam::processorFaPatchField<Foam::scalar>::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField&,
     const scalarField& coeffs,
     const direction,

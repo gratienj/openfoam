@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2015-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -353,6 +353,18 @@ void Foam::fvPatchField<Type>::manipulateMatrix
 (
     fvMatrix<Type>& matrix,
     const scalarField& weights
+)
+{
+    manipulatedMatrix_ = true;
+}
+
+
+template<class Type>
+void Foam::fvPatchField<Type>::manipulateMatrix
+(
+    fvMatrixAssemble& matrix,
+    const labelList& faceMap,
+    const label cellOffSet
 )
 {
     manipulatedMatrix_ = true;

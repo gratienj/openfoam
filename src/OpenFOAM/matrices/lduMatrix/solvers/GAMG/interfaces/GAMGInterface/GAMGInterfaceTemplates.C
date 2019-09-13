@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -37,6 +37,23 @@ Foam::tmp<Foam::Field<Type>> Foam::GAMGInterface::interfaceInternalField
 {
     tmp<Field<Type>> tresult(new Field<Type>(size()));
     interfaceInternalField(iF, tresult.ref());
+    return tresult;
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>> Foam::GAMGInterface::interfaceInternalField
+(
+    const UList<Type>& iF,
+    const labelUList& faceCells
+) const
+{
+    tmp<Field<Type>> tresult(new Field<Type>(faceCells.size()));
+
+    forAll(tresult(), elemI)
+    {
+        tresult.ref()[elemI] = iF[faceCells[elemI]];
+    }
     return tresult;
 }
 

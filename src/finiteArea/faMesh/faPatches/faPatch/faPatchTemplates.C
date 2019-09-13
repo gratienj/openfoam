@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2016-2017 Wikki Ltd
@@ -39,6 +39,27 @@ Foam::tmp<Foam::Field<Type>> Foam::faPatch::patchInternalField
     Field<Type>& pif = tpif.ref();
 
     const labelUList& edgeFaces = this->edgeFaces();
+
+    forAll(pif, facei)
+    {
+        pif[facei] = f[edgeFaces[facei]];
+    }
+
+    return tpif;
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>> Foam::faPatch::patchInternalField
+(
+    const UList<Type>& f,
+    const labelUList& edgeFaces
+) const
+{
+    tmp<Field<Type>> tpif (new Field<Type>(size()));
+    Field<Type>& pif = tpif.ref();
+
+    //const labelUList& edgeFaces = this->edgeFaces();
 
     forAll(pif, facei)
     {
