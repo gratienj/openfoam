@@ -99,7 +99,7 @@ void Foam::PatchPostProcessing<CloudType>::write()
 
             labelList indices(sortedOrder(globalTimes));
 
-            string header("# Time currentProc " + parcelType::propertyList_);
+            string header("# Time currentProc " + header_);
             patchOutFile<< header.c_str() << nl;
 
             forAll(globalTimes, i)
@@ -131,9 +131,15 @@ Foam::PatchPostProcessing<CloudType>::PatchPostProcessing
 :
     CloudFunctionObject<CloudType>(dict, owner, modelName, typeName),
     maxStoredParcels_(this->coeffDict().getScalar("maxStoredParcels")),
+    fields_
+    (
+        this->coeffDict().template
+            getOrDefault<List<wordRe>>("fields", List<wordRe>())
+    ),
     patchIDs_(),
     times_(),
-    patchData_()
+    patchData_(),
+    header_()
 {
     const wordList allPatchNames(owner.mesh().boundaryMesh().names());
     const wordReList patchNames(this->coeffDict().lookup("patches"));
@@ -177,9 +183,11 @@ Foam::PatchPostProcessing<CloudType>::PatchPostProcessing
 :
     CloudFunctionObject<CloudType>(ppm),
     maxStoredParcels_(ppm.maxStoredParcels_),
+    fields_(ppm.fields_),
     patchIDs_(ppm.patchIDs_),
     times_(ppm.times_),
-    patchData_(ppm.patchData_)
+    patchData_(ppm.patchData_),
+    header_(ppm.header_)
 {}
 
 
@@ -196,12 +204,20 @@ void Foam::PatchPostProcessing<CloudType>::postPatch
     const label patchi = pp.index();
     const label localPatchi = applyToPatch(patchi);
 
+    if (header_ == "")
+    {
+        OStringStream data;
+        p.writeProperties(data, fields_, " ", true);
+        header_ = data.str();
+    }
+
     if (localPatchi != -1 && patchData_[localPatchi].size() < maxStoredParcels_)
     {
         times_[localPatchi].append(this->owner().time().value());
 
         OStringStream data;
-        data<< Pstream::myProcNo() << ' ' << p;
+        data<< Pstream::myProcNo() << ' ';
+        p.writeProperties(data, fields_, " ", false);
 
         patchData_[localPatchi].append(data.str());
     }

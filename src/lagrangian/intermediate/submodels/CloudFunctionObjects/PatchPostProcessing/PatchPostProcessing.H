@@ -63,6 +63,9 @@ class PatchPostProcessing
         //- Maximum number of parcels to store - set as a scalar for I/O
         scalar maxStoredParcels_;
 
+        //- Field name filters
+        List<wordRe> fields_;
+
         //- List of patch indices to post-process
         labelList patchIDs_;
 
@@ -71,6 +74,9 @@ class PatchPostProcessing
 
         //- List of output data per patch
         List<DynamicList<string>> patchData_;
+
+        //- Field header
+        string header_;
 
 
     // Private Member Functions
