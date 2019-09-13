@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Modified code Copyright (C) 2015-2018 OpenCFD Ltd.
+    Modified code Copyright (C) 2015-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -202,11 +202,11 @@ public:
             const word& patchType
         );
 
-        //- Construct as copy, resetting the boundary mesh
+        //- Copy construct, resetting the boundary mesh
         polyPatch(const polyPatch&, const polyBoundaryMesh&);
 
         //- Construct given the original patch and resetting the
-        //  face list and boundary mesh information
+        //- face list and boundary mesh information
         polyPatch
         (
             const polyPatch& pp,
@@ -226,8 +226,19 @@ public:
             const label newStart
         );
 
-        //- Construct as copy
-        polyPatch(const polyPatch&);
+        //- Copy construct
+        polyPatch(const polyPatch& p);
+
+        //- Copy construct, setting faceCells
+        //  \note The faceCells are held by the caller
+        polyPatch(const polyPatch& p, const labelList& faceCells);
+
+        //- Construct and return a clone, setting faceCells
+        //  \note The faceCells are held by the caller
+        virtual autoPtr<polyPatch> clone(const labelList& faceCells) const
+        {
+            return autoPtr<polyPatch>::New(*this, faceCells);
+        }
 
         //- Construct and return a clone, resetting the boundary mesh
         virtual autoPtr<polyPatch> clone(const polyBoundaryMesh& bm) const
@@ -265,8 +276,7 @@ public:
 
     // Selectors
 
-        //- Return a pointer to a new patch created on freestore from
-        //  components
+        //- Return pointer to a new patch created on freestore from components
         static autoPtr<polyPatch> New
         (
             const word& patchType,
@@ -277,8 +287,7 @@ public:
             const polyBoundaryMesh& bm
         );
 
-        //- Return a pointer to a new patch created on freestore from
-        //  dictionary
+        //- Return pointer to a new patch created on freestore from dictionary
         static autoPtr<polyPatch> New
         (
             const word& name,
@@ -287,8 +296,7 @@ public:
             const polyBoundaryMesh& bm
         );
 
-        //- Return a pointer to a new patch created on freestore from
-        //  dictionary
+        //- Return pointer to a new patch created on freestore from dictionary
         static autoPtr<polyPatch> New
         (
             const word& patchType,
@@ -363,7 +371,7 @@ public:
 
 
         //- Write the polyPatch data as a dictionary
-        virtual void write(Ostream&) const;
+        virtual void write(Ostream& os) const;
 
 
         // Geometric data; point list required

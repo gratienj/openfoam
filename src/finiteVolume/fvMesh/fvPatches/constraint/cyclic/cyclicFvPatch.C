@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -102,6 +103,16 @@ Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::interfaceInternalField
 }
 
 
+Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::interfaceInternalField
+(
+    const labelUList& internalData,
+    const labelUList& faceCells
+) const
+{
+    return patchInternalField(internalData, faceCells);
+}
+
+
 Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::internalFieldTransfer
 (
     const Pstream::commsTypes commsType,
@@ -109,6 +120,17 @@ Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::internalFieldTransfer
 ) const
 {
     return neighbFvPatch().patchInternalField(iF);
+}
+
+
+Foam::tmp<Foam::labelField> Foam::cyclicFvPatch::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList& iF,
+    const labelUList& nbrFaceCells
+) const
+{
+    return patchInternalField(iF, nbrFaceCells);
 }
 
 

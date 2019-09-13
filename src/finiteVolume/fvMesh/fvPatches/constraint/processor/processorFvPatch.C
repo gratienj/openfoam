@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2014 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -111,6 +112,17 @@ Foam::tmp<Foam::labelField> Foam::processorFvPatch::interfaceInternalField
 }
 
 
+Foam::tmp<Foam::labelField> Foam::processorFvPatch::interfaceInternalField
+(
+    const labelUList& internalData,
+    const labelUList& faceCells
+) const
+{
+
+    return patchInternalField(internalData, faceCells);
+}
+
+
 void Foam::processorFvPatch::initInternalFieldTransfer
 (
     const Pstream::commsTypes commsType,
@@ -121,9 +133,31 @@ void Foam::processorFvPatch::initInternalFieldTransfer
 }
 
 
+void Foam::processorFvPatch::initInternalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList& iF,
+    const labelUList& faceCells
+) const
+{
+    send(commsType, interfaceInternalField(iF, faceCells)());
+}
+
+
 Foam::tmp<Foam::labelField> Foam::processorFvPatch::internalFieldTransfer
 (
     const Pstream::commsTypes commsType,
+    const labelUList&
+) const
+{
+    return receive<label>(commsType, this->size());
+}
+
+
+Foam::tmp<Foam::labelField> Foam::processorFvPatch::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList&,
     const labelUList&
 ) const
 {

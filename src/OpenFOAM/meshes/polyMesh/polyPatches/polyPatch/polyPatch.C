@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Modified code Copyright (C) 2018 OpenCFD Ltd.
+    Modified code Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -259,6 +259,18 @@ Foam::polyPatch::polyPatch(const polyPatch& p)
     faceCellsPtr_(nullptr),
     mePtr_(nullptr)
 {}
+
+
+Foam::polyPatch::polyPatch
+(
+    const polyPatch& p,
+    const labelList& faceCells
+)
+:
+    polyPatch(p)
+{
+    faceCellsPtr_ = new labelList::subList(faceCells, faceCells.size());
+}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //

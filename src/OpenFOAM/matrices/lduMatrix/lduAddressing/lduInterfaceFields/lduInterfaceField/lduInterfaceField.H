@@ -43,14 +43,14 @@ SourceFiles
 #include "lduInterface.H"
 #include "primitiveFieldsFwd.H"
 #include "Pstream.H"
+#include "lduAddressing.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+// Forward declarations
 class lduMatrix;
 
 /*---------------------------------------------------------------------------*\
@@ -59,7 +59,7 @@ class lduMatrix;
 
 class lduInterfaceField
 {
-    // Private data
+    // Private Data
 
         //- Reference to the coupled patch this field is defined for
         const lduInterface& interface_;
@@ -141,6 +141,8 @@ public:
             (
                 solveScalarField& result,
                 const bool add,
+                const lduAddressing&,
+                const label interfacei,
                 const solveScalarField& psiInternal,
                 const scalarField& coeffs,
                 const direction cmpt,
@@ -154,6 +156,8 @@ public:
             (
                 solveScalarField& result,
                 const bool add,
+                const lduAddressing&,
+                const label interfacei,
                 const solveScalarField& psiInternal,
                 const scalarField& coeffs,
                 const direction cmpt,
@@ -166,6 +170,7 @@ public:
             (
                 Field<Type>& result,
                 const bool add,
+                const labelUList& faceCells,
                 const scalarField& coeffs,
                 const Field<Type>& vals
             ) const;
