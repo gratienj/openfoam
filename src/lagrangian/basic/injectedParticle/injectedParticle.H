@@ -220,6 +220,15 @@ public:
             //- Write fields
             static void writeFields(const Cloud<injectedParticle>& c);
 
+            //- Write individual parcel properties to stream
+            void writeProperties
+            (
+                Ostream& os,
+                const wordReList& filters,
+                const word& delim,
+                const bool namesOnly
+            ) const;
+
             //- Read particle fields as objects from the obr registry
             static void readObjects
             (

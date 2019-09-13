@@ -192,6 +192,40 @@ Foam::particle::particle
 }
 
 
+void Foam::particle::writeProperties
+(
+    Ostream& os,
+    const wordReList& filters,
+    const word& delim,
+    const bool namesOnly
+) const
+{
+    const bool validFilter = !filters.empty();
+
+    const label nField = validFilter ? filters.size() : 1;
+
+    for (label n = 0; n < nField; ++n)
+    {
+        const wordRe& f = validFilter ? filters[n] : wordRe::null;
+
+        #define writeProp(name, value) \
+            writeProperty(os, f, name, value, namesOnly, delim);
+
+        writeProp("coordinates", coordinates_);
+        writeProp("position", position());
+        writeProp("celli", celli_);
+        writeProp("tetFacei", tetFacei_);
+        writeProp("tetPti", tetPti_);
+        writeProp("facei", facei_);
+        writeProp("stepFraction", stepFraction_);
+        writeProp("origProc", origProc_);
+        writeProp("origId", origId_);
+
+        #undef writeProp
+    }
+}
+
+
 void Foam::particle::writeCoordinates(Ostream& os) const
 {
     if (os.format() == IOstream::ASCII)

@@ -323,6 +323,47 @@ void Foam::SprayParcel<ParcelType>::writeFields
 
 
 template<class ParcelType>
+void Foam::SprayParcel<ParcelType>::writeProperties
+(
+    Ostream& os,
+    const wordReList& filters,
+    const word& delim,
+    const bool namesOnly
+) const
+{
+    ParcelType::writeProperties(os, filters, delim, namesOnly);
+
+    const bool applyFilter = !filters.empty();
+
+    const label nField = applyFilter ? filters.size() : 1;
+
+    for (label n = 0; n < nField; ++n)
+    {
+        const wordRe& f = applyFilter ? filters[n] : wordRe::null;
+
+        #define writeProp(name, value) \
+            ParcelType::writeProperty(os, f, name, value, namesOnly, delim);
+
+        writeProp("d0", d0_);
+        writeProp("position0", position0_);
+        writeProp("sigma", sigma_);
+        writeProp("mu", mu_);
+        writeProp("liquidCore", liquidCore_);
+        writeProp("KHindex", KHindex_);
+        writeProp("y", y_);
+        writeProp("yDot", yDot_);
+        writeProp("tc", tc_);
+        writeProp("ms", ms_);
+        writeProp("injector", injector_);
+        writeProp("tMom", tMom_);
+        writeProp("user", user_);
+
+        #undef writeProp
+    }
+}
+
+
+template<class ParcelType>
 template<class CloudType>
 void Foam::SprayParcel<ParcelType>::readObjects
 (

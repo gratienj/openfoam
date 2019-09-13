@@ -665,6 +665,41 @@ public:
 
     // I-O
 
+        //- Write the name representation to stream
+        template<class Type>
+        static void writePropertyName
+        (
+            Ostream& os,
+            const word& name,
+            const word& delim
+        );
+
+        //- Write a named particle property to stream if the name matches
+        //- the matcher
+        template<class Type>
+        static void writeProperty
+        (
+            Ostream& os,
+            const wordRe& matcher,
+            const word& name,
+            const Type& value,
+            const bool nameOnly,
+            const word& delim
+        );
+
+        //- Write a named particle property list to stream if the name matches
+        //- the matcher
+        template<class Type>
+        static void writeProperty
+        (
+            Ostream& os,
+            const wordRe& matcher,
+            const word& name,
+            const Field<Type>& values,
+            const bool nameOnly,
+            const word& delim
+        );
+
         //- Read the fields associated with the owner cloud
         template<class TrackCloudType>
         static void readFields(TrackCloudType& c);
@@ -672,6 +707,15 @@ public:
         //- Write the fields associated with the owner cloud
         template<class TrackCloudType>
         static void writeFields(const TrackCloudType& c);
+
+        //- Write individual particle properties to stream
+        void writeProperties
+        (
+            Ostream& os,
+            const wordReList& filters,
+            const word& delim,
+            const bool namesOnly
+        ) const;
 
         //- Read particle fields as objects from the obr registry
         template<class CloudType>

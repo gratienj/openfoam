@@ -170,6 +170,32 @@ void Foam::injectedParticle::writeFields(const Cloud<injectedParticle>& c)
 }
 
 
+void Foam::injectedParticle::writeProperties
+(
+    Ostream& os,
+    const wordReList& filters,
+    const word& delim,
+    const bool namesOnly
+) const
+{
+    particle::writeProperties(os, filters, delim, namesOnly);
+
+    const bool applyFilter = !filters.empty();
+
+    const label nField = applyFilter ? filters.size() : 1;
+
+    for (label n = 0; n < nField; ++n)
+    {
+        const wordRe& f = applyFilter ? filters[n] : wordRe::null;
+
+        particle::writeProperty(os, f, "tag", tag_, namesOnly, delim);
+        particle::writeProperty(os, f, "soi", soi_, namesOnly, delim);
+        particle::writeProperty(os, f, "d", d_, namesOnly, delim);
+        particle::writeProperty(os, f, "U", U_, namesOnly, delim);
+    }
+}
+
+
 void Foam::injectedParticle::readObjects
 (
     Cloud<injectedParticle>& c,
