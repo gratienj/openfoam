@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2016 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011, 2016-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -149,6 +149,8 @@ protected:
 
     //- Declare friendship with the fvSolver class
     friend class fvSolver;
+    friend class fvMatrixAssembly;
+
 
     // Protected Member Functions
 
@@ -237,7 +239,7 @@ public:
             {}
 
 
-        // Member functions
+        // Member Functions
 
             //- Solve returning the solution statistics.
             //  Use the given solver controls

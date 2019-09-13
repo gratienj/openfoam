@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2015 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2015-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -360,6 +360,18 @@ void Foam::fvPatchField<Type>::manipulateMatrix
 
 
 template<class Type>
+void Foam::fvPatchField<Type>::manipulateMatrix
+(
+    fvMatrixAssembly& matrix,
+    const labelList& faceMap,
+    const label cellOffset
+)
+{
+    manipulatedMatrix_ = true;
+}
+
+
+template<class Type>
 void Foam::fvPatchField<Type>::write(Ostream& os) const
 {
     os.writeEntry("type", type());
@@ -584,6 +596,6 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const fvPatchField<Type>& ptf)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    #include "fvPatchFieldNew.C"
+#include "fvPatchFieldNew.C"
 
 // ************************************************************************* //
