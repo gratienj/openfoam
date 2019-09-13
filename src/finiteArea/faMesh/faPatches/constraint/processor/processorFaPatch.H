@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2016-2017 Wikki Ltd
@@ -122,7 +122,6 @@ protected:
 public:
 
     //- Runtime type information
-//     TypeName(processorPolyPatch::typeName_());
     TypeName("processor");
 
 
@@ -265,10 +264,18 @@ public:
         // Interface transfer functions
 
             //- Return the values of the given internal data adjacent to
-            //  the interface as a field
+            //- the interface as a field
             virtual tmp<labelField> interfaceInternalField
             (
                 const labelUList& internalData
+            ) const;
+
+            //- Return the values of the given internal data adjacent to
+            //- the interface as a field using edgeFaces
+            virtual tmp<labelField> interfaceInternalField
+            (
+                const labelUList& internalData,
+                const labelUList& edgeFaces
             ) const;
 
             //- Initialise interface data transfer
@@ -299,8 +306,16 @@ public:
                 const labelUList& internalData
             ) const;
 
+            //- Return neighbour field using mapping
+            virtual tmp<labelField> internalFieldTransfer
+            (
+                const Pstream::commsTypes commsType,
+                const labelUList& internalData,
+                const labelUList& edgeCells
+            ) const;
+
             //- Write the patch data as a dictionary
-            virtual void write(Ostream&) const;
+            virtual void write(Ostream& os) const;
 };
 
 

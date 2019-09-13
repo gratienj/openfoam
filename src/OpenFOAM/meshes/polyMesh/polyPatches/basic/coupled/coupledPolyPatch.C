@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -69,9 +69,9 @@ void Foam::coupledPolyPatch::writeOBJ
     const labelList& pointLabels
 )
 {
-    forAll(pointLabels, i)
+    for (const label pointi : pointLabels)
     {
-        writeOBJ(os, points[pointLabels[i]]);
+        writeOBJ(os, points[pointi]);
     }
 }
 
@@ -107,10 +107,8 @@ void Foam::coupledPolyPatch::writeOBJ
 
     label vertI = 0;
 
-    forAll(faces, i)
+    for (const face& f : faces)
     {
-        const face& f = faces[i];
-
         forAll(f, fp)
         {
             if (foamToObj.insert(f[fp], vertI))
@@ -520,6 +518,18 @@ Foam::coupledPolyPatch::coupledPolyPatch
 )
 :
     polyPatch(pp, bm),
+    matchTolerance_(pp.matchTolerance_),
+    transform_(pp.transform_)
+{}
+
+
+Foam::coupledPolyPatch::coupledPolyPatch
+(
+    const coupledPolyPatch& pp,
+    const labelList& faceCells
+)
+:
+    polyPatch(pp, faceCells),
     matchTolerance_(pp.matchTolerance_),
     transform_(pp.transform_)
 {}

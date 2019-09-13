@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2018 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -257,6 +257,18 @@ Foam::polyPatch::polyPatch(const polyPatch& p)
     faceCellsPtr_(nullptr),
     mePtr_(nullptr)
 {}
+
+
+Foam::polyPatch::polyPatch
+(
+    const polyPatch& p,
+    const labelList& faceCells
+)
+:
+    polyPatch(p)
+{
+    faceCellsPtr_ = new labelList::subList(faceCells, faceCells.size());
+}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //

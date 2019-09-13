@@ -35,7 +35,6 @@ Foam::calculatedProcessorFvPatchField<Type>::calculatedProcessorFvPatchField
     const DimensionedField<Type, volMesh>& iF
 )
 :
-    //lduInterfaceField(interface),
     coupledFvPatchField<Type>(p, iF),
     procInterface_(refCast<const lduPrimitiveProcessorInterface>(interface)),
     sendBuf_(interface.faceCells().size()),
@@ -53,7 +52,6 @@ Foam::calculatedProcessorFvPatchField<Type>::calculatedProcessorFvPatchField
     const calculatedProcessorFvPatchField<Type>& ptf
 )
 :
-    //lduInterfaceField(ptf.procInterface_),
     coupledFvPatchField<Type>(ptf),
     procInterface_(ptf.procInterface_),
     sendBuf_(procInterface_.faceCells().size()),
@@ -73,7 +71,6 @@ Foam::calculatedProcessorFvPatchField<Type>::calculatedProcessorFvPatchField
     const DimensionedField<Type, volMesh>& iF
 )
 :
-    //lduInterfaceField(ptf.procInterface_),
     coupledFvPatchField<Type>(ptf, iF),
     procInterface_(ptf.procInterface_),
     sendBuf_(procInterface_.faceCells().size()),
@@ -96,9 +93,7 @@ bool Foam::calculatedProcessorFvPatchField<Type>::ready() const
      && this->outstandingSendRequest_ < Pstream::nRequests()
     )
     {
-        bool finished =
-            UPstream::finishedRequest(this->outstandingSendRequest_);
-        if (!finished)
+        if (!UPstream::finishedRequest(this->outstandingSendRequest_))
         {
             return false;
         }
@@ -111,9 +106,7 @@ bool Foam::calculatedProcessorFvPatchField<Type>::ready() const
      && this->outstandingRecvRequest_ < Pstream::nRequests()
     )
     {
-        bool finished =
-            UPstream::finishedRequest(this->outstandingRecvRequest_);
-        if (!finished)
+        if (!UPstream::finishedRequest(this->outstandingRecvRequest_))
         {
             return false;
         }
@@ -215,6 +208,8 @@ void Foam::calculatedProcessorFvPatchField<Type>::initInterfaceMatrixUpdate
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
@@ -222,7 +217,9 @@ void Foam::calculatedProcessorFvPatchField<Type>::initInterfaceMatrixUpdate
 ) const
 {
     // Bypass patchInternalField since uses fvPatch addressing
-    const labelList& fc = procInterface_.faceCells();
+
+    const labelList& fc = lduAddr.patchAddr(patchId);
+
     scalarSendBuf_.setSize(fc.size());
     forAll(fc, i)
     {
@@ -301,6 +298,8 @@ void Foam::calculatedProcessorFvPatchField<Type>::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
@@ -324,6 +323,7 @@ void Foam::calculatedProcessorFvPatchField<Type>::updateInterfaceMatrix
     outstandingSendRequest_ = -1;
     outstandingRecvRequest_ = -1;
 
+
     // Consume straight from scalarReceiveBuf_. Note use of our own
     // helper to avoid using fvPatch addressing
     addToInternalField(result, !add, coeffs, scalarReceiveBuf_);
@@ -333,15 +333,6 @@ void Foam::calculatedProcessorFvPatchField<Type>::updateInterfaceMatrix
         static_cast<const lduInterfaceField&>(*this)
     ).updatedMatrix() = true;
 }
-
-
-//template<class Type>
-//void Foam::calculatedProcessorFvPatchField<Type>::write(Ostream& os) const
-//{
-//    //zeroGradientFvPatchField<Type>::write(os);
-//    fvPatchField<Type>::write(os);
-//    this->writeEntry("value", os);
-//}
 
 
 // ************************************************************************* //

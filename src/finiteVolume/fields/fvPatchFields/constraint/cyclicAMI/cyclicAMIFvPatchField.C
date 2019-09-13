@@ -180,6 +180,8 @@ void Foam::cyclicAMIFvPatchField<Type>::updateInterfaceMatrix
 (
     solveScalarField& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const solveScalarField& psiInternal,
     const scalarField& coeffs,
     const direction cmpt,
@@ -187,7 +189,10 @@ void Foam::cyclicAMIFvPatchField<Type>::updateInterfaceMatrix
 ) const
 {
     const labelUList& nbrFaceCells =
-        cyclicAMIPatch_.cyclicAMIPatch().neighbPatch().faceCells();
+        lduAddr.patchAddr
+        (
+            cyclicAMIPatch_.cyclicAMIPatch().neighbPatchID()
+        );
 
     solveScalarField pnf(psiInternal, nbrFaceCells);
 
@@ -204,8 +209,10 @@ void Foam::cyclicAMIFvPatchField<Type>::updateInterfaceMatrix
         pnf = cyclicAMIPatch_.interpolate(pnf);
     }
 
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+
     // Multiply the field by coefficients and add into the result
-    this->addToInternalField(result, !add, coeffs, pnf);
+    this->addToInternalField(result, !add, faceCells, coeffs, pnf);
 }
 
 
@@ -214,13 +221,18 @@ void Foam::cyclicAMIFvPatchField<Type>::updateInterfaceMatrix
 (
     Field<Type>& result,
     const bool add,
+    const lduAddressing& lduAddr,
+    const label patchId,
     const Field<Type>& psiInternal,
     const scalarField& coeffs,
     const Pstream::commsTypes
 ) const
 {
     const labelUList& nbrFaceCells =
-        cyclicAMIPatch_.cyclicAMIPatch().neighbPatch().faceCells();
+        lduAddr.patchAddr
+        (
+            cyclicAMIPatch_.cyclicAMIPatch().neighbPatchID()
+        );
 
     Field<Type> pnf(psiInternal, nbrFaceCells);
 
@@ -237,8 +249,10 @@ void Foam::cyclicAMIFvPatchField<Type>::updateInterfaceMatrix
         pnf = cyclicAMIPatch_.interpolate(pnf);
     }
 
+    const labelUList& faceCells = lduAddr.patchAddr(patchId);
+
     // Multiply the field by coefficients and add into the result
-    this->addToInternalField(result, !add, coeffs, pnf);
+    this->addToInternalField(result, !add, faceCells, coeffs, pnf);
 }
 
 

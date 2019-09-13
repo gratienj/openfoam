@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,24 +30,23 @@ void Foam::lduInterfaceField::addToInternalField
 (
     Field<Type>& result,
     const bool add,
+    const labelUList& faceCells,
     const scalarField& coeffs,
     const Field<Type>& vals
 ) const
 {
-    const labelUList& faceCells = this->interface().faceCells();
-
     if (add)
     {
-        forAll(faceCells, elemI)
+        forAll(faceCells, elemi)
         {
-            result[faceCells[elemI]] += coeffs[elemI]*vals[elemI];
+            result[faceCells[elemi]] += coeffs[elemi]*vals[elemi];
         }
     }
     else
     {
-        forAll(faceCells, elemI)
+        forAll(faceCells, elemi)
         {
-            result[faceCells[elemI]] -= coeffs[elemI]*vals[elemI];
+            result[faceCells[elemi]] -= coeffs[elemi]*vals[elemi];
         }
     }
 }

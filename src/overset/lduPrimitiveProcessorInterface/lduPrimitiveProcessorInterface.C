@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2016-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -63,11 +63,23 @@ Foam::lduPrimitiveProcessorInterface::interfaceInternalField
     const labelUList& internalData
 ) const
 {
-    tmp<labelField> tfld(new labelField(faceCells_.size()));
-    labelField& fld = tfld.ref();
-    forAll(faceCells_, i)
+    return interfaceInternalField(internalData, faceCells_);
+}
+
+
+Foam::tmp<Foam::labelField>
+Foam::lduPrimitiveProcessorInterface::interfaceInternalField
+(
+    const labelUList& internalData,
+    const labelUList& faceCells
+) const
+{
+    auto tfld = tmp<labelField>::New(faceCells.size());
+    auto& fld = tfld.ref();
+
+    forAll(faceCells, i)
     {
-        fld[i] = internalData[faceCells_[i]];
+        fld[i] = internalData[faceCells[i]];
     }
     return tfld;
 }
@@ -83,6 +95,21 @@ void Foam::lduPrimitiveProcessorInterface::initInternalFieldTransfer
 }
 
 
+void Foam::lduPrimitiveProcessorInterface::initInternalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList& iF,
+    const labelUList& faceCells
+) const
+{
+    processorLduInterface::send
+    (
+        commsType,
+        interfaceInternalField(iF, faceCells)()
+    );
+}
+
+
 Foam::tmp<Foam::labelField>
 Foam::lduPrimitiveProcessorInterface::internalFieldTransfer
 (
@@ -91,6 +118,18 @@ Foam::lduPrimitiveProcessorInterface::internalFieldTransfer
 ) const
 {
     return processorLduInterface::receive<label>(commsType, faceCells_.size());
+}
+
+
+Foam::tmp<Foam::labelField>
+Foam::lduPrimitiveProcessorInterface::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList&,
+    const labelUList& faceCells
+) const
+{
+    return processorLduInterface::receive<label>(commsType, faceCells.size());
 }
 
 

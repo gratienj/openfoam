@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016 OpenFOAM Foundation
@@ -55,7 +55,6 @@ class GAMGInterface
 :
     public lduInterface
 {
-
 protected:
 
     // Protected data
@@ -73,9 +72,7 @@ protected:
         labelList faceRestrictAddressing_;
 
 
-private:
-
-    // Private Member Functions
+    // Protected Member Functions
 
         //- No copy construct
         GAMGInterface(const GAMGInterface&) = delete;
@@ -245,6 +242,15 @@ public:
                 const UList<Type>& internalData
             ) const;
 
+            //- Return the interface internal field of the given field
+            //- using faceCell mapping
+            template<class Type>
+            tmp<Field<Type>> interfaceInternalField
+            (
+                const UList<Type>& internalData,
+                const labelUList& faceCells
+            ) const;
+
             //- Get the interface internal field of the given field
             template<class Type>
             void interfaceInternalField
@@ -258,6 +264,14 @@ public:
             virtual tmp<labelField> interfaceInternalField
             (
                 const labelUList& internalData
+            ) const;
+
+            //- Return the values of the given internal data adjacent to
+            //- the interface as a field using faceCell mapping
+            virtual tmp<labelField> interfaceInternalField
+            (
+                const labelUList& internalData,
+                const labelUList& faceCells
             ) const;
 
 

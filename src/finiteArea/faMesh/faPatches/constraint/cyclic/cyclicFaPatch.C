@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2016-2017 Wikki Ltd
@@ -48,6 +48,7 @@ void Foam::cyclicFaPatch::calcTransforms()
 {
     if (size() > 0)
     {
+        // const label sizeby2 = this->size()/2;
         pointField half0Ctrs(size()/2);
         pointField half1Ctrs(size()/2);
         for (label i=0; i<size()/2; ++i)
@@ -153,7 +154,7 @@ void Foam::cyclicFaPatch::makeWeights(scalarField& w) const
     const scalarField& magL = magEdgeLengths();
 
     const scalarField deltas(edgeNormals() & faPatch::delta());
-    label sizeby2 = deltas.size()/2;
+    const label sizeby2 = deltas.size()/2;
 
     scalar maxMatchError = 0;
     label errorEdge = -1;
@@ -206,7 +207,7 @@ void Foam::cyclicFaPatch::makeWeights(scalarField& w) const
 void Foam::cyclicFaPatch::makeDeltaCoeffs(scalarField& dc) const
 {
     const scalarField deltas(edgeNormals() & faPatch::delta());
-    label sizeby2 = deltas.size()/2;
+    const label sizeby2 = deltas.size()/2;
 
     for (label edgei = 0; edgei < sizeby2; ++edgei)
     {
@@ -248,10 +249,10 @@ void Foam::cyclicFaPatch::movePoints(const pointField& p)
 Foam::tmp<Foam::vectorField> Foam::cyclicFaPatch::delta() const
 {
     const vectorField patchD(faPatch::delta());
-    label sizeby2 = patchD.size()/2;
+    const label sizeby2 = patchD.size()/2;
 
-    tmp<vectorField> tpdv(new vectorField(patchD.size()));
-    vectorField& pdv = tpdv.ref();
+    auto tpdv = tmp<vectorField>::New(patchD.size());
+    auto& pdv = tpdv.ref();
 
     // Do the transformation if necessary
     if (parallel())
@@ -290,16 +291,26 @@ Foam::tmp<Foam::labelField> Foam::cyclicFaPatch::interfaceInternalField
 }
 
 
+Foam::tmp<Foam::labelField> Foam::cyclicFaPatch::interfaceInternalField
+(
+    const labelUList& internalData,
+    const labelUList& edgeFaces
+) const
+{
+    return patchInternalField(internalData, edgeFaces);
+}
+
+
 Foam::tmp<Foam::labelField> Foam::cyclicFaPatch::transfer
 (
-    const Pstream::commsTypes,
+    const Pstream::commsTypes commsType,
     const labelUList& interfaceData
 ) const
 {
-    tmp<labelField> tpnf(new labelField(this->size()));
-    labelField& pnf = tpnf.ref();
+    auto tpnf = tmp<labelField>::New(this->size());
+    auto& pnf = tpnf.ref();
 
-    label sizeby2 = this->size()/2;
+    const label sizeby2 = this->size()/2;
 
     for (label edgei=0; edgei<sizeby2; ++edgei)
     {
@@ -317,12 +328,21 @@ Foam::tmp<Foam::labelField> Foam::cyclicFaPatch::internalFieldTransfer
     const labelUList& iF
 ) const
 {
-    const labelUList& edgeCells = this->faceCells();
+    return internalFieldTransfer(commsType, iF, this->faceCells());
+}
 
-    tmp<labelField> tpnf(new labelField(this->size()));
-    labelField& pnf = tpnf.ref();
 
-    label sizeby2 = this->size()/2;
+Foam::tmp<Foam::labelField> Foam::cyclicFaPatch::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList& iF,
+    const labelUList& edgeCells
+) const
+{
+    auto tpnf = tmp<labelField>::New(this->size());
+    auto& pnf = tpnf.ref();
+
+    const label sizeby2 = this->size()/2;
 
     for (label edgei=0; edgei<sizeby2; ++edgei)
     {

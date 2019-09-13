@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2016-2017 Wikki Ltd
@@ -76,7 +76,6 @@ void Foam::processorFaPatch::makeNonGlobalPatchPoints() const
     (
         !Pstream::parRun()
      || !boundaryMesh().mesh()().globalData().nGlobalPoints()
-//     || !boundaryMesh().mesh().globalData().nGlobalPoints()
     )
     {
         nonGlobalPatchPointsPtr_ = new labelList(nPoints());
@@ -463,6 +462,16 @@ Foam::tmp<Foam::labelField> Foam::processorFaPatch::interfaceInternalField
 }
 
 
+Foam::tmp<Foam::labelField> Foam::processorFaPatch::interfaceInternalField
+(
+    const labelUList& internalData,
+    const labelUList& edgeFaces
+) const
+{
+    return patchInternalField(internalData, edgeFaces);
+}
+
+
 void Foam::processorFaPatch::initTransfer
 (
     const Pstream::commsTypes commsType,
@@ -496,6 +505,17 @@ void Foam::processorFaPatch::initInternalFieldTransfer
 Foam::tmp<Foam::labelField> Foam::processorFaPatch::internalFieldTransfer
 (
     const Pstream::commsTypes commsType,
+    const labelUList&
+) const
+{
+    return receive<label>(commsType, this->size());
+}
+
+
+Foam::tmp<Foam::labelField> Foam::processorFaPatch::internalFieldTransfer
+(
+    const Pstream::commsTypes commsType,
+    const labelUList&,
     const labelUList&
 ) const
 {
