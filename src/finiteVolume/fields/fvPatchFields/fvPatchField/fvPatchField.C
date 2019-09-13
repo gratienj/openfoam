@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Modified code Copyright (C) 2015 OpenCFD Ltd.
+    Modified code Copyright (C) 2015-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -362,6 +362,18 @@ void Foam::fvPatchField<Type>::manipulateMatrix
 
 
 template<class Type>
+void Foam::fvPatchField<Type>::manipulateMatrix
+(
+    fvMatrixAssembly& matrix,
+    const labelList& faceMap,
+    const label cellOffset
+)
+{
+    manipulatedMatrix_ = true;
+}
+
+
+template<class Type>
 void Foam::fvPatchField<Type>::write(Ostream& os) const
 {
     os.writeEntry("type", type());
@@ -586,6 +598,6 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const fvPatchField<Type>& ptf)
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    #include "fvPatchFieldNew.C"
+#include "fvPatchFieldNew.C"
 
 // ************************************************************************* //

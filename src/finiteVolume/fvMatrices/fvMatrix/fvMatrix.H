@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Modified code Copyright (C) 2016 OpenCFD Ltd.
+    Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -151,6 +151,8 @@ protected:
 
     //- Declare friendship with the fvSolver class
     friend class fvSolver;
+    friend class fvMatrixAssembly;
+
 
     // Protected Member Functions
 
@@ -239,7 +241,7 @@ public:
             {}
 
 
-        // Member functions
+        // Member Functions
 
             //- Solve returning the solution statistics.
             //  Use the given solver controls
