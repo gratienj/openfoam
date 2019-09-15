@@ -19,13 +19,15 @@ solvers
 {
     "alpha.*"
     {
-        isoFaceTol      1e-8;
+        vof2IsoTol      1e-8;
         surfCellTol     1e-8;
         snapTol         0;
         nAlphaBounds    3;
         clip            false;
         nAlphaSubCycles 1;
         cAlpha          1;
+        reconstructionScheme isoAlpha; // plicRDF
+        
     }
 }
 
