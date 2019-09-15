@@ -120,7 +120,7 @@ primitives/functions/implicitFunctions/sin/impSin.C
 primitives/functions/implicitFunctions/ellipsoid/impEllipsoid.C
 primitives/functions/implicitFunctions/paraboloid/impParaboloid.C
 primitives/functions/implicitFunctions/plane/impPlane.C
-primitives/functions/implicitFunctions/disc/impDisc.C
+primitives/functions/implicitFunctions/cylinder/impCylinder.C
 primitives/functions/implicitFunctions/composedFunction/impComposedFunction.C
 
 primitives/subModelBase/subModelBase.C

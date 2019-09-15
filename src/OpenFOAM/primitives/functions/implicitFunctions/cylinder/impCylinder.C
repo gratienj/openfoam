@@ -20,7 +20,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "impDisc.H"
+#include "impCylinder.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -29,8 +29,8 @@ namespace Foam
 {
     namespace implicitFunction
     {
-        defineTypeNameAndDebug(impDisc, 0);
-        addToRunTimeSelectionTable(implicitFunctions, impDisc, dict);
+        defineTypeNameAndDebug(impCylinder, 0);
+        addToRunTimeSelectionTable(implicitFunctions, impCylinder, dict);
     }
 
 }
@@ -42,7 +42,7 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::implicitFunction::impDisc::impDisc
+Foam::implicitFunction::impCylinder::impCylinder
 (
     const point& origin,
     const scalar radius,
@@ -60,7 +60,7 @@ Foam::implicitFunction::impDisc::impDisc
 }
 
 
-Foam::implicitFunction::impDisc::impDisc
+Foam::implicitFunction::impCylinder::impCylinder
 (
     const dictionary& dict
 )
@@ -77,7 +77,7 @@ Foam::implicitFunction::impDisc::impDisc
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::implicitFunction::impDisc::~impDisc()
+Foam::implicitFunction::impCylinder::~impCylinder()
 {}
 
 

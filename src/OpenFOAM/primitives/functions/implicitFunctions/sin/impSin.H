@@ -113,7 +113,7 @@ public:
     {
 
         scalar x = (p - origin_) & direction_;
-        scalar z = (p - origin_) & up_;
+        scalar z = (p - origin_) & -up_;
 
         return z - amplitude_*Foam::sin(2*constant::mathematical::pi*x/period_ + phase_);
     }

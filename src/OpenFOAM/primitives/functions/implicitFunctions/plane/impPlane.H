@@ -99,19 +99,19 @@ public:
 
     virtual scalar value(const vector p) 
     {
-        return normal_ & (origin_ - p);
+        return -normal_ & (origin_ - p);
     }
 
     virtual vector grad(const vector p) 
     {
         // normal_ has the length of one
-        return -normal_;
+        return normal_;
     }
 
     virtual scalar distanceToSurfaces(const vector p) 
     {
         // normal_ has the length of one
-        return mag((p - origin_) & normal_);
+        return mag((p - origin_) & -normal_);
     }
 
 

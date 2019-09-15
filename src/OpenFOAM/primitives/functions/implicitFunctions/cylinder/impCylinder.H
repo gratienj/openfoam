@@ -19,7 +19,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
     
 Class
-    Foam::implicitFunction::impDisc
+    Foam::implicitFunction::impCylinder
 
 Description
     creates a infintite long cylinder
@@ -28,12 +28,12 @@ Author
     Henning Scheufler, DLR, all rights reserved.
 
 SourceFiles
-    impDisc.C
+    impCylinder.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef impDisc_H
-#define impDisc_H
+#ifndef impCylinder_H
+#define impCylinder_H
 
 #include "implicitFunctions.H"
 #include "tensor.H"
@@ -47,10 +47,10 @@ namespace implicitFunction
 // Forward declaration of classes
 
 /*---------------------------------------------------------------------------*\
-                           Class impDisc Declaration
+                           Class impCylinder Declaration
 \*---------------------------------------------------------------------------*/
 
-class impDisc
+class impCylinder
 :
     public implicitFunctions
 {
@@ -73,35 +73,35 @@ private:
     // Private Member Functions
 
         //- Disallow default bitwise copy construct
-        impDisc(const impDisc&);
+        impCylinder(const impCylinder&);
 
         //- Disallow default bitwise assignment
-        void operator=(const impDisc&);
+        void operator=(const impCylinder&);
 
 
 public:
 
     //- Runtime type information
-    TypeName("disc");
+    TypeName("cylinder");
 
 
     // Constructors
 
         //- Construct from components
-        impDisc( const point&, const scalar radius,const scalar scale,const vector direction);
+        impCylinder( const point&, const scalar radius,const scalar scale,const vector direction);
 
         //- Construct from dictionary (used by implicitFunctions)
-        impDisc
+        impCylinder
         (
             const dictionary& dict
         );
 
     //- Destructor
-    virtual ~impDisc();
+    virtual ~impCylinder();
 
     virtual scalar value(const vector p) 
     {
-          return (-mag(project_ & (p-origin_))+radius_)*scale_;
+        return (-mag(project_ & (p-origin_))+radius_)*scale_;
     }
 
     virtual vector grad(const vector p) 
