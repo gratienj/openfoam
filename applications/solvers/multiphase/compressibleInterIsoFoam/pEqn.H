@@ -37,8 +37,7 @@
         surfaceScalarField phid2("phid2", fvc::interpolate(psi2)*phi);
 
         p_rghEqnComp1 =
-            pos(alpha1)
-           *(
+            (
                 (
                     fvc::ddt(alpha1, rho1) + fvc::div(alphaPhi1*rho1f)
                   - (fvOptions(alpha1, mixture.thermo1().rho())&rho1)
@@ -51,11 +50,9 @@
                   + fvm::div(phid1, p_rgh) - fvm::Sp(fvc::div(phid1), p_rgh)
                 )
             );
-        p_rghEqnComp1.ref().relax();
 
         p_rghEqnComp2 =
-            pos(alpha2)
-           *(
+            (
                (
                    fvc::ddt(alpha2, rho2) + fvc::div(alphaPhi2*rho2f)
                  - (fvOptions(alpha2, mixture.thermo2().rho())&rho2)
@@ -68,17 +65,47 @@
                  + fvm::div(phid2, p_rgh) - fvm::Sp(fvc::div(phid2), p_rgh)
                )
            );
-        p_rghEqnComp2.ref().relax();
     }
     else
     {
-         p_rghEqnComp1 =
-            fvc::ddt(rho1) + psi1*correction(fvm::ddt(p_rgh))
-          + fvc::div(phi, rho1) - fvc::Sp(fvc::div(phi), rho1);
+        #include "rhofs.H"
+
+        p_rghEqnComp1 =
+            pos(alpha1)
+           *(
+                (
+                    fvc::ddt(alpha1, rho1) + fvc::div(alphaPhi1*rho1f)
+                  - (fvOptions(alpha1, mixture.thermo1().rho())&rho1)
+                )/rho1
+              - fvc::ddt(alpha1) - fvc::div(alphaPhi1)
+              + (alpha1*psi1/rho1)*correction(fvm::ddt(p_rgh))
+            );
 
         p_rghEqnComp2 =
-            fvc::ddt(rho2) + psi2*correction(fvm::ddt(p_rgh))
-          + fvc::div(phi, rho2) - fvc::Sp(fvc::div(phi), rho2);
+            pos(alpha2)
+           *(
+               (
+                   fvc::ddt(alpha2, rho2) + fvc::div(alphaPhi2*rho2f)
+                 - (fvOptions(alpha2, mixture.thermo2().rho())&rho2)
+               )/rho2
+             - fvc::ddt(alpha2) - fvc::div(alphaPhi2)
+             + (alpha2*psi2/rho2)*correction(fvm::ddt(p_rgh))
+            );
+    }
+
+    if (mesh.moving())
+    {
+        p_rghEqnComp1.ref() += fvc::div(mesh.phi())*alpha1;
+        p_rghEqnComp2.ref() += fvc::div(mesh.phi())*alpha2;
+    }
+
+    p_rghEqnComp1.ref() *= pos(alpha1);
+    p_rghEqnComp2.ref() *= pos(alpha2);
+
+    if (pimple.transonic())
+    {
+        p_rghEqnComp1.ref().relax();
+        p_rghEqnComp2.ref().relax();
     }
 
     // Cache p_rgh prior to solve for density update
@@ -94,12 +121,7 @@
 
         solve
         (
-            (
-                (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1()
-              + (max(alpha2, scalar(0))/rho2)*p_rghEqnComp2()
-            )
-          + p_rghEqnIncomp,
-            mesh.solver(p_rgh.select(pimple.finalInnerIter()))
+            p_rghEqnComp1() + p_rghEqnComp2() + p_rghEqnIncomp
         );
 
         if (pimple.finalNonOrthogonalIter())
@@ -109,8 +131,8 @@
 
             dgdt =
             (
-                pos(alpha2)*(p_rghEqnComp2 & p_rgh)/rho2
-              - pos(alpha1)*(p_rghEqnComp1 & p_rgh)/rho1
+                alpha1*(p_rghEqnComp2 & p_rgh)
+              - alpha2*(p_rghEqnComp1 & p_rgh)
             );
 
             phi = phiHbyA + p_rghEqnIncomp.flux();
@@ -122,11 +144,13 @@
         }
     }
 
+    // Correct Uf if the mesh is moving
     {
         Uf = fvc::interpolate(U);
         surfaceVectorField n(mesh.Sf()/mesh.magSf());
         Uf += n*(fvc::absolute(phi, U)/mesh.magSf() - (n & Uf));
     }
+
 
     // Update densities from change in p_rgh
     mixture.thermo1().correctRho(psi1*(p_rgh - p_rgh_0));
@@ -135,11 +159,8 @@
     rho = alpha1*rho1 + alpha2*rho2;
 
     // Correct p_rgh for consistency with p and the updated densities
-    p = max(p_rgh + rho*gh, pMin);
     p_rgh = p - rho*gh;
     p_rgh.correctBoundaryConditions();
-
-
 
     K = 0.5*magSqr(U);
 }

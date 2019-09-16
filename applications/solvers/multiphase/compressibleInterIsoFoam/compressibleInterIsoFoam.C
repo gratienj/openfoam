@@ -91,10 +91,11 @@ int main(int argc, char *argv[])
     {
         #include "readDyMControls.H"
 
-        // Store divU from the previous mesh so that it can be mapped
+        // Store divU and divUp from the previous mesh so that it can be mapped
         // and used in correctPhi to ensure the corrected phi has the
         // same divergence
         volScalarField divU("divU0", fvc::div(fvc::absolute(phi, U)));
+        volScalarField divUp("divUp", fvc::div(fvc::absolute(phi, U), p));
 
         #include "CourantNo.H"
         #include "alphaCourantNo.H"
@@ -157,6 +158,7 @@ int main(int argc, char *argv[])
             turbulence.correctPhasePhi();
 
             #include "UEqn.H"
+            volScalarField divUp("divUp", fvc::div(fvc::absolute(phi, U), p));
             #include "TEqn.H"
 
             // --- Pressure corrector loop
@@ -170,12 +172,6 @@ int main(int argc, char *argv[])
                 turbulence.correct();
             }
         }
-
-        rho = alpha1*rho1 + alpha2*rho2;
-
-        // Correct p_rgh for consistency with p and the updated densities
-        p_rgh = p - rho*gh;
-        p_rgh.correctBoundaryConditions();
 
         runTime.write();
 
