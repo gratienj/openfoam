@@ -611,7 +611,7 @@ Foam::heheuPsiThermo<BasicPsiThermo, MixtureType>::psib() const
     forAll(psibCells, celli)
     {
         psibCells[celli] =
-            this->cellReactants(celli).psi(pCells[celli], TbCells[celli]);
+            this->cellProducts(celli).psi(pCells[celli], TbCells[celli]);
     }
 
     volScalarField::Boundary& psibBf = psib.boundaryFieldRef();
