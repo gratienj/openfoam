@@ -56,8 +56,6 @@ wmake $targetType dynamicMesh
 wmake $targetType regionCoupled
 wmake $targetType parallel/decompose/decompositionMethods
 # Make dummy decomposition methods (dummyThirdParty)
-wmakeLnInclude -u regionModels/regionModel
-#wmakeLnInclude -u regionCoupled
 parallel/decompose/AllwmakeLnInclude
 dummyThirdParty/Allwmake $targetType $*
 
@@ -65,8 +63,6 @@ wmakeLnInclude -u fvOptions
 
 wmake $targetType lagrangian/basic
 wmake $targetType lagrangian/distributionModels
-
-
 
 parallel/Allwmake $targetType $*
 
