@@ -19,6 +19,7 @@ FoamFile
 {
     type            lookup;
     emissivity      1.0;
+    transmissivity  1.0;
 }
 
 "(region0_to.*)"
