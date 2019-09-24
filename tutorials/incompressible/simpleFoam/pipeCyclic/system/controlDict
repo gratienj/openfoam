@@ -47,9 +47,26 @@ runTimeModifiable true;
 
 functions
 {
-    #include "coordinateTransform"
-    #include "momentum"
-    #include "timeInfo"
+    //#include "coordinateTransform"
+    //#include "momentum"
+    //#include "timeInfo"
+    residuals
+    {
+        type            solverInfo;
+        libs            ("libutilityFunctionObjects.so");
+        fields          (".*");
+    }
+
+    /*
+    residuals
+    {
+        type            residuals;
+        libs            ("libutilityFunctionObjects.so");
+        writeFields     true;
+        writeControl    writeTime;
+        fields          (p U k epsilon);
+    }
+    */
 }
 
 

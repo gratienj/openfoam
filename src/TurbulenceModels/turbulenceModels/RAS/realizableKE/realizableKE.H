@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2004-2011 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
@@ -101,6 +101,10 @@ protected:
 
             volScalarField k_;
             volScalarField epsilon_;
+
+
+            //- Use implicit k-Epilon source
+            Switch implicitKEpsilonSource_;
 
 
    // Protected Member Functions

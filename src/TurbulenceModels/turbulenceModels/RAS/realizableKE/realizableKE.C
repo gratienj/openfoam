@@ -213,6 +213,15 @@ realizableKE<BasicTurbulenceModel>::realizableKE
             IOobject::AUTO_WRITE
         ),
         this->mesh_
+    ),
+    implicitKEpsilonSource_
+    (
+        Switch::lookupOrAddToDict
+        (
+            "implicitKEpsilonSource",
+            this->coeffDict_,
+            false
+        )
     )
 {
     bound(k_, this->kMin_);
@@ -236,6 +245,11 @@ bool realizableKE<BasicTurbulenceModel>::read()
         C2_.readIfPresent(this->coeffDict());
         sigmak_.readIfPresent(this->coeffDict());
         sigmaEps_.readIfPresent(this->coeffDict());
+        implicitKEpsilonSource_.readIfPresent
+        (
+            "implicitKEpsilonSource",
+            this->coeffDict()
+        );
 
         return true;
     }
@@ -287,6 +301,41 @@ void realizableKE<BasicTurbulenceModel>::correct()
         )
     );
 
+    tmp<fvScalarMatrix> tEpsilonSourceEq
+    (
+        new fvScalarMatrix
+        (
+            epsilon_,
+            dimVolume*rho.dimensions()*epsilon_.dimensions()/dimTime
+        )
+    );
+
+
+    tmp<volScalarField> Cmu(rCmu(tgradU(), S2, magS));
+
+    if (implicitKEpsilonSource_)
+    {
+        tmp<volScalarField> tEpsSp
+        (
+           - C1*alpha*rho*eta/sqrt(this->nut_/Cmu())
+           + alpha*rho*C2_/(sqrt(this->nut_/Cmu()) + sqrt(this->nu()))
+        );
+
+        tEpsilonSourceEq.ref() +=
+            0.5*tEpsSp()*pow(epsilon_, 1.5)
+          - fvm::Sp(1.5*tEpsSp()*sqrt(epsilon_), epsilon_);
+    }
+    else
+    {
+        tEpsilonSourceEq.ref() +=
+            C1*alpha*rho*magS*epsilon_
+          - fvm::Sp
+            (
+                C2_*alpha*rho*epsilon_/(k_ + sqrt(nuLimited*epsilon_)),
+                epsilon_
+            );
+    }
+
     // Dissipation equation
     tmp<fvScalarMatrix> epsEqn
     (
@@ -294,12 +343,7 @@ void realizableKE<BasicTurbulenceModel>::correct()
       + fvm::div(alphaRhoPhi, epsilon_)
       - fvm::laplacian(alpha*rho*DepsilonEff(), epsilon_)
      ==
-        C1*alpha*rho*magS*epsilon_
-      - fvm::Sp
-        (
-            C2_*alpha*rho*epsilon_/(k_ + sqrt(nuLimited*epsilon_)),
-            epsilon_
-        )
+        tEpsilonSourceEq()
       + epsilonSource()
       + fvOptions(alpha, rho, epsilon_)
     );
@@ -313,6 +357,26 @@ void realizableKE<BasicTurbulenceModel>::correct()
 
 
     // Turbulent kinetic energy equation
+    tmp<fvScalarMatrix> tkSourceEq
+    (
+        new fvScalarMatrix
+        (
+            k_,
+            dimVolume*rho.dimensions()*k_.dimensions()/dimTime
+        )
+    );
+
+    if (implicitKEpsilonSource_)
+    {
+        tkSourceEq.ref() +=
+            alpha*rho*G + alpha*alpha*rho*rho*Cmu()/this->nut_*sqr(k_)
+          - fvm::Sp(2.0*alpha*alpha*rho*rho*Cmu()*k_/this->nut_, k_);
+    }
+    else
+    {
+        tkSourceEq.ref() += alpha*rho*G - fvm::Sp(alpha*rho*epsilon_/k_, k_);
+    }
+
 
     tmp<fvScalarMatrix> kEqn
     (
@@ -320,9 +384,8 @@ void realizableKE<BasicTurbulenceModel>::correct()
       + fvm::div(alphaRhoPhi, k_)
       - fvm::laplacian(alpha*rho*DkEff(), k_)
      ==
-        alpha*rho*G
       - fvm::SuSp(2.0/3.0*alpha*rho*divU, k_)
-      - fvm::Sp(alpha*rho*epsilon_/k_, k_)
+      + tkSourceEq()
       + kSource()
       + fvOptions(alpha, rho, k_)
     );
