@@ -67,6 +67,8 @@ or run an OpenFOAM application (with arguments) after first sourcing
 the OpenFOAM etc/bashrc file from the project directory:
 ($projectDir)
 
+For more information: www.OpenFOAM.com
+
 USAGE
     exit 1
 }
