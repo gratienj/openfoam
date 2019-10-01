@@ -129,7 +129,7 @@ Foam::implicitFunction::impComposedFunction::impComposedFunction
             funcI,
             implicitFunctions::New
             (
-                word(compFuncDict.lookup("function")),
+                word(compFuncDict.lookup("type")),
                 compFuncDict
             )
         );
