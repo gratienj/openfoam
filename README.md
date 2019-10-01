@@ -7,10 +7,15 @@
 * compressibleInterIsoFoam -> apps/solvers/multiphase/
 * mod(interIsoFoam)
 * mod(setAlphaField) -> should be compatible with the old version without changes of the dictionaries
-* exchangeField -> src/finiteVolume/fvMesh
+* zoneDistribute -> src/finiteVolume/fvMesh
 * leastSquare -> src/finiteVolume/fvMatrices/solvers
 * RDF -> src/transportModels/geometricVoF
-
+* added tests -> applications/test
+    * setAlphaField
+    * leastSquareGrad
+    * multiDimPolyFitter
+    * reconstructedDistanceFunction
+    * zoneDistribute
 
 ## TODO
 
