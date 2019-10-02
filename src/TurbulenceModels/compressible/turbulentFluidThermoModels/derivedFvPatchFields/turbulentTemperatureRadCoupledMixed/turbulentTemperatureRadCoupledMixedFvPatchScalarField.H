@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2011 OpenCFD Ltd.
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Modified code Copyright (C) 2017 OpenCFD Ltd.
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -101,12 +101,12 @@ class turbulentTemperatureRadCoupledMixedFvPatchScalarField
     public mixedFvPatchScalarField,
     public temperatureCoupledBase
 {
-    // Private data
+    // Private Data
 
         //- Name of field on the neighbour region
         const word TnbrName_;
 
-         //- Name of the radiative heat flux in the neighbour region
+        //- Name of the radiative heat flux in the neighbour region
         const word qrNbrName_;
 
         //- Name of the radiative heat flux in local region
@@ -123,6 +123,24 @@ class turbulentTemperatureRadCoupledMixedFvPatchScalarField
 
         //- Thermal inertia term
         Switch thermalInertia_;
+
+
+     // Private Functions
+
+            //- Return local alphaSfDelta
+            tmp<scalarField> alphaSfDelta() const;
+
+            //- Return alpha-based value fraction between nbr patch and local
+            tmp<scalarField> alphaDeltaVf() const;
+
+            //- Return delta enthalpy between regions
+            tmp<scalarField> deltaH() const;
+
+            //- Return the sum of deltaCoeff*alpha from nbr and local
+            tmp<scalarField> beta() const;
+
+            //- Return the difference of heat flux between both regions
+            tmp<scalarField> deltaQflux() const;
 
 
 public:
@@ -196,13 +214,22 @@ public:
         }
 
 
-    // Member functions
+    // Member Functions
 
         //- Update the coefficients associated with the patch field
         virtual void updateCoeffs();
 
+        //- Manipulate fvMatrixAssembly
+        virtual void manipulateMatrix
+        (
+            fvMatrixAssembly& matrix,
+            const labelList& faceMap,
+            const label cellOffset
+        );
+
+
         //- Write
-        virtual void write(Ostream&) const;
+        virtual void write(Ostream& os) const;
 };
 
 
