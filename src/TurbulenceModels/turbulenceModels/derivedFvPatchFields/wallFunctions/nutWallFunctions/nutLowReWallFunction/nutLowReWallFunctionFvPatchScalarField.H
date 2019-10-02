@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2010 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2010, 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2011-2016, 2019 OpenFOAM Foundation
@@ -30,16 +30,26 @@ Group
     grpWallFunctions
 
 Description
-    This boundary condition provides a turbulent kinematic viscosity condition
-    for use with low Reynolds number models.  It sets \c nut to zero, and
-    provides an access function to calculate y+.
+    This boundary condition provides a wall constraint on the turbulent
+    kinematic viscosity, i.e. \c nut for use with low Reynolds number models.
+    It sets \c nut to zero, and provides an access function to calculate \c y+.
 
 Usage
+    \table
+        Property     | Description                 | Required  | Default value
+        Cmu          | Model coefficient           | no        | 0.09
+        kappa        | Von Karman constant         | no        | 0.41
+        E            | Model coefficient           | no        | 9.8
+    \endtable
+
     Example of the boundary condition specification:
     \verbatim
     <patchName>
     {
+        // Mandatory entries
         type            nutLowReWallFunction;
+
+        // Optional entries
     }
     \endverbatim
 
@@ -101,8 +111,8 @@ public:
         );
 
         //- Construct by mapping given
-        //  nutLowReWallFunctionFvPatchScalarField
-        //  onto a new patch
+        //- nutLowReWallFunctionFvPatchScalarField
+        //- onto a new patch
         nutLowReWallFunctionFvPatchScalarField
         (
             const nutLowReWallFunctionFvPatchScalarField&,
