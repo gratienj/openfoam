@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2012-2016 OpenFOAM Foundation
+                            | Copyright (C) 2012-2016, 2019 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,11 +26,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "v2WallFunctionFvPatchScalarField.H"
+#include "nutWallFunctionFvPatchScalarField.H"
 #include "turbulenceModel.H"
-#include "fvPatchFieldMapper.H"
-#include "volFields.H"
 #include "addToRunTimeSelectionTable.H"
-#include "wallFvPatch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -38,47 +36,6 @@ namespace Foam
 {
 namespace RASModels
 {
-
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
-void v2WallFunctionFvPatchScalarField::checkType()
-{
-    if (!isA<wallFvPatch>(patch()))
-    {
-        FatalErrorInFunction
-            << "Invalid wall function specification" << nl
-            << "    Patch type for patch " << patch().name()
-            << " must be wall" << nl
-            << "    Current patch type is " << patch().type() << nl << endl
-            << abort(FatalError);
-    }
-}
-
-
-void v2WallFunctionFvPatchScalarField::writeLocalEntries(Ostream& os) const
-{
-    os.writeEntry("Cmu", Cmu_);
-    os.writeEntry("kappa", kappa_);
-    os.writeEntry("E", E_);
-}
-
-
-scalar v2WallFunctionFvPatchScalarField::yPlusLam
-(
-    const scalar kappa,
-    const scalar E
-)
-{
-    scalar ypl = 11.0;
-
-    for (int i=0; i<10; i++)
-    {
-        ypl = log(max(E*ypl, 1))/kappa;
-    }
-
-    return ypl;
-}
-
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -89,13 +46,9 @@ v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(p, iF),
-    Cmu_(0.09),
-    kappa_(0.41),
-    E_(9.8),
-    yPlusLam_(yPlusLam(kappa_, E_))
-{
-    checkType();
-}
+    Cv2_(0.193),
+    Bv2_(-0.94)
+{}
 
 
 v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
@@ -107,13 +60,9 @@ v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(ptf, p, iF, mapper),
-    Cmu_(ptf.Cmu_),
-    kappa_(ptf.kappa_),
-    E_(ptf.E_),
-    yPlusLam_(ptf.yPlusLam_)
-{
-    checkType();
-}
+    Cv2_(ptf.Cv2_),
+    Bv2_(ptf.Bv2_)
+{}
 
 
 v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
@@ -124,13 +73,9 @@ v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(p, iF, dict),
-    Cmu_(dict.lookupOrDefault<scalar>("Cmu", 0.09)),
-    kappa_(dict.lookupOrDefault<scalar>("kappa", 0.41)),
-    E_(dict.lookupOrDefault<scalar>("E", 9.8)),
-    yPlusLam_(yPlusLam(kappa_, E_))
-{
-    checkType();
-}
+    Cv2_(dict.getOrDefault<scalar>("Cv2", 0.193)),
+    Bv2_(dict.getOrDefault<scalar>("Bv2", -0.94))
+{}
 
 
 v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
@@ -139,13 +84,9 @@ v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(v2wfpsf),
-    Cmu_(v2wfpsf.Cmu_),
-    kappa_(v2wfpsf.kappa_),
-    E_(v2wfpsf.E_),
-    yPlusLam_(v2wfpsf.yPlusLam_)
-{
-    checkType();
-}
+    Cv2_(v2wfpsf.Cv2_),
+    Bv2_(v2wfpsf.Bv2_)
+{}
 
 
 v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
@@ -155,13 +96,9 @@ v2WallFunctionFvPatchScalarField::v2WallFunctionFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(v2wfpsf, iF),
-    Cmu_(v2wfpsf.Cmu_),
-    kappa_(v2wfpsf.kappa_),
-    E_(v2wfpsf.E_),
-    yPlusLam_(v2wfpsf.yPlusLam_)
-{
-    checkType();
-}
+    Cv2_(v2wfpsf.Cv2_),
+    Bv2_(v2wfpsf.Bv2_)
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -183,37 +120,38 @@ void v2WallFunctionFvPatchScalarField::updateCoeffs()
             internalField().group()
         )
     );
-    const scalarField& y = turbModel.y()[patchi];
 
-    const tmp<volScalarField> tk = turbModel.k();
-    const volScalarField& k = tk();
+    const nutWallFunctionFvPatchScalarField& nutw =
+        nutWallFunctionFvPatchScalarField::nutw(turbModel, patchi);
+
+    const scalarField& y = turbModel.y()[patchi];
 
     const tmp<scalarField> tnuw = turbModel.nu(patchi);
     const scalarField& nuw = tnuw();
 
-    const scalar Cmu25 = pow025(Cmu_);
+    const tmp<volScalarField> tk = turbModel.k();
+    const volScalarField& k = tk();
+
+    const scalar Cmu25 = pow025(nutw.Cmu());
 
     scalarField& v2 = *this;
 
     // Set v2 wall values
     forAll(v2, facei)
     {
-        label celli = patch().faceCells()[facei];
+        const label celli = patch().faceCells()[facei];
 
-        scalar uTau = Cmu25*sqrt(k[celli]);
+        const scalar uTau = Cmu25*sqrt(k[celli]);
 
-        scalar yPlus = uTau*y[facei]/nuw[facei];
+        const scalar yPlus = uTau*y[facei]/nuw[facei];
 
-        if (yPlus > yPlusLam_)
+        if (nutw.yPlusLam() < yPlus)
         {
-            scalar Cv2 = 0.193;
-            scalar Bv2 = -0.94;
-            v2[facei] = Cv2/kappa_*log(yPlus) + Bv2;
+            v2[facei] = Cv2_/nutw.kappa()*log(yPlus) + Bv2_;
         }
         else
         {
-            scalar Cv2 = 0.193;
-            v2[facei] = Cv2*pow4(yPlus);
+            v2[facei] = Cv2_*pow4(yPlus);
         }
 
         v2[facei] *= sqr(uTau);
@@ -225,18 +163,13 @@ void v2WallFunctionFvPatchScalarField::updateCoeffs()
 }
 
 
-void v2WallFunctionFvPatchScalarField::evaluate
+void v2WallFunctionFvPatchScalarField::write
 (
-    const Pstream::commsTypes commsType
-)
+    Ostream& os
+) const
 {
-    fixedValueFvPatchField<scalar>::evaluate(commsType);
-}
-
-
-void v2WallFunctionFvPatchScalarField::write(Ostream& os) const
-{
-    writeLocalEntries(os);
+    os.writeEntry("Cv2", Cv2_);
+    os.writeEntry("Bv2", Bv2_);
     fixedValueFvPatchField<scalar>::write(os);
 }
 
