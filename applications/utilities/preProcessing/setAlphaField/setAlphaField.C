@@ -39,23 +39,22 @@ Description
 #include "fvCFD.H"
 #include "triSurface.H"
 #include "triSurfaceTools.H"
-#include "implicitFunctions.H"
+#include "implicitFunction.H"
 #include "cutCellIso.H"
+#include "OBJstream.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 void isoFacesToFile
 (
-    const DynamicList< List<point> >& faces,
-    const word filNam,
-    const word filDir
+    const DynamicList<List<point>>& faces,
+    const word& fileName
 )
 {
-    //Writing isofaces to vtk file for inspection in paraview
+    // Writing isofaces to OBJ file for inspection in paraview
+    OBJstream os(fileName + ".obj");
 
-    mkDir(filDir);
-    autoPtr<OFstream> vtkFilePtr;
     if (Pstream::parRun())
     {
         // Collect points from all the processors
@@ -65,109 +64,24 @@ void isoFacesToFile
 
         if (Pstream::master())
         {
-            Info << "Writing file: " << (filDir + "/" + filNam + ".vtk") << endl;
-            vtkFilePtr.reset(new OFstream(filDir + "/" + filNam + ".vtk"));
-            vtkFilePtr() << "# vtk DataFile Version 2.0" << endl;
-            vtkFilePtr() << filNam << endl;
-            vtkFilePtr() << "ASCII" << endl;
-            vtkFilePtr() << "DATASET POLYDATA" << endl;
-            //label nPoints(0);
+            Info << "Writing file: " << fileName << endl;
 
-            face f;
-            label nPoints(0);
-            label fSize = 0;
-            forAll(allProcFaces, proci)
+            for (const DynamicList<List<point>>& procFaces : allProcFaces)
             {
-                const DynamicList<List<point>>& procFaces = allProcFaces[proci];
-
-
-                forAll(procFaces,fi)
+                for (const List<point>& facePts : procFaces)
                 {
-                    nPoints += procFaces[fi].size();
-                    fSize++ ;
+                    os.write(face(identity(facePts.size())), facePts);
                 }
-
-            }
-
-            vtkFilePtr() << "POINTS " << nPoints << " float" << endl;
-
-            forAll(allProcFaces, proci)
-            {
-                const DynamicList<List<point>>& procFaces = allProcFaces[proci];
-
-                forAll(procFaces,fi)
-                {
-                    List<point> pf = procFaces[fi];
-                    forAll(pf,pi)
-                    {
-                        point p = pf[pi];
-                        vtkFilePtr() << p[0] << " " << p[1] << " " << p[2] << endl;
-                    }
-                }
-
-            }
-
-            vtkFilePtr() << "POLYGONS " << fSize << " " << nPoints + fSize << endl;
-
-            label np = 0;
-
-            forAll(allProcFaces, proci)
-            {
-                const DynamicList<List<point>>& procFaces = allProcFaces[proci];
-
-
-                forAll(procFaces,fi)
-                {
-                    nPoints = procFaces[fi].size();
-                    vtkFilePtr() << nPoints;
-                    for (label pi = np; pi < np + nPoints; pi++ )
-                    {
-                        vtkFilePtr() << " " << pi;
-                    }
-                    vtkFilePtr() << "" << endl;
-                    np += nPoints;
-                }
-
             }
         }
     }
     else
     {
-        Info << "Writing file: " << (filDir + "/" + filNam + ".vtk") << endl;
-        vtkFilePtr.reset(new OFstream(filDir + "/" + filNam + ".vtk"));
-        vtkFilePtr() << "# vtk DataFile Version 2.0" << endl;
-        vtkFilePtr() << filNam << endl;
-        vtkFilePtr() << "ASCII" << endl;
-        vtkFilePtr() << "DATASET POLYDATA" << endl;
-        label nPoints(0);
-        forAll(faces,fi)
-        {
-            nPoints += faces[fi].size();
-        }
+        Info << "Writing file: " << fileName << endl;
 
-        vtkFilePtr() << "POINTS " << nPoints << " float" << endl;
-        forAll(faces,fi)
+        for (const List<point>& facePts : faces)
         {
-            List<point> pf = faces[fi];
-            forAll(pf,pi)
-            {
-                point p = pf[pi];
-                vtkFilePtr() << p[0] << " " << p[1] << " " << p[2] << endl;
-            }
-        }
-        vtkFilePtr() << "POLYGONS " << faces.size() << " " << nPoints + faces.size() << endl;
-
-        label np = 0;
-        forAll(faces,fi)
-        {
-            nPoints = faces[fi].size();
-            vtkFilePtr() << nPoints;
-            for (label pi = np; pi < np + nPoints; pi++ )
-            {
-                vtkFilePtr() << " " << pi;
-            }
-            vtkFilePtr() << "" << endl;
-            np += nPoints;
+            os.write(face(identity(facePts.size())), facePts);
         }
     }
 }
@@ -175,34 +89,44 @@ void isoFacesToFile
 
 int main(int argc, char *argv[])
 {
+    argList::addNote
+    (
+        "Uses isoCutCell to create a volume fraction field from an "
+        "implicit function."
+    );
+
     #include "addRegionOption.H"
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createNamedMesh.H"
 
-
     IOdictionary setAlphaFieldDict
-	(
-		IOobject
-		(
+    (
+        IOobject
+        (
             "setAlphaFieldDict",
-			runTime.system(),
-			mesh,
-			IOobject::MUST_READ,
-			IOobject::NO_WRITE
-		)
-	);
+            runTime.system(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        )
+    );
 
-    Info<< "Reading field alpha1\n" << endl;
-    const word nameField (setAlphaFieldDict.lookup("field"));
-    const bool invert = setAlphaFieldDict.lookupOrDefault<bool>("invert",false);
-    const bool writeVTK = setAlphaFieldDict.lookupOrDefault<bool>("writeVTK",true);;
+    Info<< "Reading " << setAlphaFieldDict.name() << endl;
+
+
+    const word fieldName(setAlphaFieldDict.get<word>("field"));
+    Info<< "Reading field " << fieldName << nl << endl;
+    const bool invert =
+        setAlphaFieldDict.lookupOrDefault<bool>("invert", false);
+    const bool writeOBJ =
+        setAlphaFieldDict.lookupOrDefault<bool>("writeOBJ", true);;
 
     volScalarField alpha1
     (
         IOobject
         (
-            nameField,
+            fieldName,
             runTime.timeName(),
             mesh,
             IOobject::MUST_READ,
@@ -211,77 +135,74 @@ int main(int argc, char *argv[])
         mesh
     );
 
-    Info<< "Reading setAlphaFieldDict" << endl;
-
-    Foam::autoPtr<Foam::implicitFunctions> func = implicitFunctions::New
+    autoPtr<implicitFunction> func = implicitFunction::New
     (
         setAlphaFieldDict.get<word>("type"),
         setAlphaFieldDict
     );
 
-    scalarField f(mesh.nPoints(),0.0);
+    scalarField f(mesh.nPoints(), 0.0);
 
-    forAll(f,pi)
+    forAll(f, pi)
     {
         f[pi] = func->value(mesh.points()[pi]);
     };
 
-    cutCellIso cutCell(mesh,f);
+    cutCellIso cutCell(mesh, f);
 
-    DynamicList< List<point> > facePts;
+    DynamicList<List<point>> facePts;
 
-    DynamicList <triSurface> surface;
+    DynamicList<triSurface> surface;
 
     surfaceScalarField cellToCellDist(mag(mesh.delta()));
 
-
-    forAll(alpha1,cellI)
+    forAll(alpha1, cellI)
     {
-        label cellStatus = cutCell.calcSubCell(cellI,0.0);
+        label cellStatus = cutCell.calcSubCell(cellI, 0.0);
 
-        if(cellStatus == -1)
+        if (cellStatus == -1)
         {
             alpha1[cellI] = 1;
         }
-        else if(cellStatus == 1)
+        else if (cellStatus == 1)
         {
             alpha1[cellI] = 0;
         }
-        else if(cellStatus == 0)
+        else if (cellStatus == 0)
         {
-            if(mag(cutCell.faceArea()) != 0)
+            if (mag(cutCell.faceArea()) != 0)
             {
-                alpha1[cellI]= max(min(cutCell.VolumeOfFluid(),1),0);
-                if (writeVTK  && (mag(cutCell.faceArea()) >= 1e-14))
+                alpha1[cellI]= max(min(cutCell.VolumeOfFluid(), 1), 0);
+                if (writeOBJ  && (mag(cutCell.faceArea()) >= 1e-14))
                 {
                     facePts.append(cutCell.facePoints());
                 }
             }
         }
-
     }
 
-    if (writeVTK)
+    if (writeOBJ)
     {
-        std::ostringstream os ;
-        os << "AlphaInit" ;
-        isoFacesToFile(facePts, os.str() , "AlphaInit");
+        isoFacesToFile(facePts, fieldName + "0");
     }
 
-	ISstream::defaultPrecision(18);
+    ISstream::defaultPrecision(18);
 
-    if(invert)
+    if (invert)
     {
         alpha1 = scalar(1) - alpha1;
     }
-    
+
+    alpha1.correctBoundaryConditions();
+
+    Info<< "Writing new alpha field " << alpha1.name() << endl;
     alpha1.write();
 
     const scalarField& alpha = alpha1.internalField();
-	Info << "sum(alpha*V) = " << gSum(mesh.V()*alpha)
-	 << ", 1-max(alpha1) = " << 1 - gMax(alpha)
-	 << "\t min(alpha1) = " << gMin(alpha) << endl;
-	
+    Info<< "sum(alpha*V):" << gSum(mesh.V()*alpha)
+        << ", 1-max(alpha1): " << 1 - gMax(alpha)
+        << " min(alpha1): " << gMin(alpha) << endl;
+    
     Info<< "End\n" << endl;
 
     return 0;
