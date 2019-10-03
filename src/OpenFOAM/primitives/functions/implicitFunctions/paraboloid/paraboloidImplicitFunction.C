@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -23,59 +23,48 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+
 \*---------------------------------------------------------------------------*/
 
-#include "impEllipsoid.H"
+#include "paraboloidImplicitFunction.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    namespace implicitFunction
+    namespace implicitFunctions
     {
-        defineTypeNameAndDebug(impEllipsoid, 0);
-        addToRunTimeSelectionTable(implicitFunctions, impEllipsoid, dict);
+        defineTypeNameAndDebug(paraboloidImplicitFunction, 0);
+        addToRunTimeSelectionTable
+        (
+            implicitFunction,
+            paraboloidImplicitFunction,
+            dict
+        );
     }
 
 }
 
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::implicitFunction::impEllipsoid::impEllipsoid
+Foam::implicitFunctions::paraboloidImplicitFunction::paraboloidImplicitFunction
 (
-    const vector semiAxis
+    const vector& coeffs
 )
 :
-    semiAxis_(semiAxis)
-{
-
-}
+    coeffs_(coeffs)
+{}
 
 
-Foam::implicitFunction::impEllipsoid::impEllipsoid
+Foam::implicitFunctions::paraboloidImplicitFunction::paraboloidImplicitFunction
 (
     const dictionary& dict
 )
 :
-    semiAxis_(dict.lookup("semiAxis"))
-{
-
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::implicitFunction::impEllipsoid::~impEllipsoid()
+    coeffs_(dict.get<vector>("coeffs"))
 {}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // ************************************************************************* //

@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -26,63 +26,49 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "impSphere.H"
+#include "planeImplicitFunction.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    namespace implicitFunction
+    namespace implicitFunctions
     {
-        defineTypeNameAndDebug(impSphere, 0);
-        addToRunTimeSelectionTable(implicitFunctions, impSphere, dict);
+        defineTypeNameAndDebug(planeImplicitFunction, 0);
+        addToRunTimeSelectionTable
+        (
+            implicitFunction,
+            planeImplicitFunction,
+            dict
+        );
     }
-
 }
-
-
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::implicitFunction::impSphere::impSphere
+Foam::implicitFunctions::planeImplicitFunction::planeImplicitFunction
 (
-    const point& origin,
-    const scalar radius,
-    const scalar scale
+    const vector& origin,
+    const vector& normal
 )
 :
     origin_(origin),
-    radius_(radius),
-    scale_(scale)
-{
-
-}
+    normal_(normal)
+{}
 
 
-Foam::implicitFunction::impSphere::impSphere
+Foam::implicitFunctions::planeImplicitFunction::planeImplicitFunction
 (
     const dictionary& dict
 )
 :
-    origin_(dict.lookup("origin")),
-    radius_(readScalar(dict.lookup("radius"))),
-    scale_(dict.lookupOrDefault<scalar>("scale",1))
+    origin_(dict.get<vector>("origin")),
+    normal_(dict.get<vector>("normal"))
 {
-
+    normal_.normalise();
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::implicitFunction::impSphere::~impSphere()
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // ************************************************************************* //

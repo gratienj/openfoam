@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -25,116 +25,102 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::implicitFunctions
+    Foam::implicitFunctions::planeImplicitFunction
 
 Description
-    base class for implicit functions
+    creates a plane
 
     Original code supplied by Henning Scheufler, DLR (2019)
 
 SourceFiles
-    implicitFunctions.C
+    planeImplicitFunction.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef implicitFunctions_H
-#define implicitFunctions_H
+#ifndef implicitFunction_planeImplicitFunction_H
+#define implicitFunction_planeImplicitFunction_H
 
-
-#include "runTimeSelectionTables.H"
-#include "objectRegistry.H"
-#include "vector.H"
-#include "point.H"
+#include "implicitFunction.H"
+#include "mathematicalConstants.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+namespace implicitFunctions
+{
 
 /*---------------------------------------------------------------------------*\
-                      Class implicitFunctions Declaration
+                    Class planeImplicitFunction Declaration
 \*---------------------------------------------------------------------------*/
 
-class implicitFunctions
+class planeImplicitFunction
+:
+    public implicitFunction
 {
-    // Private data
+private:
 
+    // Private Member Data
+
+        //- ax^2 + bx*y + cy^2
+        //- Reference point
+        vector origin_;
+
+        //- Normal vector
+        vector normal_;
 
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        implicitFunctions(const implicitFunctions&);
+        //- No copy construct
+        planeImplicitFunction(const planeImplicitFunction&);
 
-        //- Disallow default bitwise assignment
-        void operator=(const implicitFunctions&);
+        //- No assignment
+        void operator=(const planeImplicitFunction&);
 
 
 public:
 
     //- Runtime type information
-    TypeName("implicitFunctions");
-
-    // Declare run-time constructor selection table
-
-        // For the dictionary constructor
-        declareRunTimeSelectionTable
-        (
-            autoPtr,
-            implicitFunctions,
-            dict,
-            (
-                const dictionary& dict
-            ),
-            (dict)
-        );
-
-
- 
+    TypeName("plane");
 
 
     // Constructors
 
-        implicitFunctions();
+        //- Construct from components
+        planeImplicitFunction(const vector& origin, const vector& normal);
 
-     // Selectors
-
-        //- Return a reference to the selected implicitFunctions
-        static autoPtr<implicitFunctions> New
-        (
-            const word& implicitFunctionsType,
-            const dictionary& dict
-        );
+        //- Construct from dictionary (used by implicitFunctions)
+        planeImplicitFunction(const dictionary& dict);
 
 
     //- Destructor
-    virtual ~implicitFunctions();
+    virtual ~planeImplicitFunction() = default;
 
 
-    // Member Functions
+    virtual scalar value(const vector& p) const
+    {
+        return -normal_ & (origin_ - p);
+    }
 
-        //- Is object global
-        virtual scalar value(const vector p) 
-        {
-            return GREAT;
-        }
+    virtual vector grad(const vector& p) const
+    {
+        // normal_ has the length of one
+        return normal_;
+    }
 
-        virtual vector grad(const vector p) 
-        {
-            return vector(GREAT,GREAT,GREAT);
-        }
-
-        virtual scalar distanceToSurfaces(const vector p) 
-        {
-            return GREAT;
-        }
-
+    virtual scalar distanceToSurfaces(const vector& p) const
+    {
+        // normal_ has the length of one
+        return mag((p - origin_) & -normal_);
+    }
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+} // End namespace implicitFunctions
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

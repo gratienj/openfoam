@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -26,57 +26,61 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "impParaboloid.H"
+#include "cylinderImplicitFunction.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    namespace implicitFunction
+    namespace implicitFunctions
     {
-        defineTypeNameAndDebug(impParaboloid, 0);
-        addToRunTimeSelectionTable(implicitFunctions, impParaboloid, dict);
+        defineTypeNameAndDebug(cylinderImplicitFunction, 0);
+        addToRunTimeSelectionTable
+        (
+            implicitFunction,
+            cylinderImplicitFunction,
+            dict
+        );
     }
-
 }
-
-
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::implicitFunction::impParaboloid::impParaboloid
+Foam::implicitFunctions::cylinderImplicitFunction::cylinderImplicitFunction
 (
-    const vector coeffs
+    const point& origin,
+    const scalar radius,
+    const scalar scale,
+    const vector& direction
 )
 :
-    coeffs_(coeffs)
+    origin_(origin),
+    radius_(radius),
+    scale_(scale),
+    direction_(direction),
+    project_(tensor::I)
 {
-
+   direction_.normalise();
+   project_ = tensor::I - direction_*direction_; // outer product
 }
 
 
-Foam::implicitFunction::impParaboloid::impParaboloid
+Foam::implicitFunctions::cylinderImplicitFunction::cylinderImplicitFunction
 (
     const dictionary& dict
 )
 :
-    coeffs_(dict.lookup("coeffs"))
+    origin_(dict.get<point>("origin")),
+    radius_(dict.get<scalar>("radius")),
+    scale_(dict.lookupOrDefault<scalar>("scale", 1)),
+    direction_(dict.get<vector>("direction")),
+    project_(tensor::I)
 {
-
+    direction_.normalise();
+    project_ = tensor::I - (direction_ * direction_); // outer product
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::implicitFunction::impParaboloid::~impParaboloid()
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // ************************************************************************* //

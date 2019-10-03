@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -25,109 +25,104 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::implicitFunction::impPlane
+    Foam::implicitFunctions::sphereImplicitFunction
 
 Description
-    creates a plane
+    Creates a sphere
 
     Original code supplied by Henning Scheufler, DLR (2019)
 
 SourceFiles
-    impPlane.C
+    sphereImplicitFunction.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef impPlane_H
-#define impPlane_H
+#ifndef implicitFunction_sphereImplicitFunction_H
+#define implicitFunction_sphereImplicitFunction_H
 
-#include "implicitFunctions.H"
-#include "mathematicalConstants.H"
-
+#include "implicitFunction.H"
+#include "point.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace implicitFunction
+namespace implicitFunctions
 {
-// Forward declaration of classes
 
 /*---------------------------------------------------------------------------*\
-                           Class impPlane Declaration
+                   Class sphereImplicitFunction Declaration
 \*---------------------------------------------------------------------------*/
 
-class impPlane
+class sphereImplicitFunction
 :
-    public implicitFunctions
+    public implicitFunction
 {
-private:
-
     // Private Member Data
 
-        //- ax^2 + bx*y + cy^2
-    // reference point of the impPlane
-        vector origin_;
-    // normal vector of the impPlane
-        vector normal_;
+        //- Origin point
+        const point origin_;
 
+        //- Radius
+        const scalar radius_;
 
+        const scalar scale_;
 
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        impPlane(const impPlane&);
+        //- No copy construct
+        sphereImplicitFunction(const sphereImplicitFunction&);
 
-        //- Disallow default bitwise assignment
-        void operator=(const impPlane&);
+        //- No copy assignment
+        void operator=(const sphereImplicitFunction&) = delete;
 
 
 public:
 
     //- Runtime type information
-    TypeName("plane");
+    TypeName("sphere");
 
 
     // Constructors
 
         //- Construct from components
-        impPlane(const vector origin,const vector normal);
-
-        //- Construct from dictionary (used by implicitFunctions)
-        impPlane
+        sphereImplicitFunction
         (
-            const dictionary& dict
+            const point&,
+            const scalar radius,
+            const scalar scale
         );
 
+        //- Construct from dictionary
+        sphereImplicitFunction(const dictionary& dict);
+
     //- Destructor
-    virtual ~impPlane();
-
-    virtual scalar value(const vector p) 
-    {
-        return -normal_ & (origin_ - p);
-    }
-
-    virtual vector grad(const vector p) 
-    {
-        // normal_ has the length of one
-        return normal_;
-    }
-
-    virtual scalar distanceToSurfaces(const vector p) 
-    {
-        // normal_ has the length of one
-        return mag((p - origin_) & -normal_);
-    }
+    virtual ~sphereImplicitFunction() = default;
 
 
     // Member Functions
 
+        virtual scalar value(const vector& p) const
+        {
+            return (-mag(p - origin_) + radius_)*scale_;
+        }
 
+        virtual vector grad(const vector& p) const
+        {
+            return (origin_ - p)*scale_;
+        }
+
+        virtual scalar distanceToSurfaces(const vector& p) const
+        {
+            return mag(mag(p-origin_) - radius_)*scale_;
+        }
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-} // End namespace implicitFunction
+
+} // End namespace implicitFunctions
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

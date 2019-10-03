@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -23,29 +23,29 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 Class
-    Foam::impComposedFunction
+    Foam::implicitFunctions::composedFunctionImplicitFunction
 
 Description
-    Handles multiple implict functions and offers multiple ways to combine
+    Handles multiple implicit functions and offers multiple ways to combine
     them
 
 Usage
     Example of function object partial specification:
-     \verbatim
-    function composedFunction;
+    \verbatim
+    function composedFunctionImplicitFunction;
     mode minDist;
-    // following mode are avaible:
+    // following mode are available:
     // "add" "subtract" "minDist" "intersect"
-    composedFunctions
+    composedFunctionImplicitFunctions
     {
         plane
         {
             function plane;
             origin (0 1. 0);
             normal (0 1 0);
-            
+
         }
 
         sphere
@@ -66,76 +66,72 @@ Usage
     }
     \endverbatim
 
-
-
-
     Original code supplied by Henning Scheufler, DLR (2019)
 
 SourceFiles
-    impComposedFunction.C
+    composedFunctionImplicitFunction.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef impComposedFunction_H
-#define impComposedFunction_H
+#ifndef implicitFunctions_composedFunctionImplicitFunction_H
+#define implicitFunctions_composedFunctionImplicitFunction_H
 
-#include "implicitFunctions.H"
-#include "mathematicalConstants.H"
-#include "Field.H"
-
+#include "implicitFunction.H"
+#include "scalarField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace implicitFunction
+namespace implicitFunctions
 {
-// Forward declaration of classes
 
 /*---------------------------------------------------------------------------*\
-                           Class impComposedFunction Declaration
+              Class composedFunctionImplicitFunction Declaration
 \*---------------------------------------------------------------------------*/
 
-class impComposedFunction
+class composedFunctionImplicitFunction
 :
-    public implicitFunctions
+    public implicitFunction
 {
 private:
 
     // Private Member Data
-             //- Enumeration defining the valid actions
-    enum setMode
-    {
-        ADD,                
-        SUBTRACT,           
-        MINDIST,
-        INTERSECT 
-    };
+         //- Enumeration defining the valid actions
+        enum class modeType
+        {
+            ADD,
+            SUBTRACT,
+            MINDIST,
+            INTERSECT
+        };
 
-    //- The setActions text representations
-    static const Enum<setMode> modeNames;
+        //- The setActions text representations
+        static const Enum<modeType> modeTypeNames;
 
-    // stores the functions
-    PtrList<implicitFunctions> functions_;
+        //- Stores the functions
+        PtrList<implicitFunction> functions_;
 
-    setMode mode_;
+        //- Mode
+        modeType mode_;
 
-    // needs for finding the closest function. 
-    // avoid creation every call
-    scalarField values_;
+        //- Needed for finding the closest function.
+        //  Note: avoid creation every call
+        mutable scalarField values_;
 
-    label selectFunction(const scalarField& values_);
+        label selectFunction(const scalarField& values) const;
 
-
-        
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        impComposedFunction(const impComposedFunction&);
+        //- No copy construct
+        composedFunctionImplicitFunction
+        (
+            const composedFunctionImplicitFunction&
+        ) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const impComposedFunction&);
+        //- No bitwise assignment
+        void operator=(const composedFunctionImplicitFunction&) = delete;
 
 
 public:
@@ -146,40 +142,26 @@ public:
 
     // Constructors
 
-        // //- Construct from components
-        // impComposedFunction
-        // (
-        //     const vector origin,
-        //     const vector normal,
-        //     const vector tangent,
-        //     const scalar k1,
-        //     const scalar k2
-        // );
+        //- Construct from dictionary
+        composedFunctionImplicitFunction(const dictionary& dict);
 
-        //- Construct from dictionary (used by implicitFunctions)
-        impComposedFunction
-        (
-            const dictionary& dict
-        );
 
     //- Destructor
-    virtual ~impComposedFunction();
-
-    virtual scalar value(const vector p);
-
-    virtual vector grad(const vector p);
-
-    virtual scalar distanceToSurfaces(const vector p);
+    virtual ~composedFunctionImplicitFunction() = default;
 
 
     // Member Functions
 
+        virtual scalar value(const vector& p) const;
 
+        virtual vector grad(const vector& p) const;
+
+        virtual scalar distanceToSurfaces(const vector& p) const;
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-} // End namespace implicitFunction
+} // End namespace implicitFunctions
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

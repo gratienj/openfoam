@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -26,60 +26,45 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "impPlane.H"
-#include "addToRunTimeSelectionTable.H"
+#include "implicitFunction.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    namespace implicitFunction
-    {
-        defineTypeNameAndDebug(impPlane, 0);
-        addToRunTimeSelectionTable(implicitFunctions, impPlane, dict);
-    }
-
+    defineTypeNameAndDebug(implicitFunction, 0);
+    defineRunTimeSelectionTable(implicitFunction, dict);
 }
 
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+Foam::autoPtr<Foam::implicitFunction> Foam::implicitFunction::New
+(
+    const word& functionType,
+    const dictionary& dict
+)
+{
+    const auto& cstrIter = dictConstructorTablePtr_->find(functionType);
+
+    if (!cstrIter.found())
+    {
+        FatalErrorInFunction
+            << "Unknown implicitFunction type " << functionType
+            << nl << nl
+            << "Valid implicitFunction types : " << nl
+            << dictConstructorTablePtr_->sortedToc()
+            << exit(FatalError);
+    }
+
+    return autoPtr<implicitFunction>(cstrIter()(dict));
+}
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::implicitFunction::impPlane::impPlane
-(
-    const vector origin,
-    const vector normal
-)
-:
-    origin_(origin),
-    normal_(normal)
-{
-
-}
-
-
-Foam::implicitFunction::impPlane::impPlane
-(
-    const dictionary& dict
-)
-:
-    origin_(dict.lookup("origin")),
-    normal_(dict.lookup("normal"))
-{
-    normal_ /= mag(normal_);
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::implicitFunction::impPlane::~impPlane()
+Foam::implicitFunction::implicitFunction()
 {}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // ************************************************************************* //

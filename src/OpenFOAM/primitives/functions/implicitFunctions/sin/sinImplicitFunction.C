@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -26,36 +26,35 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "impSin.H"
+#include "sinImplicitFunction.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    namespace implicitFunction
+    namespace implicitFunctions
     {
-        defineTypeNameAndDebug(impSin, 0);
-        addToRunTimeSelectionTable(implicitFunctions, impSin, dict);
+        defineTypeNameAndDebug(sinImplicitFunction, 0);
+        addToRunTimeSelectionTable
+        (
+            implicitFunction,
+            sinImplicitFunction,
+            dict
+        );
     }
-
 }
-
-
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
-
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::implicitFunction::impSin::impSin
+Foam::implicitFunctions::sinImplicitFunction::sinImplicitFunction
 (
     const scalar period,
     const scalar phase,
     const scalar amplitude,
-    const vector direction,
-    const vector up,
-    const vector origin
+    const vector& direction,
+    const vector& up,
+    const vector& origin
 )
 :
     period_(period),
@@ -64,35 +63,24 @@ Foam::implicitFunction::impSin::impSin
     up_(up),
     direction_(direction),
     origin_(origin)
-{
-
-}
+{}
 
 
-Foam::implicitFunction::impSin::impSin
+Foam::implicitFunctions::sinImplicitFunction::sinImplicitFunction
 (
     const dictionary& dict
 )
 :
-    period_(readScalar(dict.lookup("period"))),
+    period_(dict.get<scalar>("period")),
     phase_(dict.lookupOrDefault<scalar>("phase",0.0)),
-    amplitude_(readScalar(dict.lookup("amplitude"))),
-    up_(dict.lookup("up")),
-    direction_(dict.lookup("direction")),
-    origin_(dict.lookup("origin"))
+    amplitude_(dict.get<scalar>("amplitude")),
+    up_(dict.get<vector>("up")),
+    direction_(dict.get<vector>("direction")),
+    origin_(dict.get<vector>("origin"))
 {
-    direction_ /= mag(direction_);
-    up_ /= mag(up_);
+    direction_.normalise();
+    up_.normalise();
 }
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::implicitFunction::impSin::~impSin()
-{}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // ************************************************************************* //

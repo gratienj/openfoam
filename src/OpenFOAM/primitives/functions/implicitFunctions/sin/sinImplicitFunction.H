@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -25,113 +25,120 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::implicitFunction::impEllipsoid
+    Foam::implicitFunctions::sinImplicitFunction
 
 Description
-    creates an ellipsoid
 
     Original code supplied by Henning Scheufler, DLR (2019)
 
 SourceFiles
-    impEllipsoid.C
+    sinImplicitFunction.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef impEllipsoid_H
-#define impEllipsoid_H
+#ifndef implicitFunction_sinImplicitFunction_H
+#define implicitFunction_sinImplicitFunction_H
 
-#include "implicitFunctions.H"
+#include "implicitFunction.H"
 #include "mathematicalConstants.H"
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace implicitFunction
+namespace implicitFunctions
 {
-// Forward declaration of classes
 
 /*---------------------------------------------------------------------------*\
-                           Class impEllipsoid Declaration
+                     Class sinImplicitFunction Declaration
 \*---------------------------------------------------------------------------*/
 
-class impEllipsoid
+class sinImplicitFunction
 :
-    public implicitFunctions
+    public implicitFunction
 {
 private:
 
     // Private Member Data
 
         //- origin point
-        vector semiAxis_;
+        const scalar period_;
 
-        //- origin point
+        //- Radius
+        const scalar phase_;
+
+        const scalar amplitude_;
+
+        vector up_;
+
+        vector direction_;
+
         vector origin_;
-
 
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        impEllipsoid(const impEllipsoid&);
+        //- No copy construct
+        sinImplicitFunction(const sinImplicitFunction&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const impEllipsoid&);
+        //- No bitwise assignment
+        void operator=(const sinImplicitFunction&) = delete;
 
 
 public:
 
     //- Runtime type information
-    TypeName("ellipsoid");
+    TypeName("sin");
 
 
     // Constructors
 
         //- Construct from components
-        impEllipsoid(const vector semiAxis);
+        sinImplicitFunction
+        (
+            const scalar period,
+            const scalar phase,
+            const scalar amplitude,
+            const vector& direction,
+            const vector& up,
+            const vector& origin
+        );
 
         //- Construct from dictionary (used by implicitFunctions)
-        impEllipsoid
-        (
-            const dictionary& dict
-        );
+        sinImplicitFunction(const dictionary& dict);
+
 
     //- Destructor
-    virtual ~impEllipsoid();
+    virtual ~sinImplicitFunction() = default;
 
-    virtual scalar value(const vector p) 
+    virtual scalar value(const vector& p) const
     {
-          return -sqrt(sqr((p.x()-origin_.x())/semiAxis_.x())+sqr((p.y()-origin_.y())/semiAxis_.y())+sqr((p.z()-origin_.z())/semiAxis_.z())) + 1;
+        const scalar x = (p - origin_) & direction_;
+        const scalar z = (p - origin_) & -up_;
+
+        return
+            z
+          - amplitude_
+           *Foam::sin(2*constant::mathematical::pi*x/period_ + phase_);
     }
 
-    virtual vector grad(const vector p) 
+    virtual vector grad(const vector& p) const
     {
-        // normal_ has the length of one
-        return vector
-        (
-            2*(p.x()-origin_.x())/sqr(semiAxis_.x()),
-            2*(p.y()-origin_.y())/sqr(semiAxis_.y()),
-            2*(p.z()-origin_.z())/sqr(semiAxis_.z())
-        );
+        NotImplemented;
+        return vector::zero;
     }
 
-    virtual scalar distanceToSurfaces(const vector p) 
+    virtual scalar distanceToSurfaces(const vector& p) const
     {
-        // not yet implemented
-        return GREAT;
+        NotImplemented;
+        return 0;
     }
-
-
-    // Member Functions
-
-
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-} // End namespace implicitFunction
+
+} // End namespace implicitFunctions
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

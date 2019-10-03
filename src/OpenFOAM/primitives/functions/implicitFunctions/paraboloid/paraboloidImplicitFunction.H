@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -23,108 +23,103 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 Class
-    Foam::implicitFunction::impSphere
+    Foam::implicitFunctions::paraboloidImplicitFunction
 
 Description
-    creates a sin wave
+    creates a paraboloid
 
     Original code supplied by Henning Scheufler, DLR (2019)
 
 SourceFiles
-    impSphere.C
+    paraboloidImplicitFunction.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef impSphere_H
-#define impSphere_H
+#ifndef implicitFunction_paraboloidImplicitFunction_H
+#define implicitFunction_paraboloidImplicitFunction_H
 
-#include "implicitFunctions.H"
+#include "implicitFunction.H"
+#include "mathematicalConstants.H"
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace implicitFunction
+namespace implicitFunctions
 {
-// Forward declaration of classes
 
 /*---------------------------------------------------------------------------*\
-                           Class impSphere Declaration
+                 class paraboloidImplicitFunction Declaration
 \*---------------------------------------------------------------------------*/
 
-class impSphere
+class paraboloidImplicitFunction
 :
-    public implicitFunctions
+    public implicitFunction
 {
 private:
 
     // Private Member Data
 
-        //- origin point
-        const point origin_;
+        //- Coefficients of ax^2 + bx*y + cy^2
+        vector coeffs_;
 
-        //- Radius
-        const scalar radius_;
-
-        const scalar scale_;
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
-        impSphere(const impSphere&);
+        //- No copy construct
+        paraboloidImplicitFunction(const paraboloidImplicitFunction&);
 
-        //- Disallow default bitwise assignment
-        void operator=(const impSphere&);
+        //- No bitwise assignment
+        void operator=(const paraboloidImplicitFunction&);
 
 
 public:
 
     //- Runtime type information
-    TypeName("sphere");
+    TypeName("paraboloid");
 
 
     // Constructors
 
         //- Construct from components
-        impSphere( const point&, const scalar radius,const scalar scale);
+        paraboloidImplicitFunction(const vector& coeffs);
 
-        //- Construct from dictionary (used by implicitFunctions)
-        impSphere
-        (
-            const dictionary& dict
-        );
+        //- Construct from dictionary
+        paraboloidImplicitFunction(const dictionary& dict);
+
 
     //- Destructor
-    virtual ~impSphere();
+    virtual ~paraboloidImplicitFunction() = default;
 
-    // Member Functions
-
-    virtual scalar value(const vector p) 
+    virtual scalar value(const vector& p) const
     {
-          return (-mag(p-origin_)+radius_)*scale_;
+        return
+            coeffs_.x()*sqr(p.x())
+          + coeffs_.y()*p.x()*p.y()
+          + coeffs_.z()*sqr(p.y())
+          - p.z();
     }
 
-    virtual vector grad(const vector p) 
+    virtual vector grad(const vector& p) const
     {
-        return (origin_-p)*scale_;
+        NotImplemented;
+        return vector::zero;
     }
 
-    virtual scalar distanceToSurfaces(const vector p) 
+    virtual scalar distanceToSurfaces(const vector& p) const
     {
-        return mag(mag(p-origin_)-radius_)*scale_;
+        NotImplemented;
+        return 0;
     }
-
-
-
-
-
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-} // End namespace implicitFunction
+
+} // End namespace implicitFunctions
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

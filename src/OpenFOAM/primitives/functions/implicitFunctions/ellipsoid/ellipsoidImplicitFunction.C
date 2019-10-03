@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -23,59 +23,46 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-
 \*---------------------------------------------------------------------------*/
 
-#include "implicitFunctions.H"
+#include "ellipsoidImplicitFunction.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    defineTypeNameAndDebug(implicitFunctions, 0);
-    defineRunTimeSelectionTable(implicitFunctions, dict);
-}
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-Foam::autoPtr<Foam::implicitFunctions> Foam::implicitFunctions::New
-(
-    const word& implicitFunctionsType,
-    const dictionary& dict
-)
-{
-    dictConstructorTable::iterator cstrIter =
-        dictConstructorTablePtr_->find(implicitFunctionsType);
-
-    if (!cstrIter.found())
+    namespace implicitFunctions
     {
-        FatalErrorInFunction
-            << "Unknown implicitFunctions type " << implicitFunctionsType
-            << endl << endl
-            << "Valid implicitFunctions types : " << endl
-            << dictConstructorTablePtr_->sortedToc()
-            << exit(FatalError);
+        defineTypeNameAndDebug(ellipsoidImplicitFunction, 0);
+        addToRunTimeSelectionTable
+        (
+            implicitFunction,
+            ellipsoidImplicitFunction,
+            dict
+        );
     }
-
-    return autoPtr<implicitFunctions>(cstrIter()( dict));
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::implicitFunctions::implicitFunctions()
+Foam::implicitFunctions::ellipsoidImplicitFunction::ellipsoidImplicitFunction
+(
+    const vector& semiAxis
+)
+:
+    semiAxis_(semiAxis)
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::implicitFunctions::~implicitFunctions()
+Foam::implicitFunctions::ellipsoidImplicitFunction::ellipsoidImplicitFunction
+(
+    const dictionary& dict
+)
+:
+    semiAxis_(dict.get<vector>("semiAxis"))
 {}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
 
 
 // ************************************************************************* //
