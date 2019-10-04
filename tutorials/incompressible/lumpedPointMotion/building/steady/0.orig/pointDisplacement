@@ -67,6 +67,7 @@ boundaryField
     {
         type            lumpedPointDisplacement;
         value           uniform (0 0 0);
+        controllers     ( vertical );
     }
 }
 

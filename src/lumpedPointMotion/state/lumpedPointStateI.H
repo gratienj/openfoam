@@ -66,4 +66,17 @@ inline const Foam::tensorField& Foam::lumpedPointState::rotations() const
 }
 
 
+inline Foam::quaternion::eulerOrder
+Foam::lumpedPointState::rotationOrder() const
+{
+    return order_;
+}
+
+
+inline bool Foam::lumpedPointState::degrees() const
+{
+    return degrees_;
+}
+
+
 // ************************************************************************* //
