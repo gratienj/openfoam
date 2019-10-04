@@ -5,6 +5,8 @@
     \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
+                            | Copyright (C) 2019 Norbert Weber
+-------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
 

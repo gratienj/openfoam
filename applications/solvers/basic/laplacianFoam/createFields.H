@@ -28,9 +28,20 @@ IOdictionary transportProperties
     )
 );
 
-
 Info<< "Reading diffusivity DT\n" << endl;
 
-dimensionedScalar DT("DT", dimViscosity, transportProperties);
+volScalarField DT
+(
+    IOobject
+    (
+        "DT",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh
+);
+
 
 #include "createFvOptions.H"
