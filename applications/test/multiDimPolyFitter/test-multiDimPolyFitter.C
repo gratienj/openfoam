@@ -29,8 +29,7 @@ Description
     Uses isoCutter to create a volume fraction field from either a cylinder, 
     a sphere or a plane.
 
-Author
-    Henning Scheufler, DLR, all rights reserved.
+    Original code supplied by Henning Scheufler, DLR (2019)
 
 \*---------------------------------------------------------------------------*/
 #include "fvCFD.H"

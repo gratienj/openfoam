@@ -1,9 +1,15 @@
 /*---------------------------------------------------------------------------*\
-            Copyright (c) 2017-2019, German Aerospace Center (DLR)
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     |
+    \\  /    A nd           | Copyright (C) 2017 OpenCFD Ltd.
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+                isoAdvector | Copyright (C) 2016-2017 DHI
+              Modified work | Copyright (C) 2019 Henning Scheufler
 -------------------------------------------------------------------------------
 License
-    This file is part of the VoFLibrary source code library, which is an 
-	unofficial extension to OpenFOAM.
+    This file is part of OpenFOAM.
 
     OpenFOAM is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by
@@ -19,31 +25,20 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    initAlphaField
+    setAlphaField
 
 Description
-    Uses cellCellIso to create a volume fraction field from either a cylinder, 
+    Uses isoCutCell to create a volume fraction field from either a cylinder,
     a sphere or a plane.
 
-Author
-    Henning Scheufler, DLR, all rights reserved.
-    Johan Roenby, DHI, all rights reserved.
-
+    Original code supplied by Johan Roenby, DHI (2016)
+    Modification Henning Scheufler, DLR (2019)
 
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
-// #include "searchableCylinder.H"
-// #include "searchableSurface.H"
-// #include "mathematicalConstants.H"
-// #include "SortableList.H"
-
 #include "triSurface.H"
 #include "triSurfaceTools.H"
-
-//#include "cutFace.H"
-//#include "cutCell.H"
-
 #include "implicitFunctions.H"
 #include "cutCellIso.H"
 
@@ -183,8 +178,7 @@ int main(int argc, char *argv[])
     #include "addRegionOption.H"
     #include "setRootCase.H"
     #include "createTime.H"
-//    #include "createMesh.H"
-    #include "createNamedMesh.H" // works with regions
+    #include "createNamedMesh.H"
 
 
     IOdictionary setAlphaFieldDict
@@ -274,18 +268,14 @@ int main(int argc, char *argv[])
         isoFacesToFile(facePts, os.str() , "AlphaInit");
     }
 
-    // alpha1.correctBoundaryConditions();
-
-	
 	ISstream::defaultPrecision(18);
 
     if(invert)
     {
         alpha1 = scalar(1) - alpha1;
-        // alpha1.correctBoundaryConditions();
     }
     
-    alpha1.write(); //Writing volScalarField alpha1
+    alpha1.write();
 
     const scalarField& alpha = alpha1.internalField();
 	Info << "sum(alpha*V) = " << gSum(mesh.V()*alpha)
