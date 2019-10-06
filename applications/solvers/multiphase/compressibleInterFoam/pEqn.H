@@ -6,7 +6,7 @@
     (
         "phiHbyA",
         fvc::flux(HbyA)
-      + MRF.zeroFilter(fvc::interpolate(rho*rAU)*fvc::ddtCorr(U, phi, Uf))
+      + MRF.zeroFilter(fvc::interpolate(rho*rAU)*fvc::ddtCorr(U, phi))
     );
     MRF.makeRelative(phiHbyA);
 
@@ -23,9 +23,6 @@
     // Update the pressure BCs to ensure flux consistency
     constrainPressure(p_rgh, U, phiHbyA, rAUf, MRF);
 
-    // Make the fluxes relative to the mesh motion
-    fvc::makeRelative(phiHbyA, U);
-
     tmp<fvScalarMatrix> p_rghEqnComp1;
     tmp<fvScalarMatrix> p_rghEqnComp2;
 
@@ -37,34 +34,38 @@
         surfaceScalarField phid2("phid2", fvc::interpolate(psi2)*phi);
 
         p_rghEqnComp1 =
-            (
+            pos(alpha1)
+           *(
                 (
                     fvc::ddt(alpha1, rho1) + fvc::div(alphaPhi1*rho1f)
                   - (fvOptions(alpha1, mixture.thermo1().rho())&rho1)
                 )/rho1
               - fvc::ddt(alpha1) - fvc::div(alphaPhi1)
               + (alpha1/rho1)
-              *correction
+               *correction
                 (
                     psi1*fvm::ddt(p_rgh)
                   + fvm::div(phid1, p_rgh) - fvm::Sp(fvc::div(phid1), p_rgh)
                 )
             );
+        p_rghEqnComp1.ref().relax();
 
         p_rghEqnComp2 =
-            (
-              (
-                  fvc::ddt(alpha2, rho2) + fvc::div(alphaPhi2*rho2f)
-                - (fvOptions(alpha2, mixture.thermo2().rho())&rho2)
-              )/rho2
-            - fvc::ddt(alpha2) - fvc::div(alphaPhi2)
-            + (alpha2/rho2)
+            pos(alpha2)
+           *(
+               (
+                   fvc::ddt(alpha2, rho2) + fvc::div(alphaPhi2*rho2f)
+                 - (fvOptions(alpha2, mixture.thermo2().rho())&rho2)
+               )/rho2
+             - fvc::ddt(alpha2) - fvc::div(alphaPhi2)
+             + (alpha2/rho2)
               *correction
-              (
-                  psi2*fvm::ddt(p_rgh)
-                + fvm::div(phid2, p_rgh) - fvm::Sp(fvc::div(phid2), p_rgh)
-              )
-          );
+               (
+                   psi2*fvm::ddt(p_rgh)
+                 + fvm::div(phid2, p_rgh) - fvm::Sp(fvc::div(phid2), p_rgh)
+               )
+           );
+        p_rghEqnComp2.ref().relax();
     }
     else
     {
@@ -72,7 +73,7 @@
 
         p_rghEqnComp1 =
             pos(alpha1)
-          *(
+           *(
                 (
                     fvc::ddt(alpha1, rho1) + fvc::div(alphaPhi1*rho1f)
                   - (fvOptions(alpha1, mixture.thermo1().rho())&rho1)
@@ -83,29 +84,14 @@
 
         p_rghEqnComp2 =
             pos(alpha2)
-          *(
-              (
-                  fvc::ddt(alpha2, rho2) + fvc::div(alphaPhi2*rho2f)
-                - (fvOptions(alpha2, mixture.thermo2().rho())&rho2)
-              )/rho2
-            - fvc::ddt(alpha2) - fvc::div(alphaPhi2)
-            + (alpha2*psi2/rho2)*correction(fvm::ddt(p_rgh))
+           *(
+               (
+                   fvc::ddt(alpha2, rho2) + fvc::div(alphaPhi2*rho2f)
+                 - (fvOptions(alpha2, mixture.thermo2().rho())&rho2)
+               )/rho2
+             - fvc::ddt(alpha2) - fvc::div(alphaPhi2)
+             + (alpha2*psi2/rho2)*correction(fvm::ddt(p_rgh))
             );
-    }
-
-    if (mesh.moving())
-    {
-        p_rghEqnComp1.ref() += fvc::div(mesh.phi())*alpha1;
-        p_rghEqnComp2.ref() += fvc::div(mesh.phi())*alpha2;
-    }
-
-    p_rghEqnComp1.ref() *= pos(alpha1);
-    p_rghEqnComp2.ref() *= pos(alpha2);
-
-    if (pimple.transonic())
-    {
-        p_rghEqnComp1.ref().relax();
-        p_rghEqnComp2.ref().relax();
     }
 
     // Cache p_rgh prior to solve for density update
@@ -121,7 +107,8 @@
 
         solve
         (
-            p_rghEqnComp1() + p_rghEqnComp2() + p_rghEqnIncomp
+            p_rghEqnComp1() + p_rghEqnComp2() + p_rghEqnIncomp,
+            mesh.solver(p_rgh.select(pimple.finalInnerIter()))
         );
 
         if (pimple.finalNonOrthogonalIter())
@@ -143,9 +130,6 @@
             fvOptions.correct(U);
         }
     }
-
-    // Correct Uf if the mesh is moving
-    fvc::correctUf(Uf, U, fvc::absolute(phi, U));
 
     // Update densities from change in p_rgh
     mixture.thermo1().correctRho(psi1*(p_rgh - p_rgh_0));
