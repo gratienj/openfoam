@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     | Website:  https://openfoam.org
+   \\    /   O peration     |
     \\  /    A nd           | Copyright (C) 2019 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
@@ -195,27 +195,19 @@ relaxedNonOrthoGaussLaplacianScheme<Type, GType>::fvmLaplacian
     const word oldName(corrName + "_0");
     const scalar relax(vf.mesh().equationRelaxationFactor(oldName));
 
-    DebugVar(oldName);
     const objectRegistry& obr = vf.db();
     if (obr.foundObject<SType>(oldName))
     {
         SType& oldCorrection = obr.lookupObjectRef<SType>(oldName);
-        Pout<< "Underrelaxing " << vf.name()
-            << " non-ortho by " << relax << endl;
+
         trelaxedCorrection.ref() *= relax;
         trelaxedCorrection.ref() += (1.0-relax)*oldCorrection;
-
-        Pout<< "Transferring non-ortho correction " << vf.name() << endl;
-
-        Pout<< "    old:" << gAverage(mag(oldCorrection)())
-            << " relaxed:" << gAverage(mag(trelaxedCorrection())()) << endl;
 
         oldCorrection = tfaceFluxCorrection;
     }
     else
     {
         SType* s = new SType(oldName, tfaceFluxCorrection);
-        Pout<< "Storing non-ortho correction " << s->name() << endl;
         s->store();
     }
 
