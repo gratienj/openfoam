@@ -9,22 +9,41 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    object      DT;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [m^2/s];
-
-internalField   uniform 4e-05;
-
-boundaryField
+ddtSchemes
 {
-    ".*"
-    {
-        type            calculated;
-        value           $internalField;
-    }
+    default         steadyState;
 }
+
+gradSchemes
+{
+    grad(T)         Gauss linear;
+}
+
+divSchemes
+{
+    default         none;
+}
+
+laplacianSchemes
+{
+    laplacian(DT,T) Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
 
 // ************************************************************************* //
