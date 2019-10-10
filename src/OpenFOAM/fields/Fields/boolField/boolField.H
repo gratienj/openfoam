@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,20 +22,20 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Typedef
-    Foam::labelField
+    Foam::boolField
 
 Description
-    Specialisation of Field\<T\> for label.
+    Specialisation of Field\<T\> for bool
 
 SourceFiles
-    labelField.C
+    boolField.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef labelField_H
-#define labelField_H
+#ifndef boolField_H
+#define boolField_H
 
-#include "label.H"
+#include "bool.H"
 #include "Field.H"
 
 #define TEMPLATE
@@ -46,27 +46,15 @@ SourceFiles
 namespace Foam
 {
 
-typedef Field<label> labelField;
+typedef Field<bool> boolField;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-BINARY_TYPE_OPERATOR(label, label, label, +, add)
-BINARY_TYPE_OPERATOR(label, label, label, -, subtract)
-
+template<>
+void boolField::negate();
 
 template<>
-tmp<labelField> labelField::component(const direction) const;
-
-template<>
-void component
-(
-    labelField& lf,
-    const labelUList& f,
-    const direction
-);
-
-template<>
-void labelField::replace(const direction, const labelUList& lf);
+tmp<boolField> boolField::component(const direction) const;
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
