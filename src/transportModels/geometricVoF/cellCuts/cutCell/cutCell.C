@@ -33,9 +33,10 @@ License
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::cutCell::cutCell(const fvMesh& mesh)
-    : mesh_(mesh)
-{
-}
+:
+    mesh_(mesh)
+{}
+
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -46,7 +47,6 @@ void Foam::cutCell::calcCellData
     vector& subCellCentre, scalar& subCellVolume
 )
 {
-
     // Clear the fields for accumulation
     subCellCentre = vector::zero;
     subCellVolume = 0.0;
@@ -76,6 +76,7 @@ void Foam::cutCell::calcCellData
     subCellCentre /= subCellVolume;
     subCellVolume /= 3; // formula of pyramid
 }
+
 
 void Foam::cutCell::calcGeomDataCutFace
 (
@@ -136,8 +137,8 @@ void Foam::cutCell::calcGeomDataCutFace
     }
     else
     {
-        faceCentre = (1.0 / 3.0) * sumAc / sumA;
-        faceArea = 0.5 * sumN;
+        faceCentre = (1.0/3.0)*sumAc/sumA;
+        faceArea = 0.5*sumN;
     }
 
     // Check faceArea direction and change if not pointing in the subcell
@@ -147,16 +148,18 @@ void Foam::cutCell::calcGeomDataCutFace
     }
 }
 
+
 void Foam::cutCell::calcIsoFacePointsFromEdges
 (
-    const vector& faceArea, const vector& faceCentre,
+    const vector& faceArea,
+    const vector& faceCentre,
     const DynamicList<DynamicList<point>>& faceEdges,
     DynamicList<point>& facePoints
 )
 {
-    const vector zhat = faceArea / mag(faceArea);
+    const vector zhat = faceArea/mag(faceArea);
     vector xhat = faceEdges[0][0] - faceCentre;
-    xhat = (xhat - (xhat & zhat) * zhat);
+    xhat = (xhat - (xhat & zhat)*zhat);
     xhat /= mag(xhat);
     vector yhat = zhat ^ xhat;
     yhat /= mag(yhat);
@@ -165,15 +168,19 @@ void Foam::cutCell::calcIsoFacePointsFromEdges
     // Calculating all intersection points
     DynamicList<point> unsortedFacePoints(3 * faceEdges.size());
     DynamicList<scalar> unsortedFacePointAngles(3 * faceEdges.size());
-    forAll(faceEdges, ei)
+    for (const DynamicList<point>& edgePoints : faceEdges)
     {
-        const DynamicList<point>& edgePoints = faceEdges[ei];
-        forAll(edgePoints, pi)
+        for (const point& p : edgePoints)
         {
-            const point& p = edgePoints[pi];
             unsortedFacePoints.append(p);
-            unsortedFacePointAngles.append(Foam::atan2(
-                ((p - faceCentre) & yhat), ((p - faceCentre) & xhat)));
+            unsortedFacePointAngles.append
+            (
+                Foam::atan2
+                (
+                    ((p - faceCentre) & yhat),
+                    ((p - faceCentre) & xhat)
+                )
+            );
         }
     }
 
@@ -181,15 +188,20 @@ void Foam::cutCell::calcIsoFacePointsFromEdges
     labelList order(unsortedFacePointAngles.size());
     Foam::sortedOrder(unsortedFacePointAngles, order);
     facePoints.append(unsortedFacePoints[order[0]]);
-    for (label pi = 1; pi < order.size(); pi++)
+    for (label pi = 1; pi < order.size(); ++pi)
     {
-        if (mag(unsortedFacePointAngles[order[pi]] -
-                unsortedFacePointAngles[order[pi - 1]]) > 1e-8)
+        if
+        (
+            mag
+            (
+                unsortedFacePointAngles[order[pi]]
+              - unsortedFacePointAngles[order[pi - 1]]
+            ) > 1e-8)
         {
             facePoints.append(unsortedFacePoints[order[pi]]);
         }
     }
-
 }
+
 
 // ************************************************************************* //

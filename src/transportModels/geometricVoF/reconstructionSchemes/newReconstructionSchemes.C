@@ -40,27 +40,18 @@ Foam::reconstructionSchemes::New
     dictionary& dict
 )
 {
+    const word schemeType(dict.lookup("reconstructionScheme"));
 
-    word reconstructionSchemesTypeName
-    (
-        dict.lookup("reconstructionScheme")
-    );
+    Info<< "Selecting reconstructionScheme: " << schemeType << endl;
 
-    Info<< "Selecting reconstructionScheme: "
-        << reconstructionSchemesTypeName << endl;
+    auto cstrIter = componentsConstructorTablePtr_->find(schemeType);
 
-    componentsConstructorTable::iterator cstrIter =
-        componentsConstructorTablePtr_
-            ->find(reconstructionSchemesTypeName);
-
-    if (cstrIter == componentsConstructorTablePtr_->end())
+    if (!cstrIter.found())
     {
-        FatalErrorIn
-        (
-            "reconstructionSchemes::New"
-        )   << "Unknown reconstructionSchemes type "
-            << reconstructionSchemesTypeName << endl << endl
-            << "Valid  reconstructionSchemess are : " << endl
+        FatalErrorInFunction
+            << "Unknown reconstructionSchemes type "
+            << schemeType << nl << nl
+            << "Valid  reconstructionSchemess are : " << nl
             << componentsConstructorTablePtr_->sortedToc()
             << exit(FatalError);
     }

@@ -36,8 +36,6 @@ License
 #include "fvcSurfaceIntegrate.H"
 #include "upwind.H"
 
-
-
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
@@ -45,7 +43,7 @@ namespace Foam
 namespace advection
 {
     defineTypeNameAndDebug(MULESScheme, 0);
-    addToRunTimeSelectionTable(advectionSchemes,MULESScheme, components);
+    addToRunTimeSelectionTable(advectionSchemes, MULESScheme, components);
 }
 }
 
@@ -62,7 +60,7 @@ void Foam::advection::MULESScheme::updateNHatf()
     //    (mesh.Sf()/mesh.magSf())
     //   *(fvc::snGrad(alpha1_) - (mesh.Sf() & gradAlphaf)/mesh.magSf());
 
-        // Face unit interface normal
+    // Face unit interface normal
     surfaceVectorField nHatfv(gradAlphaf/(mag(gradAlphaf) + deltaN_));
 
     nHatf_ = nHatfv & mesh_.Sf();
@@ -73,9 +71,9 @@ void Foam::advection::MULESScheme::updateNHatf()
 
 Foam::advection::MULESScheme::MULESScheme
 (
-        volScalarField& alpha1,
-        const surfaceScalarField& phi,
-        const volVectorField& U
+    volScalarField& alpha1,
+    const surfaceScalarField& phi,
+    const volVectorField& U
 )
 :
     advectionSchemes
@@ -89,78 +87,60 @@ Foam::advection::MULESScheme::MULESScheme
     alpha2_(1-alpha1),
     talphaPhiCorr0_
     (
-         IOobject
-         (
-             "talphaPhiCorr0_",
-             mesh_.time().timeName(),
-             mesh_,
-             IOobject::READ_IF_PRESENT,
-             IOobject::AUTO_WRITE
-         ),
-         phi_*fvc::interpolate(alpha1_)
+        IOobject
+        (
+            "talphaPhiCorr0_",
+            mesh_.time().timeName(),
+            mesh_,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        phi_*fvc::interpolate(alpha1_)
     ),
     deltaN_
-     (
-         "deltaN",
-         1e-8/pow(average(alpha1.mesh().V()), 1.0/3.0)
-     ),
-     nHatf_
-     (
-         IOobject
-         (
-             "nHatf",
-             alpha1_.time().timeName(),
-             alpha1_.mesh()
-         ),
-         alpha1_.mesh(),
-         dimensionedScalar("nHatf", dimArea, 0.0)
-     )
-
-
-
-
-
+    (
+        "deltaN",
+        1e-8/cbrt(average(alpha1.mesh().V()))
+    ),
+    nHatf_
+    (
+        IOobject
+        (
+            "nHatf",
+            alpha1_.time().timeName(),
+            alpha1_.mesh()
+        ),
+        alpha1_.mesh(),
+        dimensionedScalar(dimArea, Zero)
+    )
 {
 
     //- Reference to mesh
     LTS_ = fv::localEulerDdt::enabled(mesh_);
     const dictionary& alphaControls = mesh_.solverDict(alpha1_.name());;
 
-    nAlphaCorr_= (readLabel(alphaControls.lookup("nAlphaCorr")));
+    nAlphaCorr_= alphaControls.get<label>("nAlphaCorr");
 
-    nAlphaSubCycles_ = (readLabel(alphaControls.lookup("nAlphaSubCycles")));
+    nAlphaSubCycles_ = alphaControls.get<label>("nAlphaSubCycles");
 
-    MULESCorr_ = (alphaControls.lookupOrDefault<Switch>("MULESCorr", false));
+    MULESCorr_ = alphaControls.lookupOrDefault<Switch>("MULESCorr", false);
 
-// Apply the compression correction from the previous iteration
-// Improves efficiency for steady-simulations but can only be applied
-// once the alpha field is reasonably steady, i.e. fully developed
+    // Apply the compression correction from the previous iteration
+    // Improves efficiency for steady-simulations but can only be applied
+    // once the alpha field is reasonably steady, i.e. fully developed
     alphaApplyPrevCorr_ =
-     (
-         alphaControls.lookupOrDefault<Switch>("alphaApplyPrevCorr", false)
-     );
- //Isotropic compression coefficient
-    icAlpha_ =
-     (
-         alphaControls.lookupOrDefault<scalar>("icAlpha", 0)
-     );
+        alphaControls.lookupOrDefault<Switch>("alphaApplyPrevCorr", false)
 
-    cAlpha_ = readScalar(alphaControls.lookup("cAlpha"));
+    // Isotropic compression coefficient
+    icAlpha_ = alphaControls.lookupOrDefault<scalar>("icAlpha", 0)
 
-
+    cAlpha_ = alphaControls.get<scalar>("cAlpha");
 }
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::advection::MULESScheme::~MULESScheme()
-{}
-
-// * * * * * * * * * * * * * * Protected Access Member Functions  * * * * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 
-// ************************************************************************* //
 void Foam::advection::MULESScheme::advect()
 {
     updateNHatf();
@@ -224,8 +204,7 @@ void Foam::advection::MULESScheme::advect()
         phic += (cAlpha_*icAlpha_)*fvc::interpolate(mag(U_));
     }
 
-    surfaceScalarField::Boundary& phicBf =
-        phic.boundaryFieldRef();
+    surfaceScalarField::Boundary& phicBf = phic.boundaryFieldRef();
 
     // Do not compress interface at non-coupled boundary faces
     // (inlets, outlets etc.)
@@ -275,7 +254,7 @@ void Foam::advection::MULESScheme::advect()
         tmp<surfaceScalarField> talphaPhiUD(alpha1Eqn.flux());
         alphaPhi_ = talphaPhiUD();
 
-        if(alphaApplyPrevCorr_)
+        if (alphaApplyPrevCorr_)
         {
             Info<< "Applying the previous iteration compression flux" << endl;
             //MULES::correct(alpha1_, alphaPhi_, talphaPhiCorr0_, 1, 0);
@@ -297,12 +276,12 @@ void Foam::advection::MULESScheme::advect()
 
         alpha2_ = 1.0 - alpha1_;
 
-       // mixture.correct();
+        // mixture.correct();
         updateNHatf();
     }
 
 
-    for (int aCorr=0; aCorr<nAlphaCorr_; aCorr++)
+    for (int aCorr=0; aCorr<nAlphaCorr_; ++aCorr)
     {
         surfaceScalarField phir(phic*nHatf_);
 
@@ -371,7 +350,6 @@ void Foam::advection::MULESScheme::advect()
                 oneField(),
                 zeroField()
             );
-        
         }
 
         alpha2_ = 1.0 - alpha1_;
@@ -412,7 +390,12 @@ void Foam::advection::MULESScheme::advect()
          << endl;
 }
 
-void Foam::advection::MULESScheme::advect(const volScalarField::Internal& Sp,const volScalarField::Internal& Su)
+
+void Foam::advection::MULESScheme::advect
+(
+    const volScalarField::Internal& Sp,
+    const volScalarField::Internal& Su
+)
 {
     updateNHatf();
 
@@ -528,7 +511,7 @@ void Foam::advection::MULESScheme::advect(const volScalarField::Internal& Sp,con
         tmp<surfaceScalarField> talphaPhiUD(alpha1Eqn.flux());
         alphaPhi_ = talphaPhiUD();
 
-        if(alphaApplyPrevCorr_)
+        if (alphaApplyPrevCorr_)
         {
             Info<< "Applying the previous iteration compression flux" << endl;
             // MULES::correct(alpha1_, alphaPhi_, talphaPhiCorr0_, 1, 0);
@@ -555,7 +538,7 @@ void Foam::advection::MULESScheme::advect(const volScalarField::Internal& Sp,con
     }
 
 
-    for (int aCorr=0; aCorr<nAlphaCorr_; aCorr++)
+    for (int aCorr=0; aCorr<nAlphaCorr_; ++aCorr)
     {
         surfaceScalarField phir(phic*nHatf_);
 
@@ -653,7 +636,8 @@ void Foam::advection::MULESScheme::advect(const volScalarField::Internal& Sp,con
         if (ocCoeff > 0)
         {
             // Calculate the end-of-time-step alpha flux
-            alphaPhi_ = (alphaPhi_ - (1.0 - cnCoeff)*alphaPhi_.oldTime())/cnCoeff;
+            alphaPhi_ =
+                (alphaPhi_ - (1.0 - cnCoeff)*alphaPhi_.oldTime())/cnCoeff;
         }
 
         // Calculate the end-of-time-step mass flux
@@ -665,6 +649,7 @@ void Foam::advection::MULESScheme::advect(const volScalarField::Internal& Sp,con
         << "  Min(" << alpha1_.name() << ") = " << min(alpha1_).value()
         << "  Max(" << alpha1_.name() << ") = " << max(alpha1_).value()
         << endl;
-
 }
 
+
+// ************************************************************************* //

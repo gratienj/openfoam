@@ -40,7 +40,7 @@ namespace Foam
 
 void Foam::reconstructionSchemes::isoFacesToFile
 (
-    const DynamicList< List<point> >& faces,
+    const DynamicList<List<point>>& faces,
     const word filNam,
     const word filDir
 ) const
@@ -230,6 +230,7 @@ void Foam::reconstructionSchemes::isoFacesToFile
     }
 }
 
+
 bool Foam::reconstructionSchemes::alreadyReconstructed()
 {
     const fvMesh& mesh = alpha1_.mesh();
@@ -237,7 +238,7 @@ bool Foam::reconstructionSchemes::alreadyReconstructed()
     label& curIter = timeIndexAndIter_.second();
 
     // rest timeIndex and curIter
-    if(mesh.time().timeIndex() > curTimeIndex)
+    if (mesh.time().timeIndex() > curTimeIndex)
     {
         // maybe problematic with nOuterCorrectores
         // if(curIter >= 1)
@@ -249,36 +250,36 @@ bool Foam::reconstructionSchemes::alreadyReconstructed()
         curIter = 0;
         return false;
     }
-    
+
     // reconstruct always when subcycling
     if(mesh.time().subCycling() != 0)
     {
         return false;
     }
-    
-    curIter++;
-    if(curIter > 1)
+
+    ++curIter;
+    if (curIter > 1)
     {
         return true;
     }
 
     return false;
-
 }
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::reconstructionSchemes::reconstructionSchemes
 (
-        const word& type,
-        volScalarField& alpha1,
-        const surfaceScalarField& phi,
-        const volVectorField& U,
-        dictionary& dict
+    const word& type,
+    volScalarField& alpha1,
+    const surfaceScalarField& phi,
+    const volVectorField& U,
+    dictionary& dict
 )
 :
-   IOdictionary
-   (
+    IOdictionary
+    (
         IOobject
         (
             "reconstructionScheme",
@@ -287,70 +288,57 @@ Foam::reconstructionSchemes::reconstructionSchemes
             IOobject::NO_READ,
             IOobject::NO_WRITE
         )
-  ),
-  //reconstructionSchemesCoeffs_(subDict(type + "Coeffs")),
-  reconstructionSchemesCoeffs_(dict),
-  alpha1_(alpha1),
-  phi_(phi),
-  U_(U),
-  normal_
-  (
-      IOobject
-      (
-          "recon::normal_",
-          alpha1_.mesh().time().timeName(),
-          alpha1_.mesh(),
-          IOobject::NO_READ,
-          IOobject::AUTO_WRITE
-      ),
-      alpha1_.mesh(),
-      dimensionedVector("0", dimArea, vector::zero),
-      "calculated"
-  ),
-  centre_
-  (
-      IOobject
-      (
-          "recon::centre_",
-          alpha1_.mesh().time().timeName(),
-          alpha1_.mesh(),
-          IOobject::NO_READ,
-          IOobject::AUTO_WRITE
-      ),
-      alpha1_.mesh(),
-      dimensionedVector("0", dimLength, vector::zero),
-      "calculated"
-   ),
-   interfaceCell_(alpha1_.mesh().nCells(),false),
-   interfaceLabels_(0.2*alpha1_.mesh().nCells()),
-   writeVTK_(false),
-   timeIndexAndIter_(0,0)
-{
-
-}
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::reconstructionSchemes::~reconstructionSchemes()
+    ),
+    //reconstructionSchemesCoeffs_(subDict(type + "Coeffs")),
+    reconstructionSchemesCoeffs_(dict),
+    alpha1_(alpha1),
+    phi_(phi),
+    U_(U),
+    normal_
+    (
+        IOobject
+        (
+            "recon::normal",
+            alpha1_.mesh().time().timeName(),
+            alpha1_.mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        alpha1_.mesh(),
+        dimensionedVector(dimArea, Zero)
+    ),
+    centre_
+    (
+        IOobject
+        (
+            "recon::centre",
+            alpha1_.mesh().time().timeName(),
+            alpha1_.mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        alpha1_.mesh(),
+        dimensionedVector(dimLength, Zero)
+    ),
+    interfaceCell_(alpha1_.mesh().nCells(), false),
+    interfaceLabels_(0.2*alpha1_.mesh().nCells()),
+    writeVTK_(false),
+    timeIndexAndIter_(0, 0)
 {}
 
-// * * * * * * * * * * * * * * Public Access Member Functions  * * * * * * * * * * * * * * //
 
+// * * * * * * * * * * * * Public Member Functions * * * * * * * * * * * * * //
 
-const Foam::dictionary&
-Foam::reconstructionSchemes::modelDict() const
+const Foam::dictionary& Foam::reconstructionSchemes::modelDict() const
 {
     return reconstructionSchemesCoeffs_;
 }
 
-Foam::dictionary&
-Foam::reconstructionSchemes::modelDict()
+
+Foam::dictionary& Foam::reconstructionSchemes::modelDict()
 {
     return reconstructionSchemesCoeffs_;
 }
-
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
-
 
 
 // ************************************************************************* //

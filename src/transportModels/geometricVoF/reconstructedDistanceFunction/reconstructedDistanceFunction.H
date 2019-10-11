@@ -23,7 +23,7 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 Class
     Foam::reconstructedDistanceFunction
 
@@ -58,11 +58,12 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class reconstructedDistanceFunction Declaration
+                Class reconstructedDistanceFunction Declaration
 \*---------------------------------------------------------------------------*/
 
 class reconstructedDistanceFunction
-: public volScalarField
+:
+    public volScalarField
 {
 
 
@@ -70,28 +71,23 @@ private:
 
     // Private data
 
-    // reference to mesh
-    const fvMesh& mesh_;
+        //- Reference to mesh
+        const fvMesh& mesh_;
 
-    // stores the coupled boundary points which have to be synced
-    labelList coupledBoundaryPoints_;
+        //- Stores the coupled boundary points which have to be synced
+        labelList coupledBoundaryPoints_;
 
-    volScalarField cellDistLevel_;
+        volScalarField cellDistLevel_;
 
-    boolList nextToInterface_;
+        boolList nextToInterface_;
 
-    //indexedOctree<treeDataPoint> surfaceTree_;
+        //indexedOctree<treeDataPoint> surfaceTree_;
 
-    //- Return patch of all coupled faces.
-    autoPtr<indirectPrimitivePatch> coupledFacesPatch() const;
-
-
-
+        //- Return patch of all coupled faces.
+        autoPtr<indirectPrimitivePatch> coupledFacesPatch() const;
 
 
 public:
-
-    // Constructors
 
     //- Construct from fvMesh and a scalarField
     //  Length of scalarField should equal number of mesh points
@@ -100,53 +96,52 @@ public:
 
     // Member functions
 
-    //void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
+        //void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
 
-    void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
+        void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
 
-    const volScalarField& constructRDF
-    (
-        const boolList& interfaceCells,
-        const volVectorField& centre,
-        const volVectorField& normal,
-        const label neiRingLevel,
-        zoneDistribute& distribute
-    );
+        const volScalarField& constructRDF
+        (
+            const boolList& interfaceCells,
+            const volVectorField& centre,
+            const volVectorField& normal,
+            const label neiRingLevel,
+            zoneDistribute& distribute
+        );
 
-    const volScalarField& constructRDF
-    (
-        const boolList& nextToInterface,
-        const volVectorField& centre,
-        const volVectorField& normal,
-        zoneDistribute& distribute,
-        bool updateStencil=true
-    );
+        const volScalarField& constructRDF
+        (
+            const boolList& nextToInterface,
+            const volVectorField& centre,
+            const volVectorField& normal,
+            zoneDistribute& distribute,
+            bool updateStencil=true
+        );
 
 
-    const volScalarField& constructRDFOctree
-    (
-        const boolList& nextToInterface,
-        const pointField& centre,
-        const vectorField& normals
-    );
+        const volScalarField& constructRDFOctree
+        (
+            const boolList& nextToInterface,
+            const pointField& centre,
+            const vectorField& normals
+        );
 
-    void updateContactAngle
-    (
-        const volScalarField& alpha,
-        const volVectorField& U,
-        surfaceVectorField::Boundary& nHatb
-    );
+        void updateContactAngle
+        (
+            const volScalarField& alpha,
+            const volVectorField& U,
+            surfaceVectorField::Boundary& nHatb
+        );
 
-    const volScalarField& cellDistLevel()
-    {
-        return cellDistLevel_;
-    } 
+        const volScalarField& cellDistLevel()
+        {
+            return cellDistLevel_;
+        }
 
-    const boolList& nextToInterface()
-    {
-        return nextToInterface_;
-    } 
-
+        const boolList& nextToInterface()
+        {
+            return nextToInterface_;
+        }
 };
 
 

@@ -25,7 +25,7 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 
 Class
     Foam::cutFacePLIC
@@ -68,12 +68,12 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class cutFacePLICs Declaration
+                        Class cutFacePLIC Declaration
 \*---------------------------------------------------------------------------*/
 
 class cutFacePLIC
 :
-        public cutFace
+    public cutFace
 {
     // Private data
 
@@ -105,6 +105,7 @@ class cutFacePLIC
         //  - +1: face is fully above the isosurface
         label faceStatus_;
 
+
 public:
 
     // Constructors
@@ -124,23 +125,20 @@ public:
             const vector& base
         );
 
-        //- returns centre of cutted face
-        point subFaceCentre();
+        //- Returns centre of cutted face
+        const point& subFaceCentre() const;
 
-        //- returns area vector of cutted face
-        vector subFaceArea();
+        //- Returns area vector of cutted face
+        const vector& subFaceArea() const;
 
-        //- returns the cut edge of the cutted face
-        DynamicList<point>& subFacePoints();
+        //- Returns the cut edge of the cutted face
+        const DynamicList<point>& subFacePoints() const;
 
-        //- returns point of the face in sorted of cutted face
-        DynamicList<point>& surfacePoints();
+        //- Returns point of the face in sorted of cutted face
+        const DynamicList<point>& surfacePoints() const;
 
-        //- resets internal variables
+        //- Resets internal variables
         void clearStorage();
-        
-
-        
 };
 
 

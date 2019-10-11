@@ -30,14 +30,18 @@ License
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::surfaceIteratorIso::surfaceIteratorIso(const fvMesh& mesh, scalarField &pointVal, const scalar &tol)
+Foam::surfaceIteratorIso::surfaceIteratorIso
+(
+    const fvMesh& mesh,
+    scalarField& pointVal,
+    const scalar tol
+)
 :
     mesh_(mesh),
     ap_(pointVal),
     cutCell_(mesh_,ap_),
     surfCellTol_(tol)
-{
-}
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

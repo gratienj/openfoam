@@ -25,7 +25,7 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 
 Class
     Foam::cutFace
@@ -37,7 +37,7 @@ Description
     Original code supplied by
         Johan Roenby, DHI (2016)
         Henning Scheufler, DLR (2019)
-    
+
 
 
 SourceFiles
@@ -59,23 +59,22 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class cutFaces Declaration
+                          Class cutFaces Declaration
 \*---------------------------------------------------------------------------*/
 
 class cutFace
 {
-  private:
     // Private data
 
-    //- Reference to mesh
-    const fvMesh& mesh_;
+        //- Reference to mesh
+        const fvMesh& mesh_;
 
-  protected:
 
-    //- Calculate cut points along edges of face with the
-    // pointStatus and the face label
+protected:
+
+    //- Calculate cut points along edges of face with the pointStatus and the
+    //- face label
     //  Returns the face status, where:
-
     //  -1: faceStatus is fully below the isosurface
     //   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
     //  +1: faceStatus is fully above the isosurface
@@ -91,6 +90,8 @@ class cutFace
         vector& subFaceArea
      );
 
+    //- Calculate cut points along edges of face with the pointStatus and the
+    //- face label and weights
     //  -1: faceStatus is fully below the isosurface
     //   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
     //  +1: faceStatus is fully above the isosurface
@@ -105,9 +106,9 @@ class cutFace
         label& faceStatus,
         vector& subFaceCentre,
         vector& subFaceArea
-     );
+    );
 
-    // calculates centre and normal of the face
+    //- Calculates centre and normal of the face
     void calcSubFaceCentreAndArea
     (
         DynamicList<point>& subFacePoints,
@@ -115,10 +116,9 @@ class cutFace
         vector& subFaceArea
     );
 
-    //- Calculate cut points along edges of face with
-    // pointStatus, pointfield and face
-    //-  Returns the face status, where:
-
+    //- Calculate cut points along edges of face with pointStatus, pointfield
+    //- and face
+    //  Returns the face status, where:
     // -  -1: faceStatus is fully below the isosurface
     // -   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
     // -  +1: faceStatus is fully above the isosurface
@@ -135,8 +135,8 @@ class cutFace
         vector& subFaceArea
     );
 
-  public:
-    // Constructors
+
+public:
 
     //- Construct from fvMesh
     cutFace(const fvMesh& mesh);

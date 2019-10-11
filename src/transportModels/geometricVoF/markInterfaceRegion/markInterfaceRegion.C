@@ -79,6 +79,7 @@ Foam::markInterfaceRegion::coupledFacesPatch() const
     );
 }
 
+
 void Foam::markInterfaceRegion::markCellsNearSurf
 (
     const boolList& interfaceCells,
@@ -87,12 +88,12 @@ void Foam::markInterfaceRegion::markCellsNearSurf
     volScalarField& cellDistLevel
 )
 {
-    // performance might be improved by increasing the saving last iteations cells
-    // in a Map and loop over the map 
+    // performance might be improved by increasing the saving last iterations
+    // cells in a map and loop over the map
     if (mesh_.topoChanging())
     {
         // Introduced resizing to cope with changing meshes
-        if(nextToInterface.size() != mesh_.nCells())
+        if (nextToInterface.size() != mesh_.nCells())
         {
             nextToInterface.resize(mesh_.nCells());
         }
@@ -108,17 +109,15 @@ void Foam::markInterfaceRegion::markCellsNearSurf
     // do coupled face first
     Map<bool> syncMap;
 
-    for(int level = 0;level<=neiRingLevel;level++) 
+    for (int level = 0; level<=neiRingLevel; ++level)
     {
         // parallel
-        if(level > 0)
+        if (level > 0)
         {
-            forAll(coupledBoundaryPoints_,i)
+            for (const label pi : coupledBoundaryPoints_)
             {
-                const label& pi = coupledBoundaryPoints_[i];
-                forAll(mesh_.pointCells()[pi], j)
+                for (const label celli : cPoints[pi])
                 {
-                    const label celli = cPoints[pi][j];
                     if (cellDistLevel[celli] == level-1)
                     {
                         syncMap.insert(pi, true);
@@ -126,29 +125,28 @@ void Foam::markInterfaceRegion::markCellsNearSurf
                     }
                 }
             }
-        
+
             syncTools::syncPointMap(mesh_, syncMap, orEqOp<bool>());
 
             // mark parallel points first
-            forAllConstIter(Map<bool>, syncMap, iter)
+            forAllConstIters(syncMap, iter)
             {
                 const label pi = iter.key();
-                
+
                 if(!alreadyMarkedPoint[pi])
                 {
                     // loop over all cells attached to the point
-                    forAll(cPoints[pi],j) 
+                    for (const label pCelli : cPoints[pi])
                     {
-                        const label& pCelli = cPoints[pi][j];
-                        if(cellDistLevel[pCelli] == -1)
+                        if (cellDistLevel[pCelli] == -1)
                         {
                             cellDistLevel[pCelli] = level;
                             nextToInterface[pCelli] = true;
                         }
-                        
+
                     }
                 }
-                
+
                 alreadyMarkedPoint[pi] = true;
             }
         }
@@ -172,32 +170,27 @@ void Foam::markInterfaceRegion::markCellsNearSurf
             {
                 if (cellDistLevel[celli] == level-1)
                 {
-                    forAll(pCells[celli], i)
+                    for (const label pI : pCells[celli])
                     {
-                        const label& pI = pCells[celli][i];
                         // interfacePoint_[pI] = true;
-                        if(!alreadyMarkedPoint[pI])
+                        if (!alreadyMarkedPoint[pI])
                         {
-                            forAll(cPoints[pI],j) // loop over all cells attached to the point
+                            for (const label pCelli : cPoints[pI]) // loop over all cells attached to the point
                             {
-                                const label& pCelli = cPoints[pI][j];
-                                if(cellDistLevel[pCelli] == -1)
+                                if (cellDistLevel[pCelli] == -1)
                                 {
                                     cellDistLevel[pCelli] = level;
                                     nextToInterface[pCelli] = true;
                                 }
-                                
+
                             }
                         }
                         alreadyMarkedPoint[pI] = true;
- 
                     }
                 }
             }
         }
-
     }
-
 }
 
 
@@ -208,12 +201,12 @@ void Foam::markInterfaceRegion::markCellsNearSurf
     boolList& nextToInterface
 )
 {
-    // performance might be improved by increasing the saving last iteations cells
-    // in a Map and loop over the map 
+    // performance might be improved by increasing the saving last iterations
+    // cells in a map and loop over the map
     if (mesh_.topoChanging())
     {
         // Introduced resizing to cope with changing meshes
-        if(nextToInterface.size() != mesh_.nCells())
+        if (nextToInterface.size() != mesh_.nCells())
         {
             nextToInterface.resize(mesh_.nCells());
         }
@@ -230,14 +223,13 @@ void Foam::markInterfaceRegion::markCellsNearSurf
     // do coupled face first
     Map<bool> syncMap;
 
-    for(int level = 0;level<=neiRingLevel;level++) 
+    for (int level = 0; level<=neiRingLevel; ++level)
     {
         // parallel
-        if(level > 0)
+        if (level > 0)
         {
-            forAll(coupledBoundaryPoints_,i)
+            for (const label pi : coupledBoundaryPoints_)
             {
-                const label& pi = coupledBoundaryPoints_[i];
                 forAll(mesh_.pointCells()[pi], j)
                 {
                     const label celli = cPoints[pi][j];
@@ -248,29 +240,28 @@ void Foam::markInterfaceRegion::markCellsNearSurf
                     }
                 }
             }
-        
+
             syncTools::syncPointMap(mesh_, syncMap, orEqOp<bool>());
 
             // mark parallel points first
             forAllConstIter(Map<bool>, syncMap, iter)
             {
                 const label pi = iter.key();
-                
-                if(!alreadyMarkedPoint[pi])
+
+                if (!alreadyMarkedPoint[pi])
                 {
                     // loop over all cells attached to the point
-                    forAll(cPoints[pi],j) 
+                    for (const label pCelli : cPoints[pi])
                     {
-                        const label& pCelli = cPoints[pi][j];
-                        if(cellDistLevel[pCelli] == -1)
+                        if (cellDistLevel[pCelli] == -1)
                         {
                             cellDistLevel[pCelli] = level;
                             nextToInterface[pCelli] = true;
                         }
-                        
+
                     }
                 }
-                
+
                 alreadyMarkedPoint[pi] = true;
             }
         }
@@ -278,9 +269,9 @@ void Foam::markInterfaceRegion::markCellsNearSurf
 
         forAll(cellDistLevel, celli)
         {
-            if(level == 0)
+            if (level == 0)
             {
-                if(interfaceCells[celli])
+                if (interfaceCells[celli])
                 {
                     cellDistLevel[celli] = 0;
                     nextToInterface[celli] = true;
@@ -294,47 +285,37 @@ void Foam::markInterfaceRegion::markCellsNearSurf
             {
                 if (cellDistLevel[celli] == level-1)
                 {
-                    forAll(pCells[celli], i)
+                    for (const label& pI : pCells[celli])
                     {
-                        const label& pI = pCells[celli][i];
                         // interfacePoint_[pI] = true;
-                        if(!alreadyMarkedPoint[pI])
+                        if (!alreadyMarkedPoint[pI])
                         {
-                            forAll(cPoints[pI],j) // loop over all cells attached to the point
+                            for (const label pCelli : cPoints[pI]) // loop over all cells attached to the point
                             {
-                                const label& pCelli = cPoints[pI][j];
-                                if(cellDistLevel[pCelli] == -1)
+                                if (cellDistLevel[pCelli] == -1)
                                 {
                                     cellDistLevel[pCelli] = level;
                                     nextToInterface[pCelli] = true;
                                 }
-                                
+
                             }
                         }
                         alreadyMarkedPoint[pI] = true;
- 
                     }
                 }
             }
         }
-
     }
-
 }
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::markInterfaceRegion::markInterfaceRegion
-(
-    const fvMesh& mesh
-)
+Foam::markInterfaceRegion::markInterfaceRegion(const fvMesh& mesh)
 :
     mesh_(mesh),
     coupledBoundaryPoints_(coupledFacesPatch()().meshPoints())
-{
-}
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+{}
 
 
 // ************************************************************************* //

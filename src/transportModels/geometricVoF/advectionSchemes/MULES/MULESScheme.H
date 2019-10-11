@@ -58,10 +58,10 @@ namespace advection
 \*---------------------------------------------------------------------------*/
 
 class MULESScheme
-    : public advectionSchemes
+:
+    public advectionSchemes
 {
-
-private:
+    // Private data
 
         //- Reference to mesh
         const fvMesh& mesh_;
@@ -73,7 +73,6 @@ private:
         const dimensionedScalar deltaN_;
 
         surfaceScalarField nHatf_;
-
 
         //- Reference to mesh
         bool LTS_;
@@ -87,7 +86,7 @@ private:
         // Apply the compression correction from the previous iteration
         // Improves efficiency for steady-simulations but can only be applied
         // once the alpha field is reasonably steady, i.e. fully developed
-        bool alphaApplyPrevCorr_;//
+        bool alphaApplyPrevCorr_;
 
         // Isotropic compression coefficient
         scalar icAlpha_;
@@ -104,12 +103,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        MULESScheme(const MULESScheme&);
+        //- No construct
+        MULESScheme(const MULESScheme&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const MULESScheme&);
-
+        //- No bitwise assignment
+        void operator=(const MULESScheme&) = delete;
 
 
 public:
@@ -117,28 +115,27 @@ public:
     //- Runtime type information
     TypeName("MULESScheme");
 
-
-    // Constructors
-
-        //- Construct from components
-        MULESScheme
-        (
-                volScalarField &alpha1,
-                const surfaceScalarField& phi,
-                const volVectorField& U
-        );
-
+    //- Construct from components
+    MULESScheme
+    (
+        volScalarField &alpha1,
+        const surfaceScalarField& phi,
+        const volVectorField& U
+    );
 
     //- Destructor
-    virtual ~MULESScheme();
+    virtual ~MULESScheme() = default;
 
 
+    // Member Functions
 
-    virtual void advect();
+        virtual void advect();
 
-    virtual void advect(const volScalarField::Internal& Sp,const volScalarField::Internal& Su);
-
-
+        virtual void advect
+        (
+            const volScalarField::Internal& Sp,
+            const volScalarField::Internal& Su
+        );
 };
 
 

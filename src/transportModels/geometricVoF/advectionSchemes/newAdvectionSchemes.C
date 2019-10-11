@@ -36,45 +36,26 @@ License
 Foam::autoPtr<Foam::advectionSchemes>
 Foam::advectionSchemes::New
 (
-        volScalarField& alpha1,
-        const surfaceScalarField& phi,
-        const volVectorField& U
+    volScalarField& alpha1,
+    const surfaceScalarField& phi,
+    const volVectorField& U
 )
 {
-
-    word advectionSchemesTypeName
+    const dictionary& solversDict = alpha1.mesh().solution::subDict("solvers");
+    const word schemeType
     (
-        IOdictionary
-        (
-            IOobject
-            (
-                "fvSolution",
-                alpha1.time().system(),
-                alpha1.db(),
-                IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::NO_WRITE,
-                false
-            )
-        ).subDict("solvers").subDict(alpha1.name()).lookup("advectionScheme")
-     );
+        solversDict.subDict(alpha1.name()).lookup("advectionScheme")
+    );
 
-    //word advectionSchemesTypeName = word(advectionSchemesCoeffs_.lookup("advectionScheme"));
+    Info<< "Selecting advectionSchemes: " << schemeType << endl;
 
+    auto cstrIter = componentsConstructorTablePtr_->find(schemeType);
 
-    Info<< "Selecting advectionSchemes: "
-        << advectionSchemesTypeName << endl;
-
-    componentsConstructorTable::iterator cstrIter =
-        componentsConstructorTablePtr_
-            ->find(advectionSchemesTypeName);
-
-    if (cstrIter == componentsConstructorTablePtr_->end())
+    if (!cstrIter.found())
     {
-        FatalErrorIn
-        (
-            "advectionSchemes::New"
-        )   << "Unknown advectionSchemes type "
-            << advectionSchemesTypeName << endl << endl
+        FatalErrorInFunction
+            << "Unknown advectionSchemes type "
+            << schemeType << endl << endl
             << "Valid  advectionSchemess are : " << endl
             << componentsConstructorTablePtr_->sortedToc()
             << exit(FatalError);

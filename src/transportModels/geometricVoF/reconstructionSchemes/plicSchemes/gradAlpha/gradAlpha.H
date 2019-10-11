@@ -25,7 +25,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::gradAlpha
+    Foam::reconstruction::gradAlpha
 
 Description
     Reconstructs an interface (centre and normal vector) consisting of planes
@@ -48,12 +48,8 @@ SourceFiles
 #include "volFields.H"
 #include "dimensionedScalar.H"
 #include "autoPtr.H"
-
-
 #include "surfaceIteratorPLIC.H"
 #include "zoneDistribute.H"
-
-
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -64,14 +60,14 @@ namespace reconstruction
 {
 
 /*---------------------------------------------------------------------------*\
-                Class gradAlpha Declaration
+                          Class gradAlpha Declaration
 \*---------------------------------------------------------------------------*/
 
 class gradAlpha
-    : public reconstructionSchemes
+:
+    public reconstructionSchemes
 {
-
-private:
+    // Private data
 
         //- Reference to mesh
         const fvMesh& mesh_;
@@ -80,10 +76,7 @@ private:
         DynamicField<vector> interfaceNormal_;
 
 
-
-
     // Switches and tolerances. Tolerances need to go into toleranceSwitches
-
 
         //- Tolerance for search of isoFace giving specified VOF value
         scalar vof2IsoTol_;
@@ -92,7 +85,7 @@ private:
         //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
         scalar surfCellTol_;
 
-        // provides stencil and map
+        //- Provides stencil and map
         zoneDistribute& exchangeFields_;
 
         //- surfaceIterator finds the plane centre for specified VOF value
@@ -101,16 +94,13 @@ private:
         void gradSurf(const volScalarField& phi);
 
 
-
-
     // Private Member Functions
 
-        //- Disallow copy construct
-        gradAlpha(const gradAlpha&);
+        //- No copy construct
+        gradAlpha(const gradAlpha&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const gradAlpha&);
-
+        //- No bitwise assignment
+        void operator=(const gradAlpha&) = delete;
 
 
 public:
@@ -118,32 +108,29 @@ public:
     //- Runtime type information
     TypeName("gradAlpha");
 
-
-    // Constructors
-
-        //- Construct from components
-        gradAlpha
-        (
-            volScalarField& alpha1,
-            const surfaceScalarField& phi,
-            const volVectorField& U,
-            dictionary& dict
-        );
-
+    //- Construct from components
+    gradAlpha
+    (
+        volScalarField& alpha1,
+        const surfaceScalarField& phi,
+        const volVectorField& U,
+        dictionary& dict
+    );
 
     //- Destructor
-    virtual ~gradAlpha();
-
-    // reconstruct  interface
-    virtual void reconstruct();
+    virtual ~gradAlpha() = default;
 
 
+    // Member Functions
+
+        //- Reconstruct interface
+        virtual void reconstruct();
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End reconstructionSchemes Foam
+} // End namespace reconstruction
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -59,7 +59,7 @@ namespace Foam
 \*---------------------------------------------------------------------------*/
 
 class reconstructionSchemes
-    :
+:
     public IOdictionary // will write the pointer in registry
     // inheritance from MeshObject(updateable) caused crashes with the polyhedralMesh
     // probably caused by a portation bug
@@ -67,10 +67,15 @@ class reconstructionSchemes
 
 private:
 
-	//-
+    // Private data
+
+	    //- Coefficients dictionary
         dictionary reconstructionSchemesCoeffs_;
 
+
 protected:
+
+    // Protected data
 
         volScalarField& alpha1_;
 
@@ -101,33 +106,31 @@ protected:
         //- Write face points to .vtk files e.g. for visualisation in Paraview
         void isoFacesToFile
         (
-                const List<word>& fieldName,
-                const List<DynamicList<double> > &values,
-                const DynamicList< List<point> >& faces,
-                const word filNam,
-                const word filDir
+            const List<word>& fieldName,
+            const List<DynamicList<double> > &values,
+            const DynamicList< List<point> >& faces,
+            const word filNam,
+            const word filDir
         ) const;
 
         bool alreadyReconstructed();
 
 
-
-
     // Private Member Functions
 
-        //- Disallow copy construct
-        reconstructionSchemes(const reconstructionSchemes&);
+        //- No copy construct
+        reconstructionSchemes(const reconstructionSchemes&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const reconstructionSchemes&);
+        //- No bitwise assignment
+        void operator=(const reconstructionSchemes&) = delete;
 
 
 public:
 
-	//-
+	//- Return access to the model dictionary
 	dictionary& modelDict();
-	
-	//-
+
+	//- Return const access to the model dictionary
 	const dictionary& modelDict() const;
 
 
@@ -159,10 +162,10 @@ public:
         //- Return a reference to the selected phaseChange model
         static autoPtr<reconstructionSchemes> New
         (
-                volScalarField& alpha1,
-                const surfaceScalarField& phi,
-                const volVectorField& U,
-                dictionary& dict
+            volScalarField& alpha1,
+            const surfaceScalarField& phi,
+            const volVectorField& U,
+            dictionary& dict
         );
 
 
@@ -180,40 +183,37 @@ public:
 
 
     //- Destructor
-    virtual ~reconstructionSchemes();
+    virtual ~reconstructionSchemes() = default;
 
 
     // Member Functions
 
-
         virtual void reconstruct() = 0;
 
-        const volVectorField& normal()
+        const volVectorField& normal() const
         {
             return normal_;
         }
 
-        const volVectorField& centre()
+        const volVectorField& centre() const
         {
             return centre_;
         }
 
-        const boolList& interfaceCell()
+        const boolList& interfaceCell() const
         {
             return interfaceCell_;
         }
 
-        const DynamicField<label>& interfaceLabels()
+        const DynamicField<label>& interfaceLabels() const
         {
             return interfaceLabels_;
         }
 
-        virtual void mapAlphaField()
+        virtual void mapAlphaField() const
         {
             // do nothing;
         }
-
-
 };
 
 

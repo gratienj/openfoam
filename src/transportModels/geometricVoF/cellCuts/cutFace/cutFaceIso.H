@@ -25,7 +25,6 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
 
 Class
     Foam::cutFaceIso
@@ -66,16 +65,17 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class cutFaceIsos Declaration
+                         Class cutFaceIso Declaration
 \*---------------------------------------------------------------------------*/
 
 class cutFaceIso
 :
-        public cutFace
+    public cutFace
 {
     // Private data
 
-        //- Mesh whose cells and faces to cut at their intersection with an isoface
+        //- Mesh whose cells and faces to cut at their intersection with an
+        //- isoface
         const fvMesh& mesh_;
 
         //- Isofunction values at mesh points. f_size() = mesh_.nPoints().
@@ -99,7 +99,6 @@ class cutFaceIso
         //- Storage of the edge weight
         DynamicList<scalar> weight_;
 
-
         //- A face status label taking one of the values:
         //
         //  - -1: face is fully below the isosurface
@@ -122,27 +121,24 @@ public:
         //- Calculate cut points along edges of faceI
         label calcSubFace
         (
-            const label& faceI,
-            const scalar& cutValue
+            const label faceI,
+            const scalar cutValue
         );
 
-        //- returns centre of cutted face
-        point subFaceCentre();
+        //- Returns centre of cutted face
+        const point& subFaceCentre() const;
 
-        //- returns area vector of cutted face
-        vector subFaceArea();
+        //- Returns area vector of cutted face
+        const vector& subFaceArea() const;
 
-        //- returns the cut edge of the cutted face
-        DynamicList<point>& subFacePoints();
+        //- Returns the cut edge of the cutted face
+        const DynamicList<point>& subFacePoints() const;
 
-        //- returns point of the face in sorted of cutted face
-        DynamicList<point>& surfacePoints();
+        //- Returns point of the face in sorted of cutted face
+        const DynamicList<point>& surfacePoints() const;
 
-        //- resets internal variables
+        //- Resets internal variables
         void clearStorage();
-        
-
-        
 };
 
 

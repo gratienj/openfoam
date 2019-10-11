@@ -23,7 +23,7 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 Class
     Foam::markInterfaceRegion
 
@@ -50,41 +50,30 @@ SourceFiles
 #include "zoneDistribute.H"
 #include "dimensionedScalar.H"
 
-
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class markInterfaceRegion Declaration
+                     Class markInterfaceRegion Declaration
 \*---------------------------------------------------------------------------*/
 
 class markInterfaceRegion
 {
+// Private data
 
-
-private:
-
-    // Private data
-
-    // reference to mesh
+    //- Reference to mesh
     const fvMesh& mesh_;
 
-    // stores the coupled boundary points which have to be synced
+    //- Stores the coupled boundary points which have to be synced
     labelList coupledBoundaryPoints_;
 
     //- Return patch of all coupled faces.
     autoPtr<indirectPrimitivePatch> coupledFacesPatch() const;
 
 
-
-
-
 public:
-
-    // Constructors
 
     //- Construct from fvMesh and a scalarField
     //  Length of scalarField should equal number of mesh points
@@ -93,23 +82,20 @@ public:
 
     // Member functions
 
-    //void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
+        void markCellsNearSurf
+        (
+            const boolList& interfaceCells,
+            const label neiRingLevel,
+            boolList& nextToInterface,
+            volScalarField& cellDistLevel
+        );
 
-    void markCellsNearSurf
-    (
-        const boolList& interfaceCells,
-        const label neiRingLevel,
-        boolList& nextToInterface,
-        volScalarField& cellDistLevel
-    );
-
-    void markCellsNearSurf
-    (
-        const boolList& interfaceCells,
-        const label neiRingLevel,
-        boolList& nextToInterface
-    );
-
+        void markCellsNearSurf
+        (
+            const boolList& interfaceCells,
+            const label neiRingLevel,
+            boolList& nextToInterface
+        );
 };
 
 

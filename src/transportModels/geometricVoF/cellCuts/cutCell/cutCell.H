@@ -58,61 +58,53 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class cutCell Declaration
+                           Class cutCell Declaration
 \*---------------------------------------------------------------------------*/
 
 class cutCell
 {
-    private:
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //  isosurface.
+        //- isosurface.
         const fvMesh& mesh_;
 
 
+protected:
 
-    // protected Member Functions
-    protected:
+    // Protected Member Functions
 
-            //- calculates volume and centre of the cutted cell
-            void calcCellData
-            (
-                    const DynamicList<point>& cutFaceCentres,
-                    const DynamicList<vector>& cutFaceAreas,
-                    vector& subCellCentre,
-                    scalar& subCellVolume
-            );
+        //- Calculates volume and centre of the cutted cell
+        void calcCellData
+        (
+            const DynamicList<point>& cutFaceCentres,
+            const DynamicList<vector>& cutFaceAreas,
+            vector& subCellCentre,
+            scalar& subCellVolume
+        );
 
-            //- calculates area and centre of the cutting face
-            void calcGeomDataCutFace
-            (
-                    const DynamicList<DynamicList<point> >& faceEdges,
-                    const vector& subCellCentre,
-                    vector& faceArea,
-                    vector& faceCentre  
-            );
+        //- Calculates area and centre of the cutting face
+        void calcGeomDataCutFace
+        (
+            const DynamicList<DynamicList<point> >& faceEdges,
+            const vector& subCellCentre,
+            vector& faceArea,
+            vector& faceCentre
+        );
 
-            //- calculates the point of the cutting face
-            void calcIsoFacePointsFromEdges
-            (
-                    const vector&  faceArea,
-                    const vector&  faceCentre,
-                    const DynamicList<DynamicList<point> > & faceEdges,
-                    DynamicList<point>& facePoints
-            );
+        //- Calculates the point of the cutting face
+        void calcIsoFacePointsFromEdges
+        (
+            const vector& faceArea,
+            const vector& faceCentre,
+            const DynamicList<DynamicList<point>> & faceEdges,
+            DynamicList<point>& facePoints
+        );
 
+public:
 
-    public:
-
-    // Constructors
-
-        //- Construct from fvMesh
-        cutCell(const fvMesh&);
-
-
-    // Member functions
-
+    //- Construct from fvMesh
+    cutCell(const fvMesh&);
 };
 
 

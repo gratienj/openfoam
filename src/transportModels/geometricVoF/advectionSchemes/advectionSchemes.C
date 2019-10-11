@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -41,70 +41,58 @@ namespace Foam
 
 Foam::advectionSchemes::advectionSchemes
 (
-        const word& type,
-        volScalarField& alpha1,
-        const surfaceScalarField& phi,
-        const volVectorField& U
+    const word& type,
+    volScalarField& alpha1,
+    const surfaceScalarField& phi,
+    const volVectorField& U
 )
 :
-  IOdictionary
-  (
-      IOobject
-      (
-          "advectionSchemes",
-          alpha1.time().constant(),
-          alpha1.db(),
-          IOobject::NO_READ,
-          IOobject::NO_WRITE
-      )
-  ),
-  advectionSchemesCoeffs_(alpha1.mesh().solverDict(alpha1.name())),
+    IOdictionary
+    (
+        IOobject
+        (
+            "advectionSchemes",
+            alpha1.time().constant(),
+            alpha1.db(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        )
+    ),
+    advectionSchemesCoeffs_(alpha1.mesh().solverDict(alpha1.name())),
 
-  alpha1_(alpha1),
-  phi_(phi),
-  U_(U),
-  alphaPhi_
-  (
-      IOobject
-      (
-          "alphaPhi_",
-          alpha1_.mesh().time().timeName(),
-          alpha1_.mesh(),
-          IOobject::NO_READ,
-          IOobject::NO_WRITE
-      ),
-      alpha1_.mesh(),
-      dimensionedScalar("zero", dimVol/dimTime, 0)
-  ),
-  surf_(reconstructionSchemes::New(alpha1_,phi_,U_,modelDict())),
-  runTime_(0,0,0)
-{
-
-
-}
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::advectionSchemes::~advectionSchemes()
+    alpha1_(alpha1),
+    phi_(phi),
+    U_(U),
+    alphaPhi_
+    (
+        IOobject
+        (
+            "alphaPhi_",
+            alpha1_.mesh().time().timeName(),
+            alpha1_.mesh(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        alpha1_.mesh(),
+        dimensionedScalar("zero", dimVol/dimTime, 0)
+    ),
+    surf_(reconstructionSchemes::New(alpha1_, phi_, U_, modelDict())),
+    runTime_(0,0,0)
 {}
+
 
 // * * * * * * * * * * * * * * Public Access Member Functions  * * * * * * * * * * * * * * //
 
-
-const Foam::dictionary&
-Foam::advectionSchemes::modelDict() const
+const Foam::dictionary& Foam::advectionSchemes::modelDict() const
 {
     return advectionSchemesCoeffs_;
 }
 
-Foam::dictionary&
-Foam::advectionSchemes::modelDict()
+
+Foam::dictionary& Foam::advectionSchemes::modelDict()
 {
     return advectionSchemesCoeffs_;
 }
-
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
-
 
 
 // ************************************************************************* //

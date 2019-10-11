@@ -77,8 +77,6 @@ SourceFiles
 #include "reconstructionSchemes.H"
 #include "cutFaceAdvect.H"
 
-
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -87,14 +85,13 @@ namespace advection
 {
 
 /*---------------------------------------------------------------------------*\
-                Class isoAdvector Declaration
+                         Class isoAdvector Declaration
 \*---------------------------------------------------------------------------*/
 
 class isoAdvector
-    : public advectionSchemes
+:
+    public advectionSchemes
 {
-
-private:
     // Private data types
 
         typedef DynamicList<label> DynamicLabelList;
@@ -122,16 +119,17 @@ private:
             //- Tolerance for marking of surface cells:
             //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
             scalar surfCellTol_;
-            
+
             //- Switch controlling whether to use isoface normals for interface
-            //  orientation (default corresponding to false) to base it on 
-            //  a smoothed gradient of alpha calculation (giving better results 
-            //  on tri on tet meshes).
+            //- orientation (default corresponding to false) to base it on
+            //- a smoothed gradient of alpha calculation (giving better results
+            //- on tri on tet meshes).
             bool gradAlphaBasedNormal_;
-            
+
             //- Print isofaces in a <case>/isoFaces/isoFaces_#N.vtk files.
             //  Intended for debugging
             bool writeIsoFacesToFile_;
+
 
         // Cell and face cutting
 
@@ -171,7 +169,7 @@ private:
             DynamicLabelList procPatchLabels_;
 
             //- For each patch if it is a processor patch this is a list of the
-            //  face labels on this patch that are downwind to a surface cell.
+            //- face labels on this patch that are downwind to a surface cell.
             //  For non-processor patches the list will be empty.
             List<DynamicLabelList> surfaceCellFacesOnProcPatches_;
 
@@ -179,22 +177,26 @@ private:
             void timeIntegratedFlux();
 
             //- Calculate volumetric face transport during dt given the isoFace
-            //  data provided as input for face facei
+            //- data provided as input for face facei
 
             //- For a given cell return labels of faces fluxing out of this cell
-            //  (based on sign of phi)
+            //- (based on sign of phi)
             void setDownwindFaces
             (
                 const label ci,
                 DynamicLabelList& downwindFaces
             ) const;
 
-            // Limit fluxes
+            //- Limit fluxes
             void limitFluxes();
 
-            void limitFluxes(const volScalarField::Internal& Sp,const volScalarField::Internal& Su);
+            void limitFluxes
+            (
+                const volScalarField::Internal& Sp,
+                const volScalarField::Internal& Su
+            );
 
-            // Bound fluxes
+            //- Bound fluxes
             void boundFromAbove
             (
                 const scalarField& alpha1,
@@ -202,7 +204,7 @@ private:
                 DynamicLabelList& correctedFaces
             );
 
-            // Bound fluxes
+            //- Bound fluxes
             void boundFromAbove
             (
                 const scalarField& alpha1,
@@ -212,9 +214,10 @@ private:
                 const volScalarField::Internal& Su
             );
 
-            // Bound fluxes
-	    // is need as the source terms need to be modified if the inverse equation is solved: alpha2=(1-alpha)
-	    // to avoid this alpha1 will be bounded to >= 0 not  alpha2 <= 1
+            //- Bound fluxes
+            //  is need as the source terms need to be modified if the inverse
+            //  equation is solved: alpha2=(1-alpha) to avoid this alpha1 will
+            //  be bounded to >= 0 not  alpha2 <= 1
             void boundFromBelow
             (
                 const scalarField& alpha1,
@@ -225,8 +228,8 @@ private:
             );
 
             //- Given the face volume transport dVf calculates the total volume
-            //  leaving a given cell. Note: cannot use dVf member because
-            //  netFlux is called also for corrected dVf
+            //- leaving a given cell. Note: cannot use dVf member because
+            //- netFlux is called also for corrected dVf
             scalar netFlux
             (
                 const surfaceScalarField& dVf,
@@ -251,7 +254,7 @@ private:
                 bsx0_.clear();
                 bsn0_.clear();
                 bsUn0_.clear();
-                if(mesh_.topoChanging())
+                if (mesh_.topoChanging())
                 {
                     // Introduced resizing to cope with changing meshes
                     checkBounding_.resize(mesh_.nCells());
@@ -293,7 +296,7 @@ private:
             );
 
             //- Check if the face is on processor patch and append it to the
-            //  list of surface cell faces on processor patches
+            //- list of surface cell faces on processor patches
             void checkIfOnProcPatch(const label facei);
 
         void calcFaceFlux();
@@ -306,12 +309,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        isoAdvector(const isoAdvector&);
+        //- No copy construct
+        isoAdvector(const isoAdvector&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const isoAdvector&);
-
+        //- No bitwise assignment
+        void operator=(const isoAdvector&) = delete;
 
 
 public:
@@ -319,29 +321,29 @@ public:
     //- Runtime type information
     TypeName("isoAdvector");
 
-
-    // Constructors
-
-        //- Construct from components
-        isoAdvector
-        (
-            volScalarField &alpha1,
-            const surfaceScalarField& phi,
-            const volVectorField& U
-        );
-
+    //- Construct from components
+    isoAdvector
+    (
+        volScalarField &alpha1,
+        const surfaceScalarField& phi,
+        const volVectorField& U
+    );
 
     //- Destructor
-    virtual ~isoAdvector();
+    virtual ~isoAdvector() = default;
 
 
-    //- advection of the interface
-    virtual void advect();
+    // Member Functions
 
-    //- advection of the interface with source terms
-    virtual void advect(const volScalarField::Internal& Sp,const volScalarField::Internal& Su);
+        //- Advection of the interface
+        virtual void advect();
 
-
+        //- Advection of the interface with source terms
+        virtual void advect
+        (
+            const volScalarField::Internal& Sp,
+            const volScalarField::Internal& Su
+        );
 };
 
 

@@ -25,7 +25,7 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 Class
     Foam::cutCellPLIC
 
@@ -80,7 +80,7 @@ class cutCellPLIC
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //  isosurface.
+        //- isosurface.
         const fvMesh& mesh_;
 
         //- Cell to cut
@@ -111,7 +111,7 @@ class cutCellPLIC
         point faceCentre_;
 
         //- Face normal of the isoface by convention pointing from high to low
-        //  values (i.e. opposite of the gradient vector).
+        //- values (i.e. opposite of the gradient vector).
         vector faceArea_;
 
         //- Cell centre of the subcell of celli which is "fully submerged", i.e.
@@ -131,16 +131,16 @@ class cutCellPLIC
         //  - +1: cell is fully above the isosurface
         label cellStatus_;
 
-    // Private Member Functions
 
   public:
+
     // Constructors
 
         //- Construct from fvMesh and a scalarField
-        //-  Length of scalarField should equal number of mesh points
+        //  Length of scalarField should equal number of mesh points
         cutCellPLIC(const fvMesh&);
 
-        // Member functions
+    // Member functions
 
         //- sets internal values and returns face status
         label calcSubCell
@@ -150,34 +150,34 @@ class cutCellPLIC
             const vector& normal
         );
 
-        //- returns subCellCentre
-        point subCellCentre();
+        //- Returns subCellCentre
+        const point& subCellCentre() const;
 
-        //- returns subCellVolume
-        scalar subCellVolume();
+        //- Returns subCellVolume
+        scalar subCellVolume() const;
 
-        //- returns the points of the cutting isoface
-        DynamicList<point> facePoints();
+        //- Returns the points of the cutting isoface
+        const DynamicList<point>& facePoints();
 
-        //- returns the centre of the cutting isoface
-        point faceCentre();
+        //- Returns the centre of the cutting isoface
+        const point& faceCentre() const;
 
-        //- returns the area normal vector of the cutting isoface
-        vector faceArea();
+        //- Returns the area normal vector of the cutting isoface
+        const vector& faceArea() const;
 
-        //- returns cellStatus
-        label cellStatus();
+        //- Returns cellStatus
+        label cellStatus() const;
 
-        //- returns volume of fluid value
-        scalar VolumeOfFluid();
+        //- Returns volume of fluid value
+        scalar VolumeOfFluid() const;
 
-        //- returns cutValue
+        //- Returns cutValue
         scalar cutValue() const;
 
-        //- resets internal values
+        //- Resets internal values
         void clearStorage();
-
 };
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

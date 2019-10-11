@@ -53,68 +53,67 @@ SourceFiles
 
 #include "reconstructionSchemes.H"
 
-
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                Class advectionSchemes Declaration
+                      Class advectionSchemes Declaration
 \*---------------------------------------------------------------------------*/
 
 class advectionSchemes
-    : public IOdictionary
+:
+    public IOdictionary
 {
 
 private:
 
-	//-
+    // Private data
+
+        //- Coefficients dictionary
         dictionary advectionSchemesCoeffs_;
+
 
 protected:
 
-        // reference to the VoF Field
+    // Protected data
+
+        //- Reference to the VoF Field
         volScalarField& alpha1_;
 
-        // reference to the face fluxes
+        //- Reference to the face fluxes
         const surfaceScalarField& phi_;
 
-        // reference to the velocity field
+        //- Reference to the velocity field
         const volVectorField& U_;
 
         //- Face volumetric transport
         surfaceScalarField alphaPhi_;
 
-		// pointer to reconstruction scheme
+		//- Pointer to reconstruction scheme
         autoPtr<reconstructionSchemes> surf_;
 
-		// stores excution times
+		//- Stores execution times
         vector runTime_;
-
-
 
 
     // Private Member Functions
 
         //- Disallow copy construct
-        advectionSchemes(const advectionSchemes&);
+        advectionSchemes(const advectionSchemes&) = delete;
 
         //- Disallow default bitwise assignment
-        void operator=(const advectionSchemes&);
+        void operator=(const advectionSchemes&) = delete;
 
 
 public:
 
 	//-
 	dictionary& modelDict();
-	
+
 	//-
 	const dictionary& modelDict() const;
-
-
-public:
 
     //- Runtime type information
     TypeName("advectionSchemes");
@@ -135,52 +134,48 @@ public:
         );
 
 
-    // Selectors
-
-        //- Return a reference to the selected phaseChange model
-        static autoPtr<advectionSchemes> New
-        (
-                volScalarField& alpha1,
-                const surfaceScalarField& phi,
-                const volVectorField& U
-        );
+    //- Return a reference to the selected phaseChange model
+    static autoPtr<advectionSchemes> New
+    (
+        volScalarField& alpha1,
+        const surfaceScalarField& phi,
+        const volVectorField& U
+    );
 
 
-    // Constructors
-
-        //- Construct from components
-        advectionSchemes
-        (
-            const word& type,
-            volScalarField& alpha1,
-            const surfaceScalarField& phi,
-            const volVectorField& U
-        );
+    //- Construct from components
+    advectionSchemes
+    (
+        const word& type,
+        volScalarField& alpha1,
+        const surfaceScalarField& phi,
+        const volVectorField& U
+    );
 
 
     //- Destructor
-    virtual ~advectionSchemes();
+    virtual ~advectionSchemes() = default;
 
 
     // Member Functions
 
-        //- advection of the interface
+        //- Advection of the interface
         virtual void advect() = 0;
 
-        //- advection of the interface with source terms
+        //- Advection of the interface with source terms
         virtual void advect
         (
             const volScalarField::Internal& Sp,
             const volScalarField::Internal& Su
         ) = 0;
 
-        //- reference to interface normals
+        //- Reference to interface normals
         const volVectorField& normal()
         {
             return surf_->normal();
         }
 
-        //- reference to interface centres
+        //- Reference to interface centres
         const volVectorField& centre()
         {
             return surf_->centre();
@@ -208,7 +203,7 @@ public:
             );
         }
 
-        // Return mass flux
+        //- Return mass flux
         tmp<surfaceScalarField> getRhoPhi
         (
             const volScalarField& rho1,
@@ -220,7 +215,8 @@ public:
                new surfaceScalarField
                (
                    "rhoPhi",
-                   fvc::interpolate(rho1 - rho2)*alphaPhi_ + fvc::interpolate(rho2)*phi_
+                   fvc::interpolate(rho1 - rho2)*alphaPhi_
+                 + fvc::interpolate(rho2)*phi_
                )
             );
         }
@@ -234,8 +230,6 @@ public:
         {
             return runTime_;
         }
-
-
 };
 
 

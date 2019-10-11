@@ -74,26 +74,14 @@ Foam::reconstruction::isoAlpha::isoAlpha
     vof2IsoTol_(readScalar(modelDict().lookup("vof2IsoTol" ))),
     surfCellTol_(readScalar(modelDict().lookup("surfCellTol" ))),
     sIterIso_(mesh_,ap_,surfCellTol_)
-
-
-
-
 {
-  writeVTK_ =  modelDict().lookupOrDefault<bool>("writeVTK",false);
-  reconstruct();
+    writeVTK_ =  modelDict().lookupOrDefault<bool>("writeVTK",false);
+    reconstruct();
 }
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::reconstruction::isoAlpha::~isoAlpha()
-{}
-
-// * * * * * * * * * * * * * * Protected Access Member Functions  * * * * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-
-// ************************************************************************* //
 void Foam::reconstruction::isoAlpha::reconstruct()
 {
     bool uptodate = alreadyReconstructed();
@@ -102,7 +90,7 @@ void Foam::reconstruction::isoAlpha::reconstruct()
     {
         return;
     }
-    
+
     // Interpolating alpha1 cell centre values to mesh points (vertices)
     if (mesh_.topoChanging())
     {

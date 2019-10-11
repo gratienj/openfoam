@@ -26,14 +26,10 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-
 #include "gradAlpha.H"
-#include "addToRunTimeSelectionTable.H"
-
 #include "fvc.H"
 #include "leastSquareGrad.H"
-
-
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -56,32 +52,30 @@ void Foam::reconstruction::gradAlpha::gradSurf(const volScalarField& phi)
     Map<vector> mapCC(exchangeFields_.getDatafromOtherProc(interfaceCell_,mesh_.C()));
     Map<scalar> mapPhi(exchangeFields_.getDatafromOtherProc(interfaceCell_,phi));
 
-    DynamicField<vector > cellCentre(100); // should be big enough avoids resizing
-    DynamicField<scalar > phiValues(100);
+    DynamicField<vector> cellCentre(100); // should be big enough avoids resizing
+    DynamicField<scalar> phiValues(100);
 
     const labelListList& stencil = exchangeFields_.getStencil();
 
     forAll(interfaceLabels_, i)
     {
-        //if(interfaceCell_[celli])
-        //{
-        const label celli = interfaceLabels_[i]; 
-        cellCentre.clear(); 
+        const label celli = interfaceLabels_[i];
+
+        cellCentre.clear();
         phiValues.clear();
 
-        forAll(stencil[celli],i)
+        for (const label gblIdx : stencil[celli])
         {
-            const label& gblIdx = stencil[celli][i];
             cellCentre.append(exchangeFields_.getValue(mesh_.C(),mapCC,gblIdx));
             phiValues.append(exchangeFields_.getValue(phi,mapPhi,gblIdx));
         }
 
         cellCentre -= mesh_.C()[celli];
-        interfaceNormal_[i] = lsGrad.grad(cellCentre,phiValues);
+        interfaceNormal_[i] = lsGrad.grad(cellCentre, phiValues);
         // Info << " grad celli " << celli  << " vector " << interfaceNormal_[i] << endl;
-        
     }
 }
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -107,29 +101,14 @@ Foam::reconstruction::gradAlpha::gradAlpha
     surfCellTol_(readScalar(modelDict().lookup("surfCellTol" ))),
     exchangeFields_(zoneDistribute::New(mesh_)),
     sIterPLIC_(mesh_,surfCellTol_)
-    
-
-
-
-
 {
-  writeVTK_ =  readBool( modelDict().lookup("writeVTK" ));
-  reconstruct();
+    writeVTK_ = readBool(modelDict().lookup("writeVTK"));
+    reconstruct();
 }
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::reconstruction::gradAlpha::~gradAlpha()
-{
-
-}
-
-// * * * * * * * * * * * * * * Protected Access Member Functions  * * * * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-
-// ************************************************************************* //
 void Foam::reconstruction::gradAlpha::reconstruct()
 {
     bool uptodate = alreadyReconstructed();
@@ -138,7 +117,7 @@ void Foam::reconstruction::gradAlpha::reconstruct()
     {
         return;
     }
-    
+
     if (mesh_.topoChanging())
     {
         // Introduced resizing to cope with changing meshes
@@ -166,10 +145,10 @@ void Foam::reconstruction::gradAlpha::reconstruct()
     forAll(interfaceLabels_, i)
     {
         const label celli = interfaceLabels_[i];
-        if(mag(interfaceNormal_[i]) == 0)
+        if (mag(interfaceNormal_[i]) == 0)
         {
             continue;
-        } 
+        }
 
         sIterPLIC_.vofCutCell
         (
@@ -180,13 +159,13 @@ void Foam::reconstruction::gradAlpha::reconstruct()
             interfaceNormal_[i]
         );
 
-        if(sIterPLIC_.cellStatus() == 0)
+        if (sIterPLIC_.cellStatus() == 0)
         {
 
             normal_[celli] = sIterPLIC_.surfaceArea();
             centre_[celli] = sIterPLIC_.surfaceCentre();
-            if(mag(normal_[celli]) == 0)
-            { 
+            if (mag(normal_[celli]) == 0)
+            {
                 normal_[celli] = vector::zero;
                 centre_[celli] = vector::zero;
             }
@@ -200,6 +179,7 @@ void Foam::reconstruction::gradAlpha::reconstruct()
             centre_[celli] = vector::zero;
         }
     }
-
 }
 
+
+// ************************************************************************* //

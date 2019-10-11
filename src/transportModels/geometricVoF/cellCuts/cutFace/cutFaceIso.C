@@ -25,12 +25,10 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 \*---------------------------------------------------------------------------*/
 
 #include "cutFaceIso.H"
-
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -50,12 +48,13 @@ Foam::cutFaceIso::cutFaceIso(const fvMesh& mesh, scalarField& f)
     clearStorage();
 }
 
+
 // * * * * * * * * * * * Public Member Functions  * * * * * * * * * * * * * //
 
 Foam::label Foam::cutFaceIso::calcSubFace
 (
-    const label& faceI,
-    const scalar& cutValue
+    const label faceI,
+    const scalar cutValue
 )
 {
     clearStorage();
@@ -97,7 +96,6 @@ Foam::label Foam::cutFaceIso::calcSubFace
         return faceStatus_;
     }
 
-
     cutFace::calcSubFace
     (
         faceI,
@@ -113,25 +111,30 @@ Foam::label Foam::cutFaceIso::calcSubFace
     return faceStatus_;
 }
 
-Foam::point Foam::cutFaceIso::subFaceCentre()
+
+const Foam::point& Foam::cutFaceIso::subFaceCentre() const
 {
     return subFaceCentre_;
 }
 
-Foam::vector Foam::cutFaceIso::subFaceArea()
+
+const Foam::vector& Foam::cutFaceIso::subFaceArea() const
 {
     return subFaceArea_;
 }
 
-Foam::DynamicList<Foam::point>& Foam::cutFaceIso::subFacePoints()
+
+const Foam::DynamicList<Foam::point>& Foam::cutFaceIso::subFacePoints() const
 {
     return subFacePoints_;
 }
 
-Foam::DynamicList<Foam::point>& Foam::cutFaceIso::surfacePoints()
+
+const Foam::DynamicList<Foam::point>& Foam::cutFaceIso::surfacePoints() const
 {
     return surfacePoints_;
 }
+
 
 void Foam::cutFaceIso::clearStorage()
 {
@@ -143,5 +146,6 @@ void Foam::cutFaceIso::clearStorage()
     weight_.clear();
     faceStatus_ = -1;
 }
+
 
 // ************************************************************************* //

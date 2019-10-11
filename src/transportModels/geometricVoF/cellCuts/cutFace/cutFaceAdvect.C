@@ -25,17 +25,19 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 
 \*---------------------------------------------------------------------------*/
 
 #include "cutFaceAdvect.H"
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::cutFaceAdvect::cutFaceAdvect(const fvMesh& mesh, const volScalarField& alpha1)
+Foam::cutFaceAdvect::cutFaceAdvect
+(
+    const fvMesh& mesh,
+    const volScalarField& alpha1
+)
 :
     cutFace(mesh),
     mesh_(mesh),
@@ -51,6 +53,7 @@ Foam::cutFaceAdvect::cutFaceAdvect(const fvMesh& mesh, const volScalarField& alp
 {
     clearStorage();
 }
+
 
 // * * * * * * * * * * * Public Member Functions  * * * * * * * * * * * * * //
 
@@ -112,10 +115,11 @@ Foam::label Foam::cutFaceAdvect::calcSubFace
         faceStatus_,
         subFaceCentre_,
         subFaceArea_
-     );
+    );
 
     return faceStatus_;
 }
+
 
 Foam::label Foam::cutFaceAdvect::calcSubFace
 (
@@ -134,7 +138,6 @@ Foam::label Foam::cutFaceAdvect::calcSubFace
     // loop face and calculate pointStatus
     forAll(f, i)
     {
-
         pointStatus[i] = val[f[i]] - cutValue;
         if (mag(pointStatus[i]) < 10 * SMALL)
         {
@@ -142,7 +145,7 @@ Foam::label Foam::cutFaceAdvect::calcSubFace
         }
         if (pointStatus[i] > 10 * SMALL)
         {
-            inLiquid++;
+            ++inLiquid;
             if (firstFullySubmergedPoint == -1)
             {
                 firstFullySubmergedPoint = i;
@@ -178,10 +181,9 @@ Foam::label Foam::cutFaceAdvect::calcSubFace
         subFaceArea_
     );
 
-
-
     return faceStatus_;
 }
+
 
 Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
 (
@@ -194,7 +196,6 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
     const scalar magSf
 )
 {
-
     //    Info << "timeIntegrate" << endl;
     clearStorage();
     // Note: this function is often called within a loop. Consider passing mesh
@@ -280,29 +281,42 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
             pointField fPts_tri(3);
             scalarField pTimes_tri(3);
             fPts_tri[0] = mesh_.faceCentres()[faceI];
-            pTimes_tri[0] = ((fPts_tri[0] - x0) & n0) / Un0;
+            pTimes_tri[0] = ((fPts_tri[0] - x0) & n0)/Un0;
             scalar area = 0;
-            for (label pi = 0; pi < nPoints; pi++)
+            for (label pi = 0; pi < nPoints; ++pi)
             {
                 fPts_tri[1] = fPts[pi];
                 pTimes_tri[1] = pTimes_[pi];
                 fPts_tri[2] = fPts[(pi + 1) % nPoints];
                 pTimes_tri[2] = pTimes_[(pi + 1) % nPoints];
-                const scalar magSf_tri = mag(0.5 * (fPts_tri[2] - fPts_tri[0]) ^
-                                             (fPts_tri[1] - fPts_tri[0]));
+                const scalar magSf_tri =
+                    mag
+                    (
+                        0.5
+                       *(fPts_tri[2] - fPts_tri[0])
+                       ^(fPts_tri[1] - fPts_tri[0])
+                    );
                 area += magSf_tri;
-                const scalar phi_tri = phi * magSf_tri / magSf;
-                dVf += phi_tri / magSf_tri *
-                       timeIntegratedArea(
-                           fPts_tri, pTimes_tri, dt, magSf_tri, Un0);
+                const scalar phi_tri = phi*magSf_tri/magSf;
+                dVf +=
+                    phi_tri/magSf_tri
+                   *timeIntegratedArea
+                    (
+                        fPts_tri,
+                        pTimes_tri,
+                        dt,
+                        magSf_tri,
+                        Un0
+                    );
             }
         }
         else
         {
-            WarningInFunction << "Warning: nShifts = " << nShifts << " on face "
-                              << faceI << " with pTimes = " << pTimes_
-                              << " owned by cell " << mesh_.faceOwner()[faceI]
-                              << endl;
+            WarningInFunction
+                << "Warning: nShifts = " << nShifts << " on face "
+                << faceI << " with pTimes = " << pTimes_
+                << " owned by cell " << mesh_.faceOwner()[faceI]
+                << endl;
         }
 
         return dVf;
@@ -326,17 +340,17 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
     }
 }
 
+
 Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
 (
     const label faceI,
-    const scalarField times,
+    const scalarField& times,
     const scalar Un0,
     const scalar dt,
     const scalar phi,
     const scalar magSf
 )
 {
-
     clearStorage();
 
     label nPoints = times.size();
@@ -363,18 +377,19 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
 
             if (newEdgeSign != oldEdgeSign)
             {
-                nShifts++;
+                ++nShifts;
             }
         }
 
         if (nShifts == 2)
         {
-            dVf = phi / magSf * timeIntegratedArea(faceI, dt, magSf, Un0);
+            dVf = phi/magSf*timeIntegratedArea(faceI, dt, magSf, Un0);
         }
         // not possible to decompose face
         return dVf;
     }
 }
+
 
 Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
 (
@@ -516,6 +531,7 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     return tIntArea;
 }
 
+
 void Foam::cutFaceAdvect::isoFacesToFile
 (
     const DynamicList<List<point>>& faces,
@@ -563,6 +579,7 @@ void Foam::cutFaceAdvect::isoFacesToFile
     }
 }
 
+
 Foam::label Foam::cutFaceAdvect::calcSubFace
 (
     const label& faceI,
@@ -575,7 +592,7 @@ Foam::label Foam::cutFaceAdvect::calcSubFace
     label inLiquid = 0;
     label firstFullySubmergedPoint = -1;
 
-    // loop face and calulate pointStatus
+    // loop face and calculate pointStatus
     forAll(f, i)
     {
         scalar value = (sign * pTimes_[i] - cutValue);
@@ -624,6 +641,7 @@ Foam::label Foam::cutFaceAdvect::calcSubFace
 
     return faceStatus_;
 }
+
 
 Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
 (
@@ -763,6 +781,7 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     return tIntArea;
 }
 
+
 void Foam::cutFaceAdvect::quadAreaCoeffs
 (
     const DynamicList<point>& pf0,
@@ -858,10 +877,12 @@ void Foam::cutFaceAdvect::quadAreaCoeffs
     }
     else
     {
-        WarningInFunction << "Vertex face was cut at " << pf0 << " and at "
-                          << pf1 << endl;
+        WarningInFunction
+            << "Vertex face was cut at " << pf0 << " and at "
+            << pf1 << endl;
     }
 }
+
 
 void Foam::cutFaceAdvect::cutPoints
 (
@@ -896,7 +917,8 @@ void Foam::cutFaceAdvect::cutPoints
             const scalar s = (f0 - f1) / (f2 - f1);
             cutPoints.append
             (
-                mesh_.points()[f[pi]] + s * (mesh_.points()[f[pi2]] - mesh_.points()[f[pi]])
+                mesh_.points()[f[pi]]
+              + s*(mesh_.points()[f[pi2]] - mesh_.points()[f[pi]])
             );
         }
         else if (f1 == f0)
@@ -908,12 +930,14 @@ void Foam::cutFaceAdvect::cutPoints
 
     if (cutPoints.size() > 2)
     {
-        WarningInFunction << "cutPoints = " << cutPoints
-                          << " for pts = " << f.points(mesh_.points())
-                          << ", f - f0 = " << f - f0 << " and f0 = " << f0
-                          << endl;
+        WarningInFunction
+            << "cutPoints = " << cutPoints
+            << " for pts = " << f.points(mesh_.points())
+            << ", f - f0 = " << f - f0 << " and f0 = " << f0
+            << endl;
     }
 }
+
 
 void Foam::cutFaceAdvect::cutPoints
 (
@@ -957,31 +981,37 @@ void Foam::cutFaceAdvect::cutPoints
 
     if (cutPoints.size() > 2)
     {
-        WarningInFunction << "cutPoints = " << cutPoints << " for pts = " << pts
-                          << ", f - f0 = " << f - f0 << " and f0 = " << f0
-                          << endl;
+        WarningInFunction
+            << "cutPoints = " << cutPoints << " for pts = " << pts
+            << ", f - f0 = " << f - f0 << " and f0 = " << f0
+            << endl;
     }
 }
 
-Foam::point Foam::cutFaceAdvect::subFaceCentre()
+
+const Foam::point& Foam::cutFaceAdvect::subFaceCentre() const
 {
     return subFaceCentre_;
 }
 
-Foam::vector Foam::cutFaceAdvect::subFaceArea()
+
+const Foam::vector& Foam::cutFaceAdvect::subFaceArea() const
 {
     return subFaceArea_;
 }
 
-Foam::DynamicList<Foam::point>& Foam::cutFaceAdvect::subFacePoints()
+
+const Foam::DynamicList<Foam::point>& Foam::cutFaceAdvect::subFacePoints() const
 {
     return subFacePoints_;
 }
 
-Foam::DynamicList<Foam::point>& Foam::cutFaceAdvect::surfacePoints()
+
+const Foam::DynamicList<Foam::point>& Foam::cutFaceAdvect::surfacePoints() const
 {
     return surfacePoints_;
 }
+
 
 void Foam::cutFaceAdvect::clearStorage()
 {
@@ -994,5 +1024,6 @@ void Foam::cutFaceAdvect::clearStorage()
     weight_.clear();
     faceStatus_ = -1;
 }
+
 
 // ************************************************************************* //

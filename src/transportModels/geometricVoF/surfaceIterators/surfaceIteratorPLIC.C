@@ -30,20 +30,19 @@ License
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::surfaceIteratorPLIC::surfaceIteratorPLIC(const fvMesh& mesh,const scalar& tol)
+Foam::surfaceIteratorPLIC::surfaceIteratorPLIC
+(
+    const fvMesh& mesh,
+    const scalar tol
+)
 :
     mesh_(mesh),
     cutCell_(mesh_),
     surfCellTol_(tol)
-{
-
-}
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-
-
 
 Foam::label Foam::surfaceIteratorPLIC::vofCutCell
 (
@@ -54,7 +53,7 @@ Foam::label Foam::surfaceIteratorPLIC::vofCutCell
     vector normal
 )
 {
-    if(mag(normal) == 0)
+    if (mag(normal) == 0)
     {
         WarningInFunction
             << "normal length is zero in cell: " << celli << nl
@@ -65,9 +64,7 @@ Foam::label Foam::surfaceIteratorPLIC::vofCutCell
 
     }
 
-
-    normal /= mag(normal);
-
+    normal.normalise();
 
     // Finding cell vertex extrema values
     const labelList& pLabels = mesh_.cellPoints(celli);
@@ -219,7 +216,9 @@ Foam::label Foam::surfaceIteratorPLIC::vofCutCell
     // {
     //     Info << "Warning: Bisection not converged " << endl;
     // }
-    
+
     return status;
 }
+
+
 // ************************************************************************* //

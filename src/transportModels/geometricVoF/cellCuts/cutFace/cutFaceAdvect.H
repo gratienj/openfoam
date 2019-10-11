@@ -25,7 +25,7 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 
 Class
     Foam::cutFaceAdvect
@@ -65,7 +65,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class cutFaceAdvects Declaration
+                        Class cutFaceAdvect Declaration
 \*---------------------------------------------------------------------------*/
 
 class cutFaceAdvect
@@ -121,24 +121,28 @@ class cutFaceAdvect
             const word fileDir
         ) const;
 
+
   public:
+
     // Constructors
 
         //- Construct from fvMesh and a scalarField
         //  Length of scalarField should equal number of mesh points
         cutFaceAdvect(const fvMesh& mesh, const volScalarField& alpha1);
 
-        // Member functions
+    // Member functions
 
-        //- calculates cut centre and cut area (plicReconstruction) and return facestatus
-        label  calcSubFace
+        //- Calculates cut centre and cut area (plicReconstruction) and return
+        //- face status
+        label calcSubFace
         (
             const label& faceI,
             const vector& normal,
             const vector& base
         );
 
-        //- calculates cut centre and cut area (iso reconstruction) and return facestatus
+        //- Calculates cut centre and cut area (iso reconstruction) and return
+        //- face status
         label calcSubFace
         (
             const face& f,
@@ -147,7 +151,8 @@ class cutFaceAdvect
             const scalar& cutValue
         );
 
-        //- calculates cut centre and cut area (iso reconstruction) and return facestatus
+        //- Calculates cut centre and cut area (iso reconstruction) and return
+        //- face status
         label calcSubFace
         (
             const label& faceI,
@@ -171,7 +176,7 @@ class cutFaceAdvect
         scalar timeIntegratedFlux
         (
             const label faceI,
-            const scalarField times,
+            const scalarField& times,
             const scalar Un0,
             const scalar dt,
             const scalar phi,
@@ -198,8 +203,8 @@ class cutFaceAdvect
         );
 
         //- For face with vertices p calculate its area and integrated area
-        //  between isocutting lines with isovalues f0 and f1 given vertex
-        //  values f
+        //- between isocutting lines with isovalues f0 and f1 given vertex
+        //- values f
         void quadAreaCoeffs
         (
             const DynamicPointList& pf0,
@@ -208,15 +213,15 @@ class cutFaceAdvect
             scalar& intQuadArea
         ) const;
 
-        //- get cutPoints of face
+        //- Get cutPoints of face
         void cutPoints
         (
-             const label& faceI,
-             const scalar f0,
-             DynamicList<point>& cutPoints
+            const label& faceI,
+            const scalar f0,
+            DynamicList<point>& cutPoints
          );
 
-        //- get cutPoints of face
+        //- Get cutPoints of face
         void cutPoints
         (
             const pointField& pts,
@@ -225,17 +230,17 @@ class cutFaceAdvect
             DynamicList<point>& cutPoints
         );
 
-        //- returns centre of cutted face
-        point subFaceCentre();
+        //- Returns centre of cutted face
+        const point& subFaceCentre() const;
 
-        //- returns area vector of cutted face
-        vector subFaceArea();
+        //- Returns area vector of cutted face
+        const vector& subFaceArea() const;
 
-        //- returns the cut edge of the cutted face
-        DynamicList<point>& subFacePoints();
+        //- Returns the cut edge of the cutted face
+        const DynamicList<point>& subFacePoints() const;
 
-        //- returns point of the cutted face in sorted order
-        DynamicList<point>& surfacePoints();
+        //- Returns point of the cutted face in sorted order
+        const DynamicList<point>& surfacePoints() const;
 
         //- resets internal variables
         void clearStorage();

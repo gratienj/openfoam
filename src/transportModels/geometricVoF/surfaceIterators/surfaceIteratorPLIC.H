@@ -57,20 +57,15 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class surfaceIteratorPLIC Declaration
+                      Class surfaceIteratorPLIC Declaration
 \*---------------------------------------------------------------------------*/
 
 class surfaceIteratorPLIC
 {
-
-
-
-
-private:
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //  isosurface.
+        //- isosurface.
         const fvMesh& mesh_;
 
         // cuts the cell and returns volume centre and normal
@@ -87,10 +82,11 @@ public:
 
         //- Construct from fvMesh and a scalarField
         //  Length of scalarField should equal number of mesh points
-        surfaceIteratorPLIC(const fvMesh&,const scalar& tol);
+        surfaceIteratorPLIC(const fvMesh&, const scalar tol);
 
 
     // Member functions
+
         //- Determine if a cell is a surface cell
         bool isASurfaceCell(const scalar alpha1) const
         {
@@ -101,12 +97,7 @@ public:
             );
         }
 
-
-
-
-
-
-        //- finds matching cutValue for the given value fraction
+        //- Finds matching cutValue for the given value fraction
         //- returns the cellStatus
         label vofCutCell
         (
@@ -117,57 +108,53 @@ public:
             vector normal
         );
 
-        //- returns the centre point of cutted volume
-        point subCellCentre()
+        //- Returns the centre point of cutted volume
+        const point& subCellCentre() const
         {
             return cutCell_.subCellCentre();
         }
 
-
-        //- returns the volume of cutted volume
-        scalar subCellVolume()
+        //- Returns the volume of cutted volume
+        scalar subCellVolume() const
         {
             return cutCell_.subCellVolume();
         }
 
-        //- returns the centre of cutting isosurface
-        point surfaceCentre()
+        //- Returns the centre of cutting isosurface
+        const point& surfaceCentre() const
         {
             return cutCell_.faceCentre();
         }
 
-        //- returns the area vector of cutting isosurface
-        vector surfaceArea()
+        //- Returns the area vector of cutting isosurface
+        const vector& surfaceArea() const
         {
             return cutCell_.faceArea();
         }
 
-
         //- Volume of Fluid for cellI (subCellVolume_/mesh_.V()[cellI])
-        scalar VolumeOfFluid()
+        scalar VolumeOfFluid() const
         {
             return cutCell_.VolumeOfFluid();
         }
 
-        //- returns the cutValue
+        //- Returns the cutValue
         scalar cutValue() const
         {
             return cutCell_.cutValue();
         }
 
-        //- returns the cellStatus
+        //- Returns the cellStatus
         label cellStatus()
         {
             return cutCell_.cellStatus();
         }
 
-        //- returns the points of the cutting isosurface in sorted order
-        DynamicList<point> facePoints()
+        //- Returns the points of the cutting isosurface in sorted order
+        const DynamicList<point>& facePoints()
         {
             return cutCell_.facePoints();
         }
-
-
 };
 
 

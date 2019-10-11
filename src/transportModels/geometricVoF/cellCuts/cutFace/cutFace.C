@@ -25,7 +25,7 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,9 +58,12 @@ void Foam::cutFace::calcSubFace
 
     // loop face and append the cuts
     // loop starts at firstFullySubmergedPoint
-    for (int i = firstFullySubmergedPoint;
-         i < firstFullySubmergedPoint + f.size();
-         i++)
+    for
+    (
+        int i = firstFullySubmergedPoint;
+        i < firstFullySubmergedPoint + f.size();
+        ++i
+    )
     {
         // max two points are appended during one cycle
         label idx = i % f.size();
@@ -108,6 +111,7 @@ void Foam::cutFace::calcSubFace
     }
 }
 
+
 void Foam::cutFace::calcSubFace
 (
     const label& faceI,
@@ -134,9 +138,12 @@ void Foam::cutFace::calcSubFace
 
     // loop face and append the cuts
     // loop starts at firstFullySubmergedPoint
-    for (int i = firstFullySubmergedPoint;
-         i < firstFullySubmergedPoint + f.size();
-         i++)
+    for
+    (
+        int i = firstFullySubmergedPoint;
+        i < firstFullySubmergedPoint + f.size();
+      ++i
+    )
     {
         // max two points are appended during one cycle
         label idx = i % f.size();
@@ -184,6 +191,7 @@ void Foam::cutFace::calcSubFace
     }
 }
 
+
 void Foam::cutFace::calcSubFace
 (
     const face& f,
@@ -195,9 +203,8 @@ void Foam::cutFace::calcSubFace
     label& faceStatus,
     vector& subFaceCentre,
     vector& subFaceArea
- )
+)
 {
-
     if (firstFullySubmergedPoint == -1) // in Gas
     {
         faceStatus = 1;
@@ -207,9 +214,12 @@ void Foam::cutFace::calcSubFace
     }
 
     // loop face and append the cuts
-    for (int i = firstFullySubmergedPoint;
-         i < firstFullySubmergedPoint + f.size();
-         i++)
+    for
+    (
+        int i = firstFullySubmergedPoint;
+        i < firstFullySubmergedPoint + f.size();
+        ++i
+    )
     {
         // max two points are appended during one cycle
         label idx = i % f.size();
@@ -255,6 +265,7 @@ void Foam::cutFace::calcSubFace
         faceStatus = -1;
     }
 }
+
 
 void Foam::cutFace::calcSubFaceCentreAndArea
 (
@@ -320,12 +331,13 @@ void Foam::cutFace::calcSubFaceCentreAndArea
     }
 }
 
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::cutFace::cutFace(const fvMesh& mesh) : mesh_(mesh)
-{
-
-}
+Foam::cutFace::cutFace(const fvMesh& mesh)
+:
+    mesh_(mesh)
+{}
 
 
 // ************************************************************************* //

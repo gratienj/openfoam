@@ -25,7 +25,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::plicRDF
+    Foam::reconstruction::plicRDF
 
 Description
     Reconstructs an interface (centre and normal vector) consisting of planes
@@ -58,13 +58,9 @@ SourceFiles
 #include "volFields.H"
 #include "dimensionedScalar.H"
 #include "autoPtr.H"
-
-
 #include "surfaceIteratorPLIC.H"
 #include "reconstructedDistanceFunction.H"
 #include "zoneDistribute.H"
-
-
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -75,29 +71,26 @@ namespace reconstruction
 {
 
 /*---------------------------------------------------------------------------*\
-                Class plicRDF Declaration
+                           Class plicRDF Declaration
 \*---------------------------------------------------------------------------*/
 
 class plicRDF
-    : public reconstructionSchemes
+:
+    public reconstructionSchemes
 {
 
 private:
+
+    // Private Data
 
         //- Reference to mesh
         const fvMesh& mesh_;
 
         //- Interpolation object from cell centres to points
-        //Map<vector> interfaceNormal_;
         DynamicField<vector> interfaceNormal_;
 
-        
 
-
-
-        
     // Switches and tolerances. Tolerances need to go into toleranceSwitches
-
 
         //- Tolerance for search of isoFace giving specified VOF value
         scalar vof2IsoTol_;
@@ -106,23 +99,22 @@ private:
         //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
         scalar surfCellTol_;
 
-        //  tolerance
+        //- Tolerance
         scalar tol_;
 
-        //  relative tolerance
+        //- Relative tolerance
         scalar relTol_;
 
-        // number of times that the interface ist reconstructed has to be bigger than 2
+        //- Number of times that the interface ist reconstructed has to be bigger than 2
         label iteration_;
 
-        // interpolated normal from previous time step
+        //- Interpolated normal from previous time step
         bool interpolateNormal_;
 
-
-        // calculates the RDF function
+        //- Calculates the RDF function
         reconstructedDistanceFunction RDF_;
 
-        // provides stencil and map
+        //- Provides stencil and map
         zoneDistribute& exchangeFields_;
 
         //- surfaceIterator finds the plane centre for specified VOF value
@@ -133,11 +125,11 @@ private:
 
     // Private Member Functions
 
-        //- Disallow copy construct
-        plicRDF(const plicRDF&);
+        //- No copy construct
+        plicRDF(const plicRDF&) = delete;
 
-        //- Disallow default bitwise assignment
-        void operator=(const plicRDF&);
+        //- No bitwise assignment
+        void operator=(const plicRDF&) = delete;
 
         void setInitNormals(bool interpolate);
 
@@ -152,39 +144,36 @@ private:
         void interpolateNormal();
 
 
-
 public:
 
     //- Runtime type information
     TypeName("plicRDF");
 
-
-    // Constructors
-
-        //- Construct from components
-        plicRDF
-        (
-                volScalarField& alpha1,
-                const surfaceScalarField& phi,
-                const volVectorField& U,
-                dictionary& dict
-        );
+    //- Construct from components
+    plicRDF
+    (
+        volScalarField& alpha1,
+        const surfaceScalarField& phi,
+        const volVectorField& U,
+        dictionary& dict
+    );
 
 
     //- Destructor
-    virtual ~plicRDF();
+    virtual ~plicRDF() = default;
 
-    // reconstruct  interface
-    virtual void reconstruct();
+    // Member Functions
 
-    virtual void mapAlphaField();
+        // reconstruct  interface
+        virtual void reconstruct();
 
+        virtual void mapAlphaField() const;
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End reconstructionSchemes Foam
+} // End namespace reconstruction
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
