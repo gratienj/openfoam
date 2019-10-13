@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -52,25 +52,20 @@ namespace Foam
 /*---------------------------------------------------------------------------*\
                         Class multiDimPolyFitter Declaration
 \*---------------------------------------------------------------------------*/
+
 template<class T>
 class multiDimPolyFitter
 {
-
-
-
-private:
     // Private data
 
-    //- Mesh whose cells and faces to cut at their intersection with an
-    //  isosurface.
-    autoPtr<multiDimPolyFunctions> polyFunc_;
+        //- Mesh whose cells and faces to cut at their intersection with an
+        //-  isosurface.
+        autoPtr<multiDimPolyFunctions> polyFunc_;
 
-    simpleMatrix<T> A_;
+        simpleMatrix<T> A_;
 
 
 public:
-
-    // Constructors
 
     //- Construct from number of terms
     multiDimPolyFitter
@@ -81,12 +76,10 @@ public:
 
     void resetMatrix();
 
-    label nCoeffs()
+    label nCoeffs() const
     {
         return A_.n();
-    } 
-
-    
+    }
 
     void fillMatrix
     (
@@ -107,14 +100,14 @@ public:
         scalarSymmetricSquareMatrix& A
     );
 
-    // fit data
+    //- Fit data
     Field<T> fitData
     (
         const List<scalarField>& listPolyTerms,
         const List<T>& listValue
     );
 
-    // fit data
+    //- Fit data
     Field<T> fitData
     (
         const List<scalarField>& listPolyTerms,
@@ -122,27 +115,27 @@ public:
         const List<scalar>& listWeight
     );
 
-    // computer inverse
+    //- Compute inverse
     scalarSymmetricSquareMatrix computeInverse
     (
         const List<scalarField>& listPolyTerms
     );
 
-    // computer inverse
+    //- Compute source
     Field<T> computeMatrixSource
     (
         const List<scalarField>& listPolyTerms,
         const List<T>& listValue
     );
 
-    // fit data
+    //- Fit data
     Field<T> fitData
     (
         const List<vector>& positions,
         const List<T>& listValue
     );
 
-        // fit data
+    //- Fit data
     Field<T> fitData
     (
         const List<vector>& positions,
@@ -150,19 +143,18 @@ public:
         const List<scalar>& listWeight
     );
 
-    // compute inverse
+    //- Compute inverse
     scalarSymmetricSquareMatrix computeInverse
     (
         const List<vector>& positions
     );
 
-    // computer inverse
+    //- Compute source
     Field<T> computeMatrixSource
     (
         const List<vector>& positions,
         const List<T>& listValue
     );
-
 };
 
 
