@@ -128,14 +128,18 @@ void Foam::mapDistributeBase::distribute
     const bool constructHasFlip,
     List<T>& field,
     const negateOp& negOp,
-    const int tag
+    const int tag,
+    const label comm
 )
 {
+    const label myRank = Pstream::myProcNo(comm);
+    const label nProcs = Pstream::nProcs(comm);
+
     if (!Pstream::parRun())
     {
         // Do only me to me.
 
-        const labelList& mySubMap = subMap[Pstream::myProcNo()];
+        const labelList& mySubMap = subMap[myRank];
 
         List<T> subField(mySubMap.size());
         forAll(mySubMap, i)
@@ -144,7 +148,7 @@ void Foam::mapDistributeBase::distribute
         }
 
         // Receive sub field from myself (subField)
-        const labelList& map = constructMap[Pstream::myProcNo()];
+        const labelList& map = constructMap[myRank];
 
         field.setSize(constructSize);
 
@@ -167,13 +171,20 @@ void Foam::mapDistributeBase::distribute
         // received data.
 
         // Send sub field to neighbour
-        for (label domain = 0; domain < Pstream::nProcs(); domain++)
+        for (label domain = 0; domain < nProcs; domain++)
         {
             const labelList& map = subMap[domain];
 
-            if (domain != Pstream::myProcNo() && map.size())
+            if (domain != myRank && map.size())
             {
-                OPstream toNbr(Pstream::commsTypes::blocking, domain, 0, tag);
+                OPstream toNbr
+                (
+                    Pstream::commsTypes::blocking,
+                    domain,
+                    0,
+                    tag,
+                    comm
+                );
 
                 List<T> subField(map.size());
                 forAll(subField, i)
@@ -191,7 +202,7 @@ void Foam::mapDistributeBase::distribute
         }
 
         // Subset myself
-        const labelList& mySubMap = subMap[Pstream::myProcNo()];
+        const labelList& mySubMap = subMap[myRank];
 
         List<T> subField(mySubMap.size());
         forAll(mySubMap, i)
@@ -200,7 +211,7 @@ void Foam::mapDistributeBase::distribute
         }
 
         // Receive sub field from myself (subField)
-        const labelList& map = constructMap[Pstream::myProcNo()];
+        const labelList& map = constructMap[myRank];
 
         field.setSize(constructSize);
 
@@ -215,13 +226,20 @@ void Foam::mapDistributeBase::distribute
         );
 
         // Receive sub field from neighbour
-        for (label domain = 0; domain < Pstream::nProcs(); domain++)
+        for (label domain = 0; domain < nProcs; domain++)
         {
             const labelList& map = constructMap[domain];
 
-            if (domain != Pstream::myProcNo() && map.size())
+            if (domain != myRank && map.size())
             {
-                IPstream fromNbr(Pstream::commsTypes::blocking, domain, 0, tag);
+                IPstream fromNbr
+                (
+                    Pstream::commsTypes::blocking,
+                    domain,
+                    0,
+                    tag,
+                    comm
+                );
                 List<T> subField(fromNbr);
 
                 checkReceivedSize(domain, map.size(), subField.size());
@@ -247,7 +265,7 @@ void Foam::mapDistributeBase::distribute
 
         // Receive sub field from myself
         {
-            const labelList& mySubMap = subMap[Pstream::myProcNo()];
+            const labelList& mySubMap = subMap[myRank];
 
             List<T> subField(mySubMap.size());
             forAll(subField, i)
@@ -264,7 +282,7 @@ void Foam::mapDistributeBase::distribute
             // Receive sub field from myself (subField)
             flipAndCombine
             (
-                constructMap[Pstream::myProcNo()],
+                constructMap[myRank],
                 constructHasFlip,
                 subField,
                 eqOp<T>(),
@@ -283,7 +301,7 @@ void Foam::mapDistributeBase::distribute
             label sendProc = twoProcs[0];
             label recvProc = twoProcs[1];
 
-            if (Pstream::myProcNo() == sendProc)
+            if (myRank == sendProc)
             {
                 // I am send first, receive next
                 {
@@ -292,7 +310,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         recvProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
 
                     const labelList& map = subMap[recvProc];
@@ -315,7 +334,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         recvProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
                     List<T> subField(fromNbr);
 
@@ -343,7 +363,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         sendProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
                     List<T> subField(fromNbr);
 
@@ -367,7 +388,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         sendProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
 
                     const labelList& map = subMap[sendProc];
@@ -394,14 +416,14 @@ void Foam::mapDistributeBase::distribute
 
         if (!is_contiguous<T>::value)
         {
-            PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking, tag);
+            PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking, tag, comm);
 
             // Stream data into buffer
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = subMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     // Put data into send buffer
                     UOPstream toDomain(domain, pBufs);
@@ -426,7 +448,7 @@ void Foam::mapDistributeBase::distribute
 
             {
                 // Set up 'send' to myself
-                const labelList& mySub = subMap[Pstream::myProcNo()];
+                const labelList& mySub = subMap[myRank];
                 List<T> mySubField(mySub.size());
                 forAll(mySub, i)
                 {
@@ -442,7 +464,7 @@ void Foam::mapDistributeBase::distribute
                 field.setSize(constructSize);
                 // Receive sub field from myself
                 {
-                    const labelList& map = constructMap[Pstream::myProcNo()];
+                    const labelList& map = constructMap[myRank];
 
                     flipAndCombine
                     (
@@ -460,11 +482,11 @@ void Foam::mapDistributeBase::distribute
             Pstream::waitRequests(nOutstanding);
 
             // Consume
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = constructMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     UIPstream str(domain, pBufs);
                     List<T> recvField(str);
@@ -487,13 +509,13 @@ void Foam::mapDistributeBase::distribute
         {
             // Set up sends to neighbours
 
-            List<List<T>> sendFields(Pstream::nProcs());
+            List<List<T>> sendFields(nProcs);
 
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = subMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     List<T>& subField = sendFields[domain];
                     subField.setSize(map.size());
@@ -514,20 +536,21 @@ void Foam::mapDistributeBase::distribute
                         domain,
                         reinterpret_cast<const char*>(subField.begin()),
                         subField.byteSize(),
-                        tag
+                        tag,
+                        comm
                     );
                 }
             }
 
             // Set up receives from neighbours
 
-            List<List<T>> recvFields(Pstream::nProcs());
+            List<List<T>> recvFields(nProcs);
 
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = constructMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     recvFields[domain].setSize(map.size());
                     IPstream::read
@@ -536,7 +559,8 @@ void Foam::mapDistributeBase::distribute
                         domain,
                         reinterpret_cast<char*>(recvFields[domain].begin()),
                         recvFields[domain].byteSize(),
-                        tag
+                        tag,
+                        comm
                     );
                 }
             }
@@ -545,9 +569,9 @@ void Foam::mapDistributeBase::distribute
             // Set up 'send' to myself
 
             {
-                const labelList& map = subMap[Pstream::myProcNo()];
+                const labelList& map = subMap[myRank];
 
-                List<T>& subField = sendFields[Pstream::myProcNo()];
+                List<T>& subField = sendFields[myRank];
                 subField.setSize(map.size());
                 forAll(map, i)
                 {
@@ -567,10 +591,10 @@ void Foam::mapDistributeBase::distribute
             field.setSize(constructSize);
 
 
-            // Receive sub field from myself (sendFields[Pstream::myProcNo()])
+            // Receive sub field from myself (sendFields[myRank])
             {
-                const labelList& map = constructMap[Pstream::myProcNo()];
-                const List<T>& subField = sendFields[Pstream::myProcNo()];
+                const labelList& map = constructMap[myRank];
+                const List<T>& subField = sendFields[myRank];
 
                 flipAndCombine
                 (
@@ -591,11 +615,11 @@ void Foam::mapDistributeBase::distribute
 
             // Collect neighbour fields
 
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = constructMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     const List<T>& subField = recvFields[domain];
 
@@ -635,17 +659,21 @@ void Foam::mapDistributeBase::distribute
     const labelListList& constructMap,
     const bool constructHasFlip,
     List<T>& field,
+    const T& nullValue,
     const CombineOp& cop,
     const negateOp& negOp,
-    const T& nullValue,
-    const int tag
+    const int tag,
+    const label comm
 )
 {
+    const label myRank = Pstream::myProcNo(comm);
+    const label nProcs = Pstream::nProcs(comm);
+
     if (!Pstream::parRun())
     {
         // Do only me to me.
 
-        const labelList& mySubMap = subMap[Pstream::myProcNo()];
+        const labelList& mySubMap = subMap[myRank];
 
         List<T> subField(mySubMap.size());
         forAll(mySubMap, i)
@@ -654,7 +682,7 @@ void Foam::mapDistributeBase::distribute
         }
 
         // Receive sub field from myself (subField)
-        const labelList& map = constructMap[Pstream::myProcNo()];
+        const labelList& map = constructMap[myRank];
 
         field.setSize(constructSize);
         field = nullValue;
@@ -670,13 +698,20 @@ void Foam::mapDistributeBase::distribute
         // received data.
 
         // Send sub field to neighbour
-        for (label domain = 0; domain < Pstream::nProcs(); domain++)
+        for (label domain = 0; domain < nProcs; domain++)
         {
             const labelList& map = subMap[domain];
 
-            if (domain != Pstream::myProcNo() && map.size())
+            if (domain != myRank && map.size())
             {
-                OPstream toNbr(Pstream::commsTypes::blocking, domain, 0, tag);
+                OPstream toNbr
+                (
+                    Pstream::commsTypes::blocking,
+                    domain,
+                    0,
+                    tag,
+                    comm
+                );
                 List<T> subField(map.size());
                 forAll(subField, i)
                 {
@@ -693,7 +728,7 @@ void Foam::mapDistributeBase::distribute
         }
 
         // Subset myself
-        const labelList& mySubMap = subMap[Pstream::myProcNo()];
+        const labelList& mySubMap = subMap[myRank];
 
         List<T> subField(mySubMap.size());
         forAll(mySubMap, i)
@@ -702,7 +737,7 @@ void Foam::mapDistributeBase::distribute
         }
 
         // Receive sub field from myself (subField)
-        const labelList& map = constructMap[Pstream::myProcNo()];
+        const labelList& map = constructMap[myRank];
 
         field.setSize(constructSize);
         field = nullValue;
@@ -710,13 +745,20 @@ void Foam::mapDistributeBase::distribute
         flipAndCombine(map, constructHasFlip, subField, cop, negOp, field);
 
         // Receive sub field from neighbour
-        for (label domain = 0; domain < Pstream::nProcs(); domain++)
+        for (label domain = 0; domain < nProcs; domain++)
         {
             const labelList& map = constructMap[domain];
 
-            if (domain != Pstream::myProcNo() && map.size())
+            if (domain != myRank && map.size())
             {
-                IPstream fromNbr(Pstream::commsTypes::blocking, domain, 0, tag);
+                IPstream fromNbr
+                (
+                    Pstream::commsTypes::blocking,
+                    domain,
+                    0,
+                    tag,
+                    comm
+                );
                 List<T> subField(fromNbr);
 
                 checkReceivedSize(domain, map.size(), subField.size());
@@ -741,7 +783,7 @@ void Foam::mapDistributeBase::distribute
         List<T> newField(constructSize, nullValue);
 
         {
-            const labelList& mySubMap = subMap[Pstream::myProcNo()];
+            const labelList& mySubMap = subMap[myRank];
 
             // Subset myself
             List<T> subField(mySubMap.size());
@@ -757,7 +799,7 @@ void Foam::mapDistributeBase::distribute
             }
 
             // Receive sub field from myself (subField)
-            const labelList& map = constructMap[Pstream::myProcNo()];
+            const labelList& map = constructMap[myRank];
 
             flipAndCombine
             (
@@ -781,7 +823,7 @@ void Foam::mapDistributeBase::distribute
             label sendProc = twoProcs[0];
             label recvProc = twoProcs[1];
 
-            if (Pstream::myProcNo() == sendProc)
+            if (myRank == sendProc)
             {
                 // I am send first, receive next
                 {
@@ -790,7 +832,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         recvProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
 
                     const labelList& map = subMap[recvProc];
@@ -814,7 +857,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         recvProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
                     List<T> subField(fromNbr);
                     const labelList& map = constructMap[recvProc];
@@ -841,7 +885,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         sendProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
                     List<T> subField(fromNbr);
                     const labelList& map = constructMap[sendProc];
@@ -864,7 +909,8 @@ void Foam::mapDistributeBase::distribute
                         Pstream::commsTypes::scheduled,
                         sendProc,
                         0,
-                        tag
+                        tag,
+                        comm
                     );
 
                     const labelList& map = subMap[sendProc];
@@ -892,14 +938,14 @@ void Foam::mapDistributeBase::distribute
 
         if (!is_contiguous<T>::value)
         {
-            PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking, tag);
+            PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking, tag, comm);
 
             // Stream data into buffer
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = subMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     // Put data into send buffer
                     UOPstream toDomain(domain, pBufs);
@@ -924,7 +970,7 @@ void Foam::mapDistributeBase::distribute
 
             {
                 // Set up 'send' to myself
-                const labelList& myMap = subMap[Pstream::myProcNo()];
+                const labelList& myMap = subMap[myRank];
 
                 List<T> mySubField(myMap.size());
                 forAll(myMap, i)
@@ -943,7 +989,7 @@ void Foam::mapDistributeBase::distribute
                 field = nullValue;
                 // Receive sub field from myself
                 {
-                    const labelList& map = constructMap[Pstream::myProcNo()];
+                    const labelList& map = constructMap[myRank];
 
                     flipAndCombine
                     (
@@ -961,11 +1007,11 @@ void Foam::mapDistributeBase::distribute
             Pstream::waitRequests(nOutstanding);
 
             // Consume
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = constructMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     UIPstream str(domain, pBufs);
                     List<T> recvField(str);
@@ -988,13 +1034,13 @@ void Foam::mapDistributeBase::distribute
         {
             // Set up sends to neighbours
 
-            List<List<T>> sendFields(Pstream::nProcs());
+            List<List<T>> sendFields(nProcs);
 
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = subMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     List<T>& subField = sendFields[domain];
                     subField.setSize(map.size());
@@ -1015,20 +1061,21 @@ void Foam::mapDistributeBase::distribute
                         domain,
                         reinterpret_cast<const char*>(subField.begin()),
                         subField.size()*sizeof(T),
-                        tag
+                        tag,
+                        comm
                     );
                 }
             }
 
             // Set up receives from neighbours
 
-            List<List<T>> recvFields(Pstream::nProcs());
+            List<List<T>> recvFields(nProcs);
 
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = constructMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     recvFields[domain].setSize(map.size());
                     UIPstream::read
@@ -1037,7 +1084,8 @@ void Foam::mapDistributeBase::distribute
                         domain,
                         reinterpret_cast<char*>(recvFields[domain].begin()),
                         recvFields[domain].size()*sizeof(T),
-                        tag
+                        tag,
+                        comm
                     );
                 }
             }
@@ -1045,9 +1093,9 @@ void Foam::mapDistributeBase::distribute
             // Set up 'send' to myself
 
             {
-                const labelList& map = subMap[Pstream::myProcNo()];
+                const labelList& map = subMap[myRank];
 
-                List<T>& subField = sendFields[Pstream::myProcNo()];
+                List<T>& subField = sendFields[myRank];
                 subField.setSize(map.size());
                 forAll(map, i)
                 {
@@ -1069,8 +1117,8 @@ void Foam::mapDistributeBase::distribute
 
             // Receive sub field from myself (subField)
             {
-                const labelList& map = constructMap[Pstream::myProcNo()];
-                const List<T>& subField = sendFields[Pstream::myProcNo()];
+                const labelList& map = constructMap[myRank];
+                const List<T>& subField = sendFields[myRank];
 
                 flipAndCombine
                 (
@@ -1091,11 +1139,11 @@ void Foam::mapDistributeBase::distribute
 
             // Collect neighbour fields
 
-            for (label domain = 0; domain < Pstream::nProcs(); domain++)
+            for (label domain = 0; domain < nProcs; domain++)
             {
                 const labelList& map = constructMap[domain];
 
-                if (domain != Pstream::myProcNo() && map.size())
+                if (domain != myRank && map.size())
                 {
                     const List<T>& subField = recvFields[domain];
 
@@ -1127,8 +1175,11 @@ template<class T>
 void Foam::mapDistributeBase::send(PstreamBuffers& pBufs, const List<T>& field)
 const
 {
+    const label myRank = Pstream::myProcNo(comm_);
+    const label nProcs = Pstream::nProcs(comm_);
+
     // Stream data into buffer
-    for (label domain = 0; domain < Pstream::nProcs(); domain++)
+    for (label domain = 0; domain < nProcs; domain++)
     {
         const labelList& map = subMap_[domain];
 
@@ -1161,10 +1212,13 @@ template<class T>
 void Foam::mapDistributeBase::receive(PstreamBuffers& pBufs, List<T>& field)
 const
 {
+    const label myRank = Pstream::myProcNo(comm_);
+    const label nProcs = Pstream::nProcs(comm_);
+
     // Consume
     field.setSize(constructSize_);
 
-    for (label domain = 0; domain < Pstream::nProcs(); domain++)
+    for (label domain = 0; domain < nProcs; domain++)
     {
         const labelList& map = constructMap_[domain];
 
@@ -1218,7 +1272,8 @@ void Foam::mapDistributeBase::distribute
             constructHasFlip_,
             fld,
             negOp,
-            tag
+            tag,
+            comm_
         );
     }
     else if (Pstream::defaultCommsType == Pstream::commsTypes::scheduled)
@@ -1234,7 +1289,8 @@ void Foam::mapDistributeBase::distribute
             constructHasFlip_,
             fld,
             negOp,
-            tag
+            tag,
+            comm_
         );
     }
     else
@@ -1250,7 +1306,8 @@ void Foam::mapDistributeBase::distribute
             constructHasFlip_,
             fld,
             negOp,
-            tag
+            tag,
+            comm_
         );
     }
 }
@@ -1308,7 +1365,8 @@ void Foam::mapDistributeBase::reverseDistribute
             subHasFlip_,
             fld,
             flipOp(),
-            tag
+            tag,
+            comm_
         );
     }
     else if (Pstream::defaultCommsType == Pstream::commsTypes::scheduled)
@@ -1324,7 +1382,8 @@ void Foam::mapDistributeBase::reverseDistribute
             subHasFlip_,
             fld,
             flipOp(),
-            tag
+            tag,
+            comm_
         );
     }
     else
@@ -1340,7 +1399,8 @@ void Foam::mapDistributeBase::reverseDistribute
             subHasFlip_,
             fld,
             flipOp(),
-            tag
+            tag,
+            comm_
         );
     }
 }
@@ -1370,10 +1430,11 @@ void Foam::mapDistributeBase::reverseDistribute
             subMap_,
             subHasFlip_,
             fld,
+            nullValue,
             eqOp<T>(),
             flipOp(),
-            nullValue,
-            tag
+            tag,
+            comm_
         );
     }
     else if (Pstream::defaultCommsType == Pstream::commsTypes::scheduled)
@@ -1388,10 +1449,11 @@ void Foam::mapDistributeBase::reverseDistribute
             subMap_,
             subHasFlip_,
             fld,
+            nullValue,
             eqOp<T>(),
             flipOp(),
-            nullValue,
-            tag
+            tag,
+            comm_
         );
     }
     else
@@ -1406,10 +1468,11 @@ void Foam::mapDistributeBase::reverseDistribute
             subMap_,
             subHasFlip_,
             fld,
+            nullValue,
             eqOp<T>(),
             flipOp(),
-            nullValue,
-            tag
+            tag,
+            comm_
         );
     }
 }

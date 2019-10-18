@@ -147,9 +147,9 @@ void Foam::mapDistribute::printLayout(Ostream& os) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::mapDistribute::mapDistribute()
+Foam::mapDistribute::mapDistribute(const label comm)
 :
-    mapDistributeBase()
+    mapDistributeBase(comm)
 {}
 
 
@@ -175,7 +175,8 @@ Foam::mapDistribute::mapDistribute
     labelListList&& subMap,
     labelListList&& constructMap,
     const bool subHasFlip,
-    const bool constructHasFlip
+    const bool constructHasFlip,
+    const label comm
 )
 :
     mapDistributeBase
@@ -184,7 +185,8 @@ Foam::mapDistribute::mapDistribute
         std::move(subMap),
         std::move(constructMap),
         subHasFlip,
-        constructHasFlip
+        constructHasFlip,
+        comm
     )
 {}
 
@@ -197,7 +199,8 @@ Foam::mapDistribute::mapDistribute
     labelListList&& transformElements,
     labelList&& transformStart,
     const bool subHasFlip,
-    const bool constructHasFlip
+    const bool constructHasFlip,
+    const label comm
 )
 :
     mapDistributeBase
@@ -206,7 +209,8 @@ Foam::mapDistribute::mapDistribute
         std::move(subMap),
         std::move(constructMap),
         subHasFlip,
-        constructHasFlip
+        constructHasFlip,
+        comm
     ),
     transformElements_(std::move(transformElements)),
     transformStart_(std::move(transformStart))
@@ -216,10 +220,11 @@ Foam::mapDistribute::mapDistribute
 Foam::mapDistribute::mapDistribute
 (
     const labelUList& sendProcs,
-    const labelUList& recvProcs
+    const labelUList& recvProcs,
+    const label comm
 )
 :
-    mapDistributeBase(sendProcs, recvProcs)
+    mapDistributeBase(sendProcs, recvProcs, comm)
 {}
 
 
@@ -228,7 +233,8 @@ Foam::mapDistribute::mapDistribute
     const globalIndex& globalNumbering,
     labelList& elements,
     List<Map<label>>& compactMap,
-    const int tag
+    const int tag,
+    const label comm
 )
 :
     mapDistributeBase
@@ -236,7 +242,8 @@ Foam::mapDistribute::mapDistribute
         globalNumbering,
         elements,
         compactMap,
-        tag
+        tag,
+        comm
     )
 {}
 
@@ -246,7 +253,8 @@ Foam::mapDistribute::mapDistribute
     const globalIndex& globalNumbering,
     labelListList& cellCells,
     List<Map<label>>& compactMap,
-    const int tag
+    const int tag,
+    const label comm
 )
 :
     mapDistributeBase
@@ -254,7 +262,8 @@ Foam::mapDistribute::mapDistribute
         globalNumbering,
         cellCells,
         compactMap,
-        tag
+        tag,
+        comm
     )
 {}
 
@@ -267,11 +276,14 @@ Foam::mapDistribute::mapDistribute
     const labelPairList& transformedElements,
     labelList& transformedIndices,
     List<Map<label>>& compactMap,
-    const int tag
+    const int tag,
+    const label comm
 )
 :
-    mapDistributeBase()
+    mapDistributeBase(comm)
 {
+    const label myRank = Pstream::myProcNo(comm);
+
     // Construct per processor compact addressing of the global elements
     // needed. The ones from the local processor are not included since
     // these are always all needed.
@@ -287,7 +299,7 @@ Foam::mapDistribute::mapDistribute
     {
         labelPair elem = transformedElements[i];
         label proci = globalTransforms.processor(elem);
-        if (proci != Pstream::myProcNo())
+        if (proci != myRank)
         {
             label index = globalTransforms.index(elem);
             label nCompact = compactMap[proci].size();
@@ -344,7 +356,7 @@ Foam::mapDistribute::mapDistribute
         // Get compact index for untransformed element
         label rawElemI =
         (
-            proci == Pstream::myProcNo()
+            proci == myRank
           ? index
           : compactMap[proci][index]
         );
@@ -372,11 +384,14 @@ Foam::mapDistribute::mapDistribute
     const List<labelPairList>& transformedElements,
     labelListList& transformedIndices,
     List<Map<label>>& compactMap,
-    const int tag
+    const int tag,
+    const label comm
 )
 :
-    mapDistributeBase()
+    mapDistributeBase(comm)
 {
+    const label myRank = Pstream::myProcNo(comm_);
+
     // Construct per processor compact addressing of the global elements
     // needed. The ones from the local processor are not included since
     // these are always all needed.
@@ -395,7 +410,7 @@ Foam::mapDistribute::mapDistribute
         forAll(elems, i)
         {
             label proci = globalTransforms.processor(elems[i]);
-            if (proci != Pstream::myProcNo())
+            if (proci != myRank)
             {
                 label index = globalTransforms.index(elems[i]);
                 label nCompact = compactMap[proci].size();
@@ -461,7 +476,7 @@ Foam::mapDistribute::mapDistribute
             // Get compact index for untransformed element
             label rawElemI =
             (
-                proci == Pstream::myProcNo()
+                proci == myRank
               ? index
               : compactMap[proci][index]
             );
@@ -486,10 +501,11 @@ Foam::mapDistribute::mapDistribute
 (
     labelListList&& subMap,
     const bool subHasFlip,
-    const bool constructHasFlip
+    const bool constructHasFlip,
+    const label comm
 )
 :
-    mapDistributeBase(std::move(subMap), subHasFlip, constructHasFlip)
+    mapDistributeBase(std::move(subMap), subHasFlip, constructHasFlip, comm)
 {}
 
 

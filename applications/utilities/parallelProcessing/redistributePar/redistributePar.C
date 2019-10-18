@@ -507,9 +507,9 @@ void writeProcAddressing
             patchDistMap.constructMap(),
             patchDistMap.constructHasFlip(),
             patchMap,
+            label(-1),
             eqOp<label>(),
             flipOp(),
-            label(-1),
             UPstream::msgType()
         );
     }
