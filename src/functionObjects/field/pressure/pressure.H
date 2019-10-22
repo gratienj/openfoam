@@ -123,6 +123,7 @@ SourceFiles
 
 #include "fieldExpression.H"
 #include "volFieldsFwd.H"
+#include "dimensionedVector.H"
 #include "dimensionedScalar.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -147,15 +148,25 @@ public:
         //- Enumeration for pressure calculation mode
         enum mode : unsigned
         {
-            STATIC = 0x1,           //!< Static pressure
-            TOTAL = 0x2,            //!< Total pressure
-            ISENTROPIC = 0x4,       //!< Isentropic pressure
-            COEFF = 0x8,            //!< Coefficient manipulator
+            STATIC       = (1 << 0), //!< Static pressure
+            TOTAL        = (1 << 1), //!< Total pressure
+            ISENTROPIC   = (1 << 2), //!< Isentropic pressure
+            COEFF        = (1 << 3), //!< Coefficient manipulator
             STATIC_COEFF = (STATIC | COEFF),
-            TOTAL_COEFF = (TOTAL | COEFF)
+            TOTAL_COEFF  = (TOTAL | COEFF),
         };
 
         static const Enum<mode> modeNames;
+
+        //- Enumeration for bouyancy calculation mode
+        enum buoyancyMode : unsigned
+        {
+            NONE = 0,
+            ADD,
+            SUBTRACT
+        };
+
+        static const Enum<buoyancyMode> buoyancyModeNames;
 
 
 private:
@@ -164,6 +175,9 @@ private:
 
         //- Calculation mode
         mode mode_;
+
+        //- Calculation mode
+        buoyancyMode buoyancyMode_;
 
         //- Name of velocity field, default is "U"
         word UName_;
@@ -191,6 +205,21 @@ private:
 
             //- Flag to show whether rhoInf has been initialised
             bool rhoInfInitialised_;
+
+
+        //- p +/- rgh calculation
+
+            //- Gravity vector
+            mutable dimensionedVector g_;
+
+            //- Flag to show whether g has been initialised
+            bool gInitialised_;
+
+            //- Reference height
+            mutable dimensionedScalar hRef_;
+
+            //- Flag to show whether hRef has been initialised
+            bool hRefInitialised_;
 
 
     // Private Member Functions
