@@ -82,6 +82,44 @@ Foam::mappedPatchBase::offsetModeNames_
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
+Foam::label Foam::mappedPatchBase::communicator
+(
+    const word& myWorld,
+    const word& sampleWorld
+)
+{
+    // Start off with local world
+    label comm = UPstream::worldComm;
+
+    if (!sampleWorld.empty() && !myWorld.empty())
+    {
+        const wordList& procWorlds = UPstream::worlds();
+
+        DynamicList<label> subRanks(procWorlds.size());
+        forAll(procWorlds, proci)
+        {
+            const word& world = procWorlds[proci];
+            if (world == myWorld || world == sampleWorld)
+            {
+                subRanks.append(proci);
+            }
+        }
+
+        // Allocate new communicator 1 with parent 0 (= world)
+        comm = UPstream::allocateCommunicator(0, subRanks, true);
+
+        Pout<< "*** myWorld:" << myWorld << " sampleWorld:" << sampleWorld
+            << " using subRanks:" << subRanks << " new comm:" << comm << endl;
+    }
+    else
+    {
+        Pout<< "*** myWorld:" << myWorld << " sampleWorld:" << sampleWorld
+            << " using worldcomm:" << comm << endl;
+    }
+    return comm;
+}
+
+
 Foam::tmp<Foam::pointField> Foam::mappedPatchBase::facePoints
 (
     const polyPatch& pp
@@ -112,6 +150,8 @@ Foam::tmp<Foam::pointField> Foam::mappedPatchBase::facePoints
 
 void Foam::mappedPatchBase::collectSamples
 (
+    //const label localComm,
+    const label comm,
     const pointField& facePoints,
     pointField& samples,
     labelList& patchFaceProcs,
@@ -119,15 +159,22 @@ void Foam::mappedPatchBase::collectSamples
     pointField& patchFc
 ) const
 {
-    const label myRank = Pstream::myProcNo(comm_);
-    const label nProcs = Pstream::nProcs(comm_);
+//    const label comm
+//    (
+//        localComm == 0
+//      ? localComm
+//      : UPstream::parent(comm)
+//    );
+
+    const label myRank = Pstream::myProcNo(comm);
+    const label nProcs = Pstream::nProcs(comm);
 
     // Collect all sample points and the faces they come from.
     {
         List<pointField> globalFc(nProcs);
         globalFc[myRank] = facePoints;
-        Pstream::gatherList(globalFc, Pstream::msgType(), comm_);
-        Pstream::scatterList(globalFc, Pstream::msgType(), comm_);
+        Pstream::gatherList(globalFc, Pstream::msgType(), comm);
+        Pstream::scatterList(globalFc, Pstream::msgType(), comm);
         // Rework into straight list
         patchFc = ListListOps::combine<pointField>
         (
@@ -139,8 +186,8 @@ void Foam::mappedPatchBase::collectSamples
     {
         List<pointField> globalSamples(nProcs);
         globalSamples[myRank] = samplePoints(facePoints);
-        Pstream::gatherList(globalSamples, Pstream::msgType(), comm_);
-        Pstream::scatterList(globalSamples, Pstream::msgType(), comm_);
+        Pstream::gatherList(globalSamples, Pstream::msgType(), comm);
+        Pstream::scatterList(globalSamples, Pstream::msgType(), comm);
         // Rework into straight list
         samples = ListListOps::combine<pointField>
         (
@@ -153,8 +200,8 @@ void Foam::mappedPatchBase::collectSamples
         labelListList globalFaces(nProcs);
         globalFaces[myRank] = identity(patch_.size());
         // Distribute to all processors
-        Pstream::gatherList(globalFaces, Pstream::msgType(), comm_);
-        Pstream::scatterList(globalFaces, Pstream::msgType(), comm_);
+        Pstream::gatherList(globalFaces, Pstream::msgType(), comm);
+        Pstream::scatterList(globalFaces, Pstream::msgType(), comm);
 
         patchFaces = ListListOps::combine<labelList>
         (
@@ -166,8 +213,8 @@ void Foam::mappedPatchBase::collectSamples
     {
         labelList nPerProc(nProcs);
         nPerProc[myRank] = patch_.size();
-        Pstream::gatherList(nPerProc, Pstream::msgType(), comm_);
-        Pstream::scatterList(nPerProc, Pstream::msgType(), comm_);
+        Pstream::gatherList(nPerProc, Pstream::msgType(), comm);
+        Pstream::scatterList(nPerProc, Pstream::msgType(), comm);
 
         patchFaceProcs.setSize(patchFaces.size());
 
@@ -183,24 +230,23 @@ void Foam::mappedPatchBase::collectSamples
 }
 
 
-// Find the processor/cell containing the samples. Does not account
-// for samples being found in two processors.
-void Foam::mappedPatchBase::findSamples
+void Foam::mappedPatchBase::findLocalSamples
 (
     const sampleMode mode,
     const pointField& samples,
-    labelList& sampleProcs,
-    labelList& sampleIndices,
-    pointField& sampleLocations
+    List<nearInfo>& nearest
 ) const
 {
+    // Find the local cell containing the samples
+
     const label myRank = Pstream::myProcNo(comm_);
 
     // Lookup the correct region
     const polyMesh& mesh = sampleMesh();
 
     // All the info for nearest. Construct to miss
-    List<nearInfo> nearest(samples.size());
+    nearest.setSize(samples.size());
+    nearest = nearInfo();
 
     switch (mode)
     {
@@ -465,6 +511,291 @@ void Foam::mappedPatchBase::findSamples
                 << "problem." << abort(FatalError);
         }
     }
+}
+
+
+// Find the processor/cell containing the samples. Does not account
+// for samples being found in two processors.
+void Foam::mappedPatchBase::findSamples
+(
+    const sampleMode mode,
+    const pointField& samples,
+    labelList& sampleProcs,
+    labelList& sampleIndices,
+    pointField& sampleLocations
+) const
+{
+    // Find all the info for nearest
+    List<nearInfo> nearest(samples.size());
+
+    if (UPstream::myWorld() == sampleWorld_)
+    {
+        findLocalSamples(mode, samples, nearest);
+    }
+
+    //switch (mode)
+    //{
+    //    case NEARESTCELL:
+    //    {
+    //        if (samplePatch_.size() && samplePatch_ != "none")
+    //        {
+    //            FatalErrorInFunction
+    //                << "No need to supply a patch name when in "
+    //                << sampleModeNames_[mode] << " mode." << exit(FatalError);
+    //        }
+    //
+    //        //- Note: face-diagonal decomposition
+    //        const indexedOctree<Foam::treeDataCell>& tree = mesh.cellTree();
+    //
+    //        forAll(samples, sampleI)
+    //        {
+    //            const point& sample = samples[sampleI];
+    //
+    //            label celli = tree.findInside(sample);
+    //
+    //            if (celli == -1)
+    //            {
+    //                nearest[sampleI].second().first() = Foam::sqr(GREAT);
+    //                nearest[sampleI].second().second() = myRank;
+    //            }
+    //            else
+    //            {
+    //                const point& cc = mesh.cellCentres()[celli];
+    //
+    //                nearest[sampleI].first() = pointIndexHit
+    //                (
+    //                    true,
+    //                    cc,
+    //                    celli
+    //                );
+    //                nearest[sampleI].second().first() = magSqr(cc-sample);
+    //                nearest[sampleI].second().second() = myRank;
+    //            }
+    //        }
+    //        break;
+    //    }
+    //
+    //    case NEARESTONLYCELL:
+    //    {
+    //        if (samplePatch_.size() && samplePatch_ != "none")
+    //        {
+    //            FatalErrorInFunction
+    //                << "No need to supply a patch name when in "
+    //                << sampleModeNames_[mode] << " mode." << exit(FatalError);
+    //        }
+    //
+    //        //- Note: face-diagonal decomposition
+    //        const indexedOctree<Foam::treeDataCell>& tree = mesh.cellTree();
+    //
+    //        forAll(samples, sampleI)
+    //        {
+    //            const point& sample = samples[sampleI];
+    //
+    //            nearest[sampleI].first() = tree.findNearest(sample, sqr(GREAT));
+    //            nearest[sampleI].second().first() = magSqr
+    //            (
+    //                nearest[sampleI].first().hitPoint()
+    //               -sample
+    //            );
+    //            nearest[sampleI].second().second() = myRank;
+    //        }
+    //        break;
+    //    }
+    //
+    //    case NEARESTPATCHFACE:
+    //    {
+    //        Random rndGen(123456);
+    //
+    //        const polyPatch& pp = samplePolyPatch();
+    //
+    //        if (pp.empty())
+    //        {
+    //            forAll(samples, sampleI)
+    //            {
+    //                nearest[sampleI].second().first() = Foam::sqr(GREAT);
+    //                nearest[sampleI].second().second() = myRank;
+    //            }
+    //        }
+    //        else
+    //        {
+    //            // patch faces
+    //            const labelList patchFaces(identity(pp.size(), pp.start()));
+    //
+    //            treeBoundBox patchBb
+    //            (
+    //                treeBoundBox(pp.points(), pp.meshPoints()).extend
+    //                (
+    //                    rndGen,
+    //                    1e-4
+    //                )
+    //            );
+    //            patchBb.min() -= point(ROOTVSMALL, ROOTVSMALL, ROOTVSMALL);
+    //            patchBb.max() += point(ROOTVSMALL, ROOTVSMALL, ROOTVSMALL);
+    //
+    //            indexedOctree<treeDataFace> boundaryTree
+    //            (
+    //                treeDataFace    // all information needed to search faces
+    //                (
+    //                    false,      // do not cache bb
+    //                    mesh,
+    //                    patchFaces  // boundary faces only
+    //                ),
+    //                patchBb,        // overall search domain
+    //                8,              // maxLevel
+    //                10,             // leafsize
+    //                3.0             // duplicity
+    //            );
+    //
+    //            forAll(samples, sampleI)
+    //            {
+    //                const point& sample = samples[sampleI];
+    //
+    //                pointIndexHit& nearInfo = nearest[sampleI].first();
+    //                nearInfo = boundaryTree.findNearest
+    //                (
+    //                    sample,
+    //                    magSqr(patchBb.span())
+    //                );
+    //
+    //                if (!nearInfo.hit())
+    //                {
+    //                    nearest[sampleI].second().first() = Foam::sqr(GREAT);
+    //                    nearest[sampleI].second().second() = myRank;
+    //                }
+    //                else
+    //                {
+    //                    point fc(pp[nearInfo.index()].centre(pp.points()));
+    //                    nearInfo.setPoint(fc);
+    //                    nearest[sampleI].second().first() = magSqr(fc-sample);
+    //                    nearest[sampleI].second().second() = myRank;
+    //                }
+    //            }
+    //        }
+    //        break;
+    //    }
+    //
+    //    case NEARESTPATCHPOINT:
+    //    {
+    //        Random rndGen(123456);
+    //
+    //        const polyPatch& pp = samplePolyPatch();
+    //
+    //        if (pp.empty())
+    //        {
+    //            forAll(samples, sampleI)
+    //            {
+    //                nearest[sampleI].second().first() = Foam::sqr(GREAT);
+    //                nearest[sampleI].second().second() = myRank;
+    //            }
+    //        }
+    //        else
+    //        {
+    //            // patch (local) points
+    //            treeBoundBox patchBb
+    //            (
+    //                treeBoundBox(pp.points(), pp.meshPoints()).extend
+    //                (
+    //                    rndGen,
+    //                    1e-4
+    //                )
+    //            );
+    //            patchBb.min() -= point(ROOTVSMALL, ROOTVSMALL, ROOTVSMALL);
+    //            patchBb.max() += point(ROOTVSMALL, ROOTVSMALL, ROOTVSMALL);
+    //
+    //            indexedOctree<treeDataPoint> boundaryTree
+    //            (
+    //                treeDataPoint   // all information needed to search faces
+    //                (
+    //                    mesh.points(),
+    //                    pp.meshPoints() // selection of points to search on
+    //                ),
+    //                patchBb,        // overall search domain
+    //                8,              // maxLevel
+    //                10,             // leafsize
+    //                3.0             // duplicity
+    //            );
+    //
+    //            forAll(samples, sampleI)
+    //            {
+    //                const point& sample = samples[sampleI];
+    //
+    //                pointIndexHit& nearInfo = nearest[sampleI].first();
+    //                nearInfo = boundaryTree.findNearest
+    //                (
+    //                    sample,
+    //                    magSqr(patchBb.span())
+    //                );
+    //
+    //                if (!nearInfo.hit())
+    //                {
+    //                    nearest[sampleI].second().first() = Foam::sqr(GREAT);
+    //                    nearest[sampleI].second().second() = myRank;
+    //                }
+    //                else
+    //                {
+    //                    const point& pt = nearInfo.hitPoint();
+    //
+    //                    nearest[sampleI].second().first() = magSqr(pt-sample);
+    //                    nearest[sampleI].second().second() = myRank;
+    //                }
+    //            }
+    //        }
+    //        break;
+    //    }
+    //
+    //    case NEARESTFACE:
+    //    {
+    //        if (samplePatch().size() && samplePatch() != "none")
+    //        {
+    //            FatalErrorInFunction
+    //                << "No need to supply a patch name when in "
+    //                << sampleModeNames_[mode] << " mode." << exit(FatalError);
+    //        }
+    //
+    //        //- Note: face-diagonal decomposition
+    //        const meshSearchMeshObject& meshSearchEngine =
+    //            meshSearchMeshObject::New(mesh);
+    //
+    //        forAll(samples, sampleI)
+    //        {
+    //            const point& sample = samples[sampleI];
+    //
+    //            label facei = meshSearchEngine.findNearestFace(sample);
+    //
+    //            if (facei == -1)
+    //            {
+    //                nearest[sampleI].second().first() = Foam::sqr(GREAT);
+    //                nearest[sampleI].second().second() = myRank;
+    //            }
+    //            else
+    //            {
+    //                const point& fc = mesh.faceCentres()[facei];
+    //
+    //                nearest[sampleI].first() = pointIndexHit
+    //                (
+    //                    true,
+    //                    fc,
+    //                    facei
+    //                );
+    //                nearest[sampleI].second().first() = magSqr(fc-sample);
+    //                nearest[sampleI].second().second() = myRank;
+    //            }
+    //        }
+    //        break;
+    //    }
+    //
+    //    case NEARESTPATCHFACEAMI:
+    //    {
+    //        // nothing to do here
+    //        return;
+    //    }
+    //
+    //    default:
+    //    {
+    //        FatalErrorInFunction
+    //            << "problem." << abort(FatalError);
+    //    }
+    //}
 
 
     // Find nearest. Combine on master.
@@ -540,30 +871,32 @@ void Foam::mappedPatchBase::calcMapping() const
     bool sampleMyself =
     (
         mode_ == NEARESTPATCHFACE
+     && sampleWorld() == UPstream::myWorld()
      && sampleRegion() == patch_.boundaryMesh().mesh().name()
      && samplePatch() == patch_.name()
     );
 
-    // Check offset
-    vectorField d(offsettedPoints-patchPoints());
-    bool coincident = (gAverage(mag(d)) <= ROOTVSMALL);
-
-    if (sampleMyself && coincident)
-    {
-        WarningInFunction
-            << "Invalid offset " << d << endl
-            << "Offset is the vector added to the patch face centres to"
-            << " find the patch face supplying the data." << endl
-            << "Setting it to " << d
-            << " on the same patch, on the same region"
-            << " will find the faces themselves which does not make sense"
-            << " for anything but testing." << endl
-            << "patch_:" << patch_.name() << endl
-            << "sampleRegion_:" << sampleRegion() << endl
-            << "mode_:" << sampleModeNames_[mode_] << endl
-            << "samplePatch_:" << samplePatch() << endl
-            << "offsetMode_:" << offsetModeNames_[offsetMode_] << endl;
-    }
+//    // Check offset
+//    vectorField d(offsettedPoints-patchPoints());
+//    XXXXX ADD comm_ to gAverage
+//    bool coincident = (gAverage(mag(d)) <= ROOTVSMALL);
+//
+//    if (sampleMyself && coincident)
+//    {
+//        WarningInFunction
+//            << "Invalid offset " << d << endl
+//            << "Offset is the vector added to the patch face centres to"
+//            << " find the patch face supplying the data." << endl
+//            << "Setting it to " << d
+//            << " on the same patch, on the same region"
+//            << " will find the faces themselves which does not make sense"
+//            << " for anything but testing." << endl
+//            << "patch_:" << patch_.name() << endl
+//            << "sampleRegion_:" << sampleRegion() << endl
+//            << "mode_:" << sampleModeNames_[mode_] << endl
+//            << "samplePatch_:" << samplePatch() << endl
+//            << "offsetMode_:" << offsetModeNames_[offsetMode_] << endl;
+//    }
 
     // Get global list of all samples and the processor and face they come from.
     pointField samples;
@@ -572,6 +905,7 @@ void Foam::mappedPatchBase::calcMapping() const
     pointField patchFc;
     collectSamples
     (
+        comm_,
         patchPoints,
         samples,
         patchFaceProcs,
@@ -696,7 +1030,7 @@ void Foam::mappedPatchBase::calcMapping() const
     }
 
     // Determine schedule.
-    mapPtr_.reset(new mapDistribute(sampleProcs, patchFaceProcs));
+    mapPtr_.reset(new mapDistribute(sampleProcs, patchFaceProcs, comm_));
 
     // Rework the schedule from indices into samples to cell data to send,
     // face data to receive.
@@ -921,6 +1255,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(""),
     sampleRegion_(patch_.boundaryMesh().mesh().name()),
     mode_(NEARESTPATCHFACE),
     samplePatch_(""),
@@ -929,8 +1264,14 @@ Foam::mappedPatchBase::mappedPatchBase
     offset_(Zero),
     offsets_(pp.size(), offset_),
     distance_(0),
-    comm_(UPstream::worldComm),
-    sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
+    //comm_(UPstream::worldComm),
+    //interComm_(comm_),
+    comm_(communicator(UPstream::myWorld(), sampleWorld_)),
+    sameRegion_
+    (
+        sampleWorld_.empty()
+     && sampleRegion_ == patch_.boundaryMesh().mesh().name()
+    ),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
     AMIReverse_(false),
@@ -949,6 +1290,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(""),
     sampleRegion_(sampleRegion),
     mode_(mode),
     samplePatch_(samplePatch),
@@ -957,8 +1299,14 @@ Foam::mappedPatchBase::mappedPatchBase
     offset_(Zero),
     offsets_(offsets),
     distance_(0),
-    comm_(UPstream::worldComm),
-    sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
+    //comm_(UPstream::worldComm),
+    //interComm_(comm_),
+    comm_(communicator(UPstream::myWorld(), sampleWorld_)),
+    sameRegion_
+    (
+        sampleWorld_.empty()
+     && sampleRegion_ == patch_.boundaryMesh().mesh().name()
+    ),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
     AMIReverse_(false),
@@ -977,6 +1325,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(""),
     sampleRegion_(sampleRegion),
     mode_(mode),
     samplePatch_(samplePatch),
@@ -985,8 +1334,14 @@ Foam::mappedPatchBase::mappedPatchBase
     offset_(offset),
     offsets_(0),
     distance_(0),
-    comm_(UPstream::worldComm),
-    sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
+    //comm_(UPstream::worldComm),
+    //interComm_(comm_),
+    comm_(communicator(UPstream::myWorld(), sampleWorld_)),
+    sameRegion_
+    (
+        sampleWorld_.empty()
+     && sampleRegion_ == patch_.boundaryMesh().mesh().name()
+    ),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
     AMIReverse_(false),
@@ -1005,6 +1360,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(""),
     sampleRegion_(sampleRegion),
     mode_(mode),
     samplePatch_(samplePatch),
@@ -1013,8 +1369,14 @@ Foam::mappedPatchBase::mappedPatchBase
     offset_(Zero),
     offsets_(0),
     distance_(distance),
-    comm_(UPstream::worldComm),
-    sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
+    //comm_(UPstream::worldComm),
+    //interComm_(comm_),
+    comm_(communicator(UPstream::myWorld(), sampleWorld_)),
+    sameRegion_
+    (
+        sampleWorld_.empty()
+     && sampleRegion_ == patch_.boundaryMesh().mesh().name()
+    ),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
     AMIReverse_(false),
@@ -1030,6 +1392,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(dict.lookupOrDefault<word>("sampleWorld", "")),
     sampleRegion_(dict.lookupOrDefault<word>("sampleRegion", "")),
     mode_(sampleModeNames_.get("sampleMode", dict)),
     samplePatch_(dict.lookupOrDefault<word>("samplePatch", "")),
@@ -1038,8 +1401,14 @@ Foam::mappedPatchBase::mappedPatchBase
     offset_(Zero),
     offsets_(0),
     distance_(0.0),
-    comm_(dict.lookupOrDefault<label>("communicator", UPstream::worldComm)),
-    sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
+    //comm_(dict.lookupOrDefault<label>("communicator", UPstream::worldComm)),
+    //interComm_(comm_),
+    comm_(communicator(UPstream::myWorld(), sampleWorld_)),
+    sameRegion_
+    (
+        sampleWorld_.empty()
+     && sampleRegion_ == patch_.boundaryMesh().mesh().name()
+    ),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
     AMIReverse_(dict.lookupOrDefault("flipNormals", false)),
@@ -1048,7 +1417,7 @@ Foam::mappedPatchBase::mappedPatchBase
 {
     if (!coupleGroup_.valid())
     {
-        if (sampleRegion_.empty())
+        if (sampleWorld_.empty() && sampleRegion_.empty())
         {
             // If no coupleGroup and no sampleRegion assume local region
             sampleRegion_ = patch_.boundaryMesh().mesh().name();
@@ -1108,6 +1477,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(dict.lookupOrDefault<word>("sampleWorld", "")),
     sampleRegion_(dict.lookupOrDefault<word>("sampleRegion", "")),
     mode_(mode),
     samplePatch_(dict.lookupOrDefault<word>("samplePatch", "")),
@@ -1116,8 +1486,14 @@ Foam::mappedPatchBase::mappedPatchBase
     offset_(Zero),
     offsets_(0),
     distance_(0.0),
-    comm_(dict.lookupOrDefault<label>("communicator", UPstream::worldComm)),
-    sameRegion_(sampleRegion_ == patch_.boundaryMesh().mesh().name()),
+    //comm_(dict.lookupOrDefault<label>("communicator", UPstream::worldComm)),
+    //interComm_(comm_),
+    comm_(communicator(UPstream::myWorld(), sampleWorld_)),
+    sameRegion_
+    (
+        sampleWorld_.empty()
+     && sampleRegion_ == patch_.boundaryMesh().mesh().name()
+    ),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
     AMIReverse_(dict.lookupOrDefault("flipNormals", false)),
@@ -1137,7 +1513,7 @@ Foam::mappedPatchBase::mappedPatchBase
 
     if (!coupleGroup_.valid())
     {
-        if (sampleRegion_.empty())
+        if (sampleWorld_.empty() && sampleRegion_.empty())
         {
             // If no coupleGroup and no sampleRegion assume local region
             sampleRegion_ = patch_.boundaryMesh().mesh().name();
@@ -1154,6 +1530,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(mpb.sampleWorld_),
     sampleRegion_(mpb.sampleRegion_),
     mode_(mpb.mode_),
     samplePatch_(mpb.samplePatch_),
@@ -1163,6 +1540,7 @@ Foam::mappedPatchBase::mappedPatchBase
     offsets_(mpb.offsets_),
     distance_(mpb.distance_),
     comm_(mpb.comm_),
+    //interComm_(mpb.interComm_),
     sameRegion_(mpb.sameRegion_),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
@@ -1180,6 +1558,7 @@ Foam::mappedPatchBase::mappedPatchBase
 )
 :
     patch_(pp),
+    sampleWorld_(mpb.sampleWorld_),
     sampleRegion_(mpb.sampleRegion_),
     mode_(mpb.mode_),
     samplePatch_(mpb.samplePatch_),
@@ -1194,6 +1573,7 @@ Foam::mappedPatchBase::mappedPatchBase
     ),
     distance_(mpb.distance_),
     comm_(mpb.comm_),
+    //interComm_(mpb.interComm_),
     sameRegion_(mpb.sameRegion_),
     mapPtr_(nullptr),
     AMIPtr_(nullptr),
@@ -1223,6 +1603,14 @@ void Foam::mappedPatchBase::clearOut()
 
 const Foam::polyMesh& Foam::mappedPatchBase::sampleMesh() const
 {
+    if (UPstream::myWorld() != sampleWorld_)
+    {
+        FatalErrorInFunction
+            << "sampleWorld : " << sampleWorld_
+            << " is not the current world : " << UPstream::myWorld()
+            << exit(FatalError);
+    }
+
     const polyMesh& thisMesh = patch_.boundaryMesh().mesh();
 
     return
@@ -1378,17 +1766,10 @@ Foam::pointIndexHit Foam::mappedPatchBase::facePoint
 void Foam::mappedPatchBase::write(Ostream& os) const
 {
     os.writeEntry("sampleMode", sampleModeNames_[mode_]);
-    if (!sampleRegion_.empty())
-    {
-        os.writeEntry("sampleRegion", sampleRegion_);
-    }
-    if (!samplePatch_.empty())
-    {
-        os.writeEntry("samplePatch", samplePatch_);
-    }
+    os.writeEntryIfDifferent<word>("sampleWorld", sampleWorld_, "");
+    os.writeEntryIfDifferent<word>("sampleRegion", sampleRegion_, "");
+    os.writeEntryIfDifferent<word>("samplePatch", samplePatch_, "");
     coupleGroup_.write(os);
-
-    os.writeEntryIfDifferent("communicator", UPstream::worldComm, comm_);
 
     if
     (
