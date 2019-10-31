@@ -1,11 +1,11 @@
 
 #line 1 "wmkdepend.rl"
 /*---------------------------------*- C -*-----------------------------------*\
- =========                   |
- \\      /   F ield          | OpenFOAM: The Open Source CFD Toolbox
-  \\    /    O peration      |
-   \\  /     A nd            | Copyright (C) 2010-2010, 2018 OpenCFD Ltd.
-    \\/      M anipulation   |
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     |
+    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd.
+     \\/     M anipulation  |
 ------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
