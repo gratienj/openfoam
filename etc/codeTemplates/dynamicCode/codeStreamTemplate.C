@@ -5,9 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Released 2011 OpenCFD Ltd.
-    Copyright (C) 2019 OpenCFD Ltd.
-    Modified code Copyright (C) YEAR YEAR AUTHOR,AFFILIATION
+    Copyright (C) YEAR AUTHOR, AFFILIATION
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
