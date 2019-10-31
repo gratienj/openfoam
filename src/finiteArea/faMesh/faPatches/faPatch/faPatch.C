@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           |  Copyright (C) 2019 OpenCFD Ltd
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
                             | Copyright (C) 2016-2017 Wikki Ltd
@@ -424,7 +424,8 @@ Foam::tmp<Foam::vectorField> Foam::faPatch::edgeFaceCentres() const
 
 Foam::tmp<Foam::vectorField> Foam::faPatch::delta() const
 {
-    return edgeCentres() - edgeFaceCentres();
+    return edgeNormals()*(edgeNormals() & (edgeCentres() - edgeFaceCentres()));
+    //return edgeCentres() - edgeFaceCentres();
 }
 
 
