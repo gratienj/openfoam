@@ -48,8 +48,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
-
+// Forward Declarations
 class pointBoundaryMesh;
 class pointConstraint;
 class PstreamBuffers;
@@ -60,26 +59,16 @@ class PstreamBuffers;
 
 class pointPatch
 {
-    // Private data
+    // Private Data
 
         //- Reference to boundary mesh
         const pointBoundaryMesh& boundaryMesh_;
-
-
-    // Private Member Functions
-
-        //- No copy construct
-        pointPatch(const pointPatch&) = delete;
-
-        //- No copy assignment
-        void operator=(const pointPatch&) = delete;
-
 
 protected:
 
     // Protected Member Functions
 
-        // The pointPatch geometry initialisation is called by pointBoundaryMesh
+        // The geometry initialisation is called by pointBoundaryMesh
         friend class pointBoundaryMesh;
 
         //- Initialise the calculation of the patch geometry
@@ -107,6 +96,13 @@ protected:
         {}
 
 
+        //- No copy construct
+        pointPatch(const pointPatch&) = delete;
+
+        //- No copy assignment
+        void operator=(const pointPatch&) = delete;
+
+
 public:
 
     //- Runtime type information
@@ -115,10 +111,8 @@ public:
 
     // Constructor
 
-        pointPatch
-        (
-            const pointBoundaryMesh& bm
-        )
+        //- Construct from boundary mesh
+        explicit pointPatch(const pointBoundaryMesh& bm)
         :
             boundaryMesh_(bm)
         {}
