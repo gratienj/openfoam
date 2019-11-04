@@ -2,11 +2,13 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2016-2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2015 OpenFOAM Foundation
-                            | Copyright (C) 2011 Symscape
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2015 OpenFOAM Foundation
+    Modified code Copyright (C) 2011 Symscape
+    Modified code Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
