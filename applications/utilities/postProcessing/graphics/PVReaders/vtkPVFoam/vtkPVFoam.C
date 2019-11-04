@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2005-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Modified code Copyright (C) 2017 OpenCFD Ltd.
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -790,11 +790,10 @@ void Foam::vtkPVFoam::renderPatchNames
 
     if (show && volMeshPtr_)
     {
-        // get the display patches, strip off any prefix/suffix
-        hashedWordList selectedPatches = getSelected
+        // Get the display patches, strip off any prefix/suffix
+        wordHashSet selectedPatches
         (
-            reader_->GetPartSelection(),
-            rangePatches_
+            getSelected(reader_->GetPartSelection(), rangePatches_)
         );
 
         if (selectedPatches.empty())
