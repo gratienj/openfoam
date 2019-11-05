@@ -39,7 +39,7 @@ namespace Foam
 
 Foam::ash::ash()
 :
-    solidProperties(2010, 710, 0.04, 0.0, 1.0)
+    solidProperties(2010, 710, 0.04, 0.0, 1.0, 0.0, 0.0)
 {
     if (debug)
     {

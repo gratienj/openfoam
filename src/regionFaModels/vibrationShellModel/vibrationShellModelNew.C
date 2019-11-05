@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2011-2017 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,56 +23,44 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "C.H"
-#include "addToRunTimeSelectionTable.H"
+#include "vibrationShellModel.H"
 
-// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    defineTypeNameAndDebug(C, 0);
-    addToRunTimeSelectionTable(solidProperties, C,);
-    addToRunTimeSelectionTable(solidProperties, C, dictionary);
-}
-
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::C::C()
-:
-    solidProperties(2010, 710, 0.04, 0.0, 1.0, 0.0, 0.0)
+namespace regionModels
 {
-    if (debug)
+
+// * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
+
+autoPtr<vibrationShellModel> vibrationShellModel::New
+(
+    const fvPatch& p,
+    const dictionary& dict
+)
+{
+    word modelType = dict.get<word>("vibrationShellModel");
+
+    auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
+
+    if (!cstrIter.found())
     {
-        WarningInFunction
-            << "Properties of graphite need to be checked!!!"
-            << endl;
+        FatalErrorInFunction
+            << "Unknown vibrationShellModel type "
+            << modelType << nl << nl
+            << "Valid vibrationShellModel types :" << nl
+            << dictionaryConstructorTablePtr_->sortedToc()
+            << exit(FatalError);
     }
+
+    return autoPtr<vibrationShellModel>(cstrIter()(modelType, p, dict));
 }
 
 
-Foam::C::C(const dictionary& dict)
-:
-    C()
-{
-    readIfPresent(dict);
-}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-void Foam::C::writeData(Ostream& os) const
-{
-    solidProperties::writeData(os);
-}
-
-
-// * * * * * * * * * * * * * * IOStream operators  * * * * * * * * * * * * * //
-
-Foam::Ostream& Foam::operator<<(Ostream& os, const C& s)
-{
-    s.writeData(os);
-    return os;
-}
-
+} // End namespace regionModels
+} // End namespace Foam
 
 // ************************************************************************* //

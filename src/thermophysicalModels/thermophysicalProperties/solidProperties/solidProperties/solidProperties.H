@@ -68,6 +68,12 @@ class solidProperties
         //- Emissivity
         scalar emissivity_;
 
+        //- Poisson ration
+        scalar nu_;
+
+        //- Young Modulus [N/m2]
+        scalar E_;
+
 
 public:
 
@@ -105,7 +111,9 @@ public:
             scalar Cp,
             scalar kappa,
             scalar Hf,
-            scalar emissivity
+            scalar emissivity,
+            scalar nu,
+            scalar E
         );
 
         //- Construct from dictionary
@@ -152,6 +160,12 @@ public:
 
             //- Emissivity []
             inline scalar emissivity() const;
+
+            //- Poissons
+            inline scalar nu() const;
+
+            //- Young modulus [N/m2]
+            inline scalar E() const;
 
 
     // I-O
