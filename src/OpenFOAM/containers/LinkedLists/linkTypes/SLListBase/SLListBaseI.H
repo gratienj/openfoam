@@ -144,6 +144,11 @@ inline void Foam::SLListBase::clear()
 
 inline void Foam::SLListBase::swap(SLListBase& lst)
 {
+    if (this == &lst)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     std::swap(last_, lst.last_);
     std::swap(size_, lst.size_);
 }
@@ -151,6 +156,11 @@ inline void Foam::SLListBase::swap(SLListBase& lst)
 
 inline void Foam::SLListBase::transfer(SLListBase& lst)
 {
+    if (this == &lst)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     last_ = lst.last_;
     size_ = lst.size_;
 

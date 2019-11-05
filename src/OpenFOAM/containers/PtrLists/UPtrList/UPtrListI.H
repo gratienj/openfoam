@@ -204,7 +204,7 @@ inline const T& Foam::UPtrList<T>::operator[](const label i) const
     {
         FatalErrorInFunction
             << "Cannot dereference nullptr at index " << i
-            << " in range [0," << size() << ")"
+            << " in range [0," << size() << ")\n"
             << abort(FatalError);
     }
 
@@ -221,7 +221,7 @@ inline T& Foam::UPtrList<T>::operator[](const label i)
     {
         FatalErrorInFunction
             << "Cannot dereference nullptr at index " << i
-            << " in range [0," << size() << ")"
+            << " in range [0," << size() << ")\n"
             << abort(FatalError);
     }
 

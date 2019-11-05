@@ -877,7 +877,7 @@ bool Foam::dictionary::merge(const dictionary& dict)
     if (this == &dict)
     {
         FatalIOErrorInFunction(*this)
-            << "Attempted merge to self for dictionary "
+            << "Attempted merge to self, for dictionary "
             << name() << nl
             << abort(FatalIOError);
     }
@@ -945,10 +945,7 @@ void Foam::dictionary::operator=(const dictionary& rhs)
 {
     if (this == &rhs)
     {
-        FatalIOErrorInFunction(*this)
-            << "Attempted assignment to self for dictionary "
-            << name() << nl
-            << abort(FatalIOError);
+        return;  // Self-assignment is a no-op
     }
 
     name() = rhs.name();
@@ -969,7 +966,7 @@ void Foam::dictionary::operator+=(const dictionary& rhs)
     if (this == &rhs)
     {
         FatalIOErrorInFunction(*this)
-            << "Attempted addition assignment to self for dictionary "
+            << "Attempted addition to self, for dictionary "
             << name() << nl
             << abort(FatalIOError);
     }
@@ -986,7 +983,7 @@ void Foam::dictionary::operator|=(const dictionary& rhs)
     if (this == &rhs)
     {
         FatalIOErrorInFunction(*this)
-            << "Attempted assignment to self for dictionary "
+            << "Attempted |= merging to self, for dictionary "
             << name() << nl
             << abort(FatalIOError);
     }
@@ -1006,7 +1003,7 @@ void Foam::dictionary::operator<<=(const dictionary& rhs)
     if (this == &rhs)
     {
         FatalIOErrorInFunction(*this)
-            << "Attempted assignment to self for dictionary "
+            << "Attempted addition to self, for dictionary "
             << name() << nl
             << abort(FatalIOError);
     }

@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Modified code Copyright (C) 2018 OpenCFD Ltd.
+    Modified code Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -135,9 +135,7 @@ void Foam::PtrList<T>::operator=(const PtrList<T>& list)
 {
     if (this == &list)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self for type " << typeid(T).name()
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     const label oldLen = this->size();

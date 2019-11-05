@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2010-2011 OpenCFD Ltd.
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Modified code Copyright (C) 2015-2018 OpenCFD Ltd.
+    Modified code Copyright (C) 2015-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.

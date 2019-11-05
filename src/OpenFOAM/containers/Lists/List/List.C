@@ -436,6 +436,11 @@ void Foam::List<T>::resize(const label newSize, const T& val)
 template<class T>
 void Foam::List<T>::transfer(List<T>& list)
 {
+    if (this == &list)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     // Clear and swap - could also check for self assignment
     clear();
     this->size_ = list.size_;
@@ -473,6 +478,11 @@ void Foam::List<T>::transfer(SortableList<T>& list)
 template<class T>
 void Foam::List<T>::operator=(const UList<T>& a)
 {
+    if (this == &a)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     reAlloc(a.size_);
 
     const label len = this->size_;
@@ -506,9 +516,7 @@ void Foam::List<T>::operator=(const List<T>& list)
 {
     if (this == &list)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     operator=(static_cast<const UList<T>&>(list));
@@ -582,9 +590,7 @@ void Foam::List<T>::operator=(List<T>&& list)
 {
     if (this == &list)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     transfer(list);

@@ -260,7 +260,7 @@ bool Foam::objectRegistry::checkIn(regIOobject* io) const
     if (!ok && objectRegistry::debug)
     {
         WarningInFunction
-            << name() << " : attempted to checkIn object with name "
+            << name() << " : Attempt to checkIn object with name "
             << io->name() << " which was already checked in"
             << endl;
     }
@@ -292,7 +292,7 @@ bool Foam::objectRegistry::checkOut(regIOobject* io) const
             if (objectRegistry::debug)
             {
                 WarningInFunction
-                    << name() << " : attempt to checkOut copy of "
+                    << name() << " : Attempt to checkOut copy of "
                     << iter.key()
                     << endl;
             }

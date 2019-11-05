@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -92,10 +93,7 @@ void Foam::lduMatrix::operator=(const lduMatrix& A)
 {
     if (this == &A)
     {
-        FatalError
-            << "lduMatrix::operator=(const lduMatrix&) : "
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     if (A.lowerPtr_)

@@ -657,6 +657,11 @@ void Foam::HashTable<T, Key, Hash>::clearStorage()
 template<class T, class Key, class Hash>
 void Foam::HashTable<T, Key, Hash>::swap(HashTable<T, Key, Hash>& rhs)
 {
+    if (this == &rhs)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     Foam::Swap(size_, rhs.size_);
     Foam::Swap(capacity_, rhs.capacity_);
     Foam::Swap(table_, rhs.table_);
@@ -666,6 +671,11 @@ void Foam::HashTable<T, Key, Hash>::swap(HashTable<T, Key, Hash>& rhs)
 template<class T, class Key, class Hash>
 void Foam::HashTable<T, Key, Hash>::transfer(HashTable<T, Key, Hash>& rhs)
 {
+    if (this == &rhs)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     clear();
     swap(rhs);
 }
@@ -760,12 +770,9 @@ void Foam::HashTable<T, Key, Hash>::operator=
     const HashTable<T, Key, Hash>& rhs
 )
 {
-    // Check for assignment to self
     if (this == &rhs)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     if (!capacity_)
@@ -814,12 +821,9 @@ void Foam::HashTable<T, Key, Hash>::operator=
     HashTable<T, Key, Hash>&& rhs
 )
 {
-    // Check for assignment to self
     if (this == &rhs)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     transfer(rhs);

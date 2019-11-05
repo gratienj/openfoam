@@ -657,9 +657,7 @@ void Foam::Field<Type>::operator=(const Field<Type>& rhs)
 {
     if (this == &rhs)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     List<Type>::operator=(rhs);
@@ -671,9 +669,7 @@ void Foam::Field<Type>::operator=(const tmp<Field>& rhs)
 {
     if (this == &(rhs()))
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     List<Type>::operator=(rhs());

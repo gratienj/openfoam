@@ -1110,6 +1110,11 @@ void Foam::MeshedSurface<Face>::swap
     MeshedSurface<Face>& surf
 )
 {
+    if (this == &surf)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     ParentType::clearOut(); // Topology changes
     surf.clearOut();        // Topology changes
 
@@ -1140,6 +1145,11 @@ void Foam::MeshedSurface<Face>::transfer
     MeshedSurface<Face>& surf
 )
 {
+    if (this == &surf)
+    {
+        return;  // Self-assigment is a no-op
+    }
+
     ParentType::clearOut();  // Topology changes
 
     this->storedPoints().transfer(surf.storedPoints());

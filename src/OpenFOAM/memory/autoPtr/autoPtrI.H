@@ -173,6 +173,7 @@ inline void Foam::autoPtr<T>::reset(autoPtr<T>&& ap) noexcept
 template<class T>
 inline void Foam::autoPtr<T>::swap(autoPtr<T>& other) noexcept
 {
+    // Self-swap is effectively ignored
     T* p = ptr_;
     ptr_ = other.ptr_;
     other.ptr_ = p;
@@ -260,6 +261,7 @@ inline void Foam::autoPtr<T>::operator=(autoPtr<T>&& ap) noexcept
 {
     if (this != &ap)
     {
+        // Ignore self-assignment
         reset(ap.release());
     }
 }
@@ -271,6 +273,7 @@ inline void Foam::autoPtr<T>::operator=(autoPtr<U>&& ap) noexcept
 {
     if (this != &ap)
     {
+        // Ignore self-assignment
         reset(ap.release());
     }
 }

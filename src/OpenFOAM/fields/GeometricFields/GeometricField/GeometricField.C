@@ -1328,9 +1328,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
 {
     if (this == &gf)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     checkField(*this, gf, "=");
@@ -1352,9 +1350,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
 
     if (this == &gf)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     checkField(*this, gf, "=");

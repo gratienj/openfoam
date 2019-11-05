@@ -198,6 +198,11 @@ void Foam::SortableList<T>::partialReverseSort(label n, label start)
 template<class T>
 void Foam::SortableList<T>::swap(SortableList<T>& lst)
 {
+    if (this == &lst)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     List<T>::swap(lst);
     indices_.swap(lst.indices_);
 }
@@ -224,6 +229,11 @@ inline void Foam::SortableList<T>::operator=(const UList<T>& lst)
 template<class T>
 inline void Foam::SortableList<T>::operator=(const SortableList<T>& lst)
 {
+    if (this == &lst)
+    {
+        return;  // Self-assigment is a no-op
+    }
+
     List<T>::operator=(lst);
     indices_ = lst.indices();
 }
@@ -240,6 +250,11 @@ inline void Foam::SortableList<T>::operator=(List<T>&& lst)
 template<class T>
 inline void Foam::SortableList<T>::operator=(SortableList<T>&& lst)
 {
+    if (this == &lst)
+    {
+        return;  // Self-assigment is a no-op
+    }
+
     clear();
     this->swap(lst);
 }
