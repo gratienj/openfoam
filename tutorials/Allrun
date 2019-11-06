@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------
 #     Released 2004-2011 OpenCFD Ltd.
 #     Copyright (C) 2011-2016 OpenFOAM Foundation
-#     Modified code Copyright (C) 2017 OpenCFD Ltd.
+#     Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -68,7 +68,7 @@ do
 done
 
 #------------------------------------------------------------------------------
-. $WM_PROJECT_DIR/bin/tools/LogFunctions    # Tutorial log-file functions
+. ${WM_PROJECT_DIR:?}/bin/LogFunctions      # Tutorial log-file functions
 
 if [ -z "$optCollect" ]
 then
