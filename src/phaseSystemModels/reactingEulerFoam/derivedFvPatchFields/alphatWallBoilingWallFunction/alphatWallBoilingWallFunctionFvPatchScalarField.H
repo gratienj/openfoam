@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2015-2018 OpenFOAM Foundation
+    Copyright (C) 2015-2018 OpenFOAM Foundation
+    Modified code Copyright (C) 2018 OpenCFD Ltd
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -224,6 +225,8 @@ SourceFiles
 #ifndef compressible_alphatWallBoilingWallFunctionFvPatchScalarField_H
 #define compressible_alphatWallBoilingWallFunctionFvPatchScalarField_H
 
+#include "Function1.H"
+
 #include "alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField.H"
 #include "partitioningModel.H"
 #include "nucleationSiteModel.H"
@@ -287,7 +290,7 @@ private:
         phaseType phaseType_;
 
         //- dmdt relaxationFactor
-        scalar relax_;
+         autoPtr<Function1<scalar>> relax_;
 
         //- Patch face area by cell volume
         scalarField AbyV_;

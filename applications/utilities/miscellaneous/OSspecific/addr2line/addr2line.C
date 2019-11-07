@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2018 Alexey Matveichev
+    Copyright (C) 2018 Alexey Matveichev
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -186,7 +186,7 @@ std::string getLine(const std::string& filename, const std::string& addr)
           + "' -o '"
           + "target module load -f "
           + filename
-          + " __TEXT 0x0' 2> /dev/null"
+          + " __TEXT 0x0' 2>/dev/null"
           + " | grep LineEntry"
         );
 

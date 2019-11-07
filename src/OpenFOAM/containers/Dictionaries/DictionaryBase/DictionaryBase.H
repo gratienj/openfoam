@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -94,8 +95,8 @@ public:
 
     // Constructors
 
-        //- Construct given initial table size
-        DictionaryBase(const label size = 128);
+        //- Construct with given or default (128) table capacity
+        explicit DictionaryBase(const label size = 128);
 
         //- Copy construct
         DictionaryBase(const DictionaryBase& dict);
@@ -108,7 +109,7 @@ public:
         DictionaryBase(Istream& is);
 
 
-    // Member functions
+    // Member Functions
 
         // Search and lookup
 
@@ -127,7 +128,7 @@ public:
             //- Find and return entry
             T* lookup(const word& keyword);
 
-            //- Return the table of contents
+            //- Return the table of contents (as a sorted list)
             wordList toc() const;
 
             //- Return the table of contents as a sorted list
@@ -141,25 +142,26 @@ public:
         // Editing
 
             //- Add at head of dictionary
-            void insert(const word&, T*);
+            void insert(const word& keyword, T*);
 
             //- Add at tail of dictionary
-            void append(const word&, T*);
+            void append(const word& keyword, T*);
 
             //- Remove and return entry specified by keyword.
             //  Return nullptr if the keyword was not found.
-            T* remove(const word&);
+            T* remove(const word& keyword);
 
             //- Clear the dictionary
             void clear();
 
             //- Transfer the contents of the argument into this DictionaryBase
             //  and annul the argument.
-            void transfer(DictionaryBase<IDLListType, T>&);
+            void transfer(DictionaryBase<IDLListType, T>& dict);
 
 
-    // Member operators
+    // Member Operators
 
+        //- Copy assigment
         void operator=(const DictionaryBase&);
 
         //- Find and return entry
@@ -175,7 +177,7 @@ public:
         }
 
 
-    // Ostream operator
+    // Ostream Operator
 
         friend Ostream& operator<< <IDLListType, T>
         (

@@ -3,8 +3,10 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
-#   \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
+#   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+#     Copyright (C) 2017-2019 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -146,6 +148,7 @@ HEADER
 #   -help-man     Internal option
 #   -hostRoots    Advanced distributed run option
 #   -roots        Advanced distributed run option
+#   -debug-switch, -opt-switch, -info-switch, -lib  Advanced options
 #
 # Begin parsing after first appearance of "^[Oo]ptions:"
 # Terminate parsing on first appearance of "-help-full"
@@ -159,6 +162,8 @@ extractOptions()
         sed -ne '1,/^[Oo]ptions:/d' \
             -e 's/^ *//; /^$/d; /^[^-]/d; /^--/d; /^-help-man/d;' \
             -e '/^-hostRoots /d; /^-roots /d;' \
+            -e '/^-lib /d;' \
+            -e '/^-[a-z]*-switch /d;' \
             -e 'y/,/ /; s/=.*$/=/;' \
             -e '/^-[^ ]* </{ s/^\(-[^ ]* <\).*$/\1/; p; d }' \
             -e 's/^\(-[^ ]*\).*$/\1/; p; /^-help-full/q;' \
@@ -199,7 +204,7 @@ do
         do
             extractOptions $appName
         done
-    elif command -v "$item" > /dev/null 2>&1
+    elif command -v "$item" >/dev/null
     then
         extractOptions $item
     else

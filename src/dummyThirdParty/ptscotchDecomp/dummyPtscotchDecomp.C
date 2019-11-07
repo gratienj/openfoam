@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2010-2011, 2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2015 OpenFOAM Foundation
+    Released 2010-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2015 OpenFOAM Foundation
+    Modified code Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,17 +32,16 @@ License
 #include "Time.H"
 
 static const char* notImplementedMessage =
-"You are trying to use ptscotch but do not have the "
-"ptscotchDecomp library loaded."
-"\nThis message is from the dummy ptscotchDecomp stub library instead.\n"
-"\n"
-"Please install ptscotch and make sure that libptscotch.so is in your "
-"LD_LIBRARY_PATH.\n"
-"The ptscotchDecomp library can then be built in "
-"src/parallel/decompose/ptscotchDecomp\n";
+"Attempted to use <ptscotch> without the ptscotchDecomp library loaded.\n"
+"This message is from the dummy ptscotchDecomp stub library instead.\n\n"
+"Please install <ptscotch> and ensure libptscotch.so is in LD_LIBRARY_PATH.\n"
+"The ptscotchDecomp library can then be built from "
+"src/parallel/decompose/ptscotchDecomp.\n"
+"Dynamically loading or linking this library will add "
+"<ptscotch> as a decomposition method.\n";
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
@@ -54,22 +55,21 @@ namespace Foam
     );
 }
 
+
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::ptscotchDecomp::graphPath(const polyMesh& unused) const
-{}
+void Foam::ptscotchDecomp::graphPath(const polyMesh& unused) const {}
+void Foam::ptscotchDecomp::check(const int retVal, const char* str) {}
 
 
-void Foam::ptscotchDecomp::check(const int retVal, const char* str)
-{}
-
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 Foam::label Foam::ptscotchDecomp::decompose
 (
-    const labelUList& initxadj,
-    const labelUList& initadjncy,
-    const UList<scalar>& initcWeights,
-    List<label>& finalDecomp
+    const labelList& adjncy,
+    const labelList& xadj,
+    const List<scalar>& cWeights,
+    labelList& finalDecomp
 ) const
 {
     FatalErrorInFunction
@@ -79,14 +79,16 @@ Foam::label Foam::ptscotchDecomp::decompose
 }
 
 
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
 Foam::label Foam::ptscotchDecomp::decompose
 (
     const label adjncySize,
     const label adjncy[],
     const label xadjSize,
     const label xadj[],
-    const UList<scalar>& cWeights,
-    List<label>& finalDecomp
+    const List<scalar>& cWeights,
+    labelList& finalDecomp
 ) const
 {
     FatalErrorInFunction
@@ -131,7 +133,7 @@ Foam::labelList Foam::ptscotchDecomp::decompose
     FatalErrorInFunction
         << notImplementedMessage << exit(FatalError);
 
-    return labelList::null();
+    return labelList();
 }
 
 
@@ -146,7 +148,7 @@ Foam::labelList Foam::ptscotchDecomp::decompose
     FatalErrorInFunction
         << notImplementedMessage << exit(FatalError);
 
-    return labelList::null();
+    return labelList();
 }
 
 
@@ -160,7 +162,7 @@ Foam::labelList Foam::ptscotchDecomp::decompose
     FatalErrorInFunction
         << notImplementedMessage << exit(FatalError);
 
-    return labelList::null();
+    return labelList();
 }
 
 

@@ -3,10 +3,11 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
-#   \\  /    A nd           | Copyright (C) 2009-2010 OpenCFD Ltd.
+#   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
-#-------------------------------------------------------------------------------
-#                           | Copyright (C) 2011-2016 OpenFOAM Foundation
+#------------------------------------------------------------------------------
+#     Released 2009-2011 OpenCFD Ltd.
+#     Copyright (C) 2011-2016 OpenFOAM Foundation
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM.
@@ -87,8 +88,8 @@ EOF
 
 echo "createGraphs:"
 
-# Test if gnuplot exists on the system
-command -v gnuplot >/dev/null 2>&1 || {
+# Require gnuplot
+command -v gnuplot >/dev/null || {
     echo "FOAM FATAL ERROR: gnuplot not found - skipping graph creation" 1>&2
     exit 1
 }

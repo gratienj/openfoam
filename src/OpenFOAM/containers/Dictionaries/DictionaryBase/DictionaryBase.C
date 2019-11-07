@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -158,15 +160,10 @@ T* Foam::DictionaryBase<IDLListType, T>::lookup(const word& keyword)
 template<class IDLListType, class T>
 Foam::wordList Foam::DictionaryBase<IDLListType, T>::toc() const
 {
-    wordList keywords(this->size());
-
-    label i = 0;
-    for (auto iter = this->cbegin(); iter != this->cend(); ++iter)
-    {
-        keywords[i++] = iter().keyword();
-    }
-
-    return keywords;
+    // Cannot rely on the items themselves having a keyword() method
+    // so simply return the toc() from the hashed entries
+    // Make it sorted, since anything else would have no meaning.
+    return hashedTs_.sortedToc();
 }
 
 
@@ -236,6 +233,11 @@ void Foam::DictionaryBase<IDLListType, T>::transfer
     DictionaryBase<IDLListType, T>& dict
 )
 {
+    if (this == &dict)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     IDLListType::transfer(dict);
     hashedTs_.transfer(dict.hashedTs_);
 }
@@ -251,9 +253,7 @@ void Foam::DictionaryBase<IDLListType, T>::operator=
 {
     if (this == &dict)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     IDLListType::operator=(dict);

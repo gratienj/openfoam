@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -148,9 +150,7 @@ void Foam::HashPtrTable<T, Key, Hash>::operator=
 {
     if (this == &rhs)
     {
-        FatalErrorInFunction
-            << "attempted copy assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     this->clear();
@@ -178,9 +178,7 @@ void Foam::HashPtrTable<T, Key, Hash>::operator=
 {
     if (this == &rhs)
     {
-        FatalErrorInFunction
-            << "attempted move assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     this->clear();

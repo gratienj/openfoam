@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2016-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,7 +51,7 @@ License
 //);
 //#endif
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
@@ -71,14 +73,14 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 Foam::label Foam::metisDecomp::decomposeSerial
 (
-    const labelUList& adjncy,
-    const labelUList& xadj,
-    const UList<scalar>& cWeights,
-    List<label>& decomp
+    const labelList& adjncy,
+    const labelList& xadj,
+    const List<scalar>& cWeights,
+    labelList& decomp
 ) const
 {
     // Method of decomposition
@@ -190,12 +192,12 @@ Foam::label Foam::metisDecomp::decomposeSerial
     idx_t nProcs = nDomains_;
 
     // Addressing
-    ConstPrecisionAdaptor<idx_t, label, List> xadj_metis(xadj);
-    ConstPrecisionAdaptor<idx_t, label, List> adjncy_metis(adjncy);
+    ConstPrecisionAdaptor<idx_t, label, List> xadj_param(xadj);
+    ConstPrecisionAdaptor<idx_t, label, List> adjncy_param(adjncy);
 
     // Output: cell -> processor addressing
-    PrecisionAdaptor<idx_t, label, List> decomp_metis(decomp);
-    decomp_metis.ref().setSize(numCells);
+    decomp.resize(numCells);
+    PrecisionAdaptor<idx_t, label, List> decomp_param(decomp);
 
     // Output: number of cut edges
     idx_t edgeCut = 0;
@@ -206,8 +208,8 @@ Foam::label Foam::metisDecomp::decomposeSerial
         (
             &numCells,                  // num vertices in graph
             &ncon,                      // num balancing constraints
-            xadj_metis.constCast().data(),      // indexing into adjncy
-            adjncy_metis.constCast().data(),    // neighbour info
+            xadj_param.constCast().data(),      // indexing into adjncy
+            adjncy_param.constCast().data(),    // neighbour info
             cellWeights.data(),         // vertex wts
             nullptr,                    // vsize: total communication vol
             faceWeights.data(),         // edge wts
@@ -216,7 +218,7 @@ Foam::label Foam::metisDecomp::decomposeSerial
             nullptr,                    // ubvec: processor imbalance (default)
             options.data(),
             &edgeCut,
-            decomp_metis.ref().data()
+            decomp_param.ref().data()
         );
     }
     else
@@ -225,8 +227,8 @@ Foam::label Foam::metisDecomp::decomposeSerial
         (
             &numCells,                  // num vertices in graph
             &ncon,                      // num balancing constraints
-            xadj_metis.constCast().data(),      // indexing into adjncy
-            adjncy_metis.constCast().data(),    // neighbour info
+            xadj_param.constCast().data(),      // indexing into adjncy
+            adjncy_param.constCast().data(),    // neighbour info
             cellWeights.data(),         // vertex wts
             nullptr,                    // vsize: total communication vol
             faceWeights.data(),         // edge wts
@@ -235,7 +237,7 @@ Foam::label Foam::metisDecomp::decomposeSerial
             nullptr,                    // ubvec: processor imbalance (default)
             options.data(),
             &edgeCut,
-            decomp_metis.ref().data()
+            decomp_param.ref().data()
         );
     }
 

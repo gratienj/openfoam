@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -203,6 +205,11 @@ void Foam::CompactListList<T, Container>::swap
     CompactListList<T, Container>& lst
 )
 {
+    if (this == &lst)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     Foam::Swap(size_, lst.size_);
     offsets_.swap(lst.offsets_);
     m_.swap(lst.m_);
@@ -215,6 +222,11 @@ void Foam::CompactListList<T, Container>::transfer
     CompactListList<T, Container>& lst
 )
 {
+    if (this == &lst)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     size_ = lst.size_;
     offsets_.transfer(lst.offsets_);
     m_.transfer(lst.m_);

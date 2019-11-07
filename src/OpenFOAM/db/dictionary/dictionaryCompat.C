@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,9 +67,8 @@ Foam::dictionary::const_searcher Foam::dictionary::csearchCompat
 
         if (finder.good())
         {
-            // Only want a single warning (on master), but guard with a
-            // parRun check to avoid Pstream::master() when Pstream has not
-            // yet been initialized
+            // Want single warning (on master), but guard with parRun to avoid
+            // Pstream::master() when Pstream has not yet been initialized
             if
             (
                 shouldWarnVersion(iter.second)

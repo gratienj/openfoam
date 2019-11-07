@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2016-2017 OpenFOAM Foundation
+    Copyright (C) 2016-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -318,6 +319,11 @@ inline void Foam::tmpNrc<T>::cref(const T& obj) noexcept
 template<class T>
 inline void Foam::tmpNrc<T>::swap(tmpNrc<T>& other) noexcept
 {
+    if (&other == this)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     // Copy/assign for pointer types
     T* p = ptr_;
     ptr_ = other.ptr_;
@@ -402,6 +408,11 @@ inline void Foam::tmpNrc<T>::operator=(T* p)
 template<class T>
 inline void Foam::tmpNrc<T>::operator=(const tmpNrc<T>& t)
 {
+    if (&t == this)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     clear();
 
     if (t.isTmp())

@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2013 OpenFOAM Foundation
+    Copyright (C) 2013 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -52,7 +53,6 @@ class cyclicACMILduInterface
 :
     public cyclicAMILduInterface
 {
-
 public:
 
     //- Runtime type information
@@ -62,12 +62,11 @@ public:
     // Constructors
 
         //- Construct null
-        cyclicACMILduInterface()
-        {}
+        cyclicACMILduInterface() = default;
 
 
     //- Destructor
-    virtual ~cyclicACMILduInterface();
+    virtual ~cyclicACMILduInterface() = default;
 };
 
 

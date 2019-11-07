@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -74,16 +76,17 @@ class kahipDecomp
 :
     public metisLikeDecomp
 {
+protected:
 
-    // Private Member Functions
+    // Protected Member Functions
 
         //- Call kahip with options from dictionary.
         virtual label decomposeSerial
         (
-            const labelUList& adjncy,
-            const labelUList& xadj,
-            const UList<scalar>& cellWeights,
-            List<label>& decomp
+            const labelList& adjncy,
+            const labelList& xadj,
+            const List<scalar>& cellWeights,
+            labelList& decomp
         ) const;
 
 
@@ -139,7 +142,6 @@ public:
         {
             return true;
         }
-
 };
 
 

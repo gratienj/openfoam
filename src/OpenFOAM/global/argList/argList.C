@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2015-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2017 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2015-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,6 +37,7 @@ License
 #include "labelList.H"
 #include "regIOobject.H"
 #include "dynamicCode.H"
+#include "simpleObjectRegistry.H"
 #include "sigFpe.H"
 #include "sigInt.H"
 #include "sigQuit.H"
@@ -80,7 +83,38 @@ Foam::argList::initValidTables::initValidTables()
     (
         "lib",
         "name",
-        "Additional library/libraries to load (can be used multiple times)",
+        "Additional library or library list to load"
+        " (can be used multiple times)",
+        true  // advanced option
+    );
+
+    argList::addOption
+    (
+        "debug-switch",
+        "name=val",
+        "Specify the value of a registered debug switch."
+        " Default is 1 if the value is omitted."
+        " (Can be used multiple times)",
+        true  // advanced option
+    );
+
+    argList::addOption
+    (
+        "info-switch",
+        "name=val",
+        "Specify the value of a registered info switch."
+        " Default is 1 if the value is omitted."
+        " (Can be used multiple times)",
+        true  // advanced option
+    );
+
+    argList::addOption
+    (
+        "opt-switch",
+        "name=val",
+        "Specify the value of a registered optimisation switch (int/bool)."
+        " Default is 1 if the value is omitted."
+        " (Can be used multiple times)",
         true  // advanced option
     );
 
@@ -814,6 +848,30 @@ Foam::argList::argList
                     // The '-lib' option:
                     // Append name(s) to libs_ for later opening
                     libs_.append(this->getList<fileName>(argi));
+                }
+                else if (strcmp(optName, "debug-switch") == 0)
+                {
+                    // The '-debug-switch' option:
+                    // change registered debug switch
+                    DetailInfo << "DebugSwitch ";
+                    debug::debugObjects()
+                        .setNamedInt(args_[argi], 1, true);
+                }
+                else if (strcmp(optName, "info-switch") == 0)
+                {
+                    // The '-info-switch' option:
+                    // change registered info switch
+                    DetailInfo << "InfoSwitch ";
+                    debug::infoObjects()
+                        .setNamedInt(args_[argi], 1, true);
+                }
+                else if (strcmp(optName, "opt-switch") == 0)
+                {
+                    // The '-opt-switch' option:
+                    // change registered optimisation switch
+                    DetailInfo << "OptimisationSwitch ";
+                    debug::optimisationObjects()
+                        .setNamedInt(args_[argi], 1, true);
                 }
                 else
                 {

@@ -1,6 +1,7 @@
 #!/bin/sh
-cd ${0%/*} || exit 1                        # Run from this directory
-. $WM_PROJECT_DIR/bin/tools/RunFunctions    # Tutorial run functions
+cd ${0%/*} || exit 1                                # Run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # Tutorial run functions
+#------------------------------------------------------------------------------
 
 # copy motorbike surface from resources directory
 \cp $FOAM_TUTORIALS/resources/geometry/motorBike.obj.gz constant/triSurface/
@@ -12,7 +13,7 @@ runApplication blockMesh
 # Serial
 # ------
 #runApplication snappyHexMesh -overwrite
-#\rm -f constant/polyMesh/refinementHistory*
+#rm -f constant/polyMesh/refinementHistory*
 # - set the initial fields
 # restore0Dir
 #runApplication setFields

@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2013 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2013 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,7 +53,7 @@ class processorPointPatch;
 class cyclicPointPatch;
 
 /*---------------------------------------------------------------------------*\
-                  Class facePointPatch Declaration
+                       Class facePointPatch Declaration
 \*---------------------------------------------------------------------------*/
 
 class facePointPatch
@@ -87,10 +89,6 @@ protected:
         virtual void updateMesh(PstreamBuffers&);
 
 
-private:
-
-    // Private Member Functions
-
         //- No copy construct
         facePointPatch(const facePointPatch&) = delete;
 
@@ -124,11 +122,11 @@ public:
 
     // Constructors
 
-        //- Construct from polyPatch
+        //- Construct from polyPatch and boundary mesh
         facePointPatch
         (
-            const polyPatch&,
-            const pointBoundaryMesh&
+            const polyPatch& p,
+            const pointBoundaryMesh& pm
         );
 
 
@@ -149,7 +147,7 @@ public:
     // Member Functions
 
         //- Return the polyPatch
-        const polyPatch& patch() const
+        virtual const polyPatch& patch() const
         {
             return polyPatch_;
         }
@@ -184,13 +182,11 @@ public:
             return polyPatch_.meshPoints();
         }
 
-
         //- Return pointField of points in patch
         virtual const pointField& localPoints() const
         {
             return polyPatch_.localPoints();
         }
-
 
         //- Return point unit normals
         virtual const vectorField& pointNormals() const

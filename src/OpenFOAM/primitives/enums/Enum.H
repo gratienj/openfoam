@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -211,13 +213,18 @@ public:
         //  Identical to single parameter get()
         inline EnumType operator[](const word& enumName) const;
 
-        //- Return the first name corresponding to the given enumeration.
-        //  Returns an empty word on failure.
+        //- Return the first name corresponding to the given enumeration,
+        //- or an empty word on failure.
         //  Identical to single parameter get()
         inline const word& operator[](const EnumType e) const;
 
-        //- Return the enumeration corresponding to the given name or
-        //- deflt if the name is not found.
+        //- Return the first name corresponding to the given enumeration,
+        //- or an empty word on failure.
+        //  Identical to single parameter get()
+        inline const word& operator()(const EnumType e) const;
+
+        //- Return the enumeration corresponding to the given name,
+        //- or deflt if the name is not found.
         inline EnumType operator()
         (
             const word& enumName,

@@ -2,10 +2,11 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
-#   \\  /    A nd           | Copyright (C) 2016-2019 OpenCFD Ltd.
+#   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
-#                           | Copyright (C) 2011-2016 OpenFOAM Foundation
+#     Copyright (C) 2016 OpenFOAM Foundation
+#     Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -91,6 +92,9 @@ case ThirdParty:
     case Gcc91*:
         set gcc_version=gcc-9.1.0
         breaksw
+    case Gcc92*:
+        set gcc_version=gcc-9.2.0
+        breaksw
     case Clang:
     case Clang37*:
         set clang_version=llvm-3.7.1
@@ -112,6 +116,12 @@ case ThirdParty:
         breaksw
     case Clang70*:
         set clang_version=llvm-7.0.1
+        breaksw
+    case Clang80*:
+        set clang_version=llvm-8.0.1
+        breaksw
+    case Clang00*:
+        set clang_version=llvm-9.0.0
         breaksw
     default:
         /bin/cat << UNKNOWN_COMPILER

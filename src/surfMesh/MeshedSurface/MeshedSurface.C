@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2008-2010, 2016-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2008-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1108,6 +1110,11 @@ void Foam::MeshedSurface<Face>::swap
     MeshedSurface<Face>& surf
 )
 {
+    if (this == &surf)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     ParentType::clearOut(); // Topology changes
     surf.clearOut();        // Topology changes
 
@@ -1138,6 +1145,11 @@ void Foam::MeshedSurface<Face>::transfer
     MeshedSurface<Face>& surf
 )
 {
+    if (this == &surf)
+    {
+        return;  // Self-assigment is a no-op
+    }
+
     ParentType::clearOut();  // Topology changes
 
     this->storedPoints().transfer(surf.storedPoints());

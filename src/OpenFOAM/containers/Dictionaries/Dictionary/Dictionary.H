@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,7 +29,7 @@ Class
     Foam::Dictionary
 
 Description
-    Gerneral purpose template dictionary class which manages the storage
+    General purpose template dictionary class that manages the storage
     associated with it.
 
     It is derived from DictionaryBase instantiated on a memory managed form
@@ -58,22 +60,21 @@ class Dictionary
 :
     public DictionaryBase<IDLList<T>, T>
 {
-
 public:
 
     // Constructors
 
-        //- Construct given initial table size
-        Dictionary(const label size = 128);
+        //- Construct with given or default (128) table capacity
+        explicit Dictionary(const label size = 128);
 
         //- Copy construct
-        Dictionary(const Dictionary&);
+        Dictionary(const Dictionary& dict);
 
 
-    // Member functions
+    // Member Functions
 
         //- Remove an entry specified by keyword and delete the pointer.
-        //  Returns true if the keyword was found
+        //  \return true if the keyword was found
         bool erase(const word& keyword);
 };
 

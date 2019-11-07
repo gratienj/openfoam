@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2018 OpenCFD Ltd
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,7 +60,7 @@ Foam::wallBoilingModels::TDNBModels::Schroeder::Schroeder
 )
 :
     TDNBModel(),
-    kg_(dict.lookupOrDefault<scalar>("kg", 5/3))
+    kg_(dict.lookupOrDefault<scalar>("kg", 1.666))
 {}
 
 

@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -293,18 +295,13 @@ Foam::tmp<Foam::Field<Foam::solveScalar>> Foam::lduMatrix::residual
 }
 
 
-Foam::tmp<Foam::scalarField > Foam::lduMatrix::H1() const
+Foam::tmp<Foam::scalarField> Foam::lduMatrix::H1() const
 {
-    tmp<scalarField > tH1
-    (
-        new scalarField(lduAddr().size(), Zero)
-    );
+    auto tH1 = tmp<scalarField>::New(lduAddr().size(), Zero);
 
     if (lowerPtr_ || upperPtr_)
     {
-        scalarField& H1_ = tH1.ref();
-
-        scalar* __restrict__ H1Ptr = H1_.begin();
+        scalar* __restrict__ H1Ptr = tH1.ref().begin();
 
         const label* __restrict__ uPtr = lduAddr().upperAddr().begin();
         const label* __restrict__ lPtr = lduAddr().lowerAddr().begin();

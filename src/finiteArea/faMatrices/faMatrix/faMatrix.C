@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2016-2017 Wikki Ltd
+    Copyright (C) 2016-2017 Wikki Ltd
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -712,9 +713,7 @@ void Foam::faMatrix<Type>::operator=(const faMatrix<Type>& famv)
 {
     if (this == &famv)
     {
-        FatalErrorInFunction
-            << "attempted to assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     if (&psi_ != &(famv.psi_))

@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2010-2011, 2016-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -144,6 +146,11 @@ inline bool Foam::hashedWordList::found(const word& name) const
 
 inline void Foam::hashedWordList::swap(hashedWordList& list)
 {
+    if (this == &list)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     wordList::swap(static_cast<wordList&>(list));
     lookup_.swap(list.lookup_);
 }

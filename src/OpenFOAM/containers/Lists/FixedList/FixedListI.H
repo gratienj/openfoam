@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -330,6 +332,11 @@ inline void Foam::FixedList<T, N>::setSize(const label n)
 template<class T, unsigned N>
 inline void Foam::FixedList<T, N>::swap(FixedList<T, N>& list)
 {
+    if (this == &list)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     for (unsigned i=0; i<N; ++i)
     {
         Foam::Swap(v_[i], list.v_[i]);
@@ -340,6 +347,11 @@ inline void Foam::FixedList<T, N>::swap(FixedList<T, N>& list)
 template<class T, unsigned N>
 inline void Foam::FixedList<T, N>::transfer(FixedList<T, N>& list)
 {
+    if (this == &list)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     for (unsigned i=0; i<N; ++i)
     {
         v_[i] = std::move(list[i]);
@@ -427,6 +439,11 @@ inline void Foam::FixedList<T, N>::operator=(const T& val)
 template<class T, unsigned N>
 inline void Foam::FixedList<T, N>::operator=(const FixedList<T, N>& list)
 {
+    if (this == &list)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     for (unsigned i=0; i<N; ++i)
     {
         v_[i] = list.v_[i];
@@ -436,6 +453,11 @@ inline void Foam::FixedList<T, N>::operator=(const FixedList<T, N>& list)
 template<class T, unsigned N>
 inline void Foam::FixedList<T, N>::operator=(FixedList<T, N>&& list)
 {
+    if (this == &list)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     // No significant speedup observed for copy assignment on simple types,
     // use move assignment for generality with more complex types
     for (unsigned i=0; i<N; ++i)

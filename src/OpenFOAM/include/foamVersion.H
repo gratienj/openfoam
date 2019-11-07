@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -106,9 +108,9 @@ namespace Foam
         //
         //  Eg,
         //  \code
-        //      Using: OpenFOAM-<MAJOR> (see www.OpenFOAM.com)
-        //      Build: <BUILD>
-        //      Arch:  "<ARCH_INFO>"
+        //      Using: OpenFOAM-<VER> (API) - visit www.openfoam.com
+        //      Build: <BUILD> (patch=...)
+        //      Arch:  <ARCH_INFO>
         //  \endcode
         //
         //  \param full includes Arch information

@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2010-2011, 2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2015 OpenFOAM Foundation
+    Released 2010-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2015 OpenFOAM Foundation
+    Modified code Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,17 +29,15 @@ License
 
 #include "metisDecomp.H"
 #include "addToRunTimeSelectionTable.H"
-#include "Time.H"
 
 static const char* notImplementedMessage =
-"You are trying to use metis but do not have the metisDecomp library loaded."
-"\nThis message is from the dummy metisDecomp stub library instead.\n"
-"\n"
-"Please install metis and make sure that libmetis.so is in your "
-"LD_LIBRARY_PATH.\n"
+"Attempted to use <metis> without the metisDecomp library loaded.\n"
+"This message is from the dummy metisDecomp stub library instead.\n\n"
+"Please install <metis> and ensure libmetis.so is in LD_LIBRARY_PATH.\n"
 "The metisDecomp library can then be built from "
-"src/parallel/decompose/metisDecomp and dynamically loading or linking"
-" this library will add metis as a decomposition method.\n";
+"src/parallel/decompose/metisDecomp.\n"
+"Dynamically loading or linking this library will add "
+"<metis> as a decomposition method.\n";
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -54,14 +54,14 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 Foam::label Foam::metisDecomp::decomposeSerial
 (
-    const labelUList& adjncy,
-    const labelUList& xadj,
-    const UList<scalar>& cellWeights,
-    List<label>& decomp
+    const labelList& adjncy,
+    const labelList& xadj,
+    const List<scalar>& cellWeights,
+    labelList& decomp
 ) const
 {
     FatalErrorInFunction

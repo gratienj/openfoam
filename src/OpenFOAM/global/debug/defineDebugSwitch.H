@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2012-2016 OpenFOAM Foundation
+    Copyright (C) 2012-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,14 +34,14 @@ Description
 
 #include "simpleRegIOobject.H"
 #include "debug.H"
-#include "label.H"
+#include "label.H"  // Also for defining Foam::word etc.
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-//- Define the debug information, lookup as \a Name
+//- Define the debug information, lookup as \a name
 template<class Type>
 class RegisterDebugSwitch
 :
@@ -58,12 +59,12 @@ public:
 
     virtual ~RegisterDebugSwitch() = default;
 
-    virtual void readData(Foam::Istream& is)
+    virtual void readData(Istream& is)
     {
-        Type::debug = readLabel(is);
+        is >> Type::debug;
     }
 
-    virtual void writeData(Foam::Ostream& os) const
+    virtual void writeData(Ostream& os) const
     {
         os << Type::debug;
     }
@@ -76,7 +77,7 @@ public:
 #define registerTemplateDebugSwitchWithName(Type,Name)                         \
     template<>                                                                 \
     const Foam::RegisterDebugSwitch<Type>                                      \
-        Foam::RegisterDebugSwitch<Type>::registerDebugSwitch(Name)
+    Foam::RegisterDebugSwitch<Type>::registerDebugSwitch(Name)
 
 
 //- Define the debug information, lookup as \a Name
@@ -88,15 +89,14 @@ public:
     public:                                                                    \
         add##Tag##ToDebug(const char* name)                                    \
         :                                                                      \
-            ::Foam::simpleRegIOobject(Foam::debug::addDebugObject, name)       \
+            ::Foam::simpleRegIOobject(::Foam::debug::addDebugObject, name)     \
         {}                                                                     \
-        virtual ~add##Tag##ToDebug()                                           \
-        {}                                                                     \
-        virtual void readData(Foam::Istream& is)                               \
+        virtual ~add##Tag##ToDebug() = default;                                \
+        virtual void readData(::Foam::Istream& is)                             \
         {                                                                      \
-            Type::debug = readLabel(is);                                       \
+            is >> Type::debug;                                                 \
         }                                                                      \
-        virtual void writeData(Foam::Ostream& os) const                        \
+        virtual void writeData(::Foam::Ostream& os) const                      \
         {                                                                      \
             os << Type::debug;                                                 \
         }                                                                      \
@@ -105,44 +105,44 @@ public:
 
 
 //- Define the debug information, lookup as \a Name
-#define defineDebugSwitchWithName(Type, Name, DebugSwitch)                     \
-    int Type::debug(::Foam::debug::debugSwitch(Name, DebugSwitch))
+#define defineDebugSwitchWithName(Type, Name, Value)                           \
+    int Type::debug(::Foam::debug::debugSwitch(Name, Value))
 
 //- Define the debug information
-#define defineDebugSwitch(Type, DebugSwitch)                                   \
-    defineDebugSwitchWithName(Type, Type::typeName_(), DebugSwitch);           \
+#define defineDebugSwitch(Type, Value)                                         \
+    defineDebugSwitchWithName(Type, Type::typeName_(), Value);                 \
     registerDebugSwitchWithName(Type, Type, Type::typeName_())
 
 //- Define the debug information for templates, lookup as \a Name
-#define defineTemplateDebugSwitchWithName(Type, Name, DebugSwitch)             \
+#define defineTemplateDebugSwitchWithName(Type, Name, Value)                   \
     template<>                                                                 \
-    defineDebugSwitchWithName(Type, Name, DebugSwitch);                        \
+    defineDebugSwitchWithName(Type, Name, Value);                              \
     registerTemplateDebugSwitchWithName(Type, Name)
 
 //- Define the debug information for templates sub-classes, lookup as \a Name
-#define defineTemplate2DebugSwitchWithName(Type, Name, DebugSwitch)            \
+#define defineTemplate2DebugSwitchWithName(Type, Name, Value)                  \
     template<>                                                                 \
-    defineDebugSwitchWithName(Type, Name, DebugSwitch);                        \
+    defineDebugSwitchWithName(Type, Name, Value);                              \
     registerTemplateDebugSwitchWithName(Type, Name)
 
 //- Define the debug information for templates
 //  Useful with typedefs
-#define defineTemplateDebugSwitch(Type, DebugSwitch)                           \
-    defineTemplateDebugSwitchWithName(Type, #Type, DebugSwitch)
+#define defineTemplateDebugSwitch(Type, Value)                                 \
+    defineTemplateDebugSwitchWithName(Type, #Type, Value)
 
 //- Define the debug information directly for templates
-#define defineNamedTemplateDebugSwitch(Type, DebugSwitch)                      \
-    defineTemplateDebugSwitchWithName(Type, Type::typeName_(), DebugSwitch)
+#define defineNamedTemplateDebugSwitch(Type, Value)                            \
+    defineTemplateDebugSwitchWithName(Type, Type::typeName_(), Value)
 
 
 //- Define the debug information for templates
 //  Useful with typedefs
-#define defineTemplate2DebugSwitch(Type, DebugSwitch)                          \
-    defineTemplate2DebugSwitchWithName(Type, #Type, DebugSwitch)
+#define defineTemplate2DebugSwitch(Type, Value)                                \
+    defineTemplate2DebugSwitchWithName(Type, #Type, Value)
 
 //- Define the debug information directly for templates
-#define defineNamedTemplate2DebugSwitch(Type, DebugSwitch)                     \
-    defineTemplate2DebugSwitchWithName(Type, Type::typeName_(), DebugSwitch)
+#define defineNamedTemplate2DebugSwitch(Type, Value)                           \
+    defineTemplate2DebugSwitchWithName(Type, Type::typeName_(), Value)
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

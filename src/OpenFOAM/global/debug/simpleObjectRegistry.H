@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2012-2016 OpenFOAM Foundation
+    Copyright (C) 2012-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,6 +31,7 @@ Description
     Object registry for simpleRegIOobject. Maintains ordering.
 
 SourceFiles
+    simpleObjectRegistry.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -38,11 +40,15 @@ SourceFiles
 
 #include "Dictionary.H"
 #include "simpleRegIOobject.H"
+#include <string>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
+// Forward declarations
+class dictionary;
 
 /*---------------------------------------------------------------------------*\
                    Class simpleObjectRegistryEntry Declaration
@@ -55,7 +61,14 @@ class simpleObjectRegistryEntry
 {
 public:
 
-    simpleObjectRegistryEntry(const List<simpleRegIOobject*>& data)
+    //- Construct with a single object (list size == 1)
+    explicit simpleObjectRegistryEntry(simpleRegIOobject* obj)
+    :
+        List<simpleRegIOobject*>(label(1), obj)
+    {}
+
+    //- Construct with a List of objects
+    explicit simpleObjectRegistryEntry(const List<simpleRegIOobject*>& data)
     :
         List<simpleRegIOobject*>(data)
     {}
@@ -74,11 +87,22 @@ public:
 
     // Constructors
 
-        //- Construct given initial table size
-        simpleObjectRegistry(const label nIoObjects = 128)
+        //- Construct with given or default (128) table capacity
+        explicit simpleObjectRegistry(const label size = 128)
         :
-            Dictionary<simpleObjectRegistryEntry>(nIoObjects)
+            Dictionary<simpleObjectRegistryEntry>(size)
         {}
+
+
+    // Member Functions
+
+        //- Set values (invoke callbacks) from dictionary entries
+        //  Reporting honours the infoDetailLevel
+        void setValues(const dictionary& dict, bool report=false);
+
+        //- Set named value, but also handle embedded name=value syntax
+        //  Reporting honours the infoDetailLevel
+        void setNamedInt(std::string name, int val, bool report=false);
 };
 
 

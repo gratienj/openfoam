@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2018-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -138,6 +140,30 @@ inline To& refCast(From& r)
         FatalErrorInFunction
             << "Attempt to cast type " << r.type()
             << " to type " << To::typeName
+            << abort(FatalError);
+
+        return dynamic_cast<To&>(r);
+    }
+}
+
+
+//- Reference type cast template function.
+//  As per dynamicCast, but handles type names for the error messages
+//  via the virtual type() method.
+//  Can use index to convey the context.
+template<class To, class From>
+inline To& refCast(From& r, const label index)
+{
+    try
+    {
+        return dynamic_cast<To&>(r);
+    }
+    catch (const std::bad_cast&)
+    {
+        FatalErrorInFunction
+            << "Attempt to cast type " << r.type()
+            << " to type " << To::typeName
+            << " at index " << index
             << abort(FatalError);
 
         return dynamic_cast<To&>(r);

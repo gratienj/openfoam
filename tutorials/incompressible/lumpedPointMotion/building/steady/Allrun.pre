@@ -1,6 +1,7 @@
 #!/bin/sh
-cd ${0%/*} || exit 1                        # Run from this directory
-. $WM_PROJECT_DIR/bin/tools/RunFunctions    # Tutorial run functions
+cd ${0%/*} || exit 1                                # Run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # Tutorial run functions
+#------------------------------------------------------------------------------
 
 # Copy building from resources directory
 mkdir -p constant/triSurface/
@@ -9,7 +10,7 @@ cp $FOAM_TUTORIALS/resources/geometry/building_wtc2.obj constant/triSurface/
 # runApplication surfaceFeatureExtract
 runApplication blockMesh
 
-\rm -f constant/polyMesh/*Level
+rm -f constant/polyMesh/*Level
 
 unset parallel
 parallel=true
@@ -22,7 +23,7 @@ then
     # Serial
 
     runApplication snappyHexMesh -overwrite
-    \rm -f constant/polyMesh/refinementHistory*
+    rm -f constant/polyMesh/refinementHistory*
 
     restore0Dir
 

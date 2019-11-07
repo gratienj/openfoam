@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -184,6 +186,11 @@ inline void Foam::DLListBase::clear()
 
 inline void Foam::DLListBase::swap(DLListBase& lst)
 {
+    if (this == &lst)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     std::swap(first_, lst.first_);
     std::swap(last_, lst.last_);
     std::swap(size_, lst.size_);
@@ -192,6 +199,11 @@ inline void Foam::DLListBase::swap(DLListBase& lst)
 
 inline void Foam::DLListBase::transfer(DLListBase& lst)
 {
+    if (this == &lst)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     first_ = lst.first_;
     last_  = lst.last_;
     size_  = lst.size_;

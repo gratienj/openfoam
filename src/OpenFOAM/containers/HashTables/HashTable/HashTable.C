@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -655,6 +657,11 @@ void Foam::HashTable<T, Key, Hash>::clearStorage()
 template<class T, class Key, class Hash>
 void Foam::HashTable<T, Key, Hash>::swap(HashTable<T, Key, Hash>& rhs)
 {
+    if (this == &rhs)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     Foam::Swap(size_, rhs.size_);
     Foam::Swap(capacity_, rhs.capacity_);
     Foam::Swap(table_, rhs.table_);
@@ -664,6 +671,11 @@ void Foam::HashTable<T, Key, Hash>::swap(HashTable<T, Key, Hash>& rhs)
 template<class T, class Key, class Hash>
 void Foam::HashTable<T, Key, Hash>::transfer(HashTable<T, Key, Hash>& rhs)
 {
+    if (this == &rhs)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     clear();
     swap(rhs);
 }
@@ -758,12 +770,9 @@ void Foam::HashTable<T, Key, Hash>::operator=
     const HashTable<T, Key, Hash>& rhs
 )
 {
-    // Check for assignment to self
     if (this == &rhs)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     if (!capacity_)
@@ -812,12 +821,9 @@ void Foam::HashTable<T, Key, Hash>::operator=
     HashTable<T, Key, Hash>&& rhs
 )
 {
-    // Check for assignment to self
     if (this == &rhs)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     transfer(rhs);

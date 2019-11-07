@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2009-2011, 2017-2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2009-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -231,7 +233,7 @@ class scotchDecomp
 :
     public metisLikeDecomp
 {
-    // Private data
+    // Private Data
 
         //- Output path and name for optional grf file.
         mutable fileName graphPath_;
@@ -245,13 +247,18 @@ class scotchDecomp
         //- Check and print error message
         static void check(const int, const char*);
 
+
+protected:
+
+    // Protected Member Functions
+
         //- Decompose non-parallel
         virtual label decomposeSerial
         (
-            const labelUList& adjncy,
-            const labelUList& xadj,
-            const UList<scalar>& cWeights,
-            List<label>& decomp
+            const labelList& adjncy,
+            const labelList& xadj,
+            const List<scalar>& cWeights,
+            labelList& decomp
         ) const;
 
 

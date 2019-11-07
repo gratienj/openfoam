@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2015-2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2015-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -515,6 +517,11 @@ Foam::label Foam::mapDistribute::whichTransform(const label index) const
 
 void Foam::mapDistribute::transfer(mapDistribute& rhs)
 {
+    if (this == &rhs)
+    {
+        // Self-assignment is a no-op
+    }
+
     mapDistributeBase::transfer(rhs);
     transformElements_.transfer(rhs.transformElements_);
     transformStart_.transfer(rhs.transformStart_);
@@ -527,11 +534,9 @@ void Foam::mapDistribute::operator=(const mapDistribute& rhs)
 {
     if (this == &rhs)
     {
-        // Avoid self-assignment
-        FatalErrorInFunction
-            << "Attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
+
     mapDistributeBase::operator=(rhs);
     transformElements_ = rhs.transformElements_;
     transformStart_ = rhs.transformStart_;

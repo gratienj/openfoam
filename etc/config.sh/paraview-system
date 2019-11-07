@@ -2,8 +2,10 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
-#   \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
+#   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+#     Copyright (C) 2019 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -83,7 +85,7 @@ fi
 
 #------------------------------------------------------------------------------
 
-if command -v _foamAddLib > /dev/null 2>&1  # normal sourcing
+if command -v _foamAddLib >/dev/null  # normal sourcing
 then
     unset ParaView_VERSION
 else

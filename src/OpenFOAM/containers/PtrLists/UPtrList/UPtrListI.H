@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2018-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -202,7 +204,7 @@ inline const T& Foam::UPtrList<T>::operator[](const label i) const
     {
         FatalErrorInFunction
             << "Cannot dereference nullptr at index " << i
-            << " in range [0," << size() << ")"
+            << " in range [0," << size() << ")\n"
             << abort(FatalError);
     }
 
@@ -219,7 +221,7 @@ inline T& Foam::UPtrList<T>::operator[](const label i)
     {
         FatalErrorInFunction
             << "Cannot dereference nullptr at index " << i
-            << " in range [0," << size() << ")"
+            << " in range [0," << size() << ")\n"
             << abort(FatalError);
     }
 

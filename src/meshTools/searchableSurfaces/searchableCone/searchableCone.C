@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2015-2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -209,7 +211,7 @@ void Foam::searchableCone::findNearestAndNormal
     dist[2] = magSqr(disk2Point-sample);
     dist[3] = magSqr(iCnearCone-sample);
 
-    label minI = findMin(dist);
+    const label minI = findMin(dist);
 
 
     // Snap the point to the corresponding surface

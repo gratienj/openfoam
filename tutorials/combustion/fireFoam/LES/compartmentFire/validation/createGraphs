@@ -3,9 +3,11 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
-#   \\  /    A nd           | Copyright (C) 2016 OpenCFD Ltd.
+#   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#     Copyright (C) 2016 OpenCFD Ltd.
+#------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM.
 #
@@ -53,8 +55,8 @@ EOF
 }
 
 
-# Test if gnuplot exists on the system
-command -v gnuplot >/dev/null 2>&1 || {
+# Require gnuplot
+command -v gnuplot >/dev/null || {
     echo "gnuplot not found - skipping graph creation" 1>&2
     exit 1
 }

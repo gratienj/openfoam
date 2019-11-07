@@ -2,8 +2,10 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     |
-#   \\  /    A nd           | Copyright (C) 2018 OpenCFD Ltd.
+#   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+#     Copyright (C) 2018-2019 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, licensed under GNU General Public License
@@ -22,7 +24,7 @@
 #
 # Provides Functions
 #     have_pvplugin_support, no_paraview, echo_paraview
-#     cmakeVtk, cmakePv
+#     cmakeVtk, cmakePv, cmakePvInstall
 #
 # Variables on success
 #     HAVE_PVPLUGIN_SUPPORT
@@ -35,8 +37,8 @@
 #     paraview-major.minor encoded in its name.
 #
 #------------------------------------------------------------------------------
-. $WM_PROJECT_DIR/wmake/scripts/sysFunctions # General system functions
-. $WM_PROJECT_DIR/wmake/scripts/cmakeFunctions  # Require cmake functions
+. ${WM_PROJECT_DIR:?}/wmake/scripts/sysFunctions    # General system functions
+. ${WM_PROJECT_DIR:?}/wmake/scripts/cmakeFunctions  # Require cmake functions
 
 #------------------------------------------------------------------------------
 
@@ -61,16 +63,28 @@ echo_paraview()
 
 
 # CMake into objectsDir with VTK_DIR dependency
+# 1 - sourceDir
+# 2.. optional cmake defines
 cmakeVtk()
 {
-    cmakeVersioned "VTK_DIR=$VTK_DIR" "$1"
+    cmakeVersioned "VTK_DIR=$VTK_DIR" "$@"
 }
 
 
 # CMake into objectsDir with ParaView_DIR dependency
+# 1 - sourceDir
+# 2.. optional cmake defines
 cmakePv()
 {
-    cmakeVersioned "ParaView_DIR=$ParaView_DIR" "$1"
+    cmakeVersioned "ParaView_DIR=$ParaView_DIR" "$@"
+}
+
+# CMake into objectsDir with ParaView_DIR dependency
+# 1 - sourceDir
+# 2.. optional cmake defines
+cmakePvInstall()
+{
+    cmakeVersionedInstall "ParaView_DIR=$ParaView_DIR" "$@"
 }
 
 #
@@ -105,7 +119,7 @@ have_pvplugin_support()
     warn="==> skip paraview-plugin"
 
     # Trivial check
-    command -v cmake > /dev/null 2>&1 || {
+    command -v cmake >/dev/null || {
         echo "$warn (no cmake)"
         return 1
     }

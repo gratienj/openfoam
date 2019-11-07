@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2017 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -68,36 +70,29 @@ namespace debug
     //  \sa Foam::findEtcFile()
     dictionary& controlDict();
 
-    //- The DebugSwitches sub-dictionary in the central controlDict.
+    //- The DebugSwitches sub-dictionary in the central controlDict(s).
     dictionary& debugSwitches();
 
-    //- The InfoSwitches sub-dictionary in the central controlDict.
+    //- The InfoSwitches sub-dictionary in the central controlDict(s).
     dictionary& infoSwitches();
 
-    //- The OptimisationSwitches sub-dictionary in the central controlDict.
+    //- The OptimisationSwitches sub-dictionary in the central controlDict(s).
     dictionary& optimisationSwitches();
 
     //- Lookup debug switch or add default value.
-    int debugSwitch(const char* name, const int defaultValue=0);
+    int debugSwitch(const char* name, const int deflt = 0);
 
     //- Lookup info switch or add default value.
-    int infoSwitch(const char* name, const int defaultValue=0);
+    int infoSwitch(const char* name, const int deflt = 0);
 
     //- Lookup optimisation switch or add default value.
-    int optimisationSwitch(const char* name, const int defaultValue=0);
+    int optimisationSwitch(const char* name, const int deflt = 0);
 
     //- Lookup optimisation switch or add default value.
-    float floatOptimisationSwitch
-    (
-        const char* name,
-        const float defaultValue=0
-    );
+    float floatOptimisationSwitch(const char* name, const float deflt = 0);
 
     //- Internal function to lookup a sub-dictionary from controlDict.
     dictionary& switchSet(const char* subDictName, dictionary*& subDictPtr);
-
-    //- List debug switches
-    void listSwitches(const bool unset);
 
 
     // Registered debug switches
@@ -118,23 +113,48 @@ namespace debug
         void addDimensionedConstantObject(const char* name, simpleRegIOobject*);
 
 
-        //- Get access to registered debug switch objects
+        //- Access to registered DebugSwitch objects
         simpleObjectRegistry& debugObjects();
 
-        //- Get access to registered info switch objects
+        //- Access to registered InfoSwitch objects
         simpleObjectRegistry& infoObjects();
 
-        //- Get access to registered optimisation switch objects
+        //- Access to registered OptimisationSwitch objects
         simpleObjectRegistry& optimisationObjects();
 
-        //- Get access to registered dimensionSets switch objects
+        //- Access to registered DimensionSets objects
         simpleObjectRegistry& dimensionSetObjects();
 
-        //- Get access to registered dimensionedConstant switch objects
+        //- Access to registered DimensionedConstants objects
         simpleObjectRegistry& dimensionedConstantObjects();
 
-        //- List registered debug switches
-        void listRegisteredSwitches(const bool unset);
+
+    // List switches
+
+    //- List debug/info/optimisation switches
+    void listSwitches(const bool unset = false);
+
+    //- List debug switches
+    void listDebugSwitches(const bool unset = false);
+
+    //- List info switches
+    void listInfoSwitches(const bool unset = false);
+
+    //- List optimisation switches
+    void listOptimisationSwitches(const bool unset = false);
+
+
+    //- List registered debug/info/optimisation switches
+    void listRegisteredSwitches(const bool unset = false);
+
+    //- List debug switches
+    void listRegisteredDebugSwitches(const bool unset = false);
+
+    //- List info switches
+    void listRegisteredInfoSwitches(const bool unset = false);
+
+    //- List optimisation switches
+    void listRegisteredOptimisationSwitches(const bool unset = false);
 
 } // End namespace debug
 

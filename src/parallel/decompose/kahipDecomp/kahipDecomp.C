@@ -2,8 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2017-2018 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
+-------------------------------------------------------------------------------
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,12 +28,16 @@ License
 #include "kahipDecomp.H"
 #include "addToRunTimeSelectionTable.H"
 #include "Time.H"
+#include "PrecisionAdaptor.H"
 
 #include "kaHIP_interface.h"
 
 #include <string>
 #include <map>
 #include <vector>
+
+// Provide a clear error message if we have a severe size mismatch
+// Allow widening, but not narrowing
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -70,14 +76,14 @@ Foam::kahipDecomp::configNames
 });
 
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 Foam::label Foam::kahipDecomp::decomposeSerial
 (
-    const labelUList& adjncy,
-    const labelUList& xadj,
-    const UList<scalar>& cWeights,
-    List<label>& decomp
+    const labelList& adjncy,
+    const labelList& xadj,
+    const List<scalar>& cWeights,
+    labelList& decomp
 ) const
 {
     // Default setup
@@ -159,7 +165,7 @@ Foam::label Foam::kahipDecomp::decomposeSerial
         // Verify sizing
 
         int n = 1;
-        for (auto val : labels)
+        for (const auto val : labels)
         {
             n *= val;
             vec.push_back(val);
@@ -217,59 +223,30 @@ Foam::label Foam::kahipDecomp::decomposeSerial
     // Output: number of cut edges
     int edgeCut = 0;
 
-    #if WM_LABEL_SIZE == 32
-
-    // Input:
-    int* xadjPtr   = const_cast<UList<int>&>(xadj).begin();
-    int* adjncyPtr = const_cast<UList<int>&>(adjncy).begin();
+    // Addressing
+    ConstPrecisionAdaptor<int, label, List> xadj_param(xadj);
+    ConstPrecisionAdaptor<int, label, List> adjncy_param(adjncy);
 
     // Output: cell -> processor addressing
-    decomp.setSize(numCells);
-    int* decompPtr = decomp.begin();
+    decomp.resize(numCells);
+    PrecisionAdaptor<int, label, List> decomp_param(decomp);
 
-    #elif WM_LABEL_SIZE == 64
-
-    // input (copy)
-    List<int> xadjCopy(xadj.size());
-    List<int> adjncyCopy(adjncy.size());
-
-    forAll(xadj,i)
-    {
-        xadjCopy[i] = xadj[i];
-    }
-    forAll(adjncy,i)
-    {
-        adjncyCopy[i] = adjncy[i];
-    }
-
-    int* xadjPtr   = xadjCopy.begin();
-    int* adjncyPtr = adjncyCopy.begin();
-
-    if (decomp.size() != numCells)
-    {
-        decomp.clear();
-    }
-
-    // Output: cell -> processor addressing
-    List<int> decompCopy(numCells);
-    int* decompPtr = decompCopy.begin();
-    #endif
 
 #if 0 // WIP: #ifdef KAFFPA_CPP_INTERFACE
     kaffpa_cpp
     (
         &numCells,          // num vertices in graph
         (cellWeights.size() ? cellWeights.begin() : nullptr), // vertex wts
-        xadjPtr,            // indexing into adjncy
+        xadj_param.constCast().data(),          // indexing into adjncy
         nullptr,            // edge wts
-        adjncyPtr,          // neighbour info
+        adjncy_param.constCast().data(),        // neighbour info
         &nParts,            // nparts
         &imbalance,         // amount of imbalance allowed
         !verbose,           // suppress output
         seed,               // for random
         int(kahipConfig),
-        &edgeCut,           // [output]
-        decompPtr,          // [output]
+        &edgeCut,                   // [output]
+        decomp_param.ref().data(),  // [output]
         sizingParams
     );
 #else
@@ -277,34 +254,18 @@ Foam::label Foam::kahipDecomp::decomposeSerial
     (
         &numCells,          // num vertices in graph
         (cellWeights.size() ? cellWeights.begin() : nullptr), // vertex wts
-        xadjPtr,            // indexing into adjncy
+        xadj_param.constCast().data(),          // indexing into adjncy
         nullptr,            // edge wts
-        adjncyPtr,          // neighbour info
+        adjncy_param.constCast().data(),        // neighbour info
         &nParts,            // nparts
         &imbalance,         // amount of imbalance allowed
         !verbose,           // suppress output
         seed,               // for random
         int(kahipConfig),
-        &edgeCut,           // [output]
-        decompPtr           // [output]
+        &edgeCut,                   // [output]
+        decomp_param.ref().data()   // [output]
     );
 #endif
-
-    #if WM_LABEL_SIZE == 64
-
-    // Drop input copy
-    xadjCopy.clear();
-    adjncyCopy.clear();
-
-    // Copy back to List<label>
-    decomp.setSize(numCells);
-    forAll(decompCopy, i)
-    {
-        decomp[i] = decompCopy[i];
-    }
-
-    decompCopy.clear();
-    #endif
 
     return edgeCut;
 }

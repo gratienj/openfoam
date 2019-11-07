@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2016-2017 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2017 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2016-2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,7 +39,7 @@ License
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
 |  \\    /   O peration     | Version:  VERSION                               |
-|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 
@@ -85,7 +87,7 @@ Foam::Ostream& Foam::IOobject::writeBanner(Ostream& os, bool noHint)
         "|  \\\\    /   O peration     |"
         " Version:  " << paddedVersion << "|\n"
         "|   \\\\  /    A nd           |"
-        " Web:      www.OpenFOAM.com                      |\n"
+        " Website:  www.openfoam.com                      |\n"
         "|    \\\\/     M anipulation  |"
         "                                                 |\n"
         "\\*-----------------------------------------"

@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2016 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -200,48 +202,41 @@ Foam::messageStream::operator Foam::OSstream&()
 {
     if (level)
     {
-        const bool collect = (severity_ == INFO || severity_ == WARNING);
+        const bool collect =
+        (
+            severity_ == INFO
+         || severity_ == INFO_STDERR
+         || severity_ == WARNING
+        );
 
-        // Report the error
+
+        // Could add guard with parRun
         if (collect && !Pstream::master())
         {
             return Snull;
         }
-        else
+
+        OSstream& os =
+        (
+            (collect || !Pstream::parRun())
+          ? ((severity_ == INFO_STDERR) ? Serr : Sout)
+          : Pout
+        );
+
+
+        if (!title().empty())
         {
-            if (!title().empty())
-            {
-                if (collect || !Pstream::parRun())
-                {
-                    Sout<< title().c_str();
-                }
-                else
-                {
-                    Pout<< title().c_str();
-                }
-            }
-
-            if (maxErrors_)
-            {
-                ++errorCount_;
-
-                if (errorCount_ >= maxErrors_)
-                {
-                    FatalErrorInFunction
-                        << "Too many errors"
-                        << abort(FatalError);
-                }
-            }
-
-            if (collect || !Pstream::parRun())
-            {
-                return Sout;
-            }
-            else
-            {
-                return Pout;
-            }
+            os << title().c_str();
         }
+
+        if (maxErrors_ && (++errorCount_ >= maxErrors_))
+        {
+            FatalErrorInFunction
+                << "Too many errors"
+                << abort(FatalError);
+        }
+
+        return os;
     }
 
     return Snull;
@@ -251,6 +246,8 @@ Foam::messageStream::operator Foam::OSstream&()
 // * * * * * * * * * * * * * * * Global Variables  * * * * * * * * * * * * * //
 
 Foam::messageStream Foam::Info("", messageStream::INFO);
+
+Foam::messageStream Foam::InfoErr("", messageStream::INFO_STDERR);
 
 Foam::messageStream Foam::Warning
 (

@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2017-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2015 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2015 OpenFOAM Foundation
+    Modified code Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -178,12 +180,9 @@ void Foam::entry::checkITstream(const ITstream& is) const
 
 void Foam::entry::operator=(const entry& e)
 {
-    // check for assignment to self
     if (this == &e)
     {
-        FatalErrorInFunction
-            << "attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     keyword_ = e.keyword_;
@@ -192,20 +191,24 @@ void Foam::entry::operator=(const entry& e)
 
 bool Foam::entry::operator==(const entry& e) const
 {
+    if (this == &e)
+    {
+        return true;
+    }
     if (keyword_ != e.keyword_)
     {
         return false;
     }
-    else
-    {
-        OStringStream oss1;
-        oss1 << *this;
 
-        OStringStream oss2;
-        oss2 << e;
+    // Compare contents (as strings)
 
-        return oss1.str() == oss2.str();
-    }
+    OStringStream oss1;
+    oss1 << *this;
+
+    OStringStream oss2;
+    oss2 << e;
+
+    return oss1.str() == oss2.str();
 }
 
 

@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2010, 2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2017 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -288,6 +290,11 @@ Foam::List<Type> Foam::Matrix<Form, Type>::release()
 template<class Form, class Type>
 void Foam::Matrix<Form, Type>::swap(Matrix<Form, Type>& mat)
 {
+    if (this == &mat)
+    {
+        return;  // Self-swap is a no-op
+    }
+
     Foam::Swap(mRows_, mat.mRows_);
     Foam::Swap(nCols_, mat.nCols_);
     Foam::Swap(v_, mat.v_);
@@ -297,6 +304,11 @@ void Foam::Matrix<Form, Type>::swap(Matrix<Form, Type>& mat)
 template<class Form, class Type>
 void Foam::Matrix<Form, Type>::transfer(Matrix<Form, Type>& mat)
 {
+    if (this == &mat)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
     clear();
 
     mRows_ = mat.mRows_;
@@ -456,9 +468,7 @@ void Foam::Matrix<Form, Type>::operator=(const Matrix<Form, Type>& mat)
 {
     if (this == &mat)
     {
-        FatalErrorInFunction
-            << "Attempted assignment to self"
-            << abort(FatalError);
+        return;  // Self-assignment is a no-op
     }
 
     if (mRows_ != mat.mRows_ || nCols_ != mat.nCols_)
@@ -479,14 +489,11 @@ void Foam::Matrix<Form, Type>::operator=(const Matrix<Form, Type>& mat)
 template<class Form, class Type>
 void Foam::Matrix<Form, Type>::operator=(Matrix<Form, Type>&& mat)
 {
-    if (this == &mat)
+    if (this != &mat)
     {
-        FatalErrorInFunction
-            << "Attempted assignment to self"
-            << abort(FatalError);
+        // Self-assignment is a no-op
+        this->transfer(mat);
     }
-
-    this->transfer(mat);
 }
 
 

@@ -2,10 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           |
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2016-2017 Wikki Ltd
+    Copyright (C) 2016-2017 Wikki Ltd
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -74,9 +75,6 @@ public:
 
     // Constructors
 
-        //- Construct null
-        volSurfaceMapping();
-
         //- Construct from mesh
         volSurfaceMapping(const faMesh& mesh)
         :
@@ -84,7 +82,8 @@ public:
         {}
 
 
-    // Destructor - default
+    //- Destructor
+    ~volSurfaceMapping() = default;
 
 
     // Member Functions

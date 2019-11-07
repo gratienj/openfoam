@@ -2,10 +2,12 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2004-2011, 2016-2019 OpenCFD Ltd.
+    \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2011-2017 OpenFOAM Foundation
+    Released 2004-2011 OpenCFD Ltd.
+    Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -573,7 +575,7 @@ void Foam::UPstream::allToAll
                 << " does not equal bytes to receive " << recvSizes[0]
                 << Foam::abort(FatalError);
         }
-        memmove(recvData, &sendData[sendOffsets[0]], recvSizes[0]);
+        std::memmove(recvData, &sendData[sendOffsets[0]], recvSizes[0]);
     }
     else
     {
@@ -639,7 +641,7 @@ void Foam::UPstream::gather
 
     if (!UPstream::parRun())
     {
-        memmove(recvData, sendData, sendSize);
+        std::memmove(recvData, sendData, sendSize);
     }
     else
     {
@@ -702,7 +704,7 @@ void Foam::UPstream::scatter
 
     if (!UPstream::parRun())
     {
-        memmove(recvData, sendData, recvSize);
+        std::memmove(recvData, sendData, recvSize);
     }
     else
     {
