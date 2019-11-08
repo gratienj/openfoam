@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2008-2011 OpenCFD Ltd.
     Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -73,7 +74,6 @@ class Table
         //- No copy assignment
         void operator=(const Table<Type>&) = delete;
 
-
 public:
 
     //- Runtime type information
@@ -82,7 +82,7 @@ public:
 
     // Constructors
 
-        //- Construct from entry name and Istream
+        //- Construct from entry name and dictionary
         Table(const word& entryName, const dictionary& dict);
 
         //- Copy constructor
@@ -96,7 +96,7 @@ public:
 
 
     //- Destructor
-    virtual ~Table();
+    virtual ~Table() = default;
 };
 
 
