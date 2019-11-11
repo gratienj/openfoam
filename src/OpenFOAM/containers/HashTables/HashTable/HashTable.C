@@ -98,7 +98,7 @@ Foam::HashTable<T, Key, Hash>::HashTable
 {
     for (const auto& keyval : list)
     {
-        insert(keyval.first, keyval.second);
+        set(keyval.first, keyval.second);
     }
 }
 
@@ -810,7 +810,7 @@ void Foam::HashTable<T, Key, Hash>::operator=
 
     for (const auto& keyval : rhs)
     {
-        insert(keyval.first, keyval.second);
+        set(keyval.first, keyval.second);
     }
 }
 
