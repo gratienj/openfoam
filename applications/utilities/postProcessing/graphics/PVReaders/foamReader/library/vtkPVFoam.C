@@ -679,7 +679,7 @@ void Foam::vtkPVFoam::Update
         // Suppress caching of Lagrangian since it normally always changes.
         cachedVtp_.filterKeys
         (
-            [](const word& k){ return k.startsWith("lagrangian/"); },
+            [](const word& k){ return k.starts_with("lagrangian/"); },
             true // prune
         );
     }

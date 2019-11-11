@@ -129,7 +129,7 @@ inline void Foam::fileName::stripInvalid()
         }
 
         removeRepeated('/');
-        removeTrailing('/');
+        removeEnd('/');
     }
 }
 
@@ -138,7 +138,7 @@ inline bool Foam::fileName::isAbsolute(const std::string& str)
 {
     return
     (
-        (!str.empty() && str[0] == '/')
+        (!str.empty() && str.front() == '/')  // ie, str.starts_with('/')
         #ifdef _WIN32
         ||
         (

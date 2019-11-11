@@ -116,7 +116,7 @@ bool Foam::fileFormats::OBJedgeFormat::read(const fileName& filename)
         string line = this->getLineNoComment(is);
 
         // Line continuations
-        while (line.removeEnd("\\"))
+        while (line.removeEnd('\\'))
         {
             line += this->getLineNoComment(is);
         }

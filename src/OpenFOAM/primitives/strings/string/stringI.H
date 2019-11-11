@@ -69,7 +69,7 @@ inline bool Foam::string::removePath()
         return false;
     }
 
-    this->erase(0, i+1);
+    erase(0, i+1);
     return true;
 }
 
@@ -83,7 +83,7 @@ inline bool Foam::string::removeExt()
         return false;
     }
 
-    this->resize(i);
+    erase(i);
     return true;
 }
 
@@ -164,7 +164,7 @@ inline bool Foam::string::stripInvalid(std::string& str)
             }
         }
 
-        str.resize(nChar);
+        str.erase(nChar);
 
         return true;
     }
@@ -229,7 +229,7 @@ Foam::string::quotemeta(const std::string& str, const char quote)
         sQuoted += c;
     }
 
-    sQuoted.resize(sQuoted.size());
+    sQuoted.shrink_to_fit();
 
     return sQuoted;
 }
@@ -252,7 +252,7 @@ inline String Foam::string::validate(const std::string& str)
         }
     }
 
-    out.resize(len);
+    out.erase(len);
 
     return out;
 }
