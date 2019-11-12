@@ -26,7 +26,7 @@ Class
 
 Description
     Holds the motion state of sixDoF object.  Wrapped up together
-    to allow rapid scatter to other processors.  The processors must all
+    to allow rapid scatter to other processors. The processors must all
     maintain exactly the same state data to avoid any drift or inconsistency.
 
 SourceFiles
