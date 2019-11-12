@@ -46,6 +46,7 @@ options:
   -d | -dir <dir>     post-processing directory <dir> (default = postProcessing)
   -h | -help          help
   -o | -out <dir>     output links directory <dir> (default = sequencedVTK)
+  -vtp                create sequence of vtp 
 
 Creates symbolic links to all VTK files in a post-processing directory
 Links form a sequence like name.0000.vtk, name.0001.vtk, etc.
@@ -59,7 +60,7 @@ USAGE
 
 DIR=postProcessing
 OUT=sequencedVTK
-
+fileType=vtk
 while [ "$#" -gt 0 ]
 do
    case "$1" in
@@ -81,6 +82,10 @@ do
       OUT=$2
       shift 2
       ;;
+    -vtp)
+      fileType=vtp
+      shift 1
+      ;;
    -*)
       usage "invalid option '$1'"
       ;;
@@ -95,8 +100,8 @@ if [ ! -d $DIR ]; then
     exit 0
 fi
 
-FILES=$(find $DIR -name '*.vtk' -type f)
-NAMES=$(for f in $FILES; do basename $f .vtk; done | sort -u)
+FILES=$(find $DIR -name "*.$fileType" -type f)
+NAMES=$(for f in $FILES; do basename $f .$fileType; done | sort -u)
 
 if [ -d $OUT ]; then
     echo "$OUT directory already exists.  Deleting links within it..."
@@ -108,12 +113,12 @@ fi
 
 for N in $NAMES
 do
-    echo "Sequencing all VTK files named $N.vtk"
+    echo "Sequencing all $fileType files named $N.$fileType"
 
-    # Create list of VTK files, ordered by time step
+    # Create list of vtp files, ordered by time step
     FILE_LIST=$(echo $FILES | \
         tr " " "\n" | \
-        grep $N.vtk | \
+        grep $N.$fileType | \
         awk -F'/' '{print($(NF-1)" "$0)}' | \
         sort -k 1 -g | \
         cut -d' ' -f2)
@@ -122,7 +127,7 @@ do
     for F in $FILE_LIST
     do
         i=$(expr $i + 1) # Relies on ordered list of $sourceFiles
-        LINK=$(printf "${N}.%04d.vtk" $i)
+        LINK=$(printf "${N}.%04d.$fileType" $i)
         ln -s ../$F $OUT/$LINK
     done
 done
