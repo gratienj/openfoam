@@ -55,7 +55,6 @@ Foam::interface::interface
 
     reconstructionSchemes& surf = mesh_.lookupObjectRef<reconstructionSchemes>("reconstructionScheme");
 
-    // why do we need this?
     surf.reconstruct();
 
     cutCellPLIC cellCut(mesh_);
@@ -125,12 +124,6 @@ Foam::interface::interface
 
         // interface has no zones
         surfZoneList zones(0);
-
-        // Reset primitive data (points, faces and zones)
-//        this->MeshStorage::reset
-//        (
-//            points.xfer(), faces.xfer(), zones.xfer()
-//        );
 
         MeshStorage updated(std::move(points), std::move(faces), surfZoneList());
 

@@ -60,7 +60,7 @@ Foam::label Foam::surfaceIteratorPLIC::vofCutCell
             << "try to increase to nCorrectors "
             << endl;
 
-        return sign(alpha1-0.5); // alpha1 > 0.5 =1 alpha1 > 0.5 = -1
+        return sign(alpha1-0.5);
 
     }
 
@@ -211,11 +211,6 @@ Foam::label Foam::surfaceIteratorPLIC::vofCutCell
         x1 = x0; g1 = g0;
         nIter++;
     }
-
-    // if (res > tol)
-    // {
-    //     Info << "Warning: Bisection not converged " << endl;
-    // }
 
     return status;
 }

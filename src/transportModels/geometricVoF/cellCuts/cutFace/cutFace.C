@@ -79,8 +79,6 @@ void Foam::cutFace::calcSubFace
             surfacePoints.append(points[f[idx]]);
         }
 
-        // if(weight[idx] < 1 && weight[idx] > 0) // cannot be 0 or 1 see above
-        // faster should be sign p1 != sign p2
         if
         (
             (pointStatus[idx] < 0 && pointStatus[nextIdx] > 0) ||
@@ -159,8 +157,6 @@ void Foam::cutFace::calcSubFace
             surfacePoints.append(points[f[idx]]);
         }
 
-        // if(weight[idx] < 1 && weight[idx] > 0) // cannot be 0 or 1 see above
-        // faster should be sign p1 != sign p2
         if
         (
             (pointStatus[idx] < 0 && pointStatus[nextIdx] > 0) ||
@@ -169,9 +165,6 @@ void Foam::cutFace::calcSubFace
         {
             label nextP = f.nextLabel(idx);
             vector dir = points[nextP] - points[f[idx]];
-//            scalar weight =
-//                (0.0 - pointStatus[idx]) /
-//                (pointStatus[nextIdx] - pointStatus[idx]); // cutValue is zero
 
             point p = points[f[idx]] + weights[idx] * dir;
 
@@ -235,7 +228,6 @@ void Foam::cutFace::calcSubFace
             surfacePoints.append(points[f[idx]]);
         }
 
-        // if(weight[idx] < 1 && weight[idx] > 0) // cannot be 0 or 1 see above
         if
         (
             (pointStatus[idx] < 0 && pointStatus[nextIdx] > 0) ||

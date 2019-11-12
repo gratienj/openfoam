@@ -33,7 +33,7 @@ Description
     required values in global addressing. Also holds a reference to the stencil
     Before the data transfer the communation has to be set up:
     exchangeFields_.setUpCommforZone(interfaceCell_); 
-    Is used in the plicRDF and isoRDF
+    Is used in the plicRDF
 
     Original code supplied by Henning Scheufler, DLR (2019)
 
@@ -70,7 +70,6 @@ class zoneDistribute
         UpdateableMeshObject,
         zoneDistribute
     >
-//:   public IOobject
 {
 
   private:
@@ -103,9 +102,10 @@ class zoneDistribute
         // cell-point-cell stencil elements are in global addressing
         zoneCPCStencil stencil_;
 
-        // Private Member Functions
+        //- labels of the points on coupled patches
         labelList coupledBoundaryPoints_;
 
+        //- storage of the addressing for processor-to-processor comms
         List< labelHashSet > send_;
 
         //- Return patch of all coupled faces.
@@ -145,14 +145,12 @@ class zoneDistribute
         // Member functions
 
         //- updates the stencil with boolList the size has to match
-        // mesh.nCells()
+        //- mesh.nCells()
         void setUpCommforZone(const boolList& zone,bool updateStencil=true);
 
         //- updates the stencil with boolList the size has to match
-        // mesh.nCells()
+        //- mesh.nCells()
         void updateStencil(const boolList& zone);
-
-
 
         //- return stencil reference
         const labelListList& getStencil()
@@ -175,7 +173,7 @@ class zoneDistribute
             const label& gblIdx
         ) const;
 
-        //- Returns stenicl and provides a Map with globalNumbering
+        //- Returns stencil and provides a Map with globalNumbering
         template <typename Type>
         Map<Field <Type> > getFields
         (
@@ -183,7 +181,7 @@ class zoneDistribute
             const GeometricField<Type, fvPatchField, volMesh>& phi
         );
 
-        //- Returns stenicl and provides a Map with globalNumbering
+        //- Returns stencil and provides a Map with globalNumbering
         template <typename Type>
         Map< Type > getDatafromOtherProc
         (
@@ -198,11 +196,6 @@ class zoneDistribute
             // do nothing;
             return false;
         } 
-
-
-
-
-
 
 };
 

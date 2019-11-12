@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -96,7 +96,7 @@ private:
         scalar vof2IsoTol_;
 
         //- Tolerance for marking of surface cells:
-        //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
+        //-  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
         scalar surfCellTol_;
 
         //- Tolerance
@@ -131,16 +131,21 @@ private:
         //- No bitwise assignment
         void operator=(const plicRDF&) = delete;
 
+        //- set initial normals by interpolation from the previous
+        //- timestep or with the Young method
         void setInitNormals(bool interpolate);
 
+        //- compute gradient at the surfaces
         void gradSurf(const volScalarField& phi);
 
+        //- compute the normal residuals
         void calcResidual
         (
             Map<scalar>& normalResidual,
             Map<scalar>& avgAngle
         );
 
+        //- interpolation of the normals from the previous time step
         void interpolateNormal();
 
 
@@ -164,9 +169,10 @@ public:
 
     // Member Functions
 
-        // reconstruct  interface
+        //- reconstruct  interface
         virtual void reconstruct();
 
+        //- map VoF Field in case of refinement
         virtual void mapAlphaField() const;
 };
 

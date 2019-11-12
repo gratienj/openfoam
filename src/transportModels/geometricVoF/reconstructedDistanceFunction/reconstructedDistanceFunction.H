@@ -5,7 +5,7 @@
     \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -28,9 +28,7 @@ Class
     Foam::reconstructedDistanceFunction
 
 Description
-    Calculates a reconstructed distance function if the cells a more than
-    two cell layer a ways the octree based method needs to be used. Also
-    marks the cell layers near the interface cells.
+    Calculates a reconstructed distance function
 
     Original code supplied by Henning Scheufler, DLR (2019)
 
@@ -65,8 +63,6 @@ class reconstructedDistanceFunction
 :
     public volScalarField
 {
-
-
 private:
 
     // Private data
@@ -77,11 +73,11 @@ private:
         //- Stores the coupled boundary points which have to be synced
         labelList coupledBoundaryPoints_;
 
+        //- distance of the interface band to the interface
         volScalarField cellDistLevel_;
 
+        //- is the cell in the interface band?
         boolList nextToInterface_;
-
-        //indexedOctree<treeDataPoint> surfaceTree_;
 
         //- Return patch of all coupled faces.
         autoPtr<indirectPrimitivePatch> coupledFacesPatch() const;
@@ -89,25 +85,13 @@ private:
 
 public:
 
-    //- Construct from fvMesh and a scalarField
-    //  Length of scalarField should equal number of mesh points
+    //- Construct from fvMesh
     reconstructedDistanceFunction(const fvMesh& mesh);
 
 
     // Member functions
 
-        //void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
-
         void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
-
-        const volScalarField& constructRDF
-        (
-            const boolList& interfaceCells,
-            const volVectorField& centre,
-            const volVectorField& normal,
-            const label neiRingLevel,
-            zoneDistribute& distribute
-        );
 
         const volScalarField& constructRDF
         (
@@ -116,14 +100,6 @@ public:
             const volVectorField& normal,
             zoneDistribute& distribute,
             bool updateStencil=true
-        );
-
-
-        const volScalarField& constructRDFOctree
-        (
-            const boolList& nextToInterface,
-            const pointField& centre,
-            const vectorField& normals
         );
 
         void updateContactAngle

@@ -90,7 +90,6 @@ Foam::zoneDistribute::zoneDistribute(const fvMesh& mesh)
     MeshObject<fvMesh, Foam::UpdateableMeshObject, zoneDistribute>(mesh),
     mesh_(mesh),
     stencil_(mesh),
-    //stencil_(getStencilRef()),
     coupledBoundaryPoints_(coupledFacesPatch()().meshPoints()),
     send_(Pstream::nProcs())
 {
@@ -114,13 +113,6 @@ Foam::zoneDistribute& Foam::zoneDistribute::New(const fvMesh& mesh)
 
         return *ptr;
     }
-
-    // if (meshObject::debug)
-    // {
-    //     Pout<< "MeshObject::New(const " << Mesh::typeName
-    //         << "&, ...) : constructing " << Type::typeName
-    //         << " for region " << mesh.name() << endl;
-    // }
 
     zoneDistribute* objectPtr = new zoneDistribute(mesh);
 
@@ -175,7 +167,7 @@ void Foam::zoneDistribute::setUpCommforZone(const boolList& zone,bool updateSten
         for (label domain = 0; domain < Pstream::nProcs(); domain++)
         {
 
-            if (domain != Pstream::myProcNo()) // && send[domain].size())
+            if (domain != Pstream::myProcNo())
             {
                 // Put data into send buffer
                 UOPstream toDomain(domain, pBufs);

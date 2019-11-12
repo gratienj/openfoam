@@ -196,11 +196,6 @@ Foam::label Foam::surfaceIteratorIso::vofCutCell
         nIter++;
     }
 
-	// if (res > tol)
-	// {
-	// 	Info << "Warning: Bisection not converged " << endl;
-	// }
-
     return status;
 }
 // ************************************************************************* //

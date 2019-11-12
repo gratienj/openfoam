@@ -5,7 +5,7 @@
     \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -63,19 +63,14 @@ Foam::reconstruction::isoAlpha::isoAlpha
     ),
     mesh_(alpha1.mesh()),
     // Interpolation data
-
     vpi_(mesh_),
     ap_(mesh_.nPoints()),
 
-
     // Tolerances and solution controls
-//    vof2IsoTol_(modelDict().lookupOrAddDefault<scalar>("vof2IsoTol", 1e-8,false,false)),
-//    surfCellTol_(modelDict().lookupOrAddDefault<scalar>("surfCellTol", 1e-8,false,false))
     vof2IsoTol_(readScalar(modelDict().lookup("vof2IsoTol" ))),
     surfCellTol_(readScalar(modelDict().lookup("surfCellTol" ))),
     sIterIso_(mesh_,ap_,surfCellTol_)
 {
-    writeVTK_ =  modelDict().lookupOrDefault<bool>("writeVTK",false);
     reconstruct();
 }
 
@@ -109,16 +104,10 @@ void Foam::reconstruction::isoAlpha::reconstruct()
 
     DynamicList< List<point> > facePts;
 
-
-
-//    vector avgCentre= vector::zero;
     interfaceLabels_.clear();
-
-
 
     forAll(alpha1_,cellI)
     {
-    //
         if(sIterIso_.isASurfaceCell(alpha1_[cellI]))
         {
             interfaceLabels_.append(cellI);
@@ -139,13 +128,7 @@ void Foam::reconstruction::isoAlpha::reconstruct()
                 centre_[cellI] = sIterIso_.surfaceCentre();
                 if(mag(normal_[cellI]) != 0)
                 {
-                  interfaceCell_[cellI]=true;
-                //  facePts.append(sIterIso_.facePoints());
-                  if (writeVTK_ & mesh_.time().writeTime())
-                  {
-                          facePts.append(sIterIso_.facePoints());
-                  }
-
+                    interfaceCell_[cellI]=true;
                 }
                 else
                 {
@@ -171,15 +154,5 @@ void Foam::reconstruction::isoAlpha::reconstruct()
 
 
     }
-
-
-
-    if (writeVTK_ & mesh_.time().writeTime())
-    {
-        std::ostringstream os ;
-        os << "isoFaces_" << int(mesh_.time().timeIndex());
-        isoFacesToFile(facePts, os.str() , "isoFaces");
-    }
-
 
 }

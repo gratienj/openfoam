@@ -1,4 +1,3 @@
-/*VoFLib*/
 cellCuts/cutCell/cutCell.C
 cellCuts/cutCell/cutCellPLIC.C
 cellCuts/cutCell/cutCellIso.C
@@ -9,9 +8,7 @@ cellCuts/cutFace/cutFaceIso.C
 surfaceIterators/surfaceIteratorPLIC.C
 surfaceIterators/surfaceIteratorIso.C
 
-
 reconstructedDistanceFunction/reconstructedDistanceFunction.C
-markInterfaceRegion/markInterfaceRegion.C
 
 reconstructionSchemes/newReconstructionSchemes.C
 reconstructionSchemes/reconstructionSchemes.C

@@ -121,66 +121,6 @@ Foam::Map<Foam::Field <Type> > Foam::zoneDistribute::getFields
         phi
     );
 
-//     List < Map < Type > > sendValues(Pstream::nProcs());
-
-//     if (Pstream::parRun())
-//     {
-//         forAll(send_,domaini)
-//         {
-//             const labelHashSet& toNei = send_[domaini];
-
-//             forAllConstIters(toNei,iter)
-//             {
-//                 sendValues[domaini].insert
-//                 (
-//                     iter.key(),
-//                     getLocalValue(phi,globalNumbering().toLocal(iter.key()))
-//                 );
-
-//             }
-//         }
-
-//         PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
-
-//         // Stream data into buffer
-//         for (label domain = 0; domain < Pstream::nProcs(); domain++)
-//         {
-
-//             if (domain != Pstream::myProcNo()) // && send[domain].size())
-//             {
-//                 // Put data into send buffer
-//                 UOPstream toDomain(domain, pBufs);
-
-//                 toDomain << sendValues[domain];
-//             }
-//         }
-
-//         // wait until everything is written.
-//         pBufs.finishedSends();
-
-//         Map<Type> tmpValue;
-
-//         for (label domain = 0; domain < Pstream::nProcs(); domain++)
-//         {
-// //            neiMap.clearStorage();
-//             tmpValue.clear();
-
-
-//             if (domain != Pstream::myProcNo())
-//             {
-//                 // get data from send buffer
-//                 UIPstream fromDomain(domain, pBufs);
-
-//                 fromDomain >> tmpValue;
-
-//                 forAllConstIters(tmpValue, iter)
-//                 {
-//                     neiValues.insert(iter.key(), iter());
-//                 }
-//             }
-//         }
-//     }
-
     Map< Field <Type> > stencilWithValues;
 
     DynamicField< Type > tmpField(100);
@@ -189,7 +129,7 @@ Foam::Map<Foam::Field <Type> > Foam::zoneDistribute::getFields
     {
         if(zone[celli])
         {
-            tmpField.clearStorage(); // does clear resize?clear
+            tmpField.clearStorage();
 
             forAll(stencil_[celli],i)
             {
@@ -249,7 +189,7 @@ Foam::Map <Type>  Foam::zoneDistribute::getDatafromOtherProc
         for (label domain = 0; domain < Pstream::nProcs(); domain++)
         {
 
-            if (domain != Pstream::myProcNo()) // && send[domain].size())
+            if (domain != Pstream::myProcNo())
             {
                 // Put data into send buffer
                 UOPstream toDomain(domain, pBufs);
@@ -265,9 +205,7 @@ Foam::Map <Type>  Foam::zoneDistribute::getDatafromOtherProc
 
         for (label domain = 0; domain < Pstream::nProcs(); domain++)
         {
-//            neiMap.clearStorage();
             tmpValue.clear();
-
 
             if (domain != Pstream::myProcNo())
             {

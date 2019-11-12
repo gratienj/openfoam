@@ -98,7 +98,6 @@ $(faceToCell)/MeshObjects/centredCFCFaceToCellStencilObject.C
 fvMesh/zoneDistribute/zoneStencils/zoneCellStencils.C
 fvMesh/zoneDistribute/zoneStencils/zoneCPCStencil.C
 fvMesh/zoneDistribute/zoneDistribute.C
-fvMesh/zoneDistribute/zoneDistributePoints.C
 
 functionObjects/fvMeshFunctionObject/fvMeshFunctionObject.C
 functionObjects/volRegion/volRegion.C
@@ -264,11 +263,8 @@ fvMatrices/solvers/GAMGSymSolver/GAMGAgglomerations/faceAreaPairGAMGAgglomeratio
 
 fvMatrices/solvers/multiDimPolyFitter/multiDimPolyFunctions/multiDimPolyFunctions.C
 fvMatrices/solvers/multiDimPolyFitter/multiDimPolyFunctions/polyDegree1.C
-fvMatrices/solvers/multiDimPolyFitter/multiDimPolyFunctions/polyDegree2.C
 fvMatrices/solvers/multiDimPolyFitter/multiDimPolyFitter.C
-fvMatrices/solvers/multiDimPolyFitter/leastSquareGrad.C 
-fvMatrices/solvers/multiDimPolyFitter/leastSquareInterpolate.C
-fvMatrices/solvers/multiDimPolyFitter/leastSquareFitParabolid.C
+fvMatrices/solvers/multiDimPolyFitter/leastSquareGrad.C
 
 interpolation = interpolation/interpolation
 $(interpolation)/interpolation/interpolations.C

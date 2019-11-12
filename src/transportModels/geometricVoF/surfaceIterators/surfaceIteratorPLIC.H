@@ -30,7 +30,14 @@ Class
 Description
     Finds the cutValue that matches the volume fraction
 
-
+    Reference:
+        \verbatim
+            Henning Scheufler, Johan Roenby,
+            Accurate and efficient surface reconstruction from volume
+            fraction data on general meshes,
+            Journal of Computational Physics, 2019,
+            doi 10.1016/j.jcp.2019.01.009
+        \endverbatim
 
 Author
     Johan Roenby, DHI, all rights reserved.

@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -47,7 +47,7 @@ void Foam::reconstruction::gradAlpha::gradSurf(const volScalarField& phi)
 {
     leastSquareGrad<scalar> lsGrad("polyDegree1",mesh_.geometricD());
 
-    exchangeFields_.setUpCommforZone(interfaceCell_,false);
+    exchangeFields_.setUpCommforZone(interfaceCell_,true);
 
     Map<vector> mapCC(exchangeFields_.getDatafromOtherProc(interfaceCell_,mesh_.C()));
     Map<scalar> mapPhi(exchangeFields_.getDatafromOtherProc(interfaceCell_,phi));
@@ -72,7 +72,6 @@ void Foam::reconstruction::gradAlpha::gradSurf(const volScalarField& phi)
 
         cellCentre -= mesh_.C()[celli];
         interfaceNormal_[i] = lsGrad.grad(cellCentre, phiValues);
-        // Info << " grad celli " << celli  << " vector " << interfaceNormal_[i] << endl;
     }
 }
 
@@ -102,7 +101,6 @@ Foam::reconstruction::gradAlpha::gradAlpha
     exchangeFields_(zoneDistribute::New(mesh_)),
     sIterPLIC_(mesh_,surfCellTol_)
 {
-    writeVTK_ = readBool(modelDict().lookup("writeVTK"));
     reconstruct();
 }
 
@@ -129,7 +127,7 @@ void Foam::reconstruction::gradAlpha::reconstruct()
     interfaceCell_ = false;
 
     interfaceLabels_.clear();
-    //interfaceNormal_.clear();
+    
     forAll(alpha1_,celli)
     {
         if(sIterPLIC_.isASurfaceCell(alpha1_[celli]))
@@ -139,6 +137,8 @@ void Foam::reconstruction::gradAlpha::reconstruct()
         }
     }
     interfaceNormal_.setSize(interfaceLabels_.size());
+    centre_ = dimensionedVector("centre",dimLength,vector::zero);
+    normal_ = dimensionedVector("normal",dimArea,vector::zero);
 
     gradSurf(alpha1_);
 
@@ -170,15 +170,39 @@ void Foam::reconstruction::gradAlpha::reconstruct()
                 centre_[celli] = vector::zero;
             }
 
-            //interfaceCell_[cellI]=true;
         }
         else
         {
-            //interfaceNormal_[i] = vector::zero;
             normal_[celli] = vector::zero;
             centre_[celli] = vector::zero;
         }
     }
+}
+
+void Foam::reconstruction::gradAlpha::mapAlphaField() const
+{
+    // without it we seem to get a race condition
+    mesh_.C();
+
+    cutCellPLIC cutCell(mesh_);
+
+    forAll(normal_,celli)
+    {
+        if(mag(normal_[celli]) != 0)
+        {
+            vector n = normal_[celli]/mag(normal_[celli]);
+            scalar cutValue = (centre_[celli] - mesh_.C()[celli]) & (n);
+            cutCell.calcSubCell
+            (
+                celli,
+                cutValue,
+                n
+            );
+            alpha1_[celli] = cutCell.VolumeOfFluid();
+
+        }
+    }
+    
 }
 
 

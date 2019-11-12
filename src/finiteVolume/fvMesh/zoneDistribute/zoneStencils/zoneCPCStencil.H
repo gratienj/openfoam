@@ -62,12 +62,17 @@ class zoneCPCStencil
     public zoneCellStencils
 {
     // Private Member Functions
+
         labelList nonEmptyBoundaryPoints_;
 
+        //- is valid boundaryface ?
+        //- non valid face are on empty, wedge and processor patches
         boolList isValidBFace_;
 
+        //- cell is already uptodate
         boolList uptodate_;
 
+        //- sync boundary points
         Map<bool> syncCouledBoundaryPoints
         (
             const boolList& zone,
@@ -83,6 +88,7 @@ class zoneCPCStencil
             Map<labelList>& neiGlobal
         ) const;
 
+        //- calculate stencil
         void calculateStencil
         (
             const boolList& zone,
@@ -101,9 +107,8 @@ public:
         explicit zoneCPCStencil(const fvMesh&);
 
         //- Calculates per cell the neighbour data
-        //  (= cell or boundary in global numbering).
-        //  First element is always cell itself!
-
+        //-  (= cell or boundary in global numbering).
+        //-  First element is always cell itself!
         virtual void updateMesh(const mapPolyMesh& mpm);
 
 };

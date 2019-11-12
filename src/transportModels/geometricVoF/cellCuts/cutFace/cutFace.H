@@ -72,12 +72,11 @@ class cutFace
 
 protected:
 
-    //- Calculate cut points along edges of face with the pointStatus and the
-    //- face label
-    //  Returns the face status, where:
-    //  -1: faceStatus is fully below the isosurface
-    //   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
-    //  +1: faceStatus is fully above the isosurface
+    //- Calculate cut points along edges of face with pointStatus, pointfield
+    //- and computes geometric information and the face status where:
+    // -  -1: faceStatus is fully below the isosurface
+    // -   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
+    // -  +1: faceStatus is fully above the isosurface
     void calcSubFace
     (
         const label& faceI,
@@ -90,11 +89,11 @@ protected:
         vector& subFaceArea
      );
 
-    //- Calculate cut points along edges of face with the pointStatus and the
-    //- face label and weights
-    //  -1: faceStatus is fully below the isosurface
-    //   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
-    //  +1: faceStatus is fully above the isosurface
+    //- Calculate cut points along edges of face with pointStatus, pointfield, 
+    //- weights and computes geometric information and the face status where:
+    // -  -1: faceStatus is fully below the isosurface
+    // -   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
+    // -  +1: faceStatus is fully above the isosurface
     void calcSubFace
     (
         const label& faceI,
@@ -117,8 +116,7 @@ protected:
     );
 
     //- Calculate cut points along edges of face with pointStatus, pointfield
-    //- and face
-    //  Returns the face status, where:
+    //- and computes geometric information and the face status where:
     // -  -1: faceStatus is fully below the isosurface
     // -   0: faceStatus is cut, i.e. has values larger and smaller than isoValue
     // -  +1: faceStatus is fully above the isosurface

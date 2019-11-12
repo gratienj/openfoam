@@ -134,7 +134,6 @@ Foam::zoneCPCStencil::zoneCPCStencil(const fvMesh& mesh)
 {
     // Mark boundary faces to be included in stencil (i.e. not coupled or empty)
     validBoundaryFaces(isValidBFace_);
-    //setSize(mesh_.nCells());
 }
 
 
@@ -227,7 +226,7 @@ void Foam::zoneCPCStencil::calculateStencil
                     merge
                     (
                         globalNumbering().toGlobal(celli),
-                        pCells, // here is the error is not in global addressing
+                        pCells,
                         globalCellCells[celli]
                     );
                 }

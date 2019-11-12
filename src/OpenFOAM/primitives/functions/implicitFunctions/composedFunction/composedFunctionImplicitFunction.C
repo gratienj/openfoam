@@ -162,13 +162,11 @@ Foam::scalar Foam::implicitFunctions::composedFunctionImplicitFunction::value
 {
     forAll(values_,i)
     {
-        // values_[i] = mag(functions_[i].value(p));
         values_[i] = functions_[i].value(p);
     }
 
     const label idx = selectFunction(values_);
 
-    // return functions_[minIdx].value(p);
     return values_[idx];
 }
 

@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -91,6 +91,7 @@ class gradAlpha
         //- surfaceIterator finds the plane centre for specified VOF value
         surfaceIteratorPLIC sIterPLIC_;
 
+        //- compute gradient at the surfaces
         void gradSurf(const volScalarField& phi);
 
 
@@ -125,6 +126,9 @@ public:
 
         //- Reconstruct interface
         virtual void reconstruct();
+
+        //- map VoF Field in case of refinement
+        virtual void mapAlphaField() const;
 };
 
 

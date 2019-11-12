@@ -152,13 +152,6 @@ Foam::label Foam::cutCellPLIC::calcSubCell
             subCellVolume_
         );
 
-        // Check isoFaceArea_ direction and change if not pointing out of
-        // subcell
-        // if ((faceArea_ & (faceCentre_ - subCellCentre_)) < 0)
-        // {
-        //     faceArea_ *= (-1);
-        // }
-
         VOF_ = subCellVolume_ / mesh_.V()[cellI_];
     }
     else if (fullyAbove) // cell fully above isosurface

@@ -121,14 +121,9 @@ class zoneCellStencils
             labelListList& globalCellCells
         ) = 0;
 
-
-
         labelHashSet needComm_;
 
         globalIndex globalNumbering_;
-
-
-
 
 public:
 

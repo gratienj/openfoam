@@ -35,7 +35,6 @@ License
 #include "upwind.H"
 #include "interpolationCellPoint.H"
 
-#include "MULES.H"
 #include "DynamicField.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -449,32 +448,6 @@ void Foam::advection::isoAdvector::limitFluxes
         {
             DebugInfo << "Bound from below... " << endl;
 
-           /* scalarField alpha2 = 1.0 - alpha1_.ref();
-            surfaceScalarField dVfcorrected
-            (
-                "dVfcorrected",
-                phi_*mesh_.time().deltaT() - dVf_
-            );
-            // If phi_ > 0 then dVf_ > 0 and mag(phi_*dt-dVf_) < mag(phi_*dt) as
-            // it should.
-            // If phi_ < 0 then dVf_ < 0 and mag(phi_*dt-dVf_) < mag(phi_*dt) as
-            // it should.
-
-            DynamicList<label> correctedFaces(3*nUndershoots);
-            boundFromBelow(alpha2, dVfcorrected, correctedFaces,Sp,Su);
-
-            forAll(correctedFaces, fi)
-            {
-                label facei = correctedFaces[fi];
-
-                // Change to treat boundaries consistently
-                scalar phi = faceValue(phi_, facei);
-                scalar dVcorr = faceValue(dVfcorrected, facei);
-                faceValue(dVf_, facei, phi*dt - dVcorr);
-            }
-
-            syncProcPatches(dVf_, phi_);*/
-
             surfaceScalarField dVfcorrected("dVfcorrected", dVf_);
             DynamicList<label> correctedFaces(3*nOvershoots);
             boundFromBelow(alpha1_.ref(), dVfcorrected, correctedFaces, Sp, Su);
@@ -541,13 +514,7 @@ void Foam::advection::isoAdvector::boundFromAbove
                 phi.clear();
 
                 // Find potential neighbour cells to pass surplus phase to
-                //DynamicList<label> downwindFaces(mesh_.cells()[celli].size());
-                //getDownwindFaces(celli, downwindFaces);
                 setDownwindFaces(celli, downwindFaces);
-
-                //DynamicList<label> facesToPassFluidThrough(downwindFaces.size());
-                //DynamicList<scalar> dVfmax(downwindFaces.size());
-                //DynamicList<scalar> phi(downwindFaces.size());
 
                 scalar dVftot = 0.0;
                 nFacesToPassFluidThrough = 0;
@@ -666,13 +633,7 @@ void Foam::advection::isoAdvector::boundFromAbove
                 phi.clear();
 
                 // Find potential neighbour cells to pass surplus phase to
-                //DynamicList<label> downwindFaces(mesh_.cells()[celli].size());
-                //getDownwindFaces(celli, downwindFaces);
                 setDownwindFaces(celli, downwindFaces);
-
-                //DynamicList<label> facesToPassFluidThrough(downwindFaces.size());
-                //DynamicList<scalar> dVfmax(downwindFaces.size());
-                //DynamicList<scalar> phi(downwindFaces.size());
 
                 scalar dVftot = 0.0;
                 nFacesToPassFluidThrough = 0;
@@ -753,7 +714,6 @@ void Foam::advection::isoAdvector::boundFromBelow
     DynamicList<label> downwindFaces(10);
     DynamicList<label> facesToPassFluidThrough(downwindFaces.size());
     DynamicList<scalar> dVfmax(downwindFaces.size());
-    //DynamicList<scalar> dV(downwindFaces.size());
     DynamicList<scalar> phi(downwindFaces.size());
 
     // Loop through alpha cell centred field
@@ -1231,7 +1191,6 @@ void Foam::advection::isoAdvector::advect()
     // Adjust dVf for unbounded cells
     limitFluxes();
 
-
     // Advect the free surface
     alpha1_ -= fvc::surfaceIntegrate(dVf_);
     alpha1_.correctBoundaryConditions();
@@ -1244,30 +1203,20 @@ void Foam::advection::isoAdvector::advect()
 
     reduce(runTime_.x(),maxOp<scalar>());
     reduce(runTime_.y(),maxOp<scalar>());
-    Info << "runTime " << runTime_ << endl;
 
 }
 
 
 void Foam::advection::isoAdvector::advect(const volScalarField::Internal& Sp,const volScalarField::Internal& Su)
 {
-// splitted in div part and source term part
-// source term part get calculated first
+    // splitted in div part and source term part
+    // source term part get calculated first
     scalar rDeltaT = 1/mesh_.time().deltaTValue();
 
-// MULES similiar to MULES
-//    alpha1_.primitiveFieldRef() =
-//    (
-//      alpha1_.primitiveField()*rDeltaT
-//      + Su.field()
-//      - fvc::surfaceIntegrate(dVf_)
-//    )/(rDeltaT - Sp.field());
-
-
-// second part
+    // second part
     surf_->reconstruct();
 
-//    calcFaceFlux();
+    //    calcFaceFlux();
     // Initialising dVf with upwind values
     dVf_ = upwind<scalar>(mesh_, phi_).flux(alpha1_)*mesh_.time().deltaT();
 
@@ -1278,24 +1227,8 @@ void Foam::advection::isoAdvector::advect(const volScalarField::Internal& Sp,con
     // Synchronize processor patches
     syncProcPatches(dVf_, phi_);
 
-   /* alpha1_.primitiveFieldRef() =
-    (
-      alpha1_.primitiveField()*rDeltaT
-      + Su.field()
-      - fvc::surfaceIntegrate(dVf_)().primitiveField()*rDeltaT
-    )/(rDeltaT - Sp.field());
-    alpha1_.correctBoundaryConditions();*/
-
     // Adjust dVf for unbounded cells
     limitFluxes(Sp,Su);
-// MULES
-
-//   psi.primitiveFieldRef() =
-//   (
-//      rho.field()*psi.primitiveField()*rDeltaT
-//      + Su.field()
-//      - psiIf
-//   )/(rho.field()*rDeltaT - Sp.field());
 
     alpha1_.primitiveFieldRef() =
     (
@@ -1304,7 +1237,6 @@ void Foam::advection::isoAdvector::advect(const volScalarField::Internal& Sp,con
       - fvc::surfaceIntegrate(dVf_)().primitiveField()*rDeltaT
     )/(rDeltaT - Sp.field());
 
-  //  alpha1_ -= fvc::surfaceIntegrate(dVf_) ; // dvf mal deltaT
     alpha1_.correctBoundaryConditions();
 
     applyBruteForceBounding();

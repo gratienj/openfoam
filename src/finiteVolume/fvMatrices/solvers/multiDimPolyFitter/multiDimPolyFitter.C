@@ -69,7 +69,7 @@ void Foam::multiDimPolyFitter<T>::fillMatrix
     for(label i=0; i<size; ++i) // col
     {
         A_.source()[i] += polyTerms[i]*value;
-        scalar* __restrict luMatrixi = A_[i];
+        scalar* luMatrixi = A_[i];
         tmpValue = polyTerms[i];
 
         for(label j=0; j<size; ++j) // row

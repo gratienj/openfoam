@@ -35,8 +35,6 @@ License
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-
-
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
 Foam::interface::interpolate
@@ -48,17 +46,5 @@ Foam::interface::interpolate
 
     return Field<Type>(this->points().size()); //,Type::zero);
 }
-
-//template< >
-//Foam::tmp<Foam::Field<Foam::scalar>>
-//Foam::interface::interpolate
-//(
-//    const GeometricField<scalar, fvPatchField, volMesh>& cCoords,
-//    const Field<scalar>& pCoords
-//) const
-//{
-
-//    return Field<scalar>(this->points().size(),0);
-//}
 
 // ************************************************************************* //

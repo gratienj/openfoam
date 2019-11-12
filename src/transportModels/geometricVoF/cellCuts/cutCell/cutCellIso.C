@@ -150,12 +150,6 @@ Foam::label Foam::cutCellIso::calcSubCell
             subCellVolume_
         );
 
-        // switch orientation that it points in the gas phase
-        // if ((faceArea_ & (faceCentre_ - subCellCentre_)) < 0)
-        // {
-        //     faceArea_ *= (-1);
-        // }
-
         VOF_ = subCellVolume_ / mesh_.V()[cellI_];
     }
     else if (fullyAbove) // cell fully above isosurface

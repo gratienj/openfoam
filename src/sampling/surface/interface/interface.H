@@ -101,9 +101,6 @@ public:
             return meshCells_;
         }
 
-
-
-
         //- Interpolates cCoords,pCoords. Uses the references to the original
         //  fields used to create the iso surface.
         template<class Type>
@@ -112,14 +109,6 @@ public:
             const GeometricField<Type, fvPatchField, volMesh>& cCoords,
             const Field<Type>& pCoords
         ) const;
-
-//        // hacked sca
-//        template<  >
-//        tmp<Field<scalar> > interpolate
-//        (
-//            const GeometricField<scalar, fvPatchField, volMesh>& cCoords,
-//            const Field<scalar>& pCoords
-//        ) const;
 
 };
 

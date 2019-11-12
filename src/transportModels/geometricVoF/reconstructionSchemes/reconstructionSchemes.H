@@ -60,9 +60,7 @@ namespace Foam
 
 class reconstructionSchemes
 :
-    public IOdictionary // will write the pointer in registry
-    // inheritance from MeshObject(updateable) caused crashes with the polyhedralMesh
-    // probably caused by a portation bug
+    public IOdictionary
 {
 
 private:
@@ -77,42 +75,31 @@ protected:
 
     // Protected data
 
+        //- Reference to the VoF Field
         volScalarField& alpha1_;
 
+        //- Reference to the face fluxes
         const surfaceScalarField& phi_;
 
+        //- Reference to the velocity field
         const volVectorField& U_;
 
+        //- interface area normals
         volVectorField normal_;
 
+        //- interface centres
         volVectorField centre_;
 
+        //- is interface cell?
         boolList interfaceCell_;
 
+        //- list of cell labels that have an interface
         DynamicField<label> interfaceLabels_;
 
-        bool writeVTK_;
-
+        // stores the timeindex and iteration to avoid multiple reconstruction
         Pair<label> timeIndexAndIter_;
 
-        //- Write face points to .vtk files e.g. for visualisation in Paraview
-        void isoFacesToFile
-        (
-            const DynamicList< List<point> >& isoFacePts,
-            const word fileName,
-            const word fileDir
-        ) const;
-
-        //- Write face points to .vtk files e.g. for visualisation in Paraview
-        void isoFacesToFile
-        (
-            const List<word>& fieldName,
-            const List<DynamicList<double> > &values,
-            const DynamicList< List<point> >& faces,
-            const word filNam,
-            const word filDir
-        ) const;
-
+        //- is the interface already up-to-date?
         bool alreadyReconstructed();
 
 
@@ -188,28 +175,34 @@ public:
 
     // Member Functions
 
+        //- reconstruct the interface
         virtual void reconstruct() = 0;
 
+        //- reference to interface normals
         const volVectorField& normal() const
         {
             return normal_;
         }
 
+        //- reference to interface centres
         const volVectorField& centre() const
         {
             return centre_;
         }
 
+        //- does the cell contain interface
         const boolList& interfaceCell() const
         {
             return interfaceCell_;
         }
 
+        //- list of cells with an interface
         const DynamicField<label>& interfaceLabels() const
         {
             return interfaceLabels_;
         }
 
+        //- map VoF Field in case of refinement
         virtual void mapAlphaField() const
         {
             // do nothing;

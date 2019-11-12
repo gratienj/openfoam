@@ -221,14 +221,6 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
             waterInUpwindCell = alphaf * mesh_.V()[upwindCell];
         }
 
-//        if (debug)
-//        {
-//            WarningInFunction
-//                << "mag(n0) = " << mag(n0)
-//                << " so timeIntegratedFlux calculates dVf from upwind"
-//                << " cell alpha value: " << alphaf << endl;
-//        }
-
         return min(alphaf * phi * dt, waterInUpwindCell);
     }
 
@@ -326,15 +318,6 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
         // Un0 is almost zero and isoFace is treated as stationary
         calcSubFace(faceI, -n0, x0);
         const scalar alphaf = mag(subFaceArea() / magSf);
-
-//        if (debug)
-//        {
-//            WarningInFunction
-//                << "Un0 is almost zero (" << Un0
-//                << ") - calculating dVf on face " << faceI
-//                << " using subFaceFraction giving alphaf = " << alphaf
-//                << endl;
-//        }
 
         return phi * dt * alphaf;
     }

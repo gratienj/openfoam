@@ -2,10 +2,10 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2019-2019 OpenCFD Ltd.
+    \\  /    A nd           | Copyright (C) 2019 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-                            | Copyright (C) 2019-2019 DLR
+                            | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 
 License
@@ -78,7 +78,7 @@ class isoAlpha
 :
     public reconstructionSchemes
 {
-    // Provate data
+    // Private data
 
         //- Reference to mesh
         const fvMesh& mesh_;
@@ -133,6 +133,7 @@ public:
         //- Reconstructs the interface
         virtual void reconstruct();
 
+        //- map VoF Field in case of refinement
         virtual void mapAlphaField() const
         {
             // do nothing;

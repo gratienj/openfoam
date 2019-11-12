@@ -8,6 +8,7 @@
                             | Copyright (C) 2011-2017 OpenFOAM Foundation
                 isoAdvector | Copyright (C) 2016 DHI
               Modified work | Copyright (C) 2018 Johan Roenby
+              Modified work | Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -112,7 +113,10 @@ int main(int argc, char *argv[])
         {
             if (pimple.firstIter() || moveMeshOuterCorrectors)
             {
-                advector.surf().reconstruct();
+                if(mesh.dynamic())
+                {
+                    advector.surf().reconstruct();
+                }
 
                 mesh.update();
 
@@ -121,9 +125,12 @@ int main(int argc, char *argv[])
                     // gets recompute by surfaces forces
                     gh = (g & mesh.C()) - ghRef;
                     ghf = (g & mesh.Cf()) - ghRef;
-                    advector.surf().mapAlphaField();
-                    rho == alpha1*rho1 + alpha2*rho2;
-                    rho.oldTime() = rho; // not sure if needed
+                    if(mesh.topoChanging())
+                    {
+                        advector.surf().mapAlphaField();
+                        rho == alpha1*rho1 + alpha2*rho2;
+                        rho.oldTime() = rho;
+                    }
 
                     MRF.update();
 
