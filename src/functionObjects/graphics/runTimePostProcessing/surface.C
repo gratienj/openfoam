@@ -211,13 +211,13 @@ Foam::functionObjects::runTimePostPro::surface::surface
         representationTypeNames.get("representation", dict)
     ),
     featureEdges_(dict.getOrDefault("featureEdges", false)),
+    backFaceCulling_(dict.getOrDefault("backFaceCulling", false)),
+    frontFaceCulling_(dict.getOrDefault("frontFaceCulling", true)),
     surfaceColour_(nullptr),
     edgeColour_(nullptr),
     surfaceActor_(),
     edgeActor_(),
-    maxGlyphLength_(0),
-    backFaceCulling_(false),
-    frontFaceCulling_(true)
+    maxGlyphLength_(0)
 {
     surfaceActor_ = vtkSmartPointer<vtkActor>::New();
     edgeActor_ = vtkSmartPointer<vtkActor>::New();
@@ -244,9 +244,6 @@ Foam::functionObjects::runTimePostPro::surface::surface
     {
         dict.readEntry("maxGlyphLength", maxGlyphLength_);
     }
-
-    dict.readIfPresent("backFaceCulling", backFaceCulling_);
-    dict.readIfPresent("frontFaceCulling", frontFaceCulling_);
 }
 
 

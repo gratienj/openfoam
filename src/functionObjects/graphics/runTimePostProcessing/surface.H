@@ -170,6 +170,12 @@ protected:
         //- Activate feature edges
         bool featureEdges_;
 
+        //- Back face culling option; default = off
+        bool backFaceCulling_;
+
+        //- Front face culling option; default = on
+        bool frontFaceCulling_;
+
         //- Surface colour
         autoPtr<Function1<vector>> surfaceColour_;
 
@@ -184,12 +190,6 @@ protected:
 
         //- Max glyph length for representation type rtGlyph
         scalar maxGlyphLength_;
-
-        //- Back face culling option; default = off
-        bool backFaceCulling_;
-
-        //- Front face culling option; default = on
-        bool frontFaceCulling_;
 
 
     // Protected Member Functions
