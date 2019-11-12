@@ -23,7 +23,7 @@ solvers
         nAlphaSubCycles 4;
         cAlpha          1;
 
-        reconstructionScheme plicRDF;
+        reconstructionScheme gradAlpha;
         vof2IsoTol 1e-8;
         surfCellTol 1e-6;
         nAlphaBounds    3;
@@ -54,7 +54,7 @@ solvers
     p_rgh
     {
         solver          GAMG;
-        tolerance       1e-07;
+        tolerance       1e-09;
         relTol          0.01;
         smoother        DIC;
     }
@@ -71,7 +71,7 @@ solvers
             smoother        DICGaussSeidel;
             nPreSweeps      2;
         }
-        tolerance       1e-07;
+        tolerance       1e-09;
         relTol          0;
         maxIter         20;
     }

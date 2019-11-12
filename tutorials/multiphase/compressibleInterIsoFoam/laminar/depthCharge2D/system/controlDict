@@ -51,5 +51,29 @@ maxCo           0.5;
 maxAlphaCo      0.5;
 maxDeltaT       1;
 
+functions
+{
+    surfaces
+    {
+        type            surfaces;
+        libs            ("libsampling.so");
+        writeControl    writeTime;
+
+        surfaceFormat   vtp;
+        fields          (p U);
+
+        interpolationScheme cell;
+
+        surfaces
+        (
+            freeSurf
+            {
+                type            interface;
+                interpolate     false;
+            }
+
+        );
+    }
+}
 
 // ************************************************************************* //

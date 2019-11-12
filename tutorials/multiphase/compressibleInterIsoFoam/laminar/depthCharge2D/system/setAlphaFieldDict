@@ -15,38 +15,26 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-defaultFieldValues
-(
-//    volScalarFieldValue alpha.water 1
-    volScalarFieldValue p_rgh 1e5
-    volScalarFieldValue p 1e5
-    volScalarFieldValue T 300
-);
-
-regions
-(
-    sphereToCell
+field alpha.water;
+type composedFunction;
+mode subtract;
+composedFunction
+{
+    plane
     {
-        origin  (0.5 0.5 0);
-        radius  0.1;
-
-        fieldValues
-        (
-            //volScalarFieldValue alpha.water 0
-            volScalarFieldValue p_rgh 1e6
-            volScalarFieldValue p 1e6
-            volScalarFieldValue T 578
-        );
+        type plane;
+        origin (0 1. 0);
+        normal (0 -1 0);  
     }
-   /* boxToCell
+
+    sphere
     {
-        box (-10 1 -1) (10 10 1);
-        fieldValues
-        (
-            volScalarFieldValue alpha.water 0
-        );
-    }*/
-);
+        type cylinder;
+        radius 0.1;
+        origin (0.5 0.5 0);
+        direction (0 0 1);
+        scale -1;
+    }
 
-
+}
 // ************************************************************************* //
