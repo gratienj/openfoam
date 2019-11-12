@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,9 +24,6 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-
-Class
-    Foam::memberFunctionSelectionTables
 
 Description
     Macros to enable the easy declaration of member function selection tables.
@@ -63,7 +61,7 @@ Description
     {                                                                          \
     public:                                                                    \
                                                                                \
-        add##memberFunction##argNames##MemberFunctionToTable                   \
+        explicit add##memberFunction##argNames##MemberFunctionToTable          \
         (                                                                      \
             const word& lookup = baseType##Type::typeName                      \
         )                                                                      \
@@ -115,9 +113,10 @@ Description
     {                                                                          \
         if (baseType::memberFunction##argNames##MemberFunctionTablePtr_)       \
         {                                                                      \
-            delete baseType::memberFunction##argNames##MemberFunctionTablePtr_;\
-            baseType::memberFunction##argNames##MemberFunctionTablePtr_ =      \
-                nullptr;                                                       \
+            delete baseType::memberFunction##argNames##                        \
+                MemberFunctionTablePtr_;                                       \
+            baseType::memberFunction##argNames##                               \
+                MemberFunctionTablePtr_ = nullptr;                             \
         }                                                                      \
     }
 
@@ -127,8 +126,7 @@ Description
                                                                                \
     /* Define the memberFunction table */                                      \
     baseType::memberFunction##argNames##MemberFunctionTable*                   \
-        baseType::memberFunction##argNames##MemberFunctionTablePtr_ = nullptr
-
+        baseType::memberFunction##argNames##MemberFunctionTablePtr_(nullptr)
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -190,10 +188,7 @@ Description
     void baseType<Targ>::destroy##memberFunction##argNames##                   \
     MemberFunctionTables()                                                     \
     {                                                                          \
-        if                                                                     \
-        (                                                                      \
-            baseType<Targ>::memberFunction##argNames##MemberFunctionTablePtr_  \
-        )                                                                      \
+        if (baseType<Targ>::memberFunction##argNames##MemberFunctionTablePtr_) \
         {                                                                      \
             delete baseType<Targ>::memberFunction##argNames##                  \
                 MemberFunctionTablePtr_;                                       \
@@ -210,8 +205,8 @@ Description
                                                                                \
     /* Define the memberFunction table */                                      \
     baseType<Targ>::memberFunction##argNames##MemberFunctionTable*             \
-        baseType<Targ>::memberFunction##argNames##MemberFunctionTablePtr_ =    \
-        nullptr
+        baseType<Targ>::memberFunction##argNames##                             \
+        MemberFunctionTablePtr_(nullptr)
 
 
 //- Define run-time selection table for template classes
