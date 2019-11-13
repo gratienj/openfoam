@@ -1,4 +1,11 @@
-#!/bin/sh
+#!/bin/bash
+cd "${0%/*}" || exit                                # Run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # Tutorial run functions
+#------------------------------------------------------------------------------
+
+# Turbulence closure models
+models=('kOmegaSST' 'SpalartAllmaras')
+
 # Note: CFL3D data available from:
 # https://turbmodels.larc.nasa.gov/bump_sa.html
 # The CFL3D-SpalartAllmaras datasets of Cf and Cp:
