@@ -28,7 +28,7 @@ Description
     Foam::vector2DField
 
 SourceFiles
-    vector2DField.C
+    vector2DField.H
 
 \*---------------------------------------------------------------------------*/
 
@@ -40,16 +40,6 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-tmp<vector2DField> zip(const tmp<scalarField>& x, const tmp<scalarField>& y);
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
