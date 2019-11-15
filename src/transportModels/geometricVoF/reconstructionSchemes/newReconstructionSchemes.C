@@ -40,7 +40,7 @@ Foam::reconstructionSchemes::New
     dictionary& dict
 )
 {
-    const word schemeType(dict.lookup("reconstructionScheme"));
+    const word schemeType(dict.lookupOrDefault<word>("reconstructionScheme","isoAlpha"));
 
     Info<< "Selecting reconstructionScheme: " << schemeType << endl;
 
