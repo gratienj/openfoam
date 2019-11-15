@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2015 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,6 +33,81 @@ License
 #define TEMPLATE template<template<class> class PatchField, class GeoMesh>
 #include "GeometricFieldFunctionsM.C"
 
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void Foam::zip
+(
+    GeometricField<SymmTensor<Cmpt>, PatchField, GeoMesh>& result,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& xx,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& xy,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& xz,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& yy,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& yz,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& zz
+)
+{
+    Foam::zip
+    (
+        result.primitiveFieldRef(),
+        xx.primitiveField(), xy.primitiveField(), xz.primitiveField(),
+        yy.primitiveField(), yz.primitiveField(),
+        zz.primitiveField()
+    );
+
+    Foam::zip
+    (
+        result.boundaryFieldRef(),
+        xx.boundaryField(), xy.boundaryField(), xz.boundaryField(),
+        yy.boundaryField(), yz.boundaryField(),
+        zz.boundaryField()
+    );
+}
+
+
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void Foam::unzip
+(
+    const GeometricField<SymmTensor<Cmpt>, PatchField, GeoMesh>& input,
+    GeometricField<Cmpt, PatchField, GeoMesh>& xx,
+    GeometricField<Cmpt, PatchField, GeoMesh>& xy,
+    GeometricField<Cmpt, PatchField, GeoMesh>& xz,
+    GeometricField<Cmpt, PatchField, GeoMesh>& yy,
+    GeometricField<Cmpt, PatchField, GeoMesh>& yz,
+    GeometricField<Cmpt, PatchField, GeoMesh>& zz
+)
+{
+    Foam::unzip
+    (
+        input.primitiveField(),
+        xx.primitiveFieldRef(), xy.primitiveFieldRef(), xz.primitiveFieldRef(),
+        yy.primitiveFieldRef(), yz.primitiveFieldRef(),
+        zz.primitiveFieldRef()
+    );
+
+    Foam::unzip
+    (
+        input.boundaryField(),
+        xx.boundaryFieldRef(), xy.boundaryFieldRef(), xz.boundaryFieldRef(),
+        yy.boundaryFieldRef(), yz.boundaryFieldRef(),
+        zz.boundaryFieldRef()
+    );
+}
+
+
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void Foam::unzipDiag
+(
+    const GeometricField<SymmTensor<Cmpt>, PatchField, GeoMesh>& input,
+    GeometricField<Vector<Cmpt>, PatchField, GeoMesh>& result
+)
+{
+    Foam::unzipDiag(input.primitiveField(), result.primitiveFieldRef());
+
+    Foam::unzipDiag(input.boundaryField(), result.boundaryFieldRef());
+}
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -53,7 +129,7 @@ UNARY_FUNCTION(symmTensor, symmTensor, cof, pow2)
 UNARY_FUNCTION(symmTensor, symmTensor, inv, inv)
 
 
-// * * * * * * * * * * * * * * * global operators  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
 
 UNARY_OPERATOR(vector, symmTensor, *, hdual, transform)
 
