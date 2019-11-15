@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,6 +52,32 @@ namespace Foam
 
 typedef Field<sphericalTensor> sphericalTensorField;
 
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+//- Zip together sphericalTensor field from components
+template<class Cmpt>
+void zip
+(
+    Field<SphericalTensor<Cmpt>>& result,
+    const UList<Cmpt>& ii
+);
+
+//- Unzip sphericalTensor field into components
+template<class Cmpt>
+void unzip
+(
+    const UList<SphericalTensor<Cmpt>>& input,
+    Field<Cmpt>& ii
+);
+
+//- Zip together sphericalTensor field from components
+template<class Cmpt>
+tmp<Field<SphericalTensor<Cmpt>>> zip
+(
+    const Field<Cmpt>& ii
+);
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 UNARY_FUNCTION(scalar, sphericalTensor, tr)
@@ -69,6 +96,12 @@ BINARY_TYPE_OPERATOR(sphericalTensor, scalar, sphericalTensor, /, divide)
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #include "undefFieldFunctionsM.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+    #include "sphericalTensorFieldTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
