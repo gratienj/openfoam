@@ -5,8 +5,6 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Released 2004-2011 OpenCFD Ltd.
-    Copyright (C) 2011 OpenFOAM Foundation
     Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -25,28 +23,24 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Description
-    Specialisation of FieldField<Field, T> for sphericalTensor.
-
 \*---------------------------------------------------------------------------*/
 
-#include "sphericalTensorFieldField.H"
-
-#define TEMPLATE template<template<class> class Field>
-#include "FieldFieldFunctionsM.C"
+#include "vectorFieldField.H"
 
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
 template<template<class> class Field, class Cmpt>
 void Foam::zip
 (
-    FieldField<Field, SphericalTensor<Cmpt>>& result,
-    const FieldField<Field, Cmpt>& ii
+    FieldField<Field, Vector<Cmpt>>& result,
+    const FieldField<Field, Cmpt>& x,
+    const FieldField<Field, Cmpt>& y,
+    const FieldField<Field, Cmpt>& z
 )
 {
     forAll(result, i)
     {
-        Foam::zip(result[i], ii[i]);
+        Foam::zip(result[i], x[i], y[i], z[i]);
     }
 }
 
@@ -54,42 +48,17 @@ void Foam::zip
 template<template<class> class Field, class Cmpt>
 void Foam::unzip
 (
-    const FieldField<Field, SphericalTensor<Cmpt>>& input,
-    FieldField<Field, Cmpt>& ii
+    const FieldField<Field, Vector<Cmpt>>& input,
+    FieldField<Field, Cmpt>& x,
+    FieldField<Field, Cmpt>& y,
+    FieldField<Field, Cmpt>& z
 )
 {
     forAll(input, i)
     {
-        Foam::unzip(input[i], ii[i]);
+        Foam::unzip(input[i], x[i], y[i], z[i]);
     }
 }
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-namespace Foam
-{
-
-// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
-
-UNARY_FUNCTION(scalar, sphericalTensor, tr)
-UNARY_FUNCTION(sphericalTensor, sphericalTensor, sph)
-UNARY_FUNCTION(scalar, sphericalTensor, det)
-UNARY_FUNCTION(sphericalTensor, sphericalTensor, inv)
-
-
-// * * * * * * * * * * * * * * * global operators  * * * * * * * * * * * * * //
-
-BINARY_OPERATOR(sphericalTensor, scalar, sphericalTensor, /, divide)
-BINARY_TYPE_OPERATOR(sphericalTensor, scalar, sphericalTensor, /, divide)
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "undefFieldFunctionsM.H"
 
 // ************************************************************************* //
