@@ -149,14 +149,15 @@ Foam::mappedPatchFieldBase<Type>::mappedPatchFieldBase
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-const Foam::GeometricField<Type, Foam::fvPatchField, Foam::volMesh>&
-Foam::mappedPatchFieldBase<Type>::sampleField() const
+template<class Type2>
+const Foam::GeometricField<Type2, Foam::fvPatchField, Foam::volMesh>&
+Foam::mappedPatchFieldBase<Type>::sampleField(const word& fieldName) const
 {
-    typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
+    typedef GeometricField<Type2, fvPatchField, volMesh> fieldType;
 
     if (mapper_.sameRegion())
     {
-        if (fieldName_ == patchField_.internalField().name())
+        if (fieldName == patchField_.internalField().name())
         {
             // Optimisation: bypass field lookup
             return
@@ -168,20 +169,32 @@ Foam::mappedPatchFieldBase<Type>::sampleField() const
         else
         {
             const fvMesh& thisMesh = patchField_.patch().boundaryMesh().mesh();
-            return thisMesh.template lookupObject<fieldType>(fieldName_);
+            return thisMesh.template lookupObject<fieldType>(fieldName);
         }
     }
 
     const fvMesh& nbrMesh = refCast<const fvMesh>(mapper_.sampleMesh());
-    return nbrMesh.template lookupObject<fieldType>(fieldName_);
+    return nbrMesh.template lookupObject<fieldType>(fieldName);
 }
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::mappedPatchFieldBase<Type>::mappedField() const
+const Foam::GeometricField<Type, Foam::fvPatchField, Foam::volMesh>&
+Foam::mappedPatchFieldBase<Type>::sampleField() const
 {
-    typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
+    return sampleField<Type>(fieldName_);
+}
+
+
+template<class Type>
+template<class T>
+Foam::tmp<Foam::Field<T>>
+Foam::mappedPatchFieldBase<Type>::mappedField
+(
+    const GeometricField<T, fvPatchField, volMesh>& fld
+) const
+{
+    //typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
 
     // Since we're inside initEvaluate/evaluate there might be processor
     // comms underway. Change the tag we use.
@@ -236,7 +249,7 @@ DebugVar(isSampleWorld);
                         interpolation<Type>::New
                         (
                             interpolationScheme_,
-                            sampleField()
+                            fld
                         );
 
                     const auto& interp = *interpolator;
@@ -257,7 +270,7 @@ DebugVar(isSampleWorld);
             }
             else if (isSampleWorld)
             {
-                newValues = sampleField();
+                newValues = fld;
             }
 
             distMap.distribute(newValues);
@@ -290,7 +303,7 @@ DebugVar(nbrPatchID);
                      << abort(FatalError);
                 }
 
-                const fieldType& nbrField = sampleField();
+                const auto& nbrField = fld;
 
 DebugVar(nbrField.name());
 
@@ -312,7 +325,7 @@ DebugVar(distMap.comm());
 
                 allValues.setSize(nbrMesh.nFaces(), Zero);
 
-                const fieldType& nbrField = sampleField();
+                const auto& nbrField = fld;
 
                 for (const fvPatchField<Type>& pf : nbrField.boundaryField())
                 {
@@ -358,6 +371,15 @@ DebugVar(distMap.comm());
     UPstream::msgType() = oldTag;
 
     return tnewValues;
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::mappedPatchFieldBase<Type>::mappedField() const
+{
+    const GeometricField<Type, fvPatchField, volMesh>& fld = sampleField();
+    return mappedField<Type>(fld);
 }
 
 
