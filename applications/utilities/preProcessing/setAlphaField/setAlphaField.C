@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     const bool invert =
         setAlphaFieldDict.lookupOrDefault<bool>("invert", false);
     const bool writeOBJ =
-        setAlphaFieldDict.lookupOrDefault<bool>("writeOBJ", true);;
+        setAlphaFieldDict.lookupOrDefault<bool>("writeOBJ", false);
 
     volScalarField alpha1
     (
