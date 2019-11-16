@@ -50,7 +50,7 @@ Foam::reconstruction::isoAlpha::isoAlpha
     volScalarField& alpha1,
     const surfaceScalarField& phi,
     const volVectorField& U,
-    dictionary& dict
+    const dictionary& dict
 )
 :
     reconstructionSchemes

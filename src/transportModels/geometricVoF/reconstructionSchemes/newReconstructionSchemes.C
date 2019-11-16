@@ -37,7 +37,7 @@ Foam::reconstructionSchemes::New
     volScalarField& alpha1,
     const surfaceScalarField& phi,
     const volVectorField& U,
-    dictionary& dict
+    const dictionary& dict
 )
 {
     const word schemeType(dict.lookupOrDefault<word>("reconstructionScheme","isoAlpha"));

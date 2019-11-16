@@ -185,7 +185,7 @@ Foam::label Foam::cutFaceAdvect::calcSubFace
 }
 
 
-Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
+Foam::scalar Foam::cutFaceAdvect::timeIntegratedFaceFlux
 (
     const label faceI,
     const vector& x0,
@@ -196,13 +196,11 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
     const scalar magSf
 )
 {
-    //    Info << "timeIntegrate" << endl;
     clearStorage();
     // Note: this function is often called within a loop. Consider passing mesh
     // faces, volumes and points as arguments instead of accessing here
 
     // Treating rare cases where isoface normal is not calculated properly
-    //    Info << "n0  " <<  n0 << endl;
     if (mag(n0) < 0.5)
     {
         scalar alphaf = 0.0;
@@ -304,11 +302,14 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
         }
         else
         {
-            WarningInFunction
-                << "Warning: nShifts = " << nShifts << " on face "
-                << faceI << " with pTimes = " << pTimes_
-                << " owned by cell " << mesh_.faceOwner()[faceI]
-                << endl;
+            if (debug)
+            {
+                WarningInFunction
+                    << "Warning: nShifts = " << nShifts << " on face "
+                    << faceI << " with pTimes = " << pTimes_
+                    << " owned by cell " << mesh_.faceOwner()[faceI]
+                    << endl;
+            }
         }
 
         return dVf;
@@ -324,7 +325,7 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
 }
 
 
-Foam::scalar Foam::cutFaceAdvect::timeIntegratedFlux
+Foam::scalar Foam::cutFaceAdvect::timeIntegratedFaceFlux
 (
     const label faceI,
     const scalarField& times,

@@ -31,6 +31,10 @@ License
 
 #include "cutFace.H"
 
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+  
+int Foam::cutFace::debug = 0;
+
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * *
 
 void Foam::cutFace::calcSubFace

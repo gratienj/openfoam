@@ -76,7 +76,7 @@ Foam::reconstructionSchemes::reconstructionSchemes
     volScalarField& alpha1,
     const surfaceScalarField& phi,
     const volVectorField& U,
-    dictionary& dict
+    const dictionary& dict
 )
 :
     IOdictionary

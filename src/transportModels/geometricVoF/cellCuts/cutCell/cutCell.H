@@ -105,6 +105,10 @@ public:
 
     //- Construct from fvMesh
     cutCell(const fvMesh&);
+
+    // Static data
+  
+    static int debug;
 };
 
 

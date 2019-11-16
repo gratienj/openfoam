@@ -138,7 +138,7 @@ public:
                 volScalarField& alpha1,
                 const surfaceScalarField& phi,
                 const volVectorField& U,
-                dictionary& dict
+                const dictionary& dict
             ),
             (alpha1, phi,U,dict)
         );
@@ -152,7 +152,7 @@ public:
             volScalarField& alpha1,
             const surfaceScalarField& phi,
             const volVectorField& U,
-            dictionary& dict
+            const dictionary& dict
         );
 
 
@@ -165,7 +165,7 @@ public:
             volScalarField& alpha1,
             const surfaceScalarField& phi,
             const volVectorField& U,
-            dictionary& dict
+            const dictionary& dict
         );
 
 
