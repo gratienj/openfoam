@@ -128,4 +128,5 @@ mesh.setFluxRequired(alpha1.name());
 // (
 //     advectionSchemes::New(alpha1,phi,U)
 // );
-Foam::advection::isoAdvector advector(alpha1,phi,U);
+// Foam::advection::isoAdvector advector(alpha1,phi,U);
+isoAdvection advector(alpha1,phi,U);

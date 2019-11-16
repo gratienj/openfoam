@@ -30,6 +30,10 @@ License
 
 #include "cutCell.H"
 
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+  
+int Foam::cutCell::debug = 0;
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::cutCell::cutCell(const fvMesh& mesh)

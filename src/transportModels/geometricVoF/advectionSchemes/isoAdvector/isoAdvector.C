@@ -212,7 +212,7 @@ void Foam::advection::isoAdvector::timeIntegratedFlux()
                     // Calculate time integrated flux if face is downwind
                     if (isDownwindFace)
                     {
-                        dVf_[facei] =  advectFace_.timeIntegratedFlux
+                        dVf_[facei] =  advectFace_.timeIntegratedFaceFlux
                         (
                             facei,
                             x0,
@@ -284,7 +284,7 @@ void Foam::advection::isoAdvector::timeIntegratedFlux()
             {
                 const scalar magSf = magSfb[patchi][patchFacei];
 
-                dVfb[patchi][patchFacei] = advectFace_.timeIntegratedFlux
+                dVfb[patchi][patchFacei] = advectFace_.timeIntegratedFaceFlux
                 (
                     facei,
                     bsx0_[fi],
@@ -590,6 +590,7 @@ void Foam::advection::isoAdvector::boundFromAbove
     const volScalarField::Internal& Su
 )
 {
+
     // Get time step size
     const scalar dt = mesh_.time().deltaT().value();
     const scalar rdT = 1/mesh_.time().deltaT().value();
@@ -610,83 +611,94 @@ void Foam::advection::isoAdvector::boundFromAbove
         if (checkBounding_[celli])
         {
             const scalar& Vi = mesh_.V()[celli];
-            scalar alpha1New = (alpha1[celli]*rdT + Su[celli] - netFlux(dVf, celli)/Vi*rdT)/(rdT-Sp[celli]);
-            scalar alphaOvershoot = alpha1New - 1.0;
-            scalar fluidToPassOn = alphaOvershoot*Vi;
+            scalar alpha1New =
+                (alpha1[celli]*rdT + Su[celli] - netFlux(dVf, celli)/Vi*rdT)
+               /(rdT-Sp[celli]);
+            scalar alphaUndershoot = mag(alpha1New)*pos0(-alpha1New); // pos is with zero
+            scalar fluidToHoldBack = alphaUndershoot*Vi;
             label nFacesToPassFluidThrough = 1;
 
-            if (alphaOvershoot > maxOvershoot)
+            if (alphaUndershoot > maxOvershoot) // does make any sense is always true
             {
-                maxOvershoot = alphaOvershoot;
-                maxOvershootCell = celli;
+                maxOvershoot = alphaUndershoot; // why?
+                maxOvershootCell = celli; // why?
             }
 
             bool firstLoop = true;
             // First try to pass surplus fluid on to neighbour cells that are
             // not filled and to which dVf < phi*dt
-            while (alphaOvershoot > aTol && nFacesToPassFluidThrough > 0)
-            {
-                cellIsBounded_[celli] = true;
 
-                facesToPassFluidThrough.clear();
-                dVfmax.clear();
-                phi.clear();
+		    while (alphaUndershoot > aTol && nFacesToPassFluidThrough > 0)
+		    {
+		        cellIsBounded_[celli] = true;
 
-                // Find potential neighbour cells to pass surplus phase to
-                setDownwindFaces(celli, downwindFaces);
+    			facesToPassFluidThrough.clear();
+		        dVfmax.clear();
+		        phi.clear();
 
-                scalar dVftot = 0.0;
-                nFacesToPassFluidThrough = 0;
+		        // Find potential neighbour cells to pass surplus phase to
+		        //DynamicList<label> downwindFaces(mesh_.cells()[celli].size());
+		        //getDownwindFaces(celli, downwindFaces);
+	    		setDownwindFaces(celli, downwindFaces);
 
-                forAll(downwindFaces, fi)
-                {
-                    const label facei = downwindFaces[fi];
-                    const scalar phif = faceValue(phi_, facei);
-                    const scalar dVff = faceValue(dVf, facei);
-                    const scalar maxExtraFaceFluidTrans = mag(phif*dt - dVff);
+		        //DynamicList<label> facesToPassFluidThrough(downwindFaces.size());
+		        //DynamicList<scalar> dVfmax(downwindFaces.size());
+		        //DynamicList<scalar> dV(downwindFaces.size());
 
-                    if (maxExtraFaceFluidTrans/Vi > aTol)
-//                    if (maxExtraFaceFluidTrans/Vi > aTol &&
-//                    mag(dVfIn[facei])/Vi > aTol) //Last condition may be
-//                    important because without this we will flux through uncut
-//                    downwind faces
-                    {
-                        facesToPassFluidThrough.append(facei);
+		        scalar dVftot = 0.0;
+		        nFacesToPassFluidThrough = 0;
+
+		        for (label facei : downwindFaces)
+		        {
+		            const scalar phif = faceValue(phi_, facei);
+		            const scalar dVff = faceValue(dVf, facei);
+		            //const scalar maxExtraFaceFluidTrans = mag(phif*dt - dVff);
+		    	    const scalar maxFaceFluidTrans = mag(dVff);//mag(dVff);//mag( dVff); // zero is the lower limit phi the upper
+
+		            if (maxFaceFluidTrans/Vi > aTol)
+	//                    if (maxExtraFaceFluidTrans/Vi > aTol &&
+	//                    mag(dVfIn[facei])/Vi > aTol) //Last condition may be
+	//                    important because without this we will flux through uncut
+	//                    downwind faces
+		            {
+		                facesToPassFluidThrough.append(facei);
                         phi.append(phif);
-                        dVfmax.append(maxExtraFaceFluidTrans);
-                        dVftot += mag(phif*dt);
-                    }
-                }
+		                dVfmax.append(maxFaceFluidTrans);
+                        dVftot += mag(phif*dt); // cannot be zero cell wouldn't be below zero
+		            }
+		        }
 
-                forAll(facesToPassFluidThrough, fi)
-                {
-                    const label facei = facesToPassFluidThrough[fi];
-                    scalar fluidToPassThroughFace =
-                        fluidToPassOn*mag(phi[fi]*dt)/dVftot;
+		        forAll(facesToPassFluidThrough, fi)
+		        {
+		            const label facei = facesToPassFluidThrough[fi];
+		            scalar fluidToPassThroughFace =
+		                fluidToHoldBack*mag(phi[fi]*dt)/dVftot;
 
-                    nFacesToPassFluidThrough +=
-                        pos0(dVfmax[fi] - fluidToPassThroughFace);
+		            nFacesToPassFluidThrough +=
+		                pos0(dVfmax[fi] - fluidToPassThroughFace);
 
-                    fluidToPassThroughFace =
-                        min(fluidToPassThroughFace, dVfmax[fi]);
+		            fluidToPassThroughFace =
+		                min(fluidToPassThroughFace, dVfmax[fi]);
 
-                    scalar dVff = faceValue(dVf, facei);
-                    dVff += sign(phi[fi])*fluidToPassThroughFace;
-                    setFaceValue(dVf, facei, dVff);
+		            scalar dVff = faceValue(dVf, facei);
+		            dVff -= sign(phi[fi])*fluidToPassThroughFace;
+		            setFaceValue(dVf, facei, dVff);
 
-                    if (firstLoop)
-                    {
-                        checkIfOnProcPatch(facei);
-                        correctedFaces.append(facei);
-                    }
-                }
+		            if (firstLoop)
+		            {
+		                checkIfOnProcPatch(facei);
+		                correctedFaces.append(facei);
+		            }
+		        }
 
-                firstLoop = false;
-                alpha1New = (alpha1[celli]*rdT + Su[celli] - netFlux(dVf, celli)/Vi*rdT)/(rdT-Sp[celli]);
-                alphaOvershoot = alpha1New - 1.0;
-                fluidToPassOn = alphaOvershoot*Vi;
+		        firstLoop = false;
+		        alpha1New =
+                    (alpha1[celli]*rdT + Su[celli] - netFlux(dVf, celli)/Vi*rdT)
+                   /(rdT - Sp[celli]);
+		        alphaUndershoot =  mag(alpha1New)*pos0(-alpha1New);
 
-            }
+		        fluidToHoldBack = alphaUndershoot*Vi;
+		    }
         }
     }
 }
@@ -982,7 +994,7 @@ void Foam::advection::isoAdvector::calcFaceFlux()
 
                 const scalar Un0 = UInterp.interpolate(surf_().centre()[own], own) & n0;
 
-                dVf_[faceI] =  advectFace_.timeIntegratedFlux
+                dVf_[faceI] =  advectFace_.timeIntegratedFaceFlux
                 (
                     faceI,
                     surf_().centre()[own],
@@ -1004,7 +1016,7 @@ void Foam::advection::isoAdvector::calcFaceFlux()
 
                 const scalar Un0 = UInterp.interpolate(surf_().centre()[nei], nei) & n0;
 
-                dVf_[faceI] =  advectFace_.timeIntegratedFlux
+                dVf_[faceI] =  advectFace_.timeIntegratedFaceFlux
                 (
                     faceI,
                     surf_().centre()[nei],

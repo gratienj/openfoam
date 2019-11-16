@@ -161,7 +161,7 @@ class cutFaceAdvect
         );
 
         //- Calculate time integrated flux for a face
-        scalar timeIntegratedFlux
+        scalar timeIntegratedFaceFlux
         (
             const label faceI,
             const vector& x0,
@@ -173,7 +173,7 @@ class cutFaceAdvect
         );
 
         //- Calculate time integrated flux for a face
-        scalar timeIntegratedFlux
+        scalar timeIntegratedFaceFlux
         (
             const label faceI,
             const scalarField& times,

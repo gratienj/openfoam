@@ -138,6 +138,10 @@ public:
 
     //- Construct from fvMesh
     cutFace(const fvMesh& mesh);
+
+    // Static data
+  
+    static int debug;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
