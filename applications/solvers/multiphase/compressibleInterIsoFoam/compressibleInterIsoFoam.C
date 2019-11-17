@@ -128,8 +128,8 @@ int main(int argc, char *argv[])
                         << " s" << endl;
 
                     // gets recompute by surfaces forces
-                    // gh = (g & mesh.C()) - ghRef;
-                    // ghf = (g & mesh.Cf()) - ghRef;
+                    gh = (g & mesh.C()) - ghRef;
+                    ghf = (g & mesh.Cf()) - ghRef;
                 }
 
                 if ((mesh.changing() && correctPhi))
