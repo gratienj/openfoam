@@ -6,7 +6,9 @@
     }
 
     // Updating alpha1
-    advector.advect();
+    zeroField Su;
+    zeroField Sp;
+    advector.advect(Sp,Su);
 
     // Making U absolute again after advection step
     if (mesh.moving())

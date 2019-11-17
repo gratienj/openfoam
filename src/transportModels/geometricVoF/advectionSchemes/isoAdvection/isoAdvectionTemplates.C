@@ -111,7 +111,7 @@ void Foam::isoAdvection::setFaceValue
 }
 
 template < class SpType, class SuType >
-void Foam::isoAdvection::boundAlpha
+void Foam::isoAdvection::limitFluxes
 (
     const SpType& Sp,
     const SuType& Su
@@ -123,7 +123,6 @@ void Foam::isoAdvection::boundAlpha
     scalar maxAlphaMinus1 = gMax(alpha1_) - 1;      // max(alphaNew - 1);
     scalar minAlpha = gMin(alpha1_);           // min(alphaNew);
     const label nOvershoots = 20;         // sum(pos0(alphaNew - 1 - aTol));
-    cellIsBounded_ = false;
 
     const labelList& owner = mesh_.owner();
     const labelList& neighbour = mesh_.neighbour();
@@ -141,7 +140,6 @@ void Foam::isoAdvection::boundAlpha
         {
             DebugInfo << "boundAlpha... " << endl;
 
-            // surfaceScalarField dVfcorrected("dVfcorrected", dVf_);
             DynamicList<label> correctedFaces(3*nOvershoots);
             dVfcorrectionValues = dimensionedScalar("0",dimVolume,0.0);
             boundFlux(alpha1In_, dVfcorrectionValues, correctedFaces,Sp,Su);
@@ -247,8 +245,6 @@ void Foam::isoAdvection::boundFlux
                 facesToPassFluidThrough.clear();
                 dVfmax.clear();
                 phi.clear();
-
-                cellIsBounded_.set(celli);
 
                 // Find potential neighbour cells to pass surplus phase to
                 setDownwindFaces(celli, downwindFaces);
@@ -361,12 +357,6 @@ void Foam::isoAdvection::advect(const SpType& Sp, const SuType& Su)
         alpha1In_ *= (mesh_.Vsc0()/mesh_.Vsc());
     }
 
-    // limitFluxes
-    // (
-    //     zeroField(),
-    //     zeroField()
-    // );
-
     // Advect the free surface
     alpha1_.primitiveFieldRef() =
     (
@@ -377,7 +367,7 @@ void Foam::isoAdvection::advect(const SpType& Sp, const SuType& Su)
     alpha1_.correctBoundaryConditions();
 
     // Adjust dVf for unbounded cells
-    boundAlpha
+    limitFluxes
     (
         Sp,
         Su
@@ -394,11 +384,12 @@ void Foam::isoAdvection::advect(const SpType& Sp, const SuType& Su)
 
     // Write surface cell set and bound cell set if required by user
     writeSurfaceCells();
-    writeBoundedCells();
 
     advectionTime_ += (mesh_.time().elapsedCpuTime() - advectionStartTime);
     Info << "isoAdvection: time consumption = "
         << label(100*advectionTime_/(mesh_.time().elapsedCpuTime() + SMALL))
         << "%" << endl;
+
+    alphaPhi_ = dVf_/mesh_.time().deltaT();
 }
 // ************************************************************************* //

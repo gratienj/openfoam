@@ -91,11 +91,8 @@ surfaceScalarField rhoPhi
 volScalarField dgdt(alpha1*fvc::div(phi));
 
 #include "createAlphaFluxes.H"
-// autoPtr<advectionSchemes> advector
-// (
-//     advectionSchemes::New(alpha1,phi,U)
-// );
-Foam::advection::isoAdvector advector(alpha1,phi,U);
+
+Foam::isoAdvection advector(alpha1,phi,U);
 // Construct compressible turbulence model
 compressibleInterPhaseTransportModel turbulence
 (

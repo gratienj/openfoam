@@ -17,10 +17,6 @@ reconstructionSchemes/isoSchemes/isoAlpha/isoAlpha.C
 reconstructionSchemes/plicSchemes/gradAlpha/gradAlpha.C
 reconstructionSchemes/plicSchemes/plicRDF/plicRDF.C
 
-advectionSchemes/newAdvectionSchemes.C
-advectionSchemes/advectionSchemes.C
-advectionSchemes/isoAdvector/isoAdvector.C
-
 advectionSchemes/isoAdvection/isoAdvection.C
 
 LIB = $(FOAM_LIBBIN)/libgeometricVoF
