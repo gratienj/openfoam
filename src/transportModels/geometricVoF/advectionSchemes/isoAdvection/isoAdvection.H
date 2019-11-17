@@ -58,6 +58,7 @@ SourceFiles
 #include "fvMesh.H"
 #include "volFieldsFwd.H"
 #include "surfaceFields.H"
+#include "fvc.H"
 #include "className.H"
 #include "reconstructionSchemes.H"
 #include "cutFaceAdvect.H"
@@ -106,6 +107,9 @@ class isoAdvection
         //- Face volumetric water transport
         surfaceScalarField dVf_;
 
+        //- Face volumetric transport
+        surfaceScalarField alphaPhi_;
+
         //- Time spent performing interface advection
         scalar advectionTime_;
 
@@ -122,12 +126,6 @@ class isoAdvection
             //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
             scalar surfCellTol_;
 
-            //- Switch controlling whether to use isoface normals for interface
-            //  orientation (default corresponding to false) to base it on
-            //  a smoothed gradient of alpha calculation (giving better results
-            //  on tri on tet meshes).
-            bool gradAlphaBasedNormal_;
-
             //- Print isofaces in a <case>/isoFaces/isoFaces_#N.vtk files.
             //  Intended for debugging
             bool writeIsoFacesToFile_;
@@ -142,12 +140,6 @@ class isoAdvection
 
             //- An isoCutFace object to get access to its face cutting functionality
             cutFaceAdvect advectFace_;
-
-            //- Cells that have been touched by the bounding step
-            bitSet cellIsBounded_;
-
-            //- True for all surface cells and their neighbours
-            bitSet checkBounding_;
 
             //- Storage for boundary faces downwind to a surface cell
             DynamicLabelList bsFaces_;
@@ -196,9 +188,9 @@ class isoAdvection
                 DynamicLabelList& downwindFaces
             ) const;
 
-            // boundAlpha
+            // limitFluxes
             template < class SpType, class SuType >
-            void boundAlpha
+            void limitFluxes
             (
                 const SpType& Sp,
                 const SuType& Su
@@ -242,15 +234,6 @@ class isoAdvection
                 bsx0_.clear();
                 bsn0_.clear();
                 bsUn0_.clear();
-
-                if (mesh_.topoChanging())
-                {
-                    // Introduced resizing to cope with changing meshes
-                    checkBounding_.resize(mesh_.nCells());
-                    cellIsBounded_.resize(mesh_.nCells());
-                }
-                checkBounding_ = false;
-                cellIsBounded_ = false;
 
             }
 
@@ -343,9 +326,6 @@ public:
             //- Return cellSet of surface cells
             void writeSurfaceCells() const;
 
-            //- Return cellSet of bounded cells
-            void writeBoundedCells() const;
-
             //- Return mass flux
             tmp<surfaceScalarField> getRhoPhi
             (
@@ -362,6 +342,30 @@ public:
                     )
                 );
             }
+
+            //- Return mass flux
+            tmp<surfaceScalarField> getRhoPhi
+            (
+                const volScalarField& rho1,
+                const volScalarField& rho2
+            )
+            {
+                return tmp<surfaceScalarField>
+                (
+                new surfaceScalarField
+                (
+                    "rhoPhi",
+                    fvc::interpolate(rho1 - rho2)*alphaPhi_
+                    + fvc::interpolate(rho2)*phi_
+                )
+                );
+            }
+
+            const surfaceScalarField& alphaPhi() const
+            {
+                return alphaPhi_;
+            }
+
 
             scalar advectionTime() const
             {

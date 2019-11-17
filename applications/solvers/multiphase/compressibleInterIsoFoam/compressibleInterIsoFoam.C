@@ -50,7 +50,7 @@ Description
 #include "CorrectPhi.H"
 #include "fvcSmooth.H"
 
-#include "isoAdvector.H"
+#include "isoAdvection.H"
 #include "twoPhaseMixtureThermo.H"
 
 
@@ -95,7 +95,6 @@ int main(int argc, char *argv[])
         // and used in correctPhi to ensure the corrected phi has the
         // same divergence
         volScalarField divU("divU0", fvc::div(fvc::absolute(phi, U)));
-        volScalarField divUp("divUp", fvc::div(fvc::absolute(phi, U), p));
 
         #include "CourantNo.H"
         #include "alphaCourantNo.H"

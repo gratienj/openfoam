@@ -74,21 +74,31 @@ Foam::isoAdvection::isoAdvection
         mesh_,
         dimensionedScalar(dimVol, Zero)
     ),
+    alphaPhi_
+    (
+        IOobject
+        (
+            "alphaPhi_",
+            mesh_.time().timeName(),
+            mesh_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh_,
+        dimensionedScalar(dimVol/dimTime, Zero)
+    ),
     advectionTime_(0),
 
     // Tolerances and solution controls
     nAlphaBounds_(dict_.lookupOrDefault<label>("nAlphaBounds", 3)),
     isoFaceTol_(dict_.lookupOrDefault<scalar>("isoFaceTol", 1e-8)),
     surfCellTol_(dict_.lookupOrDefault<scalar>("surfCellTol", 1e-8)),
-    gradAlphaBasedNormal_(dict_.lookupOrDefault("gradAlphaNormal", false)),
     writeIsoFacesToFile_(dict_.lookupOrDefault("writeIsoFaces", false)),
 
     // Cell cutting data
     surfCells_(label(0.2*mesh_.nCells())),
     surf_(reconstructionSchemes::New(alpha1_, phi_, U_, dict_)),
     advectFace_(alpha1.mesh(),alpha1),
-    cellIsBounded_(mesh_.nCells(), false),
-    checkBounding_(mesh_.nCells(), false),
     bsFaces_(label(0.2*mesh_.nBoundaryFaces())),
     bsx0_(bsFaces_.size()),
     bsn0_(bsFaces_.size()),
@@ -98,8 +108,7 @@ Foam::isoAdvection::isoAdvection
     procPatchLabels_(mesh_.boundary().size()),
     surfaceCellFacesOnProcPatches_(0)
 {
-//    isoCutCell::debug = debug;
-//    isoCutFace::debug = debug;
+   cutFaceAdvect::debug = debug;
 
     // Prepare lists used in parallel runs
     if (Pstream::parRun())
@@ -162,8 +171,6 @@ void Foam::isoAdvection::timeIntegratedFlux()
     // Get necessary mesh data
     const cellList& cellFaces = mesh_.cells();
     const labelList& own = mesh_.faceOwner();
-    const labelList& nei = mesh_.faceNeighbour();
-    const labelListList& cellCells = mesh_.cellCells();
 
 
     // Storage for isoFace points. Only used if writeIsoFacesToFile_
@@ -177,11 +184,9 @@ void Foam::isoAdvection::timeIntegratedFlux()
         if (mag(surf_->normal()[celli]) != 0)
         {
 
-
             // This is a surface cell, increment counter, append and mark cell    
             nSurfaceCells++;
             surfCells_.append(celli);
-            checkBounding_[celli] = true;
 
             DebugInfo
                 << "\n------------ Cell " << celli << " with alpha1 = "
@@ -214,7 +219,6 @@ void Foam::isoAdvection::timeIntegratedFlux()
                 if (mesh_.isInternalFace(facei))
                 {
                     bool isDownwindFace = false;
-                    label otherCell = -1;
 
                     if (celli == own[facei])
                     {
@@ -222,8 +226,6 @@ void Foam::isoAdvection::timeIntegratedFlux()
                         {
                             isDownwindFace = true;
                         }
-
-                        otherCell = nei[facei];
                     }
                     else
                     {
@@ -231,8 +233,6 @@ void Foam::isoAdvection::timeIntegratedFlux()
                         {
                             isDownwindFace = true;
                         }
-
-                        otherCell = own[facei];
                     }
 
                     if (isDownwindFace)
@@ -249,27 +249,6 @@ void Foam::isoAdvection::timeIntegratedFlux()
                         );
                     }
 
-                    // We want to check bounding of neighbour cells to
-                    // surface cells as well:
-                    checkBounding_[otherCell] = true;
-
-                    // Also check neighbours of neighbours.
-                    // Note: consider making it a run time selectable
-                    // extension level (easily done with recursion):
-                    // 0 - only neighbours
-                    // 1 - neighbours of neighbours
-                    // 2 - ...
-                    // Note: We will like all point neighbours to interface cells to
-                    // be checked. Especially if the interface leaves a cell during
-                    // a time step, it may enter a point neighbour which should also
-                    // be treated like a surface cell. Its interface normal should
-                    // somehow be inherrited from its upwind cells from which it
-                    // receives the interface.
-                    const labelList& nNeighbourCells = cellCells[otherCell];
-                    forAll(nNeighbourCells, ni)
-                    {
-                        checkBounding_[nNeighbourCells[ni]] = true;
-                    }
                 }
                 else
                 {
@@ -575,34 +554,6 @@ void Foam::isoAdvection::writeSurfaceCells() const
         cSet.write();
     }
 }
-
-
-void Foam::isoAdvection::writeBoundedCells() const
-{
-    if (!mesh_.time().writeTime()) return;
-
-    if (dict_.lookupOrDefault("writeBoundedCells", false))
-    {
-        cellSet cSet
-        (
-            IOobject
-            (
-                "boundedCells",
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::NO_READ
-            )
-        );
-
-        for (const label celli : cellIsBounded_)
-        {
-            cSet.insert(celli);
-        }
-
-        cSet.write();
-    }
-}
-
 
 void Foam::isoAdvection::writeIsoFaces
 (
