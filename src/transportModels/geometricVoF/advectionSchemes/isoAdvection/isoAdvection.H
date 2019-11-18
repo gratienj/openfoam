@@ -8,6 +8,7 @@
     Copyright (C) 2016-2017 DHI
     Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
     Modified code Copyright (C) 2018 Johan Roenby
+    Modified code Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,6 +46,7 @@ Description
         \endverbatim
 
     Original code supplied by Johan Roenby, DHI (2016)
+    Modified Henning Scheufler, DLR
 
 SourceFiles
     isoAdvection.C
@@ -261,10 +263,11 @@ class isoAdvection
         // Parallel run handling functions
 
             //- Synchronize dVf across processor boundaries using upwind value
-            void syncProcPatches
+            DynamicList<label> syncProcPatches
             (
                 surfaceScalarField& dVf,
-                const surfaceScalarField& phi
+                const surfaceScalarField& phi,
+                bool returnSyncedFaces=false
             );
 
             //- Check if the face is on processor patch and append it to the

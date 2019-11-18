@@ -8,6 +8,7 @@
     Copyright (C) 2016-2017 DHI
     Modified code Copyright (C) 2016-2017 OpenCFD Ltd.
     Modified code Copyright (C) 2019 Johan Roenby
+    Modified code Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -388,12 +389,14 @@ Foam::scalar Foam::isoAdvection::netFlux
 }
 
 
-void Foam::isoAdvection::syncProcPatches
+Foam::DynamicList<Foam::label>  Foam::isoAdvection::syncProcPatches
 (
     surfaceScalarField& dVf,
-    const surfaceScalarField& phi
+    const surfaceScalarField& phi,
+    bool returnSyncedFaces
 )
 {
+    DynamicLabelList syncedFaces(0);
     const polyBoundaryMesh& patches = mesh_.boundaryMesh();
 
     if (Pstream::parRun())
@@ -439,6 +442,15 @@ void Foam::isoAdvection::syncProcPatches
             List<scalar> nbrdVfs;
 
             fromNeighb >> faceIDs >> nbrdVfs;
+            if(returnSyncedFaces)
+            {
+                List <label> syncedFaceI(faceIDs);
+                for(label& faceI: syncedFaceI)
+                {
+                    faceI += procPatch.start();
+                }
+                syncedFaces.append(syncedFaceI);
+            }
 
             if (debug)
             {
@@ -482,6 +494,8 @@ void Foam::isoAdvection::syncProcPatches
             surfaceCellFacesOnProcPatches_[patchi].clear();
         }
     }
+
+    return syncedFaces;
 }
 
 

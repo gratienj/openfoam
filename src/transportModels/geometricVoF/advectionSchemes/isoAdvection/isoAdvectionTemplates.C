@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 DHI
     Modified code Copyright (C) 2016-2017 OpenCFD Ltd.
+    Modified code Copyright (C) 2019 DLR
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -124,8 +125,8 @@ void Foam::isoAdvection::limitFluxes
     scalar minAlpha = gMin(alpha1_);           // min(alphaNew);
     const label nOvershoots = 20;         // sum(pos0(alphaNew - 1 - aTol));
 
-    const labelList& owner = mesh_.owner();
-    const labelList& neighbour = mesh_.neighbour();
+    const labelList& owner = mesh_.faceOwner();
+    const labelList& neighbour = mesh_.faceNeighbour();
 
     Info << "isoAdvection: Before conservative bounding: min(alpha) = "
         << minAlpha << ", max(alpha) = 1 + " << maxAlphaMinus1 << endl;
@@ -144,7 +145,7 @@ void Foam::isoAdvection::limitFluxes
             dVfcorrectionValues = dimensionedScalar("0",dimVolume,0.0);
             boundFlux(alpha1In_, dVfcorrectionValues, correctedFaces,Sp,Su);
 
-            syncProcPatches(dVfcorrectionValues, phi_);
+            correctedFaces.append(syncProcPatches(dVfcorrectionValues, phi_,true));
 
             labelHashSet alreadyUpdated;
             forAll(correctedFaces, fi)
@@ -152,7 +153,7 @@ void Foam::isoAdvection::limitFluxes
                 label facei = correctedFaces[fi];
                 if(alreadyUpdated.insert(facei))
                 {
-
+                    checkIfOnProcPatch(facei);
                     const label own = owner[facei];
                     const label nei = neighbour[facei];
 
@@ -192,6 +193,9 @@ void Foam::isoAdvection::limitFluxes
                 << " with min(alpha1_) = " << minAlpha << endl;
         }
     }
+
+    alpha1_.correctBoundaryConditions();
+
 }
 
 
