@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,6 +49,24 @@ SourceFiles
 
 namespace Foam
 {
+
+//- Zip together sphericalTensor field from components
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void zip
+(
+    GeometricField<SphericalTensor<Cmpt>, PatchField, GeoMesh>& result,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& ii
+);
+
+
+//- Unzip sphericalTensor field into components
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void unzip
+(
+    const GeometricField<SphericalTensor<Cmpt>, PatchField, GeoMesh>& input,
+    GeometricField<Cmpt, PatchField, GeoMesh>& ii
+);
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

@@ -5,8 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Released 2004-2011 OpenCFD Ltd.
-    Copyright (C) 2011 OpenFOAM Foundation
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,31 +23,70 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Application
-    sphericalTensorFieldTest
-
 \*---------------------------------------------------------------------------*/
 
-#include "tensorField.H"
+#include "vector2DField.H"
 
-using namespace Foam;
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-int main(int argc, char *argv[])
+template<class Cmpt>
+void Foam::zip
+(
+    Field<Vector2D<Cmpt>>& result,
+    const UList<Cmpt>& x,
+    const UList<Cmpt>& y
+)
 {
-    scalarField f1(1, 1);
-    sphericalTensorField sf1(1, 1);
-    sphericalTensorField sf2(1, 2);
-    tensorField tf1(1, tensor::one);
+    typedef Vector2D<Cmpt> value_type;
 
-    Info<< (tf1 & sf2) << endl;
+    const label len = result.size();
 
-    Info<< f1*sf1 << " " << sf1*3 << endl;
+    #ifdef FULLDEBUG
+    if (len != x.size() || len != y.size())
+    {
+        FatalErrorInFunction
+            << "Components sizes do not match: " << len << " ("
+            << x.size() << ' '
+            << y.size() << ')'
+            << nl
+            << abort(FatalError);
+    }
+    #endif
 
-    Info<< ((sf1 + sf2) & (sf1 + sf2)) << endl;
+    for (label i=0; i < len; ++i)
+    {
+        result[i] = value_type(x[i], y[i]);
+    }
+}
 
-    return 0;
+
+template<class Cmpt>
+void Foam::unzip
+(
+    const UList<Vector2D<Cmpt>>& input,
+    Field<Cmpt>& x,
+    Field<Cmpt>& y
+)
+{
+    const label len = input.size();
+
+    #ifdef FULLDEBUG
+    if (len != x.size() || len != y.size())
+    {
+        FatalErrorInFunction
+            << "Components sizes do not match: " << len << " ("
+            << x.size() << ' '
+            << y.size() << ')'
+            << nl
+            << abort(FatalError);
+    }
+    #endif
+
+    for (label i=0; i < len; ++i)
+    {
+        x[i] = input[i].x();
+        y[i] = input[i].y();
+    }
 }
 
 

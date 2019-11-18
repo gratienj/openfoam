@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,8 +28,13 @@ License
 Description
     Foam::vector2DField
 
+Note
+    There is no 'zip(const scalarField& x, const scalarField& y)'
+    function since it would not be easily distinguishable
+    between vector2DField and complexField.
+
 SourceFiles
-    vector2DField.H
+    vector2DFieldTemplates.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -40,6 +46,39 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+namespace Foam
+{
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+//- Zip together 2D vector field from components
+template<class Cmpt>
+void zip
+(
+    Field<Vector2D<Cmpt>>& result,
+    const UList<Cmpt>& x,
+    const UList<Cmpt>& y
+);
+
+//- Unzip 2D vector field into components
+template<class Cmpt>
+void unzip
+(
+    const UList<Vector2D<Cmpt>>& input,
+    Field<Cmpt>& x,
+    Field<Cmpt>& y
+);
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+    #include "vector2DFieldTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

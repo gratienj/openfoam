@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,6 +50,43 @@ SourceFiles
 namespace Foam
 {
 
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+//- Zip together symmTensor field from components
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void zip
+(
+    GeometricField<SymmTensor<Cmpt>, PatchField, GeoMesh>& result,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& xx,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& xy,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& xz,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& yy,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& yz,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& zz
+);
+
+//- Unzip symmTensor field into components
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void unzip
+(
+    const GeometricField<SymmTensor<Cmpt>, PatchField, GeoMesh>& input,
+    GeometricField<Cmpt, PatchField, GeoMesh>& xx,
+    GeometricField<Cmpt, PatchField, GeoMesh>& xy,
+    GeometricField<Cmpt, PatchField, GeoMesh>& xz,
+    GeometricField<Cmpt, PatchField, GeoMesh>& yy,
+    GeometricField<Cmpt, PatchField, GeoMesh>& yz,
+    GeometricField<Cmpt, PatchField, GeoMesh>& zz
+);
+
+//- Extract a symmTensor field diagonal
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void unzipDiag
+(
+    const GeometricField<SymmTensor<Cmpt>, PatchField, GeoMesh>& input,
+    GeometricField<Vector<Cmpt>, PatchField, GeoMesh>& result
+);
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 UNARY_FUNCTION(symmTensor, vector, sqr, sqr)
@@ -65,7 +103,7 @@ UNARY_FUNCTION(symmTensor, symmTensor, cof, cof)
 UNARY_FUNCTION(symmTensor, symmTensor, inv, inv)
 
 
-// * * * * * * * * * * * * * * * global operators  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
 
 UNARY_OPERATOR(vector, symmTensor, *, hdual, transform)
 

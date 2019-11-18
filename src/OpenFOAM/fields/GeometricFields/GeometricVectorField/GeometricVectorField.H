@@ -5,8 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Released 2004-2011 OpenCFD Ltd.
-    Copyright (C) 2011 OpenFOAM Foundation
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,38 +23,60 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Application
-    symmTensorFieldTest
+InClass
+    Foam::GeometricVectorField
+
+Description
+    Vector specific part of the implementation of GeometricField.
+
+SourceFiles
+    GeometricVectorField.C
 
 \*---------------------------------------------------------------------------*/
 
-#include "tensorField.H"
+#ifndef GeometricVectorField_H
+#define GeometricVectorField_H
 
-using namespace Foam;
+#include "GeometricScalarField.H"
+#include "DimensionedScalarField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-int main(int argc, char *argv[])
+namespace Foam
 {
-    scalarField f1(1, 1);
-    symmTensorField sf1(1, symmTensor::one);
-    symmTensorField sf2(1, symmTensor::one);
-    tensorField tf1(1, tensor(1, 2, 3, 4, 5, 6, 7, 8, 9));
 
-    Info<< (tf1 & sf2) << endl;
+// * * * * * * * * * * * * * * * Global Functions * * * * * * * * * * * * * * //
 
-    Info<< f1*sf1 << " " << sf1*3 << endl;
+//- Compose a vector field from components
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void zip
+(
+    GeometricField<Vector<Cmpt>, PatchField, GeoMesh>& result,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& x,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& y,
+    const GeometricField<Cmpt, PatchField, GeoMesh>& z
+);
 
-    Info<< ((sf1 + sf2) & (sf1 + sf2)) << endl;
+//- Unzip vector field into components
+template<class Cmpt, template<class> class PatchField, class GeoMesh>
+void unzip
+(
+    const GeometricField<Vector<Cmpt>, PatchField, GeoMesh>& input,
+    GeometricField<Cmpt, PatchField, GeoMesh>& x,
+    GeometricField<Cmpt, PatchField, GeoMesh>& y,
+    GeometricField<Cmpt, PatchField, GeoMesh>& z
+);
 
-    vectorField vf1(1, vector::one);
-    Info<< sqr(vf1) << endl;
-    Info<< pow<vector, 2>(vf1) << endl;
+} // End namespace Foam
 
-    Info<< symm(tf1) << endl;
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    return 0;
-}
+#ifdef NoRepository
+    #include "GeometricVectorField.C"
+#endif
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
 
 // ************************************************************************* //
