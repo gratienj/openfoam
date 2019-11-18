@@ -6,8 +6,7 @@
     }
 
     // Updating alpha1
-    zeroField Su;
-    zeroField Sp;
+    #include "alphaSuSp.H"
     advector.advect(Sp,Su);
 
     // Making U absolute again after advection step
