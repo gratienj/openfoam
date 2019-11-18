@@ -128,6 +128,7 @@ int main(int argc, char *argv[])
                     if(mesh.topoChanging())
                     {
                         advector.surf().mapAlphaField();
+                        alpha2 = 1.0 - alpha1;
                         rho == alpha1*rho1 + alpha2*rho2;
                         rho.oldTime() = rho;
                     }
