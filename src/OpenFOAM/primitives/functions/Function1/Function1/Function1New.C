@@ -38,11 +38,25 @@ Foam::autoPtr<Foam::Function1<Type>> Foam::Function1<Type>::New
     const word& redirectType
 )
 {
-    if (dict.isDict(entryName))
-    {
-        const dictionary& coeffsDict(dict.subDict(entryName));
+    word modelType(redirectType);
 
-        const word Function1Type
+    const entry* eptr = dict.findEntry(entryName, keyType::LITERAL);
+
+    if (!eptr)
+    {
+        if (modelType.empty())
+        {
+            FatalIOErrorInFunction(dict)
+                << "No Function1 dictionary entry: "
+                << entryName << nl << nl
+                << exit(FatalIOError);
+        }
+    }
+    else if (eptr->isDict())
+    {
+        const dictionary& coeffsDict = eptr->dict();
+
+        coeffsDict.readEntry
         (
             redirectType.empty()
           ? coeffsDict.get<word>("type")

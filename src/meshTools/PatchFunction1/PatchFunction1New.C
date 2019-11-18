@@ -40,9 +40,18 @@ Foam::autoPtr<Foam::PatchFunction1<Type>> Foam::PatchFunction1<Type>::New
 {
     if (dict.isDict(entryName))
     {
-        const dictionary& coeffsDict(dict.subDict(entryName));
+        FatalIOErrorInFunction(dict)
+            << "No PatchFunction1 dictionary entry: "
+            << entryName << nl << nl
+            << exit(FatalIOError);
 
-        const word modelType(coeffsDict.getWord("type"));
+        return nullptr;
+    }
+    else if (eptr->isDict())
+    {
+        const dictionary& coeffsDict = eptr->dict();
+
+        const word modelType(coeffsDict.getWord("type", keyType::LITERAL));
 
         auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
 
