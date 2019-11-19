@@ -28,6 +28,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Switch.H"
+#include "scalar.H"
 #include "error.H"
 #include "dictionary.H"
 #include "IOstreams.H"
@@ -49,7 +50,7 @@ static const char* names[9] =
     "false", "true",
     "no",    "yes",
     "off",   "on",
-    "none",  "(unused)",
+    "none",  "any",
     "invalid"
 };
 
@@ -59,7 +60,7 @@ static const char* names[9] =
 
 const char* Foam::Switch::name(const bool b) noexcept
 {
-    return names[(b ? 0 : 1)];
+    return names[(b ? 1 : 0)];
 }
 
 
@@ -88,10 +89,11 @@ Foam::Switch::switchType Foam::Switch::parse
             if (str == names[switchType::ON]) return switchType::ON;
             break;
         }
-        case 3: // (off|yes)
+        case 3: // (off|yes|any)
         {
             if (str == names[switchType::OFF]) return switchType::OFF;
             if (str == names[switchType::YES]) return switchType::YES;
+            if (str == names[switchType::ANY]) return switchType::ANY;
             break;
         }
         case 4: // (none|true)
@@ -130,6 +132,18 @@ Foam::Switch Foam::Switch::getOrAddToDict
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::Switch::Switch(const float val, const float tol)
+:
+    switch_((mag(val) > tol) ? switchType::TRUE : switchType::FALSE)
+{}
+
+
+Foam::Switch::Switch(const double val, const double tol)
+:
+    switch_((mag(val) > tol) ? switchType::TRUE : switchType::FALSE)
+{}
+
 
 Foam::Switch::Switch
 (
