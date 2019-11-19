@@ -308,7 +308,7 @@ public:
 
         // Access functions
 
-            //- Return alpha field
+            //- Return reconstructionSchemes
             reconstructionSchemes& surf()
             {
                 return surf_();
@@ -364,12 +364,13 @@ public:
                 );
             }
 
+            //- reference to alphaPhi
             const surfaceScalarField& alphaPhi() const
             {
                 return alphaPhi_;
             }
 
-
+            //- time spend in the advection step
             scalar advectionTime() const
             {
                 return advectionTime_;

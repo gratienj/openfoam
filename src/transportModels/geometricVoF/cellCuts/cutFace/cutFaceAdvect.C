@@ -197,9 +197,8 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFaceFlux
 )
 {
     clearStorage();
-    // Note: this function is often called within a loop. Consider passing mesh
-    // faces, volumes and points as arguments instead of accessing here
 
+/* Temporarily taken out
     // Treating rare cases where isoface normal is not calculated properly
     if (mag(n0) < 0.5)
     {
@@ -220,7 +219,7 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFaceFlux
         }
 
         return min(alphaf * phi * dt, waterInUpwindCell);
-    }
+    }*/
 
     // Find sorted list of times where the isoFace will arrive at face points
     // given initial position x0 and velocity Un0*n0
@@ -234,9 +233,9 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFaceFlux
         // Here we estimate time of arrival to the face points from their normal
         // distance to the initial surface and the surface normal velocity
 
-        forAll(f, i)
+        for (const scalar fi : f)
         {
-            scalar value = ((mesh_.points()[f[i]] - x0) & n0) / Un0;
+            scalar value = ((mesh_.points()[fi] - x0) & n0) / Un0;
             if (mag(value) < 10 * SMALL)
             {
                 value = 0;
@@ -320,6 +319,15 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFaceFlux
         calcSubFace(faceI, -n0, x0);
         const scalar alphaf = mag(subFaceArea() / magSf);
 
+        if (debug)
+        {
+            WarningInFunction
+                << "Un0 is almost zero (" << Un0
+                << ") - calculating dVf on face " << faceI
+                << " using subFaceFraction giving alphaf = " << alphaf
+                << endl;
+        }
+
         return phi * dt * alphaf;
     }
 }
@@ -343,9 +351,9 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedFaceFlux
         // Here we estimate time of arrival to the face points from their normal
         // distance to the initial surface and the surface normal velocity
 
-        forAll(times, i)
+        for (const scalar ti : times)
         {
-            pTimes_.append(times[i]);
+            pTimes_.append(ti);
         }
 
         scalar dVf = 0;
@@ -458,9 +466,9 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     {
         scalar prevTime = time;
         const scalar tSmall = max(1e-6 * dt, 10 * SMALL);
-        forAll(order, ti)
+
+        for (const scalar timeI : order)
         {
-            const scalar timeI = pTimes[order[ti]];
             if (timeI > prevTime + tSmall && timeI <= dt)
             {
                 sortedTimes.append(timeI);
@@ -470,9 +478,8 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     }
 
     // Sweeping all quadrilaterals corresponding to the intervals defined above
-    forAll(sortedTimes, ti)
+    for (const scalar newTime : sortedTimes)
     {
-        const scalar newTime = sortedTimes[ti];
         // New face-interface intersection line
         DynamicList<point> newFIIL(3);
         cutPoints(fPts, pTimes, newTime, newFIIL);
@@ -707,9 +714,9 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     {
         scalar prevTime = time;
         const scalar tSmall = max(1e-6 * dt, 10 * SMALL);
-        forAll(order, ti)
+        for (const label oI : order)
         {
-            const scalar timeI = pTimes_[order[ti]];
+            const scalar timeI = pTimes_[oI];
             if (timeI > prevTime + tSmall && timeI <= dt)
             {
                 sortedTimes.append(timeI);
@@ -719,9 +726,8 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     }
 
     // Sweeping all quadrilaterals corresponding to the intervals defined above
-    forAll(sortedTimes, ti)
+    for (const scalar newTime : sortedTimes)
     {
-        const scalar newTime = sortedTimes[ti];
         // New face-interface intersection line
         DynamicList<point> newFIIL(3);
         cutPoints(faceI, newTime, newFIIL);

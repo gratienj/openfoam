@@ -86,10 +86,10 @@ class cutCellPLIC
         //- Cell to cut
         label cellI_;
 
-        //- Isovalue used to cut cell
+        //- normal of the cutting plane
         vector normal_;
 
-        //- Isovalue used to cut cell
+        //- cutvalue used to cut cell
         scalar cutValue_;
 
         //- An cutFacePLIC object to get access to its face cutting functionality
@@ -98,19 +98,19 @@ class cutCellPLIC
         //- List of face centres for CutFaces
         DynamicList<point> cutFaceCentres_;
 
-        //- List of face area vectors for isoCutFaces
+        //- List of face area vectors for PLICCutFaces
         DynamicList<vector> cutFaceAreas_;
 
-        //- Storage for subFace edges belonging to isoFace
+        //- Storage for subFace edges belonging to PLICFace
         DynamicList<DynamicList<point>> plicFaceEdges_;
 
-        //- Points constituting the cell-isosurface intersection (isoface)
+        //- Points constituting the cell-PLICsurface intersection (isoface)
         DynamicList<point> facePoints_;
 
         //- Face centre of the cutFace
         point faceCentre_;
 
-        //- Face normal of the isoface by convention pointing from high to low
+        //- Face normal of the PLICface by convention pointing from high to low
         //- values (i.e. opposite of the gradient vector).
         vector faceArea_;
 
@@ -126,9 +126,9 @@ class cutCellPLIC
 
         //- A cell status label taking one of the values:
         //
-        //  - -1: cell is fully below the isosurface
+        //  - -1: cell is fully below the PLICsurface
         //  -  0: cell is cut
-        //  - +1: cell is fully above the isosurface
+        //  - +1: cell is fully above the PLICsurface
         label cellStatus_;
 
 
@@ -156,13 +156,13 @@ class cutCellPLIC
         //- Returns subCellVolume
         scalar subCellVolume() const;
 
-        //- Returns the points of the cutting isoface
+        //- Returns the points of the cutting PLICface
         const DynamicList<point>& facePoints();
 
-        //- Returns the centre of the cutting isoface
+        //- Returns the centre of the cutting PLICface
         const point& faceCentre() const;
 
-        //- Returns the area normal vector of the cutting isoface
+        //- Returns the area normal vector of the cutting PLICface
         const vector& faceArea() const;
 
         //- Returns cellStatus
