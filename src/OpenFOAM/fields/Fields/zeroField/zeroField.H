@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2017 OpenFOAM Foundation
+    Modified code Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,19 +61,33 @@ public:
     // Constructors
 
         //- Construct null
-        zeroField()
-        {}
+        zeroField() = default;
+
+
+    // Member Functions
+
+        zeroField field() const
+        {
+            return zeroField();
+        }
 
 
     // Member Operators
 
-        inline scalar operator[](const label) const;
+        scalar operator[](const label) const
+        {
+            return scalar(0);
+        }
 
-        inline zeroField field() const;
+        zeroField operator()() const
+        {
+            return zeroField();
+        }
 
-        inline zeroField operator()() const;
-
-        inline zeroField operator-() const;
+        zeroField operator-() const
+        {
+            return zeroField();
+        }
 };
 
 

@@ -27,10 +27,10 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
-
 namespace Foam
 {
+
+// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
 
 inline const oneField& operator*(const oneField& of, const oneField&)
 {
@@ -46,6 +46,5 @@ inline const oneField& operator/(const oneField& of, const oneField&)
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
 
 // ************************************************************************* //
