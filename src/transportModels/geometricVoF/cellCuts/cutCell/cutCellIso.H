@@ -93,7 +93,7 @@ class cutCellIso
         //- Isofunction values at mesh points. f_size() = mesh_.nPoints().
         scalarField& f_;
 
-        //- Isovalue used to cut cell
+        //- cutvalue used to cut cell
         scalar cutValue_;
 
         //- An cutFaceIso object to get access to its face cutting functionality
