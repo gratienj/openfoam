@@ -345,6 +345,15 @@ public:
 };
 
 
+template<class Cmpt>
+class typeOfSolve<Tensor<Cmpt>>
+{
+public:
+
+    typedef Tensor<solveScalar> type;
+};
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
