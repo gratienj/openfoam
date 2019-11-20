@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Modified code Copyright (C) 2016-2018 OpenCFD Ltd.
+    Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -64,6 +64,14 @@ Description
         objectRegistry.
       - \par NO_WRITE
         No automatic write on destruction but can be written explicitly
+
+Note
+    Specifying registered does not result in the IOobject itself being
+    registered. It is only serves as guidance for a regIOobject using it.
+
+See also
+    Foam::objectRegistry
+    Foam::regIOobject
 
 SourceFiles
     IOobject.C
@@ -165,10 +173,10 @@ private:
         //- Write option
         writeOption wOpt_;
 
-        //- Register object created from this IOobject with registry if true
+        //- Should object created with this IOobject be registered?
         bool registerObject_;
 
-        //- Is object same for all processors
+        //- Is object same for all processors?
         bool globalObject_;
 
         //- IOobject state
@@ -227,6 +235,7 @@ public:
         );
 
         //- Create dot-delimited name.group
+        //  If the group is an empty string, it is ignored.
         template<class StringType>
         static inline word groupName(StringType name, const word& group);
 
@@ -363,16 +372,16 @@ public:
             name_ = newName;
         }
 
-        //- Register object created from this IOobject with registry if true
+        //- Should object created with this IOobject be registered?
         inline bool registerObject() const;
 
-        //- Register object created from this IOobject with registry if true
+        //- Should object created with this IOobject be registered?
         inline bool& registerObject();
 
-        //- Is object same for all processors
+        //- Is object same for all processors?
         inline bool globalObject() const;
 
-        //- Is object same for all processors
+        //- Is object same for all processors?
         inline bool& globalObject();
 
         //- The label byte-size, possibly read from the header
@@ -515,7 +524,7 @@ public:
         }
 
 
-    // Member operators
+    // Member Operators
 
         void operator=(const IOobject& io);
 };

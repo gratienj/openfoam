@@ -47,7 +47,7 @@ inline Type& Foam::regIOobject::store(Type* p)
     if (!p)
     {
         FatalErrorInFunction
-            << "object deallocated"
+            << "Object deallocated\n"
             << abort(FatalError);
     }
 
