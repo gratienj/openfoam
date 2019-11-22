@@ -432,7 +432,7 @@ public:
             virtual void write(Ostream&) const;
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const pointPatchField<Type>&){}
         virtual void operator+=(const pointPatchField<Type>&){}
@@ -470,6 +470,16 @@ public:
             Ostream&,
             const pointPatchField<Type>&
         );
+
+
+    // Housekeeping
+
+    // Includes some dummy methods to ensure that various
+    // FieldFieldFunctions will be definable.
+
+        //- Negate the field inplace
+        //  [dummy placeholder for FieldField] (2019-11)
+        void negate() {}
 };
 
 
