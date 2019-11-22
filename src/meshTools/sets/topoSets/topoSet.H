@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Released 2004-2011 OpenCFD Ltd.
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Modified code Copyright (C) 2016-2018 OpenCFD Ltd.
+    Modified code Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,7 +55,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declarations
+// Forward Declarations
 class mapPolyMesh;
 class polyMesh;
 class primitiveMesh;
@@ -109,26 +109,6 @@ protected:
             const label maxLen
         ) const;
 
-
-        //- Helper for constructor - return IOobject in the polyMesh/sets
-        static IOobject findIOobject
-        (
-            const polyMesh& mesh,
-            const word& name,
-            readOption r,
-            writeOption w
-        );
-
-        //- Helper for constructor - return IOobject in the polyMesh/sets
-        static IOobject findIOobject
-        (
-            const Time& runTime,
-            const word& name,
-            readOption r,
-            writeOption w
-        );
-
-
         //- No copy construct
         topoSet(const topoSet&) = delete;
 
@@ -141,11 +121,29 @@ public:
 
     // Static
 
+        //- Debug switch to disallow the use of generic sets
+        static int disallowGenericSets;
+
         //- Name of file set will use.
         static fileName localPath(const polyMesh& mesh, const word& name);
 
-        //- Debug switch to disallow the use of generic sets
-        static int disallowGenericSets;
+        //- Find IOobject in the polyMesh/sets (used as constructor helper)
+        static IOobject findIOobject
+        (
+            const polyMesh& mesh,
+            const word& name,
+            readOption r=MUST_READ,
+            writeOption w=NO_WRITE
+        );
+
+        //- Find IOobject in the polyMesh/sets (used as constructor helper)
+        static IOobject findIOobject
+        (
+            const Time& runTime,
+            const word& name,
+            readOption r=MUST_READ,
+            writeOption w=NO_WRITE
+        );
 
 
     // Declare run-time constructor selection table
