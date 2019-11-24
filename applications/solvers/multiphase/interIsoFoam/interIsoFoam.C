@@ -63,6 +63,7 @@ Description
 #include "fvOptions.H"
 #include "CorrectPhi.H"
 #include "fvcSmooth.H"
+#include "dynamicRefineFvMesh.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -113,7 +114,7 @@ int main(int argc, char *argv[])
         {
             if (pimple.firstIter() || moveMeshOuterCorrectors)
             {
-                if(mesh.dynamic())
+                if(isA<dynamicRefineFvMesh>(mesh))
                 {
                     advector.surf().reconstruct();
                 }
@@ -122,15 +123,19 @@ int main(int argc, char *argv[])
 
                 if (mesh.changing())
                 {
-                    // gets recompute by surfaces forces
+                    
                     gh = (g & mesh.C()) - ghRef;
                     ghf = (g & mesh.Cf()) - ghRef;
-                    if(mesh.topoChanging())
+                    
+                    if(isA<dynamicRefineFvMesh>(mesh))
                     {
                         advector.surf().mapAlphaField();
                         alpha2 = 1.0 - alpha1;
+                        alpha2.correctBoundaryConditions();
                         rho == alpha1*rho1 + alpha2*rho2;
+                        rho.correctBoundaryConditions();
                         rho.oldTime() = rho;
+                        alpha2.oldTime() = alpha2;
                     }
 
                     MRF.update();

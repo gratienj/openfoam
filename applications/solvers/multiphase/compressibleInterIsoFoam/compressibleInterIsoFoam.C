@@ -49,7 +49,7 @@ Description
 #include "fvOptions.H"
 #include "CorrectPhi.H"
 #include "fvcSmooth.H"
-
+#include "dynamicRefineFvMesh.H"
 #include "isoAdvection.H"
 #include "twoPhaseMixtureThermo.H"
 
@@ -112,24 +112,35 @@ int main(int argc, char *argv[])
             {
                 scalar timeBeforeMeshUpdate = runTime.elapsedCpuTime();
 
-                advector.surf().reconstruct();
+                if(isA<dynamicRefineFvMesh>(mesh))
+                {
+                    advector.surf().reconstruct();
+                }
 
                 mesh.update();
 
                 if (mesh.changing())
                 {
-                    MRF.update();
+                    gh = (g & mesh.C()) - ghRef;
+                    ghf = (g & mesh.Cf()) - ghRef;
                     
-                    advector.surf().mapAlphaField();
-                    rho == alpha1*rho1 + alpha2*rho2;
+                    if(isA<dynamicRefineFvMesh>(mesh))
+                    {
+                        advector.surf().mapAlphaField();
+                        alpha2 = 1.0 - alpha1;
+                        alpha2.correctBoundaryConditions();
+                        rho == alpha1*rho1 + alpha2*rho2;
+                        rho.correctBoundaryConditions();
+                        rho.oldTime() = rho;
+                        alpha2.oldTime() = alpha2;
+                    }
+
+                    MRF.update();
 
                     Info<< "Execution time for mesh.update() = "
                         << runTime.elapsedCpuTime() - timeBeforeMeshUpdate
                         << " s" << endl;
 
-                    // gets recompute by surfaces forces
-                    gh = (g & mesh.C()) - ghRef;
-                    ghf = (g & mesh.Cf()) - ghRef;
                 }
 
                 if ((mesh.changing() && correctPhi))
