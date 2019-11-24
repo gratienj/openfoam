@@ -202,6 +202,9 @@ void Foam::reconstruction::gradAlpha::mapAlphaField() const
 
         }
     }
+    alpha1_.correctBoundaryConditions();
+    alpha1_.oldTime () = alpha1_;
+    alpha1_.oldTime().correctBoundaryConditions();
     
 }
 
