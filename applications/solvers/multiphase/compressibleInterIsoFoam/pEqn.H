@@ -50,6 +50,7 @@
                   + fvm::div(phid1, p_rgh) - fvm::Sp(fvc::div(phid1), p_rgh)
                 )
             );
+        p_rghEqnComp1.ref().relax();
 
         p_rghEqnComp2 =
             (
@@ -65,6 +66,7 @@
                  + fvm::div(phid2, p_rgh) - fvm::Sp(fvc::div(phid2), p_rgh)
                )
            );
+        p_rghEqnComp2.ref().relax();
     }
     else
     {
@@ -119,10 +121,11 @@
           - fvm::laplacian(rAUf, p_rgh)
         );
 
-        solve
-        (
-            p_rghEqnComp1() + p_rghEqnComp2() + p_rghEqnIncomp
-        );
+         solve
+         (
+             p_rghEqnComp1() + p_rghEqnComp2() + p_rghEqnIncomp,
+             mesh.solver(p_rgh.select(pimple.finalInnerIter()))
+         );
 
         if (pimple.finalNonOrthogonalIter())
         {

@@ -27,6 +27,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "reconstructionSchemes.H"
+#include "messageStream.H"
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -40,8 +41,14 @@ Foam::reconstructionSchemes::New
     const dictionary& dict
 )
 {
+    if(!dict.found("reconstructionScheme"))
+    {
+        Warning << "Entry '" << "reconstructionScheme" << "' not found in dictionary "
+                << dict.name() << nl
+                << "using default " << endl;
+    }
     const word schemeType(dict.lookupOrDefault<word>("reconstructionScheme","isoAlpha"));
-
+    
     Info<< "Selecting reconstructionScheme: " << schemeType << endl;
 
     auto cstrIter = componentsConstructorTablePtr_->find(schemeType);

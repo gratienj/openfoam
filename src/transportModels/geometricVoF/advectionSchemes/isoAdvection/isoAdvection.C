@@ -312,7 +312,7 @@ void Foam::isoAdvection::timeIntegratedFlux()
 
     writeIsoFaces(isoFacePts);
 
-    Info<< "Number of isoAdvector surface cells = "
+    DebugInfo << "Number of isoAdvector surface cells = "
         << returnReduce(nSurfaceCells, sumOp<label>()) << endl;
 }
 

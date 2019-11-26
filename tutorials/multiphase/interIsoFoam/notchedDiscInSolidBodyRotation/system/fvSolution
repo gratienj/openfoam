@@ -19,7 +19,7 @@ solvers
 {
     "alpha.*"
     {
-        vof2IsoTol      1e-8;
+        isoFaceTol      1e-8;
         surfCellTol     1e-8;
         snapTol         0;
         nAlphaBounds    3;
