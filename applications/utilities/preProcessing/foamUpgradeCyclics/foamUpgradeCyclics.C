@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
     }
     const bool enableEntries = args.found("enableFunctionEntries");
 
-    const word regionName = args.opt<word>("region", polyMesh::defaultRegion);
+    const word regionName = args.get<word>("region", polyMesh::defaultRegion);
 
     fileName regionPrefix;
     if (regionName != polyMesh::defaultRegion)

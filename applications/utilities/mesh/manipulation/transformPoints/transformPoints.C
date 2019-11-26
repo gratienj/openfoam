@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            scalar timeValue = args.opt<scalar>("time");
+            scalar timeValue = args.get<scalar>("time");
             runTime.setTime(instant(timeValue), 0);
         }
     }
