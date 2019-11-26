@@ -67,8 +67,8 @@ Foam::reconstruction::isoAlpha::isoAlpha
     ap_(mesh_.nPoints()),
 
     // Tolerances and solution controls
-    vof2IsoTol_(readScalar(modelDict().lookup("vof2IsoTol" ))),
-    surfCellTol_(readScalar(modelDict().lookup("surfCellTol" ))),
+    isoFaceTol_(modelDict().lookupOrDefault<scalar>("isoFaceTol", 1e-8)),
+    surfCellTol_(modelDict().lookupOrDefault<scalar>("surfCellTol", 1e-8)),
     sIterIso_(mesh_,ap_,surfCellTol_)
 {
     reconstruct();
@@ -117,7 +117,7 @@ void Foam::reconstruction::isoAlpha::reconstruct()
             (
                     cellI,
                     alpha1_[cellI],
-                    vof2IsoTol_,
+                    isoFaceTol_,
                     100
             );
 

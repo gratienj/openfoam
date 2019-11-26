@@ -92,7 +92,7 @@ class isoAlpha
         // Switches and tolerances. Tolerances need to go into toleranceSwitches
 
         //- Tolerance for search of isoFace giving specified VOF value
-        scalar vof2IsoTol_;
+        scalar isoFaceTol_;
 
         //- Tolerance for marking of surface cells:
         //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_

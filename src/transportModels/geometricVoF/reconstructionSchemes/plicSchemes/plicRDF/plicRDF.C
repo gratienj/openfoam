@@ -286,9 +286,8 @@ Foam::reconstruction::plicRDF::plicRDF
 
     interfaceNormal_(0.2*mesh_.nCells()),
 
-
-    vof2IsoTol_(readScalar(modelDict().lookup("vof2IsoTol"))),
-    surfCellTol_(readScalar(modelDict().lookup("surfCellTol"))),
+    isoFaceTol_(modelDict().lookupOrDefault<scalar>("isoFaceTol", 1e-8)),
+    surfCellTol_(modelDict().lookupOrDefault<scalar>("surfCellTol", 1e-8)),
     tol_(modelDict().lookupOrDefault("tol" ,1e-6)),
     relTol_(modelDict().lookupOrDefault("relTol" ,0.1)),
     iteration_(modelDict().lookupOrDefault("iterations" , 5)),
@@ -313,7 +312,7 @@ Foam::reconstruction::plicRDF::plicRDF
         (
             celli,
             alpha1_[celli],
-            vof2IsoTol_,
+            isoFaceTol_,
             100,
             interfaceNormal_[i]
         );
@@ -384,7 +383,7 @@ void Foam::reconstruction::plicRDF::reconstruct()
             (
                 celli,
                 alpha1_[celli],
-                vof2IsoTol_,
+                isoFaceTol_,
                 100,
                 interfaceNormal_[i]
             );
@@ -480,8 +479,8 @@ void Foam::reconstruction::plicRDF::reconstruct()
 
         if (iter == 0)
         {
-            Info<< "intial residual absolute = " << avgRes/resCounter << endl;
-            Info<< "intial residual normalized = " << avgNormRes/resCounter
+            DebugInfo << "intial residual absolute = " << avgRes/resCounter << endl;
+            DebugInfo << "intial residual normalized = " << avgNormRes/resCounter
                 << endl;
         }
 
@@ -494,9 +493,9 @@ void Foam::reconstruction::plicRDF::reconstruct()
          || iter + 1  == iteration_
         )
         {
-            Info<< "iterations = " << iter << endl;
-            Info<< "final residual absolute = " << avgRes/resCounter << endl;
-            Info<< "final residual normalized = " << avgNormRes/resCounter
+            DebugInfo << "iterations = " << iter << endl;
+            DebugInfo << "final residual absolute = " << avgRes/resCounter << endl;
+            DebugInfo << "final residual normalized = " << avgNormRes/resCounter
                 << endl;
             break;
         }

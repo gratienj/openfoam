@@ -96,8 +96,8 @@ Foam::reconstruction::gradAlpha::gradAlpha
     ),
     mesh_(alpha1.mesh()),
     interfaceNormal_(fvc::grad(alpha1)),
-    vof2IsoTol_(readScalar(modelDict().lookup("vof2IsoTol" ))),
-    surfCellTol_(readScalar(modelDict().lookup("surfCellTol" ))),
+    isoFaceTol_(modelDict().lookupOrDefault<scalar>("isoFaceTol", 1e-8)),
+    surfCellTol_(modelDict().lookupOrDefault<scalar>("surfCellTol", 1e-8)),
     exchangeFields_(zoneDistribute::New(mesh_)),
     sIterPLIC_(mesh_,surfCellTol_)
 {
@@ -154,7 +154,7 @@ void Foam::reconstruction::gradAlpha::reconstruct()
         (
             celli,
             alpha1_[celli],
-            vof2IsoTol_,
+            isoFaceTol_,
             100,
             interfaceNormal_[i]
         );

@@ -128,7 +128,7 @@ void Foam::isoAdvection::limitFluxes
     const labelList& owner = mesh_.faceOwner();
     const labelList& neighbour = mesh_.faceNeighbour();
 
-    Info << "isoAdvection: Before conservative bounding: min(alpha) = "
+    DebugInfo << "isoAdvection: Before conservative bounding: min(alpha) = "
         << minAlpha << ", max(alpha) = 1 + " << maxAlphaMinus1 << endl;
 
     surfaceScalarField dVfcorrectionValues("dVfcorrectionValues", dVf_*0.0);
@@ -390,7 +390,7 @@ void Foam::isoAdvection::advect(const SpType& Sp, const SuType& Su)
     writeSurfaceCells();
 
     advectionTime_ += (mesh_.time().elapsedCpuTime() - advectionStartTime);
-    Info << "isoAdvection: time consumption = "
+    DebugInfo << "isoAdvection: time consumption = "
         << label(100*advectionTime_/(mesh_.time().elapsedCpuTime() + SMALL))
         << "%" << endl;
 

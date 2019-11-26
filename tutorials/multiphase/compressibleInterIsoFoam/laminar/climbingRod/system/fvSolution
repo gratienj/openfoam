@@ -24,7 +24,7 @@ solvers
         cAlpha          1;
 
         reconstructionScheme isoAlpha;
-        vof2IsoTol 1e-8;
+        isoFaceTol 1e-8;
         surfCellTol 1e-8;
         nAlphaBounds    3;
         snapTol         1e-12;
