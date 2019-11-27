@@ -479,8 +479,8 @@ void Foam::reconstruction::plicRDF::reconstruct()
 
         if (iter == 0)
         {
-            DebugInfo << "intial residual absolute = " << avgRes/resCounter << endl;
-            DebugInfo << "intial residual normalized = " << avgNormRes/resCounter
+            DebugInfo << "plicRDF: initial residual absolute = " << avgRes/resCounter << endl;
+            DebugInfo << "plicRDF: initial normalized = " << avgNormRes/resCounter
                 << endl;
         }
 
@@ -493,9 +493,9 @@ void Foam::reconstruction::plicRDF::reconstruct()
          || iter + 1  == iteration_
         )
         {
-            DebugInfo << "iterations = " << iter << endl;
-            DebugInfo << "final residual absolute = " << avgRes/resCounter << endl;
-            DebugInfo << "final residual normalized = " << avgNormRes/resCounter
+            DebugInfo << "plicRDF: iterations = " << iter << endl;
+            DebugInfo << "plicRDF: final residual absolute = " << avgRes/resCounter << endl;
+            DebugInfo << "plicRDF: final residual normalized = " << avgNormRes/resCounter
                 << endl;
             break;
         }
