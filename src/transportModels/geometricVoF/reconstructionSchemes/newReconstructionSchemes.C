@@ -43,11 +43,16 @@ Foam::reconstructionSchemes::New
 {
     if(!dict.found("reconstructionScheme"))
     {
-        Warning << "Entry '" << "reconstructionScheme" << "' not found in dictionary "
-                << dict.name() << nl
-                << "using default " << endl;
+        Warning 
+            << "Entry '" 
+            << "reconstructionScheme" << "' not found in dictionary "
+            << dict.name() << nl
+            << "using default " << endl;
     }
-    const word schemeType(dict.lookupOrDefault<word>("reconstructionScheme","isoAlpha"));
+    const word schemeType
+    (
+        dict.lookupOrDefault<word>("reconstructionScheme", "isoAlpha")
+    );
     
     Info<< "Selecting reconstructionScheme: " << schemeType << endl;
 
@@ -63,7 +68,7 @@ Foam::reconstructionSchemes::New
             << exit(FatalError);
     }
 
-    return autoPtr<reconstructionSchemes>(cstrIter()( alpha1, phi,U,dict));
+    return autoPtr<reconstructionSchemes>(cstrIter()( alpha1, phi, U, dict));
 }
 
 

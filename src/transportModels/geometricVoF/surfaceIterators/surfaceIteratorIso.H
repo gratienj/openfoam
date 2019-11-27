@@ -70,7 +70,7 @@ class surfaceIteratorIso
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //- isosurface.
+        //  isosurface.
         const fvMesh& mesh_;
 
         //- Reference to the point values

@@ -53,7 +53,7 @@ bool Foam::reconstructionSchemes::alreadyReconstructed()
     }
 
     // reconstruct always when subcycling
-    if(mesh.time().subCycling() != 0)
+    if (mesh.time().subCycling() != 0)
     {
         return false;
     }

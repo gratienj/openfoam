@@ -465,7 +465,7 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     DynamicList<scalar> sortedTimes(pTimes.size());
     {
         scalar prevTime = time;
-        const scalar tSmall = max(1e-6 * dt, 10 * SMALL);
+        const scalar tSmall = max(1e-6*dt, 10*SMALL);
 
         for (const scalar timeI : order)
         {
@@ -489,9 +489,9 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
         quadAreaCoeffs(FIIL, newFIIL, alpha, beta);
         // Integration of area(t) = A*t^2+B*t from t = 0 to 1
         tIntArea += (newTime - time) *
-                    (initialArea + sign(Un0) * (alpha / 3.0 + 0.5 * beta));
+                    (initialArea + sign(Un0) * (alpha/3.0 + 0.5*beta));
         // Adding quad area to submerged area
-        initialArea += sign(Un0) * (alpha + beta);
+        initialArea += sign(Un0)*(alpha + beta);
 
         FIIL = newFIIL;
         time = newTime;
@@ -510,13 +510,13 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
         quadAreaCoeffs(FIIL, newFIIL, alpha, beta);
         // Integration of area(t) = A*t^2+B*t from t = 0 to 1
         tIntArea += (dt - time) *
-                    (initialArea + sign(Un0) * (alpha / 3.0 + 0.5 * beta));
+                    (initialArea + sign(Un0)*(alpha / 3.0 + 0.5 * beta));
     }
     else
     {
         // FIIL will leave the face at lastTime and face will be fully in fluid
         // A or fluid B in the time interval from lastTime to dt.
-        tIntArea += magSf * (dt - lastTime) * pos0(Un0);
+        tIntArea += magSf*(dt - lastTime)*pos0(Un0);
     }
 
     return tIntArea;
@@ -541,7 +541,10 @@ void Foam::cutFaceAdvect::isoFacesToFile
     vtkFilePtr() << "ASCII" << endl;
     vtkFilePtr() << "DATASET POLYDATA" << endl;
     label nPoints(0);
-    forAll(faces, fi) { nPoints += faces[fi].size(); }
+    forAll(faces, fi)
+    {
+        nPoints += faces[fi].size(); 
+    }
 
     vtkFilePtr() << "POINTS " << nPoints << " float" << endl;
     forAll(faces, fi)
@@ -657,7 +660,7 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     {
         // If all face cuttings were in the past and cell is filling up (Un0>0)
         // then face must be full during whole time interval
-        tIntArea = magSf * dt * pos0(Un0);
+        tIntArea = magSf* dt * pos0(Un0);
         return tIntArea;
     }
 
@@ -713,7 +716,7 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
     DynamicList<scalar> sortedTimes(pTimes_.size());
     {
         scalar prevTime = time;
-        const scalar tSmall = max(1e-6 * dt, 10 * SMALL);
+        const scalar tSmall = max(1e-6*dt, 10*SMALL);
         for (const label oI : order)
         {
             const scalar timeI = pTimes_[oI];
@@ -737,8 +740,10 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
 
         quadAreaCoeffs(FIIL, newFIIL, alpha, beta);
         // Integration of area(t) = A*t^2+B*t from t = 0 to 1
-        tIntArea += (newTime - time) *
-                    (initialArea + sign(Un0) * (alpha / 3.0 + 0.5 * beta));
+        tIntArea += 
+            (newTime - time) 
+          * (initialArea + sign(Un0) 
+          * (alpha / 3.0 + 0.5 * beta));
         // Adding quad area to submerged area
         initialArea += sign(Un0) * (alpha + beta);
 
@@ -758,8 +763,9 @@ Foam::scalar Foam::cutFaceAdvect::timeIntegratedArea
         scalar alpha = 0, beta = 0;
         quadAreaCoeffs(FIIL, newFIIL, alpha, beta);
         // Integration of area(t) = A*t^2+B*t from t = 0 to 1
-        tIntArea += (dt - time) *
-                    (initialArea + sign(Un0) * (alpha / 3.0 + 0.5 * beta));
+        tIntArea += 
+            (dt - time) 
+          * (initialArea + sign(Un0) * (alpha / 3.0 + 0.5 * beta));
     }
     else
     {

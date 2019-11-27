@@ -75,7 +75,7 @@ class cutFaceIso
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //- isoface
+        //  isoface
         const fvMesh& mesh_;
 
         //- Isofunction values at mesh points. f_size() = mesh_.nPoints().
@@ -101,9 +101,9 @@ class cutFaceIso
 
         //- A face status label taking one of the values:
         //
-        //  - -1: face is fully below the isosurface
-        //  -  0: face is cut, i.e. has values larger and smaller than isoValue_
-        //  - +1: face is fully above the isosurface
+        //   -1: face is fully below the isosurface
+        //    0: face is cut, i.e. has values larger and smaller than isoValue_
+        //   +1: face is fully above the isosurface
         label faceStatus_;
 
 
@@ -112,7 +112,7 @@ public:
     // Constructors
 
         //- Construct from fvMesh and a scalarField
-        //  Length of scalarField should equal number of mesh points
+        //  length of scalarField should equal number of mesh points
         cutFaceIso(const fvMesh& mesh,scalarField& f);
 
 

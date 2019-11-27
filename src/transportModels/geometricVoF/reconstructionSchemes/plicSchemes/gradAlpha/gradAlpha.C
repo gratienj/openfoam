@@ -38,7 +38,7 @@ namespace Foam
 namespace reconstruction
 {
     defineTypeNameAndDebug(gradAlpha, 0);
-    addToRunTimeSelectionTable(reconstructionSchemes,gradAlpha, components);
+    addToRunTimeSelectionTable(reconstructionSchemes, gradAlpha, components);
 }
 }
 
@@ -49,10 +49,16 @@ void Foam::reconstruction::gradAlpha::gradSurf(const volScalarField& phi)
 
     exchangeFields_.setUpCommforZone(interfaceCell_,true);
 
-    Map<vector> mapCC(exchangeFields_.getDatafromOtherProc(interfaceCell_,mesh_.C()));
-    Map<scalar> mapPhi(exchangeFields_.getDatafromOtherProc(interfaceCell_,phi));
+    Map<vector> mapCC
+    (
+        exchangeFields_.getDatafromOtherProc(interfaceCell_, mesh_.C())
+    );
+    Map<scalar> mapPhi
+    (
+        exchangeFields_.getDatafromOtherProc(interfaceCell_, phi)
+    );
 
-    DynamicField<vector> cellCentre(100); // should be big enough avoids resizing
+    DynamicField<vector> cellCentre(100);
     DynamicField<scalar> phiValues(100);
 
     const labelListList& stencil = exchangeFields_.getStencil();
@@ -66,8 +72,14 @@ void Foam::reconstruction::gradAlpha::gradSurf(const volScalarField& phi)
 
         for (const label gblIdx : stencil[celli])
         {
-            cellCentre.append(exchangeFields_.getValue(mesh_.C(),mapCC,gblIdx));
-            phiValues.append(exchangeFields_.getValue(phi,mapPhi,gblIdx));
+            cellCentre.append
+            (
+                exchangeFields_.getValue(mesh_.C(), mapCC, gblIdx)
+            );
+            phiValues.append
+            (
+                exchangeFields_.getValue(phi, mapPhi, gblIdx)
+            );
         }
 
         cellCentre -= mesh_.C()[celli];
@@ -137,8 +149,8 @@ void Foam::reconstruction::gradAlpha::reconstruct()
         }
     }
     interfaceNormal_.setSize(interfaceLabels_.size());
-    centre_ = dimensionedVector("centre",dimLength,vector::zero);
-    normal_ = dimensionedVector("normal",dimArea,vector::zero);
+    centre_ = dimensionedVector("centre", dimLength, vector::zero);
+    normal_ = dimensionedVector("normal", dimArea, vector::zero);
 
     gradSurf(alpha1_);
 
@@ -161,7 +173,6 @@ void Foam::reconstruction::gradAlpha::reconstruct()
 
         if (sIterPLIC_.cellStatus() == 0)
         {
-
             normal_[celli] = sIterPLIC_.surfaceArea();
             centre_[celli] = sIterPLIC_.surfaceCentre();
             if (mag(normal_[celli]) == 0)
@@ -181,14 +192,14 @@ void Foam::reconstruction::gradAlpha::reconstruct()
 
 void Foam::reconstruction::gradAlpha::mapAlphaField() const
 {
-    // without it we seem to get a race condition
+    // without it, we seem to get a race condition
     mesh_.C();
 
     cutCellPLIC cutCell(mesh_);
 
-    forAll(normal_,celli)
+    forAll(normal_, celli)
     {
-        if(mag(normal_[celli]) != 0)
+        if (mag(normal_[celli]) != 0)
         {
             vector n = normal_[celli]/mag(normal_[celli]);
             scalar cutValue = (centre_[celli] - mesh_.C()[celli]) & (n);

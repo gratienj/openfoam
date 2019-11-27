@@ -145,7 +145,10 @@ void Foam::isoAdvection::limitFluxes
             dVfcorrectionValues = dimensionedScalar("0",dimVolume,0.0);
             boundFlux(alpha1In_, dVfcorrectionValues, correctedFaces,Sp,Su);
 
-            correctedFaces.append(syncProcPatches(dVfcorrectionValues, phi_,true));
+            correctedFaces.append
+            (
+                syncProcPatches(dVfcorrectionValues, phi_,true)
+            );
 
             labelHashSet alreadyUpdated;
             forAll(correctedFaces, fi)
@@ -157,14 +160,19 @@ void Foam::isoAdvection::limitFluxes
                     const label own = owner[facei];
                     const label nei = neighbour[facei];
 
-                    alpha1_[own] += -faceValue(dVfcorrectionValues, facei)/mesh_.V()[own];
+                    alpha1_[own] += 
+                        -faceValue(dVfcorrectionValues, facei)/mesh_.V()[own];
                     if(mesh_.isInternalFace(facei))
                     {
-                        alpha1_[nei] -= -faceValue(dVfcorrectionValues, facei)/mesh_.V()[nei];
+                        alpha1_[nei] -= 
+                            -faceValue(dVfcorrectionValues, facei)/mesh_.V()[nei];
                     }
 
                     // Change to treat boundaries consistently
-                    scalar corrVf = faceValue(dVf_, facei) + faceValue(dVfcorrectionValues, facei);
+                    scalar corrVf = 
+                        faceValue(dVf_, facei) 
+                      + faceValue(dVfcorrectionValues, facei);
+
                     setFaceValue(dVf_, facei, corrVf);
                 }
             }
@@ -175,8 +183,8 @@ void Foam::isoAdvection::limitFluxes
             break;
         }
 
-        maxAlphaMinus1 = gMax(alpha1_) - 1;      // max(alphaNew - 1);
-        minAlpha = gMin(alpha1_);           // min(alphaNew);
+        maxAlphaMinus1 = gMax(alpha1_) - 1;     // max(alphaNew - 1);
+        minAlpha = gMin(alpha1_);               // min(alphaNew);
 
         if (debug)
         {
@@ -186,6 +194,7 @@ void Foam::isoAdvection::limitFluxes
             scalar minAlpha = min(alpha1_.primitiveField());
             label nUndershoots = sum(neg0(alpha1_.primitiveField() + aTol));
             label nOvershoots = sum(pos0(alpha1_.primitiveField() - 1 - aTol));
+
             Info<< "After bounding number " << n + 1 << " of time "
                 << mesh_.time().value() << ":" << endl;
             Info<< "nOvershoots = " << nOvershoots << " with max(alpha1_-1) = "
@@ -260,8 +269,13 @@ void Foam::isoAdvection::boundFlux
                 {
                     const label facei = downwindFaces[fi];
                     const scalar phif = faceValue(phi_, facei);
-                    const scalar dVff = faceValue(dVf_, facei) + faceValue(dVfcorrectionValues, facei);
-                    const scalar maxExtraFaceFluidTrans = mag(pos0(fluidToPassOn)*phif*dt - dVff);
+                    
+                    const scalar dVff = 
+                        faceValue(dVf_, facei) 
+                      + faceValue(dVfcorrectionValues, facei);
+
+                    const scalar maxExtraFaceFluidTrans = 
+                        mag(pos0(fluidToPassOn)*phif*dt - dVff);
 
                     // dVf has same sign as phi and so if phi>0 we have
                     // mag(phi_[facei]*dt) - mag(dVf[facei]) = phi_[facei]*dt
@@ -306,7 +320,10 @@ void Foam::isoAdvection::boundFlux
                         min(fluidToPassThroughFace, dVfmax[fi]);
 
                     scalar dVff = faceValue(dVfcorrectionValues, facei);
-                    dVff += sign(phi[fi])*fluidToPassThroughFace*sign(fluidToPassOn);
+
+                    dVff += 
+                        sign(phi[fi])*fluidToPassThroughFace*sign(fluidToPassOn);
+
                     setFaceValue(dVfcorrectionValues, facei, dVff);
 
                     if (firstLoop)
@@ -317,12 +334,20 @@ void Foam::isoAdvection::boundFlux
                 }
 
                 firstLoop = false;
-                scalar alpha1New = (alphaOld[celli]*rDeltaT  + Su[celli]
-                                    - netFlux(dVf_, celli)/Vi*rDeltaT
-                                    - netFlux(dVfcorrectionValues, celli)/Vi*rDeltaT
-                                   )/(rDeltaT - Sp[celli]);
-                alphaOvershoot = pos0(alpha1New-1)*(alpha1New-1)
-                + neg0(alpha1New)*alpha1New;
+
+                scalar alpha1New = 
+                (
+                    alphaOld[celli]*rDeltaT  + Su[celli]
+                  - netFlux(dVf_, celli)/Vi*rDeltaT
+                  - netFlux(dVfcorrectionValues, celli)/Vi*rDeltaT
+                )
+                /
+                (rDeltaT - Sp[celli]);
+
+                alphaOvershoot = 
+                    pos0(alpha1New-1)*(alpha1New-1)
+                  + neg0(alpha1New)*alpha1New;
+
                 fluidToPassOn = alphaOvershoot*Vi;
 
                 DebugInfo
@@ -364,10 +389,11 @@ void Foam::isoAdvection::advect(const SpType& Sp, const SuType& Su)
     // Advect the free surface
     alpha1_.primitiveFieldRef() =
     (
-      alpha1_.oldTime().primitiveField()*rDeltaT
+        alpha1_.oldTime().primitiveField()*rDeltaT
       + Su.field()
       - fvc::surfaceIntegrate(dVf_)().primitiveField()*rDeltaT
     )/(rDeltaT - Sp.field());
+
     alpha1_.correctBoundaryConditions();
 
     // Adjust dVf for unbounded cells
@@ -379,7 +405,8 @@ void Foam::isoAdvection::advect(const SpType& Sp, const SuType& Su)
 
     scalar maxAlphaMinus1 = gMax(alpha1In_) - 1;
     scalar minAlpha = gMin(alpha1In_);
-    Info << "isoAdvection: After conservative bounding: min(alpha) = "
+
+    Info<< "isoAdvection: After conservative bounding: min(alpha) = "
         << minAlpha << ", max(alpha) = 1 + " << maxAlphaMinus1 << endl;
 
     // Apply non-conservative bounding mechanisms (clipping and snapping)
@@ -390,7 +417,8 @@ void Foam::isoAdvection::advect(const SpType& Sp, const SuType& Su)
     writeSurfaceCells();
 
     advectionTime_ += (mesh_.time().elapsedCpuTime() - advectionStartTime);
-    DebugInfo << "isoAdvection: time consumption = "
+    DebugInfo 
+        << "isoAdvection: time consumption = "
         << label(100*advectionTime_/(mesh_.time().elapsedCpuTime() + SMALL))
         << "%" << endl;
 

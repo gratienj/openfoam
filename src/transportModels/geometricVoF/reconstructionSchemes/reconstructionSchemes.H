@@ -84,16 +84,16 @@ protected:
         //- Reference to the velocity field
         const volVectorField& U_;
 
-        //- interface area normals
+        //- Interface area normals
         volVectorField normal_;
 
         //- interface centres
         volVectorField centre_;
 
-        //- is interface cell?
+        //- Is interface cell?
         boolList interfaceCell_;
 
-        //- list of cell labels that have an interface
+        //- List of cell labels that have an interface
         DynamicField<label> interfaceLabels_;
 
         // stores the timeindex and iteration to avoid multiple reconstruction
@@ -140,7 +140,7 @@ public:
                 const volVectorField& U,
                 const dictionary& dict
             ),
-            (alpha1, phi,U,dict)
+            (alpha1, phi, U, dict)
         );
 
 
@@ -178,31 +178,31 @@ public:
         //- reconstruct the interface
         virtual void reconstruct() = 0;
 
-        //- reference to interface normals
+        //- Reference to interface normals
         const volVectorField& normal() const
         {
             return normal_;
         }
 
-        //- reference to interface centres
+        //- Reference to interface centres
         const volVectorField& centre() const
         {
             return centre_;
         }
 
-        //- does the cell contain interface
+        //- Does the cell contain interface
         const boolList& interfaceCell() const
         {
             return interfaceCell_;
         }
 
-        //- list of cells with an interface
+        //- List of cells with an interface
         const DynamicField<label>& interfaceLabels() const
         {
             return interfaceLabels_;
         }
 
-        //- map VoF Field in case of refinement
+        //- Map VoF Field in case of refinement
         virtual void mapAlphaField() const
         {
             // do nothing;

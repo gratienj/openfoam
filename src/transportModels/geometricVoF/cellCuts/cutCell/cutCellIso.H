@@ -84,7 +84,7 @@ class cutCellIso
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //- isosurface.
+        //  isosurface.
         const fvMesh& mesh_;
 
         //- Cell to cut
@@ -93,7 +93,7 @@ class cutCellIso
         //- Isofunction values at mesh points. f_size() = mesh_.nPoints().
         scalarField& f_;
 
-        //- cutvalue used to cut cell
+        //- Cutvalue used to cut cell
         scalar cutValue_;
 
         //- An cutFaceIso object to get access to its face cutting functionality
@@ -119,7 +119,7 @@ class cutCellIso
         vector faceArea_;
 
         //- Cell centre of the subcell of celli which is "fully submerged", i.e.
-        //- where the function value is higher than the isoValue_
+        //  where the function value is higher than the isoValue_
         point subCellCentre_;
 
         //- Volume of fully submerged subcell
@@ -130,9 +130,9 @@ class cutCellIso
 
         //- A cell status label taking one of the values:
         //
-        //  - -1: cell is fully below the isosurface
-        //  -  0: cell is cut
-        //  - +1: cell is fully above the isosurface
+        //   -1: cell is fully below the isosurface
+        //    0: cell is cut
+        //   +1: cell is fully above the isosurface
         label cellStatus_;
 
 

@@ -82,7 +82,7 @@ class cutFaceAdvect
         //- Mesh whose cells and faces to cut at their intersection with an isoface
         const fvMesh& mesh_;
 
-        //- reference to VoF field
+        //- Reference to VoF field
         const volScalarField& alpha1_;
 
         //- Storage for centre of subface
@@ -108,12 +108,12 @@ class cutFaceAdvect
 
         //- A face status label taking one of the values:
         //
-        //  - -1: face is fully below the isosurface
-        //  -  0: face is cut, i.e. has values larger and smaller than isoValue_
-        //  - +1: face is fully above the isosurface
+        //   -1: face is fully below the isosurface
+        //    0: face is cut, i.e. has values larger and smaller than isoValue_
+        //   +1: face is fully above the isosurface
         label faceStatus_;
 
-        //- write faces to vtk files
+        //- Write faces to vtk files
         void isoFacesToFile
         (
             const DynamicList<List<point>>& isoFacePts,
@@ -133,7 +133,7 @@ class cutFaceAdvect
     // Member functions
 
         //- Calculates cut centre and cut area (plicReconstruction) and return
-        //- face status
+        //  face status
         label calcSubFace
         (
             const label& faceI,
@@ -142,7 +142,7 @@ class cutFaceAdvect
         );
 
         //- Calculates cut centre and cut area (iso reconstruction) and return
-        //- face status
+        //  face status
         label calcSubFace
         (
             const face& f,
@@ -152,7 +152,7 @@ class cutFaceAdvect
         );
 
         //- Calculates cut centre and cut area (iso reconstruction) and return
-        //- face status
+        //  face status
         label calcSubFace
         (
             const label& faceI,
@@ -203,8 +203,8 @@ class cutFaceAdvect
         );
 
         //- For face with vertices p calculate its area and integrated area
-        //- between isocutting lines with isovalues f0 and f1 given vertex
-        //- values f
+        //  between isocutting lines with isovalues f0 and f1 given vertex
+        //  values f
         void quadAreaCoeffs
         (
             const DynamicPointList& pf0,
@@ -242,7 +242,7 @@ class cutFaceAdvect
         //- Returns point of the cutted face in sorted order
         const DynamicList<point>& surfacePoints() const;
 
-        //- resets internal variables
+        //- Resets internal variables
         void clearStorage();
 };
 

@@ -124,9 +124,4 @@ mesh.setFluxRequired(alpha1.name());
 #include "createMRF.H"
 #include "createFvOptions.H"
 
-// autoPtr<advectionSchemes> advector
-// (
-//     advectionSchemes::New(alpha1,phi,U)
-// );
-// Foam::advection::isoAdvector advector(alpha1,phi,U);
 isoAdvection advector(alpha1,phi,U);
