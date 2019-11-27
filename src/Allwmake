@@ -97,7 +97,7 @@ wmake $targetType waveModels
 wmake $targetType engine
 
 conversion/Allwmake $targetType $*
-functionObjects/Allwmake $targetType $*
+
 
 wmake $targetType lumpedPointMotion
 wmake $targetType sixDoFRigidBodyMotion
@@ -109,6 +109,7 @@ wmake $targetType atmosphericModels
 wmake $targetType optimisation/adjointOptimisation/adjoint
 
 phaseSystemModels/Allwmake $targetType $*
+functionObjects/Allwmake $targetType $*
 
 # Needs access to Turbulence
 

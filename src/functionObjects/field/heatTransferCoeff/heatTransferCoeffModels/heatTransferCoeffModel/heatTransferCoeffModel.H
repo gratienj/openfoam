@@ -86,6 +86,7 @@ protected:
         word qrName_;
 
         tmp<FieldField<Field, scalar>> q() const;
+        
 
         //- Set the heat transfer coefficient
         virtual void htc(volScalarField& htc) = 0;

@@ -16,7 +16,7 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 DebugSwitches
 {
-    compressible::alphatWallBoilingWallFunction                 0;
+    compressible::alphatWallBoilingWallFunction                 2;
     compressible::turbulentTemperatureTwoPhaseRadCoupledMixed   0;
 }
 
@@ -34,7 +34,7 @@ deltaT          1e-6;
 
 writeControl    adjustable;
 
-writeInterval   0.1;
+writeInterval   0.01;
 
 purgeWrite      0;
 
@@ -61,6 +61,17 @@ adjustTimeStep  yes;
 
 functions
 {
+    htc
+    {
+        type            heatTransferCoeff;
+        libs            ("libfieldFunctionObjects.so");
+        region          water;
+        field           T.liquid;
+        outputControl   outputTime;
+        htcModel        fixedReferenceTemperature;
+        patches         (water_to_solid);
+        TRef            373;
+    }
 }
 
 // ************************************************************************* //
