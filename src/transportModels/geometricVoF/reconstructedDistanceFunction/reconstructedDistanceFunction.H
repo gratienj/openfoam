@@ -73,10 +73,10 @@ private:
         //- Stores the coupled boundary points which have to be synced
         labelList coupledBoundaryPoints_;
 
-        //- distance of the interface band to the interface
+        //- Distance of the interface band to the interface
         volScalarField cellDistLevel_;
 
-        //- is the cell in the interface band?
+        //- Is the cell in the interface band?
         boolList nextToInterface_;
 
         //- Return patch of all coupled faces.
@@ -91,7 +91,11 @@ public:
 
     // Member functions
 
-        void markCellsNearSurf(const boolList& interfaceCells,const label neiRingLevel);
+        void markCellsNearSurf
+        (
+            const boolList& interfaceCells,
+            const label neiRingLevel
+        );
 
         const volScalarField& constructRDF
         (

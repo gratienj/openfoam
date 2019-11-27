@@ -88,7 +88,7 @@ void Foam::reconstructedDistanceFunction::markCellsNearSurf
     if (mesh_.topoChanging())
     {
         // Introduced resizing to cope with changing meshes
-        if(nextToInterface_.size() != mesh_.nCells())
+        if (nextToInterface_.size() != mesh_.nCells())
         {
             nextToInterface_.resize(mesh_.nCells());
         }
@@ -98,18 +98,18 @@ void Foam::reconstructedDistanceFunction::markCellsNearSurf
     const labelListList& pCells = mesh_.cellPoints();
     const labelListList& cPoints = mesh_.pointCells();
 
-    boolList alreadyMarkedPoint(mesh_.nPoints(),false);
+    boolList alreadyMarkedPoint(mesh_.nPoints(), false);
     nextToInterface_ = false;
 
     // do coupled face first
     Map<bool> syncMap;
 
-    for(int level = 0;level<=neiRingLevel;level++)
+    for(int level=0;level<=neiRingLevel;level++)
     {
         // parallel
-        if(level > 0)
+        if (level > 0)
         {
-            forAll(coupledBoundaryPoints_,i)
+            forAll(coupledBoundaryPoints_, i)
             {
                 const label& pi = coupledBoundaryPoints_[i];
                 forAll(mesh_.pointCells()[pi], j)
@@ -130,21 +130,19 @@ void Foam::reconstructedDistanceFunction::markCellsNearSurf
             {
                 const label pi = iter.key();
 
-                if(!alreadyMarkedPoint[pi])
+                if (!alreadyMarkedPoint[pi])
                 {
                     // loop over all cells attached to the point
-                    forAll(cPoints[pi],j)
+                    forAll(cPoints[pi], j)
                     {
                         const label& pCelli = cPoints[pi][j];
-                        if(cellDistLevel_[pCelli] == -1)
+                        if (cellDistLevel_[pCelli] == -1)
                         {
                             cellDistLevel_[pCelli] = level;
                             nextToInterface_[pCelli] = true;
                         }
-
                     }
                 }
-
                 alreadyMarkedPoint[pi] = true;
             }
         }
@@ -152,9 +150,9 @@ void Foam::reconstructedDistanceFunction::markCellsNearSurf
 
         forAll(cellDistLevel_, celli)
         {
-            if(level == 0)
+            if (level == 0)
             {
-                if(interfaceCells[celli])
+                if (interfaceCells[celli])
                 {
                     cellDistLevel_[celli] = 0;
                     nextToInterface_[celli] = true;
@@ -171,22 +169,20 @@ void Foam::reconstructedDistanceFunction::markCellsNearSurf
                     forAll(pCells[celli], i)
                     {
                         const label& pI = pCells[celli][i];
-                        // interfacePoint_[pI] = true;
-                        if(!alreadyMarkedPoint[pI])
+
+                        if (!alreadyMarkedPoint[pI])
                         {
-                            forAll(cPoints[pI],j) // loop over all cells attached to the point
+                            forAll(cPoints[pI], j)
                             {
                                 const label& pCelli = cPoints[pI][j];
-                                if(cellDistLevel_[pCelli] == -1)
+                                if (cellDistLevel_[pCelli] == -1)
                                 {
                                     cellDistLevel_[pCelli] = level;
                                     nextToInterface_[pCelli] = true;
                                 }
-
                             }
                         }
                         alreadyMarkedPoint[pI] = true;
-
                     }
                 }
             }
@@ -258,12 +254,12 @@ const Foam::volScalarField&  Foam::reconstructedDistanceFunction::constructRDF
     }
 
 
-    distribute.setUpCommforZone(nextToInterface,updateStencil);
+    distribute.setUpCommforZone(nextToInterface, updateStencil);
 
     Map<vector> mapCentres =
-        distribute.getDatafromOtherProc(nextToInterface,centre);
+        distribute.getDatafromOtherProc(nextToInterface, centre);
     Map<vector> mapNormal =
-        distribute.getDatafromOtherProc(nextToInterface,normal);
+        distribute.getDatafromOtherProc(nextToInterface, normal);
 
     const labelListList& stencil = distribute.getStencil();
 
@@ -287,7 +283,7 @@ const Foam::volScalarField&  Foam::reconstructedDistanceFunction::constructRDF
                 forAll (stencil[celli],i)
                 {
                     const label& gblIdx = stencil[celli][i];
-                    vector n = -distribute.getValue(normal, mapNormal, gblIdx); // note the minus
+                    vector n = -distribute.getValue(normal, mapNormal, gblIdx);
                     if (mag(n) != 0)
                     {
                         n /= mag(n);
@@ -341,11 +337,12 @@ const Foam::volScalarField&  Foam::reconstructedDistanceFunction::constructRDF
                     forAll (stencil[pCellI], j)
                     {
                         const label& gblIdx = stencil[pCellI][j];
-                        vector n = -distribute.getValue(normal, mapNormal, gblIdx); // note the minus
+                        vector n = -distribute.getValue(normal, mapNormal, gblIdx);
                         if (mag(n) != 0)
                         {
                             n /= mag(n);
-                            vector c = distribute.getValue(centre, mapCentres, gblIdx);
+                            vector c = 
+                                distribute.getValue(centre, mapCentres, gblIdx);
                             vector distanceToIntSeg = (c - p);
                             scalar distToSurf = distanceToIntSeg & (n);
                             scalar weight = 0;

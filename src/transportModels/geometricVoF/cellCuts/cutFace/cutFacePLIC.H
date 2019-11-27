@@ -100,9 +100,9 @@ class cutFacePLIC
 
         //- A face status label taking one of the values:
         //
-        //  - -1: face is fully below the PLICsurface
-        //  -  0: face is cut, i.e. has values larger and smaller than cutValue_
-        //  - +1: face is fully above the PLICsurface
+        //   -1: face is fully below the PLICsurface
+        //    0: face is cut, i.e. has values larger and smaller than cutValue_
+        //   +1: face is fully above the PLICsurface
         label faceStatus_;
 
 

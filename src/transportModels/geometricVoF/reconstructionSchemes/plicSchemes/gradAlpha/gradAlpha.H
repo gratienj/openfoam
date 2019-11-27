@@ -88,10 +88,10 @@ class gradAlpha
         //- Provides stencil and map
         zoneDistribute& exchangeFields_;
 
-        //- surfaceIterator finds the plane centre for specified VOF value
+        //- SurfaceIterator finds the plane centre for specified VOF value
         surfaceIteratorPLIC sIterPLIC_;
 
-        //- compute gradient at the surfaces
+        //- Compute gradient at the surfaces
         void gradSurf(const volScalarField& phi);
 
 

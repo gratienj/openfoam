@@ -99,7 +99,7 @@ Foam::isoAdvection::isoAdvection
     // Cell cutting data
     surfCells_(label(0.2*mesh_.nCells())),
     surf_(reconstructionSchemes::New(alpha1_, phi_, U_, dict_)),
-    advectFace_(alpha1.mesh(),alpha1),
+    advectFace_(alpha1.mesh(), alpha1),
     bsFaces_(label(0.2*mesh_.nBoundaryFaces())),
     bsx0_(bsFaces_.size()),
     bsn0_(bsFaces_.size()),

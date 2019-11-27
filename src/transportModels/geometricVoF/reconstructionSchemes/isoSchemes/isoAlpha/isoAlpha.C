@@ -90,12 +90,12 @@ void Foam::reconstruction::isoAlpha::reconstruct()
     if (mesh_.topoChanging())
     {
         // Introduced resizing to cope with changing meshes
-        if(ap_.size() != mesh_.nPoints())
+        if (ap_.size() != mesh_.nPoints())
         {
             ap_.resize(mesh_.nPoints());
 
         }
-        if(interfaceCell_.size() != mesh_.nCells())
+        if (interfaceCell_.size() != mesh_.nCells())
         {
             interfaceCell_.resize(mesh_.nCells());
         }
@@ -108,22 +108,20 @@ void Foam::reconstruction::isoAlpha::reconstruct()
 
     forAll(alpha1_,cellI)
     {
-        if(sIterIso_.isASurfaceCell(alpha1_[cellI]))
+        if (sIterIso_.isASurfaceCell(alpha1_[cellI]))
         {
             interfaceLabels_.append(cellI);
 
-
             sIterIso_.vofCutCell
             (
-                    cellI,
-                    alpha1_[cellI],
-                    isoFaceTol_,
-                    100
+                cellI,
+                alpha1_[cellI],
+                isoFaceTol_,
+                100
             );
 
-            if(sIterIso_.cellStatus() == 0)
+            if (sIterIso_.cellStatus() == 0)
             {
-
                 normal_[cellI] = sIterIso_.surfaceArea();
                 centre_[cellI] = sIterIso_.surfaceCentre();
                 if(mag(normal_[cellI]) != 0)
@@ -134,12 +132,9 @@ void Foam::reconstruction::isoAlpha::reconstruct()
                 {
                     interfaceCell_[cellI]=false;
                 }
-
-
             }
             else
             {
-
                 normal_[cellI] = vector::zero;
                 centre_[cellI] = vector::zero;
                 interfaceCell_[cellI]=false;
@@ -151,8 +146,5 @@ void Foam::reconstruction::isoAlpha::reconstruct()
             centre_[cellI] = vector::zero;
             interfaceCell_[cellI]=false;
          }
-
-
     }
-
 }

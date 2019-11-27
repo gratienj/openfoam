@@ -66,7 +66,7 @@ class cutCell
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //- isosurface.
+        //  isosurface.
         const fvMesh& mesh_;
 
 

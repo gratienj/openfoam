@@ -96,7 +96,7 @@ private:
         scalar isoFaceTol_;
 
         //- Tolerance for marking of surface cells:
-        //-  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
+        //  Those with surfCellTol_ < alpha1 < 1 - surfCellTol_
         scalar surfCellTol_;
 
         //- Tolerance
@@ -132,7 +132,7 @@ private:
         void operator=(const plicRDF&) = delete;
 
         //- set initial normals by interpolation from the previous
-        //- timestep or with the Young method
+        //  timestep or with the Young method
         void setInitNormals(bool interpolate);
 
         //- compute gradient at the surfaces
@@ -167,12 +167,13 @@ public:
     //- Destructor
     virtual ~plicRDF() = default;
 
+    
     // Member Functions
 
-        //- reconstruct  interface
+        //- Reconstruct  interface
         virtual void reconstruct();
 
-        //- map VoF Field in case of refinement
+        //- Map VoF Field in case of refinement
         virtual void mapAlphaField() const;
 };
 

@@ -190,7 +190,7 @@ class isoAdvection
                 DynamicLabelList& downwindFaces
             ) const;
 
-            // limitFluxes
+            // LimitFluxes
             template < class SpType, class SuType >
             void limitFluxes
             (

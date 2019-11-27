@@ -80,16 +80,16 @@ class cutCellPLIC
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //- isosurface.
+        //  isosurface.
         const fvMesh& mesh_;
 
         //- Cell to cut
         label cellI_;
 
-        //- normal of the cutting plane
+        //- Normal of the cutting plane
         vector normal_;
 
-        //- cutvalue used to cut cell
+        //- Cutvalue used to cut cell
         scalar cutValue_;
 
         //- An cutFacePLIC object to get access to its face cutting functionality
@@ -111,7 +111,7 @@ class cutCellPLIC
         point faceCentre_;
 
         //- Face normal of the PLICface by convention pointing from high to low
-        //- values (i.e. opposite of the gradient vector).
+        //  values (i.e. opposite of the gradient vector).
         vector faceArea_;
 
         //- Cell centre of the subcell of celli which is "fully submerged", i.e.
@@ -126,9 +126,9 @@ class cutCellPLIC
 
         //- A cell status label taking one of the values:
         //
-        //  - -1: cell is fully below the PLICsurface
-        //  -  0: cell is cut
-        //  - +1: cell is fully above the PLICsurface
+        //   -1: cell is fully below the PLICsurface
+        //    0: cell is cut
+        //   +1: cell is fully above the PLICsurface
         label cellStatus_;
 
 
@@ -142,7 +142,7 @@ class cutCellPLIC
 
     // Member functions
 
-        //- sets internal values and returns face status
+        //- Sets internal values and returns face status
         label calcSubCell
         (
             const label& celli,

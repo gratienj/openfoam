@@ -72,7 +72,7 @@ class surfaceIteratorPLIC
     // Private data
 
         //- Mesh whose cells and faces to cut at their intersection with an
-        //- isosurface.
+        //  isosurface.
         const fvMesh& mesh_;
 
         // cuts the cell and returns volume centre and normal
@@ -105,7 +105,7 @@ public:
         }
 
         //- Finds matching cutValue for the given value fraction
-        //- returns the cellStatus
+        //  returns the cellStatus
         label vofCutCell
         (
             const label celli,
