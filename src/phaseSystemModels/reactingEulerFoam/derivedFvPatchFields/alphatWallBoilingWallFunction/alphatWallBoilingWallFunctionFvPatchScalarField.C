@@ -757,36 +757,6 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                 );
 
                 Qtb = CHFtotal*(1 - phi) + phi*MHF;
-
-
-                if (debug & 2)
-                {
-
-                    scalarField& phiFluid =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("phiTb")
-                        );
-
-                    phiFluid = phi;
-
-                    scalarField& CHFFluid =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("CHFtotal")
-                        );
-
-                    CHFFluid = CHFtotal;
-                }
-
             }
 
 
@@ -929,11 +899,11 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
 
                         // transient boiling
                         dmdt_[i] =
-                                fLiquid[i]
-                                *(
-                                    relax*Qtb[i]*AbyV_[i]/L[i]
-                                    + (1 - relax)*dmdt_[i]
-                                );
+                            fLiquid[i]
+                            *(
+                                relax*Qtb[i]*AbyV_[i]/L[i]
+                                + (1 - relax)*dmdt_[i]
+                            );
 
                         mDotL_[i] = dmdt_[i]*L[i];
 
@@ -942,14 +912,14 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         qq_[i] = 0.0;
 
                         this->operator[](i) =
-                        max
-                        (
+                            max
                             (
-                                mDotL_[i]/AbyV_[i]
-                                /max(hewSn[i], scalar(1e-16))
-                            )/max(liquidw[i], scalar(1e-8)),
-                            1e-8
-                        );
+                                (
+                                    mDotL_[i]/AbyV_[i]
+                                    /max(hewSn[i], scalar(1e-16))
+                                )/max(liquidw[i], scalar(1e-8)),
+                                1e-8
+                            );
 
                     }
                     else if (Tw[i] > TLeiden[i])
@@ -1037,18 +1007,6 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
 
                 if (debug & 2)
                 {
-                    /*
-                    scalarField& faceRegimes =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("faceRegimes")
-                        );
-                    */
-
                     scalar nSubCool(0);
                     scalar nTransient(0);
                     scalar nFilm(0);
@@ -1099,19 +1057,6 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         nNonBoilings*fLiquid*A1*(alphatConv_ + alphaw)
                         *hew.snGrad()
                     );
-                    /*
-                    scalarField& qcFluid =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("qc")
-                        );
-
-                    qcFluid = qc;
-                    */
 
                     scalar Qc = gSum(qc*patch().magSf());
                     Info<< " Convective heat transfer: " << Qc << endl;
@@ -1120,33 +1065,7 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                     (
                         relax*fLiquid*nFilms*htcFilmBoiling*(Tw - Tsatw)
                     );
-                    /*
-                    scalarField& qFilmFluid =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("qFilm")
-                        );
-
-                    qFilmFluid = qFilm;
-                    */
-
-                    /*
-                    scalarField& htcFilm =
-                        const_cast<fvPatchScalarField&>
-                    (
-                        patch().lookupPatchField
-                        <
-                            volScalarField,
-                            scalar
-                        >("htcFilmBoiling")
-                    );
-
-                    htcFilm = htcFilmBoiling;
-                    */
+                  
                     scalar QFilm = gSum(qFilm*patch().magSf());
                     Info<< " Film boiling heat transfer: " << QFilm << endl;
 
@@ -1154,36 +1073,13 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                         << gMin(nFilms*htcFilmBoiling)
                         << " - "
                         << gMax(nFilms*htcFilmBoiling) << endl;
-                    /*
-                    scalarField& qtbFluid =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("qtb")
-                        );
-                    qtbFluid = fLiquid*Qtb;
-                    */
                     
                     scalar Qtbtot =
                         gSum(fLiquid*nTransients*Qtb*patch().magSf());
+
                     Info<< " Transient boiling heat transfer:" << Qtbtot
                         << endl;
 
-                    /*
-                    scalarField& TdnbFluid =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("Tdnb")
-                        );
-                    TdnbFluid = tDNB;
-                    */
 
                     Info<< " TDNB: " << gMin(tDNB) << " - " << gMax(tDNB)
                         << endl;
@@ -1196,20 +1092,6 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
                             + qe() + qq()
                         )
                     );
-                    
-                    /*
-                    scalarField& qSubCoolFluid =
-                        const_cast<fvPatchScalarField&>
-                        (
-                            patch().lookupPatchField
-                            <
-                                volScalarField,
-                                scalar
-                            >("qSubCool")
-                        );
-
-                    qSubCoolFluid = qSubCool;
-                    */
                     
                     scalar QsubCool = gSum(qSubCool*patch().magSf());
 
@@ -1244,7 +1126,9 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::updateCoeffs()
 
 void alphatWallBoilingWallFunctionFvPatchScalarField::write(Ostream& os) const
 {
-    fvPatchField<scalar>::write(os);
+    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField::write(os);
+    
+    //fvPatchField<scalar>::write(os);
 
     os.writeKeyword("phaseType") << phaseTypeNames_[phaseType_]
         << token::END_STATEMENT << nl;
@@ -1259,22 +1143,6 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::write(Ostream& os) const
             os  << indent << token::BEGIN_BLOCK << incrIndent << nl;
             partitioningModel_->write(os);
             os << decrIndent << indent << token::END_BLOCK << nl;
-
-            if (filmBoilingModel_.valid())
-            {
-                os.writeKeyword("filmBoilingModel") << nl;
-                os << indent << token::BEGIN_BLOCK << incrIndent << nl;
-                filmBoilingModel_->write(os);
-                os << decrIndent << indent << token::END_BLOCK << nl;
-            }
-
-            if (LeidenfrostModel_.valid())
-            {
-                os.writeKeyword("LeidenfrostModel") << nl;
-                os << indent << token::BEGIN_BLOCK << incrIndent << nl;
-                LeidenfrostModel_->write(os);
-                os << decrIndent << indent << token::END_BLOCK << nl;
-            }
 
             break;
         }
@@ -1357,11 +1225,11 @@ void alphatWallBoilingWallFunctionFvPatchScalarField::write(Ostream& os) const
     os.writeKeyword("otherPhase") << otherPhaseName_
         << token::END_STATEMENT << nl;
 
-    dmdt_.writeEntry("dmdt", os);
+    //dmdt_.writeEntry("dmdt", os);
     dDep_.writeEntry("dDep", os);
     qq_.writeEntry("qQuenching", os);
     alphatConv_.writeEntry("alphatConv", os);
-    writeEntry("value", os);
+    //writeEntry("value", os);
 }
 
 
