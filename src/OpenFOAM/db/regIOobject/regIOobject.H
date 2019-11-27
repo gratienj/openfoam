@@ -132,6 +132,8 @@ public:
 
         static float fileModificationSkew;
 
+        static int maxFileModificationPolls;
+
 
     // Constructors
 
