@@ -513,7 +513,7 @@ void Foam::reconstruction::plicRDF::reconstruct()
             DebugInfo<< "intial residual absolute = " 
                 << avgRes/resCounter << endl;
             DebugInfo<< "intial residual normalized = " 
-                << avgNormRes/resCounter
+                << avgNormRes/resCounter << endl;
         }
 
         if
