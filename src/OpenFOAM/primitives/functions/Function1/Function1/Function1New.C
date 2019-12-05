@@ -63,13 +63,13 @@ Foam::autoPtr<Foam::Function1<Type>> Foam::Function1<Type>::New
           : coeffsDict.lookupOrDefault<word>("type", redirectType)
         );
 
-        auto cstrIter = dictionaryConstructorTablePtr_->cfind(Function1Type);
+        auto cstrIter = dictionaryConstructorTablePtr_->cfind(modelType);
 
         if (!cstrIter.found())
         {
             FatalIOErrorInFunction(dict)
                 << "Unknown Function1 type "
-                << Function1Type << " for "
+                << modelType << " for "
                 << entryName << nl << nl
                 << "Valid Function1 types :" << nl
                 << dictionaryConstructorTablePtr_->sortedToc() << nl
