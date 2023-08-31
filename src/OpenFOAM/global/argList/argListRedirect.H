@@ -5,8 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2020-2023 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,48 +23,64 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::Detail::redirectOutputs
+
+Description
+    Helper class for redirecting outputs from within argList.
+    Handles the following options:
+
+    \verbatim
+        -stdout <file>
+        -stderr <file>
+        -join-stderr
+        -append-rank
+    \endverbatim
+
+Note
+    Not intended for general use
+
+SourceFiles
+    argListRedirect.C
+
 \*---------------------------------------------------------------------------*/
 
-#include "OSstream.H"
+#ifndef argListRedirect_H
+#define argListRedirect_H
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+#include "string.H"
 
-inline Foam::OSstream::OSstream
-(
-    std::ostream& os,
-    const string& streamName,
-    IOstreamOption streamOpt
-)
-:
-    Ostream(streamOpt),
-    name_(streamName),
-    os_(&os)
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+namespace Foam
 {
-    if (os_->good())
-    {
-        setOpened();
-        setGood();
-        os_->precision(precision_);
-    }
-    else
-    {
-        syncState();
-    }
-}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-inline std::ostream& Foam::OSstream::attach(std::ostream& os)
+namespace Detail
 {
-    std::ostream* old = os_;
 
-    os_ = &os;
-    IOstream::attach(*os_);
-    // Leave precision untouched
+/*---------------------------------------------------------------------------*\
+                       Class redirectOutputs Declaration
+\*---------------------------------------------------------------------------*/
 
-    return *old;
-}
+struct redirectOutputs
+{
+    string stdout_;
+    string stderr_;
+    bool join_;
+    bool ranks_;
 
+    redirectOutputs(int& argc, char**& argv);
+
+    bool active() const;
+};
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Detail
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
 
 // ************************************************************************* //
