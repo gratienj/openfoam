@@ -344,7 +344,7 @@ bool Foam::faMesh::init(const bool doInit)
 
 Foam::faMesh::faMesh(const polyMesh& pMesh, const Foam::zero)
 :
-    faMesh(pMesh, labelList(), static_cast<const IOobject&>(pMesh))
+    faMesh(pMesh, labelList())
 {}
 
 
@@ -361,9 +361,7 @@ Foam::faMesh::faMesh
 )
 :
     MeshObject<polyMesh, Foam::UpdateableMeshObject, faMesh>(pMesh),
-    faSchemes(mesh()),
     edgeInterpolation(*this),
-    faSolution(mesh()),
     faceLabels_
     (
         IOobject
@@ -471,21 +469,8 @@ Foam::faMesh::faMesh
     labelList&& faceLabels
 )
 :
-    faMesh(pMesh, std::move(faceLabels), static_cast<const IOobject&>(pMesh))
-{}
-
-
-Foam::faMesh::faMesh
-(
-    const polyMesh& pMesh,
-    labelList&& faceLabels,
-    const IOobject& io
-)
-:
     MeshObject<polyMesh, Foam::UpdateableMeshObject, faMesh>(pMesh),
-    faSchemes(mesh(), io.readOpt()),
     edgeInterpolation(*this),
-    faSolution(mesh(), io.readOpt()),
     faceLabels_
     (
         IOobject
@@ -547,6 +532,9 @@ Foam::faMesh::faMesh
     nEdges_ = 0;
     nInternalEdges_ = 0;
     nFaces_ = faceLabels_.size();
+
+    // TDB: can we make a NO_READ readOption persistent for
+    // faSchemes/faSolution? Or not needed anymore?
 }
 
 
@@ -557,17 +545,7 @@ Foam::faMesh::faMesh
 )
 :
     MeshObject<polyMesh, Foam::UpdateableMeshObject, faMesh>(baseMesh.mesh()),
-    faSchemes
-    (
-        mesh(),
-        static_cast<const faSchemes&>(baseMesh)
-    ),
     edgeInterpolation(*this),
-    faSolution
-    (
-        mesh(),
-        static_cast<const faSolution&>(baseMesh)
-    ),
     faceLabels_
     (
         IOobject
@@ -629,6 +607,31 @@ Foam::faMesh::faMesh
     nEdges_ = 0;
     nInternalEdges_ = 0;
     nFaces_ = faceLabels_.size();
+
+    // TBD
+    // if (baseMesh.schemesPtr_)
+    // {
+    //     schemesPtr_.reset
+    //     (
+    //         new faSchemes
+    //         (
+    //             faMesh::thisDb(),
+    //            *(baseMesh.schemesPtr_)
+    //         )
+    //     );
+    // }
+    //
+    // if (baseMesh.solutionPtr_)
+    // {
+    //     solutionPtr_.reset
+    //     (
+    //         new faSolution
+    //         (
+    //             faMesh::thisDb(),
+    //            *(baseMesh.solutionPtr_)
+    //         )
+    //     );
+    // }
 }
 
 
@@ -739,6 +742,114 @@ Foam::faMesh::~faMesh()
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+const Foam::faSchemes& Foam::faMesh::schemes() const
+{
+    if (!schemesPtr_)
+    {
+        // Likely really want schemes: promote NO_READ to LAZY_READ
+
+        const auto& obr = faMesh::thisDb();
+        IOobjectOption::readOption rOpt(obr.readOpt());
+        if (!IOobjectOption::isAnyRead(rOpt))
+        {
+            rOpt = IOobjectOption::LAZY_READ;
+        }
+
+        schemesPtr_.reset(new faSchemes(obr, rOpt));
+    }
+    return *schemesPtr_;
+}
+
+
+Foam::faSchemes& Foam::faMesh::schemes()
+{
+    if (!schemesPtr_)
+    {
+        // Likely really want schemes: promote NO_READ to LAZY_READ
+
+        const auto& obr = faMesh::thisDb();
+        IOobjectOption::readOption rOpt(obr.readOpt());
+        if (!IOobjectOption::isAnyRead(rOpt))
+        {
+            rOpt = IOobjectOption::LAZY_READ;
+        }
+
+        schemesPtr_.reset(new faSchemes(obr, rOpt));
+    }
+    return *schemesPtr_;
+}
+
+
+void Foam::faMesh::schemes(IOobjectOption::readOption rOpt)
+{
+    if
+    (
+        IOobjectOption::isAnyRead(rOpt)
+     && (!schemesPtr_ || schemesPtr_->dict().empty())
+    )
+    {
+        const auto& obr = faMesh::thisDb();
+
+        schemesPtr_.reset(nullptr);  // Discard existing (forces unregister)
+        schemesPtr_.reset(new faSchemes(obr, rOpt));
+    }
+}
+
+
+const Foam::faSolution& Foam::faMesh::solution() const
+{
+    if (!solutionPtr_)
+    {
+        // Likely really want solution: promote NO_READ to LAZY_READ
+
+        const auto& obr = faMesh::thisDb();
+        IOobjectOption::readOption rOpt(obr.readOpt());
+        if (!IOobjectOption::isAnyRead(rOpt))
+        {
+            rOpt = IOobjectOption::LAZY_READ;
+        }
+
+        solutionPtr_.reset(new faSolution(obr, rOpt));
+    }
+    return *solutionPtr_;
+}
+
+
+Foam::faSolution& Foam::faMesh::solution()
+{
+    if (!solutionPtr_)
+    {
+        // Likely really want solution: promote NO_READ to LAZY_READ
+
+        const auto& obr = faMesh::thisDb();
+        IOobjectOption::readOption rOpt(obr.readOpt());
+        if (!IOobjectOption::isAnyRead(rOpt))
+        {
+            rOpt = IOobjectOption::LAZY_READ;
+        }
+
+        solutionPtr_.reset(new faSolution(obr, rOpt));
+    }
+    return *solutionPtr_;
+}
+
+
+void Foam::faMesh::solution(IOobjectOption::readOption rOpt)
+{
+    if
+    (
+        IOobjectOption::isAnyRead(rOpt)
+     && (!solutionPtr_ || solutionPtr_->dict().empty())
+    )
+    {
+        const auto& obr = faMesh::thisDb();
+
+        solutionPtr_.reset(nullptr);  // Discard existing (forces unregister)
+        solutionPtr_.reset(new faSolution(obr, rOpt));
+    }
+}
+
 
 Foam::fileName Foam::faMesh::meshDir() const
 {
