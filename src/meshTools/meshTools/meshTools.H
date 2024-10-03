@@ -352,6 +352,37 @@ namespace meshTools
             const vector& cutDir
         );
 
+
+    // Face information
+
+        //- Set face information: patch, zone and zone flip for a face
+        void setFaceInfo
+        (
+            const polyMesh& mesh,
+            const label faceI,
+            label& patchID,
+            label& zoneID,
+            label& zoneFlip
+        );
+
+
+    // Mark-up of mesh bits. Relocated from refinement polyMeshModifier
+
+        //- Extend marked cells across faces given a bool list of already marked
+        //  cells
+        void extendMarkedCellsAcrossFaces
+        (
+            const polyMesh& mesh,
+            boolList& markedCell
+        );
+
+        //- Extend marked cells across points given a bool list of already
+        //  marked cells
+        void extendMarkedCellsAcrossPoints
+        (
+            const polyMesh& mesh,
+            boolList& markedCell
+        );
 } // End namespace meshTools
 
 
