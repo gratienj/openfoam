@@ -8,5 +8,6 @@ CuthillMcKeeRenumber/CuthillMcKeeRenumber.C
 springRenumber/springRenumber.C
 structuredRenumber/structuredRenumber.C
 structuredRenumber/OppositeFaceCellWaveBase.C
+hpathRenumber/hpathRenumber.C
 
 LIB = $(FOAM_LIBBIN)/librenumberMethods
