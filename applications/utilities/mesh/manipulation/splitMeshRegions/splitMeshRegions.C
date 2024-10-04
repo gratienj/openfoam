@@ -43,8 +43,9 @@ Description
     - volScalarField with regions as different scalars (-detectOnly)
             or
     - mesh with multiple regions and mapped patches. These patches
-      either cover the whole interface between two region (default) or
-      only part according to faceZones (-useFaceZones)
+      either cover the whole interface between two region (default),
+      only part according to faceZones (-useFaceZones) or be auto-generated
+      according to an AMI method (see below)
             or
     - mesh with cells put into cellZones (-makeCellZones)
 
@@ -98,6 +99,14 @@ Description
         - boundaryRegionAddressing : for every patch in this region the
         patch in the original mesh (or -1 if added patch)
 
+    - auto-generate patches using AMI area-overlap detection. This requires a
+      patchSet to apply it to and an optional AMIMethod (default is
+      faceAreaWeightAMI2D).
+            -autoPatch '("solid*")'
+            -AMIMethod faceAreaWeightAMI2D
+      Any mapped patch thus generated should probably use the
+      nearestPatchFaceAMI sampling method.
+
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
@@ -115,6 +124,7 @@ Description
 #include "mappedWallPolyPatch.H"
 #include "fvMeshTools.H"
 #include "processorMeshes.H"
+#include "faceAreaWeightAMI2D.H"
 
 using namespace Foam;
 
@@ -300,12 +310,115 @@ void addToInterface
 }
 
 
+labelList getMinBoundaryValue
+(
+    const polyMesh& mesh,
+    const word& AMIMethod,
+    const labelList& matchPatchIDs,
+    const labelList& cellRegion
+)
+{
+    // Neighbour cellRegion.
+    labelList coupledRegion(mesh.nBoundaryFaces());
+
+    forAll(coupledRegion, i)
+    {
+        label celli = mesh.faceOwner()[i+mesh.nInternalFaces()];
+        coupledRegion[i] = cellRegion[celli];
+    }
+    syncTools::swapBoundaryFaceList(mesh, coupledRegion);
+
+    // Add approximate matches
+    forAll(matchPatchIDs, i)
+    {
+        const label patchi = matchPatchIDs[i];
+        const auto& pp = mesh.boundaryMesh()[patchi];
+
+        for (label j = i+1; j < matchPatchIDs.size(); ++j)
+        {
+            const label nbrPatchi = matchPatchIDs[j];
+            const auto& nbrPp = mesh.boundaryMesh()[nbrPatchi];
+
+            // Use AMI to try and find matches
+            auto AMPtr(AMIInterpolation::New(AMIMethod));
+
+            AMPtr->calculate(pp, nbrPp, nullptr);
+            if
+            (
+                gAverage(AMPtr->tgtWeightsSum()) > SMALL
+             || gAverage(AMPtr->srcWeightsSum()) > SMALL
+            )
+            {
+                // Pull remote data local
+                labelList thisDecomp(pp.size(), labelMax);
+                AMPtr->interpolateToSource
+                (
+                    labelList(cellRegion, nbrPp.faceCells()),
+                    []
+                    (
+                        label& res,
+                        const label facei,
+                        const label& fld,
+                        const scalar& w
+                    )
+                    {
+                        res = min(res, fld);
+                    },
+                    thisDecomp,
+                    thisDecomp      // used in case of low-weight-corr
+                );
+
+                // Put thisDecomp into coupledRegion. Check for unmatched faces.
+                forAll(thisDecomp, i)
+                {
+                    if (thisDecomp[i] != labelMax)
+                    {
+                        coupledRegion[pp.offset()+i] = thisDecomp[i];
+                    }
+                }
+
+
+                labelList nbrDecomp(nbrPp.size(), labelMax);
+                AMPtr->interpolateToTarget
+                (
+                    labelList(cellRegion, pp.faceCells()), //thisDecomp,
+                    []
+                    (
+                        label& res,
+                        const label facei,
+                        const label& fld,
+                        const scalar& w
+                    )
+                    {
+                        res = min(res, fld);
+                    },
+                    nbrDecomp,
+                    nbrDecomp       // used in case of low-weight-corr
+                );
+
+                // Put nbrDecomp into coupledRegion. Check for unmatched faces/
+                forAll(nbrDecomp, i)
+                {
+                    if (nbrDecomp[i] != labelMax)
+                    {
+                        coupledRegion[nbrPp.offset()+i] = nbrDecomp[i];
+                    }
+                }
+            }
+        }
+    }
+    return coupledRegion;
+}
+
+
 // Get region-region interface name and sizes.
 // Returns interfaces as straight list for looping in identical order.
 void getInterfaceSizes
 (
     const polyMesh& mesh,
     const bool useFaceZones,
+    const word& AMIMethod,
+    const labelList& matchPatchIDs,
     const labelList& cellRegion,
     const wordList& regionNames,
 
@@ -344,15 +457,16 @@ void getInterfaceSizes
     // Boundary faces
     // ~~~~~~~~~~~~~~
 
-    // Neighbour cellRegion.
-    labelList coupledRegion(mesh.nBoundaryFaces());
-
-    forAll(coupledRegion, i)
-    {
-        label celli = mesh.faceOwner()[i+mesh.nInternalFaces()];
-        coupledRegion[i] = cellRegion[celli];
-    }
-    syncTools::swapBoundaryFaceList(mesh, coupledRegion);
+    const labelList coupledRegion
+    (
+        getMinBoundaryValue
+        (
+            mesh,
+            AMIMethod,
+            matchPatchIDs,
+            cellRegion
+        )
+    );
 
     forAll(coupledRegion, i)
     {
@@ -552,6 +666,8 @@ autoPtr<mapPolyMesh> createRegionMesh
     const labelList& cellRegion,
     const label regionI,
     const word& regionName,
+    const word& AMIMethod,
+    const labelList& matchPatchIDs,
     // Interface info
     const labelList& interfacePatches,
     const labelList& faceToInterface,
@@ -563,15 +679,16 @@ autoPtr<mapPolyMesh> createRegionMesh
     fvMeshTools::createDummyFvMeshFiles(mesh, regionName, true);
 
     // Neighbour cellRegion.
-    labelList coupledRegion(mesh.nBoundaryFaces());
-
-    forAll(coupledRegion, i)
-    {
-        label celli = mesh.faceOwner()[i+mesh.nInternalFaces()];
-        coupledRegion[i] = cellRegion[celli];
-    }
-    syncTools::swapBoundaryFaceList(mesh, coupledRegion);
-
+    const labelList coupledRegion
+    (
+        getMinBoundaryValue
+        (
+            mesh,
+            AMIMethod,
+            matchPatchIDs,
+            cellRegion
+        )
+    );
 
     // Topology change container. Start off from existing mesh.
     polyTopoChange meshMod(mesh);
@@ -590,20 +707,16 @@ autoPtr<mapPolyMesh> createRegionMesh
     labelList exposedPatchIDs(exposedFaces.size());
     forAll(exposedFaces, i)
     {
-        label facei = exposedFaces[i];
-        label interfacei = faceToInterface[facei];
+        const label facei = exposedFaces[i];
+        const label interfacei = faceToInterface[facei];
 
-        label ownRegion = cellRegion[mesh.faceOwner()[facei]];
-        label neiRegion = -1;
-
-        if (mesh.isInternalFace(facei))
-        {
-            neiRegion = cellRegion[mesh.faceNeighbour()[facei]];
-        }
-        else
-        {
-            neiRegion = coupledRegion[facei-mesh.nInternalFaces()];
-        }
+        const label ownRegion = cellRegion[mesh.faceOwner()[facei]];
+        const label neiRegion
+        (
+            mesh.isInternalFace(facei)
+          ? cellRegion[mesh.faceNeighbour()[facei]]
+          : coupledRegion[facei-mesh.nInternalFaces()]
+        );
 
 
         // Check which side is being kept - determines which of the two
@@ -650,6 +763,62 @@ autoPtr<mapPolyMesh> createRegionMesh
         meshMod
     );
 
+
+    // Do re-patching on non-removed cells ourselves. These are not exposed
+    // faces but are boundary faces
+    for (label bFacei = 0; bFacei < mesh.nBoundaryFaces(); bFacei++)
+    {
+        const label facei = mesh.nInternalFaces()+bFacei;
+
+        if (!meshMod.faceRemoved(facei))
+        {
+            const label interfacei = faceToInterface[facei];
+            const label ownRegion = cellRegion[mesh.faceOwner()[facei]];
+            const label neiRegion = coupledRegion[bFacei];
+
+            label exposedPatchID = -1;
+            if (ownRegion == regionI)
+            {
+                if (regionI < neiRegion)
+                {
+                    exposedPatchID = interfacePatches[interfacei];
+                }
+                else if (regionI > neiRegion)
+                {
+                    exposedPatchID = interfacePatches[interfacei]+1;
+                }
+            }
+            else if (neiRegion == regionI)
+            {
+                if (regionI < ownRegion)
+                {
+                    exposedPatchID = interfacePatches[interfacei];
+                }
+                else if (regionI > ownRegion)
+                {
+                    exposedPatchID = interfacePatches[interfacei]+1;
+                }
+            }
+
+            if (exposedPatchID != -1)
+            {
+                // In-place modify the patch
+                DynamicList<label>& patchID =
+                    const_cast<DynamicList<label>&>(meshMod.region());
+
+                //Pout<< "For face:" << facei
+                //    << " on interface:" << interfacei
+                //    << " modifying from own:" << meshMod.faceOwner()[facei]
+                //    << " nei:" << meshMod.faceNeighbour()[facei]
+                //    << " verts:" << meshMod.faces()[facei]
+                //    << " patch " << patchID[facei]
+                //    << " to " << exposedPatchID << endl;
+                patchID[facei] = exposedPatchID;
+            }
+        }
+    }
+
+
     autoPtr<mapPolyMesh> map = meshMod.makeMesh
     (
         newMesh,
@@ -674,6 +843,8 @@ void createAndWriteRegion
     const labelList& cellRegion,
     const wordList& regionNames,
     const bool prefixRegion,
+    const word& AMIMethod,
+    const labelList& matchPatchIDs,
     const labelList& faceToInterface,
     const labelList& interfacePatches,
     const label regionI,
@@ -690,6 +861,8 @@ void createAndWriteRegion
         cellRegion,
         regionI,
         regionNames[regionI],
+        AMIMethod,
+        matchPatchIDs,
         interfacePatches,
         faceToInterface,
         newMesh
@@ -988,6 +1161,7 @@ labelList addRegionPatches
     const wordList& regionNames,
     const edgeList& interfaces,
     const List<Pair<word>>& interfaceNames
+    //const List<mappedPatchBase::sampleMode>& interfaceModes
 )
 {
     Info<< nl << "Adding patches" << nl << endl;
@@ -1011,7 +1185,7 @@ labelList addRegionPatches
             0,                  // overridden
             0,                  // overridden
             regionNames[e[1]],  // sampleRegion
-            mappedPatchBase::NEARESTPATCHFACE,
+            mappedPatchBase::NEARESTPATCHFACE,  //interfaceModes[interI]
             names[1],           // samplePatch
             point::zero,        // offset
             mesh.boundaryMesh()
@@ -1033,7 +1207,7 @@ labelList addRegionPatches
             0,
             0,
             regionNames[e[0]],  // sampleRegion
-            mappedPatchBase::NEARESTPATCHFACE,
+            mappedPatchBase::NEARESTPATCHFACE,  //interfaceModes[interI]
             names[0],
             point::zero,        // offset
             mesh.boundaryMesh()
@@ -1423,6 +1597,7 @@ int main(int argc, char *argv[])
         "Split mesh into multiple regions (detected by walking across faces)"
     );
     #include "addRegionOption.H"
+
     #include "addOverwriteOption.H"
     argList::addBoolOption
     (
@@ -1489,6 +1664,18 @@ int main(int argc, char *argv[])
         "useFaceZones",
         "Use faceZones to patch inter-region faces instead of single patch"
     );
+    argList::addOption
+    (
+        "autoPatch",
+        "lists of patches",
+        "Find overlapping faces to auto-generate interface patches"
+    );
+    argList::addOption
+    (
+        "AMIMethod",
+        "word",
+        "type of AMI matching method"
+    );
     argList::addBoolOption
     (
         "prefixRegion",
@@ -1500,6 +1687,12 @@ int main(int argc, char *argv[])
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createNamedMesh.H"
+
+
+    // Note: could try to read multiple meshes and merge into one before
+    // operation but this would give problems with unique prefixes:
+    //  - patches get renamed. So patchFields would need to be renamed.
+    //  - what about e.g. 'samplePatch' in mapped patches?
 
     const word oldInstance = mesh.pointsInstance();
 
@@ -1524,6 +1717,14 @@ int main(int argc, char *argv[])
     const bool useFaceZones     = args.found("useFaceZones");
     const bool prefixRegion     = args.found("prefixRegion");
 
+    labelList matchPatchIDs;
+    word AMIMethod(faceAreaWeightAMI2D::typeName);
+    if (args.found("autoPatch"))
+    {
+        const wordRes patchNames(args.getList<wordRe>("autoPatch"));
+        matchPatchIDs = mesh.boundaryMesh().indices(patchNames);
+        args.readIfPresent("AMIMethod", AMIMethod);
+    }
 
     if
     (
@@ -1552,6 +1753,13 @@ int main(int argc, char *argv[])
             << nl << endl;
     }
 
+
+    if (matchPatchIDs.size())
+    {
+        Info<< "Auto-detecting matching faces out of patches "
+            << UIndirectList<word>(mesh.boundaryMesh().names(), matchPatchIDs)
+            << nl << endl;
+    }
 
 
     if (insidePoint && largestOnly)
@@ -1620,8 +1828,8 @@ int main(int argc, char *argv[])
             << " This requires all"
             << " cells to be in one and only one cellZone." << nl << endl;
 
-        // Collect sets of zones into clusters. If no cluster is just an identity
-        // list (cluster 0 is cellZone 0 etc.)
+        // Collect sets of zones into clusters. If no cluster is just an
+        // identity list (cluster 0 is cellZone 0 etc.)
         wordList clusterNames;
         labelListList clusterToZones;
         labelList zoneToCluster;
@@ -1936,6 +2144,8 @@ int main(int argc, char *argv[])
     (
         mesh,
         useFaceZones,
+        AMIMethod,
+        matchPatchIDs,
         cellRegion,
         regionNames,
 
@@ -2115,6 +2325,7 @@ int main(int argc, char *argv[])
                 regionNames,
                 interfaces,
                 interfaceNames
+                //interfaceModes
             )
         );
 
@@ -2167,6 +2378,8 @@ int main(int argc, char *argv[])
                 cellRegion,
                 regionNames,
                 prefixRegion,
+                AMIMethod,
+                matchPatchIDs,
                 faceToInterface,
                 interfacePatches,
                 regionI,
@@ -2188,6 +2401,8 @@ int main(int argc, char *argv[])
                 cellRegion,
                 regionNames,
                 prefixRegion,
+                AMIMethod,
+                matchPatchIDs,
                 faceToInterface,
                 interfacePatches,
                 regionI,
@@ -2209,6 +2424,8 @@ int main(int argc, char *argv[])
                     cellRegion,
                     regionNames,
                     prefixRegion,
+                    AMIMethod,
+                    matchPatchIDs,
                     faceToInterface,
                     interfacePatches,
                     regionI,
