@@ -125,6 +125,7 @@ Foam::IncompressibleTurbulenceModel<TransportModel>::divDevReff
     volVectorField& U
 ) const
 {
+    std::cout<<"Foam::IncompressibleTurbulenceModel<TransportModel>::divDevReff"<<std::endl ;
     return divDevRhoReff(U);
 }
 

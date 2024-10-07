@@ -349,6 +349,7 @@ Foam::ReynoldsStress<BasicTurbulenceModel>::divDevRhoReff
     volVectorField& U
 ) const
 {
+  std::cout<<"ReynoldsStress<BasicTurbulenceModel>::divDevRhoReff"<<std::endl ;
     return DivDevRhoReff(this->rho_, U);
 }
 
@@ -361,6 +362,7 @@ Foam::ReynoldsStress<BasicTurbulenceModel>::divDevRhoReff
     volVectorField& U
 ) const
 {
+  std::cout<<"ReynoldsStress<BasicTurbulenceModel>::divDevRhoReff2"<<std::endl ;
     return DivDevRhoReff(rho, U);
 }
 

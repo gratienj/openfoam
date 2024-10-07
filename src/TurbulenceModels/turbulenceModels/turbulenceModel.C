@@ -92,6 +92,7 @@ void Foam::turbulenceModel::validate()
 
 void Foam::turbulenceModel::correct()
 {
+    std::cout<<"Foam::turbulenceModel::correct()"<<std::endl ;
     if (mesh_.changing())
     {
         y_.correct();

@@ -86,6 +86,7 @@ template<class BasicTurbulenceModel>
 Foam::tmp<Foam::volSymmTensorField>
 Foam::eddyViscosity<BasicTurbulenceModel>::R() const
 {
+    std::cout<<"EDDYVISCOSITY::R"<<std::endl ;
     tmp<volScalarField> tk(k());
 
     // Get list of patchField type names from k
@@ -125,6 +126,7 @@ void Foam::eddyViscosity<BasicTurbulenceModel>::validate()
 template<class BasicTurbulenceModel>
 void Foam::eddyViscosity<BasicTurbulenceModel>::correct()
 {
+    std::cout<<"eddyViscosity::correct()"<<std::endl ;
     BasicTurbulenceModel::correct();
 }
 

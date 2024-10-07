@@ -179,8 +179,11 @@ int main(int argc, char *argv[])
             if (pimple.turbCorr())
             {
                 laminarTransport.correct();
+                std::cout<<"TURBULENCE::CORRECT"<<std::endl ;
                 turbulence->correct();
             }
+            else
+              std::cout<<"NO TURBULENCE::CORRECT"<<std::endl ;
         }
 
         runTime.write();

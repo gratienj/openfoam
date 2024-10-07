@@ -70,7 +70,9 @@ protected:
         //- ***HGW Temporary function to be removed when the run-time selectable
         //  thermal transport layer is complete
         virtual void correctNut()
-        {}
+        {
+          std::cout<<"incompressibleTurbulenceModel::correctNut"<<std::endl;
+        }
 
 
 private:

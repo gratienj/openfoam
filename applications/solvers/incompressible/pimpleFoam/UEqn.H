@@ -1,7 +1,7 @@
 // Solve the Momentum equation
 
 MRF.correctBoundaryVelocity(U);
-
+std::cout<<"ASSEMBLE UEQ LINEARSYSTEM"<<std::endl ;
 tmp<fvVectorMatrix> tUEqn
 (
     fvm::ddt(U) + fvm::div(phi, U)
@@ -10,10 +10,13 @@ tmp<fvVectorMatrix> tUEqn
  ==
     fvOptions(U)
 );
+std::cout<<"AFTER ASSEMBLE UEQ LINEARSYSTEM"<<std::endl ;
 fvVectorMatrix& UEqn = tUEqn.ref();
 
+std::cout<<"UEQ RELAX"<<std::endl ;
 UEqn.relax();
 
+std::cout<<"FVOPTIONS CONSTRAINT"<<std::endl ;
 fvOptions.constrain(UEqn);
 
 if (pimple.momentumPredictor())

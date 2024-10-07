@@ -10,19 +10,19 @@ undefine LINKEXE_STUB
 #------------------------------------------------------------------------------
 
 # Use gold linker
-ifneq (,$(findstring +gold,$(WM_COMPILE_CONTROL)))
+#ifneq (,$(findstring +gold,$(WM_COMPILE_CONTROL)))
 
     LINKLIBSO  += -fuse-ld=gold
     LINKEXE    += -fuse-ld=gold
     LINKEXE_STUB := true
 
 # Default linker, assume ld - no dummy stub
-else
+#else
 
-    LINKLIBSO  += -Xlinker --add-needed -Xlinker --no-as-needed
-    LINKEXE    += -Xlinker --add-needed -Xlinker --no-as-needed
+#    LINKLIBSO  += -Xlinker --add-needed -Xlinker --no-as-needed
+#    LINKEXE    += -Xlinker --add-needed -Xlinker --no-as-needed
 
-endif
+#endif
 
 
 # Link dummy stub to resolve libPstream symbols used by libOpenFOAM
@@ -33,3 +33,20 @@ endif
 endif
 
 #------------------------------------------------------------------------------
+#LINKLIBSO   = $(CC) -fuse-ld=bfd $(c++FLAGS) -shared \
+#    -Xlinker --add-needed \
+#    -Xlinker --no-as-needed \
+#    $(FOAM_EXTRA_LDFLAGS)
+##LINKLIBSO   = $(CC) $(c++FLAGS) -shared \
+##    -Xlinker --copy-dt-needed-entries \
+##    -Xlinker --no-copy-dt-needed-entries \
+##    $(FOAM_EXTRA_LDFLAGS)
+
+#LINKEXE     = $(CC) -fuse-ld=bfd $(c++FLAGS) \
+#    -Xlinker --add-needed \
+#    -Xlinker --no-as-needed \
+#    $(FOAM_EXTRA_LDFLAGS)
+##LINKEXE     = $(CC) $(c++FLAGS) \
+##    -Xlinker --copy-dt-needed-entries  \
+##    -Xlinker --no-copy-dt-needed-entries \
+##    $(FOAM_EXTRA_LDFLAGS)

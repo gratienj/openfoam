@@ -26,7 +26,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "Smagorinsky.H"
+#include "SmagorinskyML.H"
 #include "fvOptions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -39,12 +39,12 @@ namespace LESModels
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
-tmp<volScalarField> Smagorinsky<BasicTurbulenceModel>::k
+tmp<volScalarField> SmagorinskyML<BasicTurbulenceModel>::k
 (
     const tmp<volTensorField>& gradU
 ) const
 {
-    std::cout<<"Smagorinsky<BasicTurbulenceModel>::k()"<<typeid(*this).name()<<std::endl;
+    std::cout<<"SmagorinskyML<BasicTurbulenceModel>::k()"<<typeid(*this).name()<<std::endl;
     volSymmTensorField D(symm(gradU));
 
     volScalarField a(this->Ce_/this->delta());
@@ -68,9 +68,9 @@ tmp<volScalarField> Smagorinsky<BasicTurbulenceModel>::k
 
 
 template<class BasicTurbulenceModel>
-void Smagorinsky<BasicTurbulenceModel>::correctNut()
+void SmagorinskyML<BasicTurbulenceModel>::correctNut()
 {
-    std::cout<<"Smagorinsky<BasicTurbulenceModel>::correctNut()"<<typeid(*this).name()<<std::endl;
+    std::cout<<"SmagorinskyML<BasicTurbulenceModel>::correctNut()"<<typeid(*this).name()<<std::endl;
     volScalarField k(this->k(fvc::grad(this->U_)));
 
     this->nut_ = Ck_*this->delta()*sqrt(k);
@@ -78,14 +78,14 @@ void Smagorinsky<BasicTurbulenceModel>::correctNut()
     fv::options::New(this->mesh_).correct(this->nut_);
 
     BasicTurbulenceModel::correctNut();
-    std::cout<<"FIN Smagorinsky<BasicTurbulenceModel>::correctNut()"<<std::endl;
+    std::cout<<"FIN SmagorinskyML<BasicTurbulenceModel>::correctNut()"<<std::endl;
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
-Smagorinsky<BasicTurbulenceModel>::Smagorinsky
+SmagorinskyML<BasicTurbulenceModel>::SmagorinskyML
 (
     const alphaField& alpha,
     const rhoField& rho,
@@ -117,6 +117,18 @@ Smagorinsky<BasicTurbulenceModel>::Smagorinsky
             this->coeffDict_,
             0.094
         )
+    ),
+    TSGS_
+    (
+        IOobject
+        (
+            IOobject::groupName("TSGS", alphaRhoPhi.group()),
+            this->runTime_.timeName(),
+            this->mesh_,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        ),
+        this->mesh_
     )
 {
     if (type == typeName)
@@ -129,7 +141,7 @@ Smagorinsky<BasicTurbulenceModel>::Smagorinsky
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
-bool Smagorinsky<BasicTurbulenceModel>::read()
+bool SmagorinskyML<BasicTurbulenceModel>::read()
 {
     if (LESeddyViscosity<BasicTurbulenceModel>::read())
     {
@@ -143,18 +155,36 @@ bool Smagorinsky<BasicTurbulenceModel>::read()
 
 
 template<class BasicTurbulenceModel>
-void Smagorinsky<BasicTurbulenceModel>::correct()
+void SmagorinskyML<BasicTurbulenceModel>::correct()
 {
     if (!this->turbulence_)
     {
         return;
     }
 
-    std::cout<<"Smagorinsky::correct()"<<typeid(*this).name()<<std::endl;
+    std::cout<<"SmagorinskyML::correct()"<<typeid(*this).name()<<std::endl;
     LESeddyViscosity<BasicTurbulenceModel>::correct();
 
-    std::cout<<"Smagorinsky::correctNut()"<<std::endl;
+    std::cout<<"SmagorinskyML::correctNut()"<<std::endl;
     correctNut();
+
+    std::cout<<"BUILD T SGS"<<std::endl ;
+    volTensorField turb_t((this->alpha_*this->rho_*this->nut())*dev2(T(fvc::grad(this->U_)))) ;
+    volSymmTensorField D(symm(fvc::grad(this->U_)));
+    forAll(TSGS_, celli)
+    {
+        const symmTensor& d = D[celli];
+        symmTensor& tsgs    = TSGS_[celli];
+        auto& t             = turb_t[celli] ;
+        //std::cout<<"||D["<<celli<<"]|| = "<<mag(d)<<std::endl ;
+        //std::cout<<"turb_t["<<celli<<"]="<<typeid(t).name()<<" "<<t.xx()<<" "<<t.yy()<<" "<<t.zz()<<std::endl ;
+        tsgs = symmTensor(t.xx(),t.xy(),t.xz(),
+                                 t.yy(),t.yz(),
+                                        t.zz()) ;
+        //std::cout<<"Tensor D["<<celli<<"] = "<<d.xx()<<" "<<d.yy()<<" "<<d.zz()<<std::endl ;
+        //std::cout<<"Tensor TSGS["<<celli<<"] = "<<tsgs.xx()<<" "<<tsgs.yy()<<" "<<tsgs.zz()<<std::endl ;
+    }
+    std::cout<<"FIN SmagorinskyML::correct()"<<typeid(*this).name()<<std::endl;
 }
 
 

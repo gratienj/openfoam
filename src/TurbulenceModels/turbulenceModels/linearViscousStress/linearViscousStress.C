@@ -109,11 +109,24 @@ Foam::linearViscousStress<BasicTurbulenceModel>::divDevRhoReff
     volVectorField& U
 ) const
 {
-    return
-    (
-      - fvc::div((this->alpha_*this->rho_*this->nuEff())*dev2(T(fvc::grad(U))))
-      - fvm::laplacian(this->alpha_*this->rho_*this->nuEff(), U)
-    );
+    std::cout<<"linearViscousStress<BasicTurbulenceModel>::divDevRhoReff use SGS Stress tensor"<<this->m_use_sgs_stress_tensor<<std::endl ;
+    if(this->m_use_sgs_stress_tensor)
+    {
+      return
+      (
+        - fvc::div((this->alpha_*this->rho_*this->nu())*dev2(T(fvc::grad(U))))
+        - fvc::div(this->R())
+        - fvm::laplacian(this->alpha_*this->rho_*this->nu(), U)
+      );
+    }
+    else
+    {
+      return
+      (
+        - fvc::div((this->alpha_*this->rho_*this->nuEff())*dev2(T(fvc::grad(U))))
+        - fvm::laplacian(this->alpha_*this->rho_*this->nuEff(), U)
+      );
+    }
 }
 
 
@@ -125,6 +138,7 @@ Foam::linearViscousStress<BasicTurbulenceModel>::divDevRhoReff
     volVectorField& U
 ) const
 {
+    std::cout<<"linearViscousStress<BasicTurbulenceModel>::divDevRhoReff2"<<std::endl ;
     return
     (
       - fvc::div((this->alpha_*rho*this->nuEff())*dev2(T(fvc::grad(U))))

@@ -8,8 +8,6 @@ cd "${0%/*}" || exit                                # Run from this directory
     # operand setups
     setups="
     DFSEM
-    DFM
-    FSM
     "
 
     # flag to enable computations

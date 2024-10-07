@@ -218,6 +218,7 @@ bool dynamicKEqn<BasicTurbulenceModel>::read()
 template<class BasicTurbulenceModel>
 void dynamicKEqn<BasicTurbulenceModel>::correct()
 {
+  std::cout<<"dynamicKEqn<BasicTurbulenceModel>::correct()"<<std::endl ;
     if (!this->turbulence_)
     {
         return;

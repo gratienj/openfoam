@@ -74,6 +74,9 @@ protected:
         //- Flag to print the model coeffs at run-time
         Switch printCoeffs_;
 
+        //- Flag to print the model coeffs at run-time
+        Switch use_sgs_tensor_;
+
         //- Model coefficients dictionary
         dictionary coeffDict_;
 

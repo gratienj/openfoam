@@ -69,6 +69,7 @@ Foam::LESModel<BasicTurbulenceModel>::LESModel
     LESDict_(this->subOrEmptyDict("LES")),
     turbulence_(LESDict_.getOrDefault<Switch>("turbulence", true)),
     printCoeffs_(LESDict_.getOrDefault<Switch>("printCoeffs", false)),
+    use_sgs_tensor_(LESDict_.getOrDefault<Switch>("useSGSTensor", false)),
     coeffDict_(LESDict_.optionalSubDict(type + "Coeffs")),
     Ce_
     (
@@ -122,6 +123,8 @@ Foam::LESModel<BasicTurbulenceModel>::LESModel
     // Force the construction of the mesh deltaCoeffs which may be needed
     // for the construction of the derived models and BCs
     this->mesh_.deltaCoeffs();
+    this->m_use_sgs_stress_tensor = use_sgs_tensor_;
+    std::cout<<"USE SGS TENSOR : "<<this->m_use_sgs_stress_tensor<<std::endl ;
 }
 
 
@@ -248,6 +251,7 @@ Foam::LESModel<BasicTurbulenceModel>::omega() const
 template<class BasicTurbulenceModel>
 void Foam::LESModel<BasicTurbulenceModel>::correct()
 {
+    std::cout<<"LESModel::correct()"<<std::endl;
     delta_().correct();
     BasicTurbulenceModel::correct();
 }
