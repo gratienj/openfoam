@@ -78,6 +78,13 @@ SourceFiles
 #include "LESModel.H"
 #include "LESeddyViscosity.H"
 
+#define USE_ML4TURB
+#ifdef USE_ML4TURB
+#include "ml4turb/utils/PerfCounterMng.h"
+#include "ml4turb/MLTurbModel.h"
+#include "ml4turb/ML4Turb.h"
+#endif
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -110,6 +117,15 @@ protected:
         dimensionedScalar Ck_;
 
         volSymmTensorField TSGS_;
+
+#ifdef USE_ML4TURB
+        typedef ml4turb::ML4Turb ML4TurbPtrType ;
+        std::unique_ptr<ML4TurbPtrType> mlturb_api_ptr_ ;
+        std::string                     ml4trub_model_;
+        double                          clip_ = 0. ;
+        Switch                          ml4turb_enabled_ = false ;
+        bool                            ml4turb_api_initialized_ = false ;
+#endif
 
     // Protected Member Functions
 
