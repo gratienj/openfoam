@@ -27,7 +27,7 @@ wmakeLnInclude -u OSspecific/"${WM_OSTYPE:-POSIX}"
 
 OSspecific/"${WM_OSTYPE:-POSIX}"/Allwmake $targetType $*
 
-case "$WM_ARCH/$COMPILER" in
+case "$WM_ARCH/$WM_COMPILER" in
 (*ARM64/Mingw*)
     # Handle Pstream/OpenFOAM cyclic dependency
     # - compile Pstream as single .o object
