@@ -215,7 +215,6 @@ $(ranges)/labelRange/labelRange.cxx
 $(ranges)/labelRange/labelRanges.cxx
 $(ranges)/scalarRange/scalarRange.cxx
 $(ranges)/scalarRange/scalarRanges.cxx
-$(ranges)/sliceRange/sliceRange.cxx
 $(ranges)/tableBounds/tableBounds.cxx
 
 spatialVectorAlgebra = primitives/spatialVectorAlgebra

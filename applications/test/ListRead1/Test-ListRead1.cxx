@@ -46,7 +46,6 @@ Description
 #include "ListOps.H"
 #include "IndirectList.H"
 #include "SubList.H"
-#include "SliceList.H"
 #include "ListPolicy.H"
 
 #include <list>

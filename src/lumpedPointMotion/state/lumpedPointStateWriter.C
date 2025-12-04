@@ -27,7 +27,6 @@ License
 
 #include "lumpedPointState.H"
 #include "OFstream.H"
-#include "sliceRange.H"
 #include "foamVtkOutput.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -246,9 +245,10 @@ void Foam::lumpedPointState::writeVTP
             format().beginDataArray<label>(vtk::dataArrayAttr::OFFSETS);
             format().writeSize(payLoad);
 
-            for (const label off : sliceRange(3, nPolys, 3))
+            for (label trii = 1; trii <= nPolys; ++trii)
             {
-                format().write(off);
+                // Connectivity end offset for each triangle
+                format().write(label(3*trii));
             }
             format().flush();
 

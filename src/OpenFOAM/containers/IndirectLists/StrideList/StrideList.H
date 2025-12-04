@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019 OpenCFD Ltd.
+    Copyright (C) 2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,21 +24,18 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::SliceList
+    Foam::StrideList
 
 Description
-    A List with indirect slice addressing.
-
-SourceFiles
+    A List with indirect stride addressing.
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef SliceList_H
-#define SliceList_H
+#ifndef Foam_StrideList_H
+#define Foam_StrideList_H
 
-#include "IndirectListAddressing.H"
 #include "IndirectListBase.H"
-#include "sliceRange.H"
+#include "StrideRange.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -46,29 +43,39 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                          Class SliceList Declaration
+                         Class StrideList Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class T>
-class SliceList
+class StrideList
 :
-    private IndirectListAddressing<sliceRange>,
-    public IndirectListBase<T, sliceRange>
+    private IndirectListAddressing<StrideRange<label>>,
+    public  IndirectListBase<T, StrideRange<label>>
 {
+    typedef IndirectListAddressing<StrideRange<label>> storage_type;
+    typedef IndirectListBase<T, StrideRange<label>> parent_type;
+
 public:
 
     // Constructors
 
-        //- Copy construct from values list and slicing
-        SliceList(const UList<T>& values, const sliceRange& addr)
+        //- Copy construct from values list and striding
+        StrideList
+        (
+            const UList<T>& values,
+            const StrideRange<label>& addr
+        ) noexcept
         :
-            IndirectListAddressing<sliceRange>(addr),
-            IndirectListBase<T, sliceRange>
-            (
-                values,
-                IndirectListAddressing<sliceRange>::addressing()
-            )
+            storage_type(addr),
+            parent_type(values, storage_type::addressing())
         {}
+
+
+    // Safety
+
+        //- The values list (reference) cannot be an rvalue!
+        template<class... Args>
+        StrideList(UList<T>&&, Args&&...) = delete;
 
 
     // Member Functions
@@ -80,7 +87,7 @@ public:
     // Member Operators
 
         //- Use standard assignment operations
-        using IndirectListBase<T, sliceRange>::operator=;
+        using parent_type::operator=;
 };
 
 
