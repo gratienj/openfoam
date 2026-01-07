@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2016 OpenFOAM Foundation
     Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -111,6 +112,8 @@ makeRASModel(SSG);
 #include "EBRSM.H"
 makeRASModel(EBRSM);
 
+#include "GEKO.H"
+makeRASModel(GEKO);
 
 // -------------------------------------------------------------------------- //
 // LES models
