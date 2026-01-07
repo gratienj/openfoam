@@ -56,6 +56,8 @@ class SortList
 :
     public IndirectList<T>
 {
+    typedef IndirectList<T> parent_type;
+
 public:
 
     // Constructors
@@ -68,6 +70,13 @@ public:
         //  \note The comparator is not stored in the class.
         template<class Compare>
         inline SortList(const UList<T>& values, const Compare& comp);
+
+
+    // Safety
+
+        //- The values list (reference) cannot be an rvalue!
+        template<class... Args>
+        SortList(UList<T>&&, Args&&...) = delete;
 
 
     // Member Functions
@@ -104,8 +113,8 @@ public:
 
     // Member Operators
 
-        //- Assignment operators
-        using IndirectList<T>::operator=;
+        //- Use standard assignment operations
+        using parent_type::operator=;
 };
 
 

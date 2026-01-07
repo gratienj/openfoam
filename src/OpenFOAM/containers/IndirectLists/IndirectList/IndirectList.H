@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -53,7 +54,6 @@ SourceFiles
 #define Foam_IndirectList_H
 
 #include "List.H"
-#include "IndirectListAddressing.H"
 #include "IndirectListBase.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -79,32 +79,34 @@ class UIndirectList
 :
     public IndirectListBase<T, labelUList>
 {
+    typedef IndirectListBase<T, labelUList> parent_type;
+
 public:
 
     // Constructors
 
         //- Shallow copy values and addressing
-        UIndirectList(const UList<T>& values, const labelUList& addr)
+        UIndirectList(const UList<T>& values, const labelUList& addr) noexcept
         :
-            IndirectListBase<T, labelUList>(values, addr)
+            parent_type(values, addr)
         {}
 
         //- Copy construct (shallow copy values and addressing)
-        UIndirectList(const UIndirectList<T>& list)
+        UIndirectList(const UIndirectList& list) noexcept
         :
-            UIndirectList<T>(list.values(), list.addressing())
+            parent_type(list.values(), list.addressing())
         {}
 
 
     // Member Operators
 
         //- Use standard assignment operations
-        using IndirectListBase<T, labelUList>::operator=;
+        using parent_type::operator=;
 
         //- Deep copy values, Fatal if list sizes are not identical
-        void operator=(const UIndirectList<T>& rhs)
+        void operator=(const UIndirectList& rhs)
         {
-            this->copyList(rhs);
+            parent_type::operator=(rhs);
         }
 };
 
@@ -117,8 +119,11 @@ template<class T>
 class IndirectList
 :
     private IndirectListAddressing<labelList>,
-    public UIndirectList<T>
+    public  UIndirectList<T>
 {
+    typedef IndirectListAddressing<labelList> storage_type;
+    typedef UIndirectList<T> parent_type;
+
 public:
 
     // Constructors
@@ -127,16 +132,16 @@ public:
         inline IndirectList(const UList<T>& values, const labelUList& addr);
 
         //- Move construct addressing, shallow copy values reference
-        inline IndirectList(const UList<T>& values, labelList&& addr);
+        inline IndirectList(const UList<T>& values, labelList&& addr) noexcept;
 
         //- Zero-sized addressing, shallow copy values reference
-        inline IndirectList(const UList<T>& values, Foam::zero);
+        inline IndirectList(const UList<T>& values, Foam::zero) noexcept;
 
         //- Copy construct addressing, shallow copy values reference
-        inline IndirectList(const IndirectList<T>& list);
+        inline IndirectList(const IndirectList& list);
 
         //- Move construct addressing, shallow copy values reference
-        inline IndirectList(IndirectList<T>&& list);
+        inline IndirectList(IndirectList&& list) noexcept;
 
         //- Copy construct addressing, shallow copy values reference
         inline explicit IndirectList(const UIndirectList<T>& list);
@@ -159,7 +164,7 @@ public:
         static IndirectList<T> subset
         (
             const UList<T>& values,
-            const UnaryCondition& select,
+            UnaryCondition&& select,
             const bool invert = false
         );
 
@@ -173,7 +178,7 @@ public:
         static IndirectList<T> subset_if
         (
             const UList<T>& values,
-            const UnaryPredicate& pred,
+            UnaryPredicate&& pred,
             const bool invert = false
         );
 
@@ -197,13 +202,13 @@ public:
 
     // Member Operators
 
-        //- Assignment operator
-        using UIndirectList<T>::operator=;
+        //- Use standard assignment operations
+        using parent_type::operator=;
 
         //- Deep copy values, Fatal if list sizes are not identical
-        void operator=(const IndirectList<T>& rhs)
+        void operator=(const IndirectList& rhs)
         {
-            this->copyList(rhs);
+            parent_type::operator=(rhs);
         }
 };
 

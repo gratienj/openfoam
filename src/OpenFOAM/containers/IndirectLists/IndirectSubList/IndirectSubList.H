@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,22 +32,19 @@ Description
 
     In many cases, using a Foam::SubList provides a simpler and more
     efficient means of accessing a sub-list.
-    There are, however, some advantages of a IndirectSubList:
-    - allows adjustment of its addressing range after construct
-    - can recover the original, underlying list at any time
+    With an IndirectSubList, however, can recover the original underlying
+    list at any time.
 
 SeeAlso
     Foam::SubList
-
-SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
 #ifndef Foam_IndirectSubList_H
 #define Foam_IndirectSubList_H
 
-#include "IndirectListAddressing.H"
 #include "IndirectListBase.H"
+#include "labelRange.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -61,8 +59,11 @@ template<class T>
 class IndirectSubList
 :
     private IndirectListAddressing<labelRange>,
-    public IndirectListBase<T, labelRange>
+    public  IndirectListBase<T, labelRange>
 {
+    typedef IndirectListAddressing<labelRange> storage_type;
+    typedef IndirectListBase<T, labelRange> parent_type;
+
 public:
 
     // Constructors
@@ -70,28 +71,23 @@ public:
         //- Construct from UList, the entire size
         explicit IndirectSubList(const UList<T>& values)
         :
-            IndirectListAddressing<labelRange>(labelRange(0, values.size())),
-            IndirectListBase<T, labelRange>
-            (
-                values,
-                IndirectListAddressing<labelRange>::addressing()
-            )
+            storage_type(0, values.size()),
+            parent_type(values, storage_type::addressing())
         {}
 
         //- Construct from values list and range
-        IndirectSubList
-        (
-            const UList<T>& values,
-            const labelRange& addr
-        )
+        IndirectSubList(const UList<T>& values, const labelRange& addr)
         :
-            IndirectListAddressing<labelRange>(addr),
-            IndirectListBase<T, labelRange>
-            (
-                values,
-                IndirectListAddressing<labelRange>::addressing()
-            )
+            storage_type(addr),
+            parent_type(values, storage_type::addressing())
         {}
+
+
+    // Safety
+
+        //- The values list (reference) cannot be an rvalue!
+        template<class... Args>
+        IndirectSubList(UList<T>&&, Args&&...) = delete;
 
 
     // Member Functions
@@ -103,7 +99,7 @@ public:
     // Member Operators
 
         //- Use standard assignment operations
-        using IndirectListBase<T, labelRange>::operator=;
+        using parent_type::operator=;
 };
 
 

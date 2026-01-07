@@ -84,9 +84,6 @@ class DynamicList
         //- Remove elements in range
         label removeElements(const labelRange& slice);
 
-        //- Subset elements in range
-        label subsetElements(const labelRange& slice);
-
         //- Copy assignment from another list
         template<class ListType>
         inline void doAssignDynList(const ListType& list);
@@ -325,17 +322,6 @@ public:
             //  result always addresses a valid section of the list.
             //  Remaining elements are moved down.
             inline label remove(const labelRange& range);
-
-            //- Remove a (start,size) subset from the list.
-            inline label remove(std::initializer_list<label> start_size);
-
-            //- Retain a (start,size) subset from the list.
-            //  The range is subsetted with the list size itself to ensure
-            //  result always addresses a valid section of the list.
-            inline label subset(const labelRange& range);
-
-            //- Retain a (start,size) subset from List.
-            inline label subset(std::initializer_list<label> start_size);
 
 
         // Member Operators

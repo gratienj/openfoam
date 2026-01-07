@@ -65,28 +65,4 @@ Foam::label Foam::DynamicList<T, SizeMin>::removeElements
 }
 
 
-template<class T, int SizeMin>
-Foam::label Foam::DynamicList<T, SizeMin>::subsetElements
-(
-    const labelRange& slice
-)
-{
-    if (slice.begin_value() > 0)
-    {
-        // Move elements down.
-        // Since begin_value > 0, the initial destination is non-overlapping
-        std::move
-        (
-            this->begin(slice.begin_value()),
-            this->begin(slice.end_value()),
-            this->begin()
-        );
-    }
-
-    // Don't need min size, since slice size was already checked before
-    resize(slice.size());
-    return this->size();
-}
-
-
 // ************************************************************************* //

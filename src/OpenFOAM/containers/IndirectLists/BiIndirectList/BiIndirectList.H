@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -112,14 +113,17 @@ public:
         //- Move reset addressing
         inline void resetAddressing(labelList&& addr);
 
-        //- Return the addressed elements as a List
+        //- Extract the addressed elements. Sizes must match!
+        inline void extract(UList<T>& result) const;
+
+        //- Extract and return the addressed elements as a List
         inline List<T> list() const;
 
 
     // Member Operators
 
-        //- Return the addressed elements as a List
-        List<T> operator()() const { return this->list(); }
+        //- Extract and return the addressed elements as a List
+        inline List<T> operator()() const;
 
         //- Return non-const access to an element
         inline T& operator[](const label i);
@@ -127,11 +131,14 @@ public:
         //- Return const access to an element
         inline const T& operator[](const label i) const;
 
-        //- Assignment to UList of addressed elements
-        inline void operator=(const UList<T>& ae);
-
         //- Assignment of all entries to the given value
         inline void operator=(const T& val);
+
+        //- Assignment of all entries to zero
+        inline void operator=(Foam::zero);
+
+        //- Deep copy values from a list of the addressed elements
+        inline void operator=(const UList<T>& vals);
 };
 
 

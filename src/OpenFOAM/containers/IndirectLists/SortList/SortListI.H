@@ -32,7 +32,7 @@ License
 template<class T>
 inline Foam::SortList<T>::SortList(const UList<T>& values)
 :
-    IndirectList<T>(values, labelList())
+    parent_type(values, labelList())
 {
     sort();
 }
@@ -42,7 +42,7 @@ template<class T>
 template<class Compare>
 inline Foam::SortList<T>::SortList(const UList<T>& values, const Compare& comp)
 :
-    IndirectList<T>(values, labelList())
+    parent_type(values, labelList())
 {
     sort<Compare>(comp);
 }

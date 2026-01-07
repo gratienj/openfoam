@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
     Copyright (C) 2017-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,6 +43,10 @@ using namespace Foam;
 template<class ListType>
 void printInfo(const ListType& lst)
 {
+    Info<< "self: " << Foam::name(std::addressof(lst))
+        << " values: " << Foam::name(lst.values().cdata())
+        << " addr: "  << Foam::name(std::addressof(lst.addressing())) << nl;
+
     Info<< "full: " << flatOutput(lst.values()) << nl
         << "addr: " << flatOutput(lst.addressing()) << nl
         << "list: " << flatOutput(lst) << nl
@@ -96,6 +101,22 @@ int main(int argc, char *argv[])
     Info<< "raw : " << flatOutput(completeList) << nl << endl;
 
     List<label> addresses{1, 0, 3, 7, 4, 8, 5, 1, 0, 3, 7, 4, 8, 5, };
+
+    #if 0
+    {
+        // This was always a really bad idea, now also refuses to compile
+        UIndirectList<label> bad_idea(completeList, identity(5));
+        Info<< bad_idea << endl;
+    }
+    #endif
+
+    #if 0
+    {
+        // Another really bad idea, now also refuses to compile
+        UIndirectList<label> bad_idea(identity(100), addresses);
+        Info<< bad_idea << endl;
+    }
+    #endif
 
     labelIndList idl1(completeList, addresses);
 
