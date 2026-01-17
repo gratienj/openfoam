@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017 OpenFOAM Foundation
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -64,7 +64,6 @@ Description
 
 #include "fileOperation.H"
 #include "OSspecific.H"
-#include "HashPtrTable.H"
 #include "DynamicList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -103,7 +102,7 @@ protected:
     // Protected Data
 
         //- Cached times for a given directory
-        mutable HashPtrTable<DynamicList<instant>> times_;
+        mutable HashTable<DynamicList<instant>, fileName> times_;
 
 
     // Protected Operation Functors
@@ -413,10 +412,11 @@ protected:
         //  Does not do any parallel communication.
         virtual fileName filePathInfo
         (
-            //! also check undecomposed case
+            //! Also check undecomposed system/constant locations
+            //! (only for \c regular layout and Time::processorCase()).
             const bool checkGlobal,
             //! True (check for file), False (check for directory)
-            const bool isFile,
+            const bool checkIsFile,
             const IOobject& io,
             const dirIndexList& pDirs,
             const bool search,
@@ -431,8 +431,8 @@ protected:
         //- Construct filePath
         fileName localObjectPath
         (
-            const IOobject&,
-            const pathType& searchType,
+            const IOobject& io,
+            const pathType searchType,
             const word& processorsDir,
             const word& instancePath
         ) const;
@@ -626,7 +626,8 @@ public:
             //- Search for an object
             virtual fileName filePath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject& io,
                 const word& typeName,  //!< currently unused
@@ -636,7 +637,8 @@ public:
             //- Search for a directory
             virtual fileName dirPath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject& io,
                 const bool search
@@ -721,7 +723,7 @@ public:
             //- Find index (or -1) of file in list of handles
             virtual label findWatch
             (
-                const labelList& watchIndices,
+                const labelUList& watchIndices,
                 const fileName&
             ) const;
 
@@ -786,7 +788,8 @@ public:
             virtual void sync();
 
             //- Return cached times
-            const HashPtrTable<DynamicList<instant>>& times() const noexcept
+            const HashTable<DynamicList<instant>, fileName>&
+            times() const noexcept
             {
                 return times_;
             }

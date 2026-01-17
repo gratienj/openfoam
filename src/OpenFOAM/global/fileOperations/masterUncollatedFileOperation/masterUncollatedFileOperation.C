@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -98,6 +98,8 @@ Foam::fileOperations::masterUncollatedFileOperation::filePathInfo
     word& newInstancePath
 ) const
 {
+    const auto& tm = io.time();
+
     procsDir.clear();
     newInstancePath.clear();
 
@@ -127,8 +129,8 @@ Foam::fileOperations::masterUncollatedFileOperation::filePathInfo
             return writePath;
         }
 
-        // 2. Check processors/
-        if (io.time().processorCase())
+        // 2. Check processors/ directory (for parallel case)
+        if (tm.processorCase())
         {
             for (const dirIndex& dirIdx : pDirs)
             {
@@ -164,11 +166,11 @@ Foam::fileOperations::masterUncollatedFileOperation::filePathInfo
         // Any global checks
         if
         (
-            checkGlobal
-         && io.time().processorCase()
+            tm.processorCase()
+         && checkGlobal
          && (
-                io.instance() == io.time().system()
-             || io.instance() == io.time().constant()
+                io.instance() == tm.system()
+             || io.instance() == tm.constant()
             )
         )
         {
@@ -188,71 +190,76 @@ Foam::fileOperations::masterUncollatedFileOperation::filePathInfo
         // Check for approximately same time. E.g. if time = 1e-2 and
         // directory is 0.01 (due to different time formats)
 
-        if
-        (
-            const auto* instPtr = times_.get(io.time().path());
-            search && instPtr
-        )
+        if (search)
         {
-            newInstancePath =
-                Time::findInstancePath
+            if (const auto iter = times_.cfind(tm.path()); iter.good())
+            {
+                newInstancePath = Time::findInstancePath
                 (
-                    *instPtr,  // instantList (cached)
+                    iter.val(),  //< instantList (cached)
                     instant(io.instance())
                 );
+            }
+        }
 
-            if (newInstancePath.size() && newInstancePath != io.instance())
+        const bool checkNewInstance
+        (
+            newInstancePath.size() && newInstancePath != io.instance()
+        );
+
+        if (checkNewInstance)
+        {
+            // 1. Try processors equivalent
+            for (const dirIndex& dirIdx : pDirs)
             {
-                // 1. Try processors equivalent
-                for (const dirIndex& dirIdx : pDirs)
-                {
-                    const fileName& pDir = dirIdx.first();
+                const fileName& pDir = dirIdx.first();
 
-                    fileName fName
-                    (
-                        processorsPath(io, newInstancePath, pDir)
-                       /io.name()
-                    );
-                    if (isFileOrDir(isFile, fName))
-                    {
-                        switch (dirIdx.second().first())
-                        {
-                            case fileOperation::PROCUNCOLLATED:
-                            {
-                                searchType =
-                                    fileOperation::PROCUNCOLLATEDINSTANCE;
-                            }
-                            break;
-                            case fileOperation::PROCBASEOBJECT:
-                            {
-                                searchType = fileOperation::PROCBASEINSTANCE;
-                            }
-                            break;
-                            case fileOperation::PROCOBJECT:
-                            {
-                                searchType = fileOperation::PROCINSTANCE;
-                            }
-                            break;
-                            default:
-                            break;
-                        }
-                        procsDir = pDir;
-                        return fName;
-                    }
-                }
-
-
-                // 2. Check local
                 fileName fName
                 (
-                   io.rootPath()/io.caseName()
-                  /newInstancePath/io.db().dbDir()/io.local()/io.name()
+                    processorsPath(io, newInstancePath, pDir)/io.name()
                 );
+
                 if (isFileOrDir(isFile, fName))
                 {
-                    searchType = fileOperation::FINDINSTANCE;
+                    switch (dirIdx.second().first())
+                    {
+                        case fileOperation::PROCUNCOLLATED:
+                        {
+                            searchType = fileOperation::PROCUNCOLLATEDINSTANCE;
+                        }
+                        break;
+                        case fileOperation::PROCBASEOBJECT:
+                        {
+                            searchType = fileOperation::PROCBASEINSTANCE;
+                        }
+                        break;
+                        case fileOperation::PROCOBJECT:
+                        {
+                            searchType = fileOperation::PROCINSTANCE;
+                        }
+                        break;
+                        default:
+                        break;
+                    }
+                    procsDir = pDir;
                     return fName;
                 }
+            }
+        }
+
+        if (checkNewInstance)
+        {
+            // 2. Check local
+            fileName fName
+            (
+               io.rootPath()/io.caseName()
+              /newInstancePath/io.db().dbDir()/io.local()/io.name()
+            );
+
+            if (isFileOrDir(isFile, fName))
+            {
+                searchType = fileOperation::FINDINSTANCE;
+                return fName;
             }
         }
     }
@@ -267,7 +274,7 @@ Foam::fileName
 Foam::fileOperations::masterUncollatedFileOperation::localObjectPath
 (
     const IOobject& io,
-    const pathType& searchType,
+    const pathType searchType,
     const word& procDir,
     const word& instancePath
 ) const
@@ -297,20 +304,15 @@ Foam::fileOperations::masterUncollatedFileOperation::localObjectPath
         case fileOperation::PROCUNCOLLATED:
         {
             // Uncollated type, e.g. processor1
-            const word procName
-            (
-                "processor" + Foam::name(Pstream::myProcNo(UPstream::worldComm))
-            );
+            const auto myProci = UPstream::myProcNo(UPstream::worldComm);
+            const word procName("processor" + Foam::name(myProci));
+
             return
                 processorsPath
                 (
                     io,
                     io.instance(),
-                    (
-                        Pstream::parRun()
-                      ? procName
-                      : procDir
-                    )
+                    (UPstream::parRun() ? procName : procDir)
                 )
                /io.name();
         }
@@ -353,21 +355,15 @@ Foam::fileOperations::masterUncollatedFileOperation::localObjectPath
         case fileOperation::PROCUNCOLLATEDINSTANCE:
         {
             // Uncollated type, e.g. processor1
-            const word procName
-            (
-                "processor"
-              + Foam::name(Pstream::myProcNo(UPstream::worldComm))
-            );
+            const auto myProci = UPstream::myProcNo(UPstream::worldComm);
+            const word procName("processor" + Foam::name(myProci));
+
             return
                 processorsPath
                 (
                     io,
                     instancePath,
-                    (
-                        Pstream::parRun()
-                      ? procName
-                      : procDir
-                    )
+                    (UPstream::parRun() ? procName : procDir)
                 )
                /io.name();
         }
@@ -431,8 +427,8 @@ void Foam::fileOperations::masterUncollatedFileOperation::readAndSend
     {
         Info<< "masterUncollatedFileOperation::readAndSend :"
             << filePath
-            << " (compressed:" << bool(ifs.compression())
-            << ") : " << " bytes" << endl;
+            << " (compressed:" << bool(ifs.compression()) << ") : "
+            << buf.size() << " bytes" << endl;
     }
 
     for (const label proci : recvProcs)
@@ -459,18 +455,23 @@ Foam::fileOperations::masterUncollatedFileOperation::read
 
     if (UPstream::master(comm))
     {
+        const auto& masterFilePath = filePaths[0];
+
+        if (readOnProcs[0] && masterFilePath.empty())
+        {
+            FatalIOErrorInFunction(masterFilePath)
+                << "Cannot find file " << io.objectPath()
+                << " fileHandler : comm:" << comm
+                << " ioRanks:" << flatOutput(UPstream::procID(comm))
+                << exit(FatalIOError);
+        }
+
         if (uniform)
         {
             if (readOnProcs[0])
             {
-                if (filePaths[0].empty())
-                {
-                    FatalIOErrorInFunction(filePaths[0])
-                        << "Cannot find file " << io.objectPath()
-                        << " fileHandler : comm:" << comm
-                        << " ioRanks:" << UPstream::procID(comm)
-                        << exit(FatalIOError);
-                }
+                // Read on master and send to all processors
+                // (including master for simplicity)
 
                 DynamicList<label> recvProcs(UPstream::nProcs(comm));
                 for (const int proci : UPstream::allProcs(comm))
@@ -481,69 +482,55 @@ Foam::fileOperations::masterUncollatedFileOperation::read
                     }
                 }
 
-                // Read on master and send to all processors
-                // (including master for simplicity)
                 if (debug)
                 {
-                    Pout<< "masterUncollatedFileOperation::readStream :"
-                        << " For uniform file " << filePaths[0]
-                        << " sending to " << recvProcs
+                    Pout<< "masterUncollatedFileOperation::read :"
+                        << " For uniform file " << masterFilePath
+                        << " sending to " << flatOutput(recvProcs)
                         << " in comm:" << comm << endl;
                 }
-                readAndSend(filePaths[0], recvProcs, pBufs);
+                readAndSend(masterFilePath, recvProcs, pBufs);
             }
         }
         else
         {
             if (readOnProcs[0])
             {
-                if (filePaths[0].empty())
-                {
-                    FatalIOErrorInFunction(filePaths[0])
-                        << "Cannot find file " << io.objectPath()
-                        << " fileHandler : comm:" << comm
-                        << " ioRanks:" << UPstream::procID(comm)
-                        << exit(FatalIOError);
-                }
-
                 // Open master
-                isPtr.reset(new IFstream(filePaths[0]));
-
-                // Read header
-                if (!io.readHeader(*isPtr))
-                {
-                    FatalIOErrorInFunction(*isPtr)
-                        << "problem while reading header for object "
-                        << io.name()
-                        << " fileHandler : comm:" << comm
-                        << " ioRanks:" << UPstream::procID(comm)
-                        << exit(FatalIOError);
-                }
+                isPtr.reset(new IFstream(masterFilePath));
             }
 
-            // Read sub-rank files
+            // Read and send individual sub-rank files
+            labelList recvProcs(1);
             for (const int proci : UPstream::subProcs(comm))
             {
+                const auto& fPath = filePaths[proci];
+                recvProcs[0] = proci;
+
                 if (debug)
                 {
-                    Pout<< "masterUncollatedFileOperation::readStream :"
+                    Pout<< "masterUncollatedFileOperation::read :"
                         << " For processor " << proci
-                        << " opening " << filePaths[proci] << endl;
+                        << (readOnProcs[proci] ? " opening " : " skipping ")
+                        << fPath << endl;
                 }
-
-                const fileName& fPath = filePaths[proci];
 
                 if (readOnProcs[proci] && !fPath.empty())
                 {
-                    // Note: handle compression ourselves since size cannot
-                    // be determined without actually uncompressing
-                    readAndSend(fPath, labelList(one{}, proci), pBufs);
+                    readAndSend(fPath, recvProcs, pBufs);
                 }
             }
         }
     }
 
+    // Finalize readAndSend
     pBufs.finishedScatters();
+
+    if (!readOnProcs[UPstream::myProcNo(comm)])
+    {
+        // This processor is not expected to read anything
+        return dummyISstream::New();
+    }
 
     // isPtr will be valid on master and will be the unbuffered
     // IFstream. Else the information is in the PstreamBuffers (and
@@ -551,46 +538,40 @@ Foam::fileOperations::masterUncollatedFileOperation::read
 
     if (!isPtr)
     {
-        if (readOnProcs[UPstream::myProcNo(comm)])
+        // This processor returns something
+        List<char> buf(pBufs.recvDataCount(UPstream::masterNo()));
+
+        if (!buf.empty())
         {
-            // This processor needs to return something
-            List<char> buf(pBufs.recvDataCount(UPstream::masterNo()));
-
-            if (!buf.empty())
-            {
-                UIPstream is(UPstream::masterNo(), pBufs);
-                is.read(buf.data(), buf.size());
-            }
-
-            if (debug)
-            {
-                Pout<< "masterUncollatedFileOperation::readStream :"
-                    << " Done reading " << buf.size() << " bytes" << endl;
-            }
-
-            // A local character buffer copy of the Pstream contents.
-            // Construct with same parameters (ASCII, current version)
-            // as the IFstream so that it has the same characteristics.
-
-            isPtr.reset(new ICharStream(std::move(buf)));
-
-            // With the proper file name
-            isPtr->name() = filePaths[UPstream::myProcNo(comm)];
-
-            if (!io.readHeader(*isPtr))
-            {
-                FatalIOErrorInFunction(*isPtr)
-                    << "problem while reading header for object "
-                    << io.name()
-                    << " fileHandler : comm:" << comm
-                    << " ioRanks:" << UPstream::procID(comm)
-                    << exit(FatalIOError);
-            }
+            UIPstream is(UPstream::masterNo(), pBufs);
+            is.read(buf.data(), buf.size());
         }
-        else
+
+        if (debug)
         {
-            return dummyISstream::New();
+            Pout<< "masterUncollatedFileOperation::read :"
+                << " Done reading " << buf.size() << " bytes" << endl;
         }
+
+        // A local character buffer copy of the Pstream contents.
+        // Construct with same parameters (ASCII, current version)
+        // as the IFstream so that it has the same characteristics.
+
+        isPtr.reset(new ICharStream(std::move(buf)));
+
+        // With the proper file name
+        isPtr->name() = filePaths[UPstream::myProcNo(comm)];
+    }
+
+    // Read header
+    if (!io.readHeader(*isPtr))
+    {
+        FatalIOErrorInFunction(*isPtr)
+            << "problem while reading header for object "
+            << io.name()
+            << " fileHandler : comm:" << comm
+            << " ioRanks:" << flatOutput(UPstream::procID(comm))
+            << exit(FatalIOError);
     }
 
     return isPtr;
@@ -682,16 +663,16 @@ masterUncollatedFileOperation
     {
         FatalErrorInFunction<< "Problem comm_:" << comm_ << exit(FatalError);
     }
-    if (UPstream::nProcs(comm_) == -1)
+    if (auto val = UPstream::nProcs(comm_); val < 0)
     {
         FatalErrorInFunction<< "Problem comm_:" << comm_
-            << " nProcs:" << UPstream::nProcs(comm_)
+            << " nProcs:" << val << nl
             << exit(FatalError);
     }
-    if (UPstream::myProcNo(comm_) == -1)
+    if (auto val = UPstream::myProcNo(comm_); val < 0)
     {
         FatalErrorInFunction<< "Problem comm_:" << comm_
-            << " myProcNo:" << UPstream::myProcNo(comm_)
+            << " myProcNo:" << val << nl
             << exit(FatalError);
     }
 }
@@ -714,16 +695,16 @@ masterUncollatedFileOperation
     {
         FatalErrorInFunction<< "Problem comm_:" << comm_ << exit(FatalError);
     }
-    if (UPstream::nProcs(comm_) == -1)
+    if (auto val = UPstream::nProcs(comm_); val < 0)
     {
         FatalErrorInFunction<< "Problem comm_:" << comm_
-            << " nProcs:" << UPstream::nProcs(comm_)
+            << " nProcs:" << val << nl
             << exit(FatalError);
     }
-    if (UPstream::myProcNo(comm_) == -1)
+    if (auto val = UPstream::myProcNo(comm_); val < 0)
     {
         FatalErrorInFunction<< "Problem comm_:" << comm_
-            << " myProcNo:" << UPstream::myProcNo(comm_)
+            << " myProcNo:" << val << nl
             << exit(FatalError);
     }
 }
@@ -1068,6 +1049,9 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::filePath
     const bool search
 ) const
 {
+    // Check is-file
+    constexpr bool checkIsFile = true;
+
     if (debug)
     {
         Pout<< "masterUncollatedFileOperation::filePath :"
@@ -1090,15 +1074,15 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::filePath
     // Determine master filePath and scatter
 
     fileName objPath;
-    pathType searchType = NOTFOUND;
+    pathType searchType = fileOperation::NOTFOUND;
     word procsDir;
     word newInstancePath;
 
     if (Pstream::master(comm_))
     {
-        const bool oldParRun = UPstream::parRun(false);
-        const int oldCache = fileOperation::cacheLevel(0);
-        const label oldNProcs = fileOperation::nProcs();
+        const auto oldParRun = UPstream::parRun(false);
+        const auto oldCache = fileOperation::cacheLevel(0);
+        const auto oldNProcs = fileOperation::nProcs();
 
         // All masters search locally. Note that global objects might
         // fail (except on master). This gets handled later on (in PARENTOBJECT)
@@ -1106,7 +1090,7 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::filePath
             filePathInfo
             (
                 checkGlobal,
-                true,
+                checkIsFile,
                 io,
                 pDirs,
                 search,
@@ -1115,6 +1099,7 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::filePath
                 newInstancePath
             );
 
+        // Restore old states
         this->constCast().nProcs(oldNProcs);
         fileOperation::cacheLevel(oldCache);
         UPstream::parRun(oldParRun);
@@ -1197,7 +1182,7 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::filePath
                 objPath = masterOp<fileName>
                 (
                     io.objectPath(),
-                    fileOrNullOp(true), // isFile=true
+                    fileOrNullOp(checkIsFile),
                     UPstream::msgType(),
                     comm_
                 );
@@ -1225,6 +1210,9 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::dirPath
     const bool search
 ) const
 {
+    // Check is-directory (not is-file)
+    constexpr bool checkIsFile = false;
+
     if (debug)
     {
         Pout<< "masterUncollatedFileOperation::dirPath :"
@@ -1247,21 +1235,21 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::dirPath
     // Determine master dirPath and broadcast
 
     fileName objPath;
-    pathType searchType = NOTFOUND;
+    pathType searchType = fileOperation::NOTFOUND;
     word procsDir;
     word newInstancePath;
 
     // Local IO node searches for file
     if (Pstream::master(comm_))
     {
-        const bool oldParRun = UPstream::parRun(false);
-        const int oldCache = fileOperation::cacheLevel(0);
-        const label oldNProcs = fileOperation::nProcs();
+        const auto oldParRun = UPstream::parRun(false);
+        const auto oldCache = fileOperation::cacheLevel(0);
+        const auto oldNProcs = fileOperation::nProcs();
 
         objPath = filePathInfo
         (
             checkGlobal,
-            false,
+            checkIsFile,
             io,
             pDirs,
             search,
@@ -1270,6 +1258,7 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::dirPath
             newInstancePath
         );
 
+        // Restore old states
         this->constCast().nProcs(oldNProcs);
         fileOperation::cacheLevel(oldCache);
         UPstream::parRun(oldParRun);
@@ -1355,7 +1344,7 @@ Foam::fileName Foam::fileOperations::masterUncollatedFileOperation::dirPath
                 objPath = masterOp<fileName>
                 (
                     io.objectPath(),
-                    fileOrNullOp(false), // isFile=false
+                    fileOrNullOp(checkIsFile),
                     UPstream::msgType(),
                     comm_
                 );
@@ -1396,7 +1385,7 @@ bool Foam::fileOperations::masterUncollatedFileOperation::exists
         return true;
     }
 
-    // 2. Check processors/
+    // 2. Check processors/ directory (for parallel case)
     if (io.time().processorCase())
     {
         for (const dirIndex& dirIdx : pDirs)
@@ -1459,15 +1448,16 @@ Foam::fileOperations::masterUncollatedFileOperation::findInstance
     // if (Pstream::master(comm_))
     if (Pstream::master(UPstream::worldComm))
     {
-        const bool oldParRun = UPstream::parRun(false);
-        const int oldCache = fileOperation::cacheLevel(0);
-        const label oldNProcs = fileOperation::nProcs();
+        const auto oldParRun = UPstream::parRun(false);
+        const auto oldCache = fileOperation::cacheLevel(0);
+        const auto oldNProcs = fileOperation::nProcs();
 
         if (exists(pDirs, io))
         {
             foundInstance = io.instance();
         }
 
+        // Restore old states
         this->constCast().nProcs(oldNProcs);
         fileOperation::cacheLevel(oldCache);
         UPstream::parRun(oldParRun);
@@ -1509,9 +1499,9 @@ Foam::fileOperations::masterUncollatedFileOperation::findInstance
     // if (Pstream::master(comm_))
     if (Pstream::master(UPstream::worldComm))
     {
-        const bool oldParRun = UPstream::parRun(false);
-        const int oldCache = fileOperation::cacheLevel(0);
-        const label oldNProcs = fileOperation::nProcs();
+        const auto oldParRun = UPstream::parRun(false);
+        const auto oldCache = fileOperation::cacheLevel(0);
+        const auto oldNProcs = fileOperation::nProcs();
 
         label instIndex = ts.size()-1;
 
@@ -1627,9 +1617,10 @@ Foam::fileOperations::masterUncollatedFileOperation::findInstance
             }
         }
 
+        // Restore old states
         this->constCast().nProcs(oldNProcs);
         fileOperation::cacheLevel(oldCache);
-        UPstream::parRun(oldParRun);  // Restore parallel state
+        UPstream::parRun(oldParRun);
     }
 
     Pstream::broadcast(foundInstance, UPstream::worldComm);
@@ -1701,9 +1692,9 @@ Foam::fileOperations::masterUncollatedFileOperation::readObjects
     {
         // Avoid fileOperation::readObjects from triggering parallel ops
         // (through call to filePath which triggers parallel )
-        const bool oldParRun = UPstream::parRun(false);
-        const int oldCache = fileOperation::cacheLevel(0);
-        const label oldNProcs = fileOperation::nProcs();
+        const auto oldParRun = UPstream::parRun(false);
+        const auto oldCache = fileOperation::cacheLevel(0);
+        const auto oldNProcs = fileOperation::nProcs();
 
         //- Use non-time searching version
         objectNames = fileOperation::readObjects
@@ -1746,9 +1737,10 @@ Foam::fileOperations::masterUncollatedFileOperation::readObjects
             }
         }
 
+        // Restore old states
         this->constCast().nProcs(oldNProcs);
         fileOperation::cacheLevel(oldCache);
-        UPstream::parRun(oldParRun);  // Restore parallel state
+        UPstream::parRun(oldParRun);
     }
 
     Pstream::broadcasts(UPstream::worldComm, newInstance, objectNames);
@@ -2190,17 +2182,18 @@ bool Foam::fileOperations::masterUncollatedFileOperation::read
         if (UPstream::master(UPstream::worldComm))
         {
             // Do master-only reading always.
-            const bool oldParRun = UPstream::parRun(false);
-            const int oldCache = fileOperation::cacheLevel(0);
-            const label oldNProcs = fileOperation::nProcs();
+            const auto oldParRun = UPstream::parRun(false);
+            const auto oldCache = fileOperation::cacheLevel(0);
+            const auto oldNProcs = fileOperation::nProcs();
 
             auto& is = io.readStream(typeName);
             ok = io.readData(is);
             io.close();
 
+            // Restore old states
             this->constCast().nProcs(oldNProcs);
             fileOperation::cacheLevel(oldCache);
-            UPstream::parRun(oldParRun);  // Restore parallel state
+            UPstream::parRun(oldParRun);
         }
 
         // Broadcast regIOobject content, with writeData/readData handling
@@ -2295,39 +2288,40 @@ Foam::instantList Foam::fileOperations::masterUncollatedFileOperation::findTimes
     const word& constantName
 ) const
 {
-    if (const auto* instPtr = times_.get(directory); instPtr)
+    if (const auto iter = times_.cfind(directory); iter.good())
     {
         if (debug)
         {
             Pout<< "masterUncollatedFileOperation::findTimes :"
-                << " Found " << instPtr->size() << " cached times" << nl
+                << " Found " << iter.val().size() << " cached times" << nl
                 << "    for directory:" << directory << endl;
         }
-        return *instPtr;
+        return iter.val();
     }
     else
     {
-        instantList times;
+        instantList timeDirs;
         if (Pstream::master(UPstream::worldComm))
         {
             // Do master-only reading always.
-            const bool oldParRun = UPstream::parRun(false);
-            const int oldCache = fileOperation::cacheLevel(0);
-            const label oldNProcs = fileOperation::nProcs();
+            const auto oldParRun = UPstream::parRun(false);
+            const auto oldCache = fileOperation::cacheLevel(0);
+            const auto oldNProcs = fileOperation::nProcs();
 
-            times = fileOperation::findTimes(directory, constantName);
+            timeDirs = fileOperation::findTimes(directory, constantName);
 
+            // Restore old states
             this->constCast().nProcs(oldNProcs);
             fileOperation::cacheLevel(oldCache);
-            UPstream::parRun(oldParRun);  // Restore parallel state
+            UPstream::parRun(oldParRun);
         }
 
-        Pstream::broadcast(times, UPstream::worldComm);
+        Pstream::broadcast(timeDirs, UPstream::worldComm);
 
         if (debug)
         {
             Pout<< "masterUncollatedFileOperation::findTimes :"
-                << " Found times:" << flatOutput(times) << nl
+                << " Found times:" << flatOutput(timeDirs) << nl
                 << "    for directory:" << directory << endl;
         }
 
@@ -2336,14 +2330,10 @@ Foam::instantList Foam::fileOperations::masterUncollatedFileOperation::findTimes
         //   indicate a directory that is being filled later on ...
         if (cacheLevel() > 0)
         {
-            auto* tPtr = new DynamicList<instant>(std::move(times));
-            times_.set(directory, tPtr);
-
-            return *tPtr;
+            times_(directory) = timeDirs;
         }
 
-        // Times found (not cached)
-        return times;
+        return timeDirs;
     }
 }
 
@@ -2363,7 +2353,7 @@ void Foam::fileOperations::masterUncollatedFileOperation::setTime
 
     if (auto iter = times_.find(tm.path()); iter.good())
     {
-        DynamicList<instant>& times = *(iter.val());
+        auto& times = iter.val();
 
         const instant timeNow(tm.value(), tm.timeName());
 
@@ -2379,7 +2369,7 @@ void Foam::fileOperations::masterUncollatedFileOperation::setTime
         // check if the new time is greater than the latest existing time.
         // Can then simply append without extra searching or sorting
 
-        if (times.size() <= startIdx || times.last() < timeNow)
+        if (times.size() <= startIdx || times.back() < timeNow)
         {
             times.push_back(timeNow);
         }
@@ -2435,30 +2425,28 @@ Foam::fileOperations::masterUncollatedFileOperation::NewIFstream
                         << " Opening global file " << filePath << endl;
                 }
 
-                readAndSend
-                (
-                    filePath,
-                    identity(Pstream::nProcs(comm_)-1, 1),
-                    pBufs
-                );
+                // Read and send to sub-ranks
+                labelList recvProcs(identity(UPstream::nProcs(comm_)-1, 1));
+
+                readAndSend(filePath, recvProcs, pBufs);
             }
             else
             {
+                // Read individual sub-rank files
+                labelList recvProcs(1);
                 for (const int proci : Pstream::subProcs(comm_))
                 {
+                    const fileName& fPath = filePaths[proci];
+                    recvProcs[0] = proci;
+
                     if (debug)
                     {
                         Pout<< "masterUncollatedFileOperation::NewIFstream :"
-                            << " Opening local file " << filePath
-                            << " for rank " << proci << endl;
+                            << " Opening local file " << fPath
+                            << " rank:" << proci << endl;
                     }
 
-                    readAndSend
-                    (
-                        filePaths[proci],
-                        labelList(one{}, proci),
-                        pBufs
-                    );
+                    readAndSend(filePaths[proci], recvProcs, pBufs);
                 }
             }
         }
@@ -2569,43 +2557,45 @@ void Foam::fileOperations::masterUncollatedFileOperation::flush() const
 
 void Foam::fileOperations::masterUncollatedFileOperation::sync()
 {
+    fileOperation::sync();
+
     if (debug)
     {
         Pout<< "masterUncollatedFileOperation::sync :"
-            << " syncing information across processors" << endl;
+            << "parallel synchronisation" << endl;
     }
 
-    fileOperation::sync();
-
-
-    wordList timeNames;
-    List<DynamicList<instant>> instants;
-
-    if (Pstream::master(UPstream::worldComm))
+    if (!UPstream::parRun())
     {
-        timeNames.resize(times_.size());
-        instants.resize(times_.size());
+        return;
+    }
 
-        // Flatten into two lists to preserve key/val pairing
-        label i = 0;
+    if (UPstream::master(UPstream::worldComm))
+    {
+        // Serialize cache : nEntries key/val, key/val, ...
+        OPBstream os(UPstream::worldComm);
+        os << times_.size();
         forAllConstIters(times_, iter)
         {
-            timeNames[i] = iter.key();
-            instants[i] = std::move(*(iter.val()));
-            ++i;
+            os << iter.key() << iter.val();
         }
     }
-
-    Pstream::broadcasts(UPstream::worldComm, timeNames, instants);
-
-    times_.clear();
-    forAll(timeNames, i)
+    else
     {
-        fileName dir(timeNames[i]);
-        auto ptr = autoPtr<DynamicList<instant>>::New(std::move(instants[i]));
+        const auto myProci = UPstream::myProcNo(UPstream::worldComm);
 
-        if (Pstream::parRun() && !Pstream::master(UPstream::worldComm))
+        // Clear old cache and rebuild
+        times_.clear();
+
+        // Deserialize: nEntries key/val, key/val, ...
+        IPBstream is(UPstream::worldComm);
+        auto count = Foam::readLabel(is);
+
+        while (count-- > 0)
         {
+            fileName dir(is);          // key
+            instantList timeDirs(is);  // val
+
             // Replace processor0 ending with processorDDD
             fileName path, pDir, local;
             procRangeType group;
@@ -2627,15 +2617,13 @@ void Foam::fileOperations::masterUncollatedFileOperation::sync()
             //    << "    proci: " << proci << nl
             //    << endl;
 
-            const label myProci = Pstream::myProcNo(UPstream::worldComm);
-
             if (proci != -1 && proci != myProci)
             {
                 dir = path/"processor" + Foam::name(myProci);
             }
-        }
 
-        times_.insert(dir, ptr);
+            times_(dir) = std::move(timeDirs);
+        }
     }
 }
 
@@ -2674,7 +2662,7 @@ bool Foam::fileOperations::masterUncollatedFileOperation::removeWatch
 
 Foam::label Foam::fileOperations::masterUncollatedFileOperation::findWatch
 (
-    const labelList& watchIndices,
+    const labelUList& watchIndices,
     const fileName& fName
 ) const
 {
@@ -2703,7 +2691,7 @@ void Foam::fileOperations::masterUncollatedFileOperation::addWatches
     const fileNameList& files
 ) const
 {
-    const labelList& watchIndices = rio.watchIndices();
+    const labelUList& watchIndices = rio.watchIndices();
 
     // Do on master and distribute effect to subprocs such that after
     // all have consistent numbering & files
@@ -2712,9 +2700,9 @@ void Foam::fileOperations::masterUncollatedFileOperation::addWatches
     if (UPstream::master())
     {
         // Switch off comms inside findWatch/addWatch etc.
-        const bool oldParRun = UPstream::parRun(false);
-        const int oldCache = fileOperation::cacheLevel(0);
-        const label oldNProcs = fileOperation::nProcs();
+        const auto oldParRun = UPstream::parRun(false);
+        const auto oldCache = fileOperation::cacheLevel(0);
+        const auto oldNProcs = fileOperation::nProcs();
 
         labelHashSet removedWatches(watchIndices);
 
@@ -2740,6 +2728,7 @@ void Foam::fileOperations::masterUncollatedFileOperation::addWatches
             removeWatch(watchIndices[index]);
         }
 
+        // Restore old states
         this->constCast().nProcs(oldNProcs);
         fileOperation::cacheLevel(oldCache);
         UPstream::parRun(oldParRun);

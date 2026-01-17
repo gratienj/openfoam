@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -96,7 +96,7 @@ namespace
 //    \2 = firstProc
 //    \3 = lastProc
 //
-// Return true on success and set parameters numProcs and group (size,start)
+// Return true on success and set parameters numProcs and group (start,size)
 //
 // Use low-level C-string to integer parsing to drive the sequence.
 //
@@ -106,11 +106,12 @@ namespace
 // - (*endptr != endChar) for trailing junk
 // - skip INT_MAX checks as being too pessimistic
 
-static bool parseProcsNumRange
+template<class IntType>
+bool parseProcsNumRange
 (
-    const std::string str,
+    std::string str,
     int& numProcs,
-    Foam::fileOperation::procRangeType& group
+    Foam::IntRange<IntType>& group
 )
 {
     const char * nptr = str.c_str();
@@ -135,24 +136,24 @@ static bool parseProcsNumRange
     nptr = ++endptr;
 
 
-    // 2. firstProc
+    // 2. Min rank in the range
     errno = 0;
     parsed = std::strtoimax(nptr, &endptr, 10);
     if (errno || nptr == endptr) return false;  // bad parse
 
-    const int firstProc = int(parsed);
+    const int minProc = int(parsed);
 
     // Parse point at range separator ('-' character)?
     if (*endptr != '-') return false;
     nptr = ++endptr;
 
 
-    // 3. lastProc
+    // 3. Max rank in the range (inclusive)
     errno = 0;
     parsed = std::strtoimax(nptr, &endptr, 10);
     if (errno || nptr == endptr) return false;  // bad parse
 
-    const int lastProc = int(parsed);
+    const int maxProc = int(parsed);
 
 
     if
@@ -162,13 +163,13 @@ static bool parseProcsNumRange
 
         // Input plausibility
         // Accept nProcs == 0 in case that becomes useful in the future
-     && (nProcs >= 0 && firstProc >= 0 && firstProc <= lastProc)
+     && (nProcs >= 0 && minProc >= 0 && minProc <= maxProc)
     )
     {
         numProcs = nProcs;
 
-        // Convert first/last to start/size
-        group.reset(firstProc, lastProc-firstProc+1);
+        // Convert min/max to start/size
+        group.reset(minProc, maxProc-minProc+1);
 
         return true;
     }
@@ -194,18 +195,10 @@ void sortProcessorDirs(Foam::UList<Foam::fileOperation::dirIndex>& dirs)
         (
             dirs.begin(),
             dirs.end(),
-            []
-            (
-                const Foam::fileOperation::dirIndex& a,
-                const Foam::fileOperation::dirIndex& b
-            ) -> bool
+            [](const auto& a, const auto& b) -> bool
             {
                 return
-                    Foam::stringOps::natural_sort::compare
-                    (
-                        a.first(),
-                        b.first()
-                    ) < 0;
+                    Foam::stringOps::natural_sort::less(a.first(), b.first());
             }
         );
     }
@@ -251,7 +244,7 @@ Foam::fileOperation::sortTimes
     // Parse directory entries for scalar values
     for (const fileName& dirName : dirEntries)
     {
-        if (readScalar(dirName, times[nTimes].value()))
+        if (Foam::readScalar(dirName, times[nTimes].value()))
         {
             times[nTimes].name() = dirName;
             ++nTimes;
@@ -264,7 +257,7 @@ Foam::fileOperation::sortTimes
     {
         if (nTimes > 2)
         {
-            std::sort(&times[1], times.end(), instant::less());
+            std::sort(times.begin()+1, times.end(), instant::less());
         }
     }
     else if (nTimes > 1)
@@ -338,8 +331,15 @@ void Foam::fileOperation::mergeTimes
     instantList& times
 )
 {
-    if (extraTimes.size())
+    if (extraTimes.empty())
     {
+        // Nothing to do
+    }
+    else
+    {
+        // Combined times
+        DynamicList<instant> combinedTimes(times.size()+extraTimes.size());
+
         const bool haveConstant =
         (
             times.size()
@@ -352,62 +352,58 @@ void Foam::fileOperation::mergeTimes
          && extraTimes[0].name() == constantName
         );
 
-        // Combine times
-        instantList combinedTimes(times.size()+extraTimes.size());
-        label sz = 0;
-        label extrai = 0;
-        if (haveExtraConstant)
+        if (!haveConstant && haveExtraConstant)
         {
-            extrai = 1;
-            if (!haveConstant)
-            {
-                combinedTimes[sz++] = extraTimes[0];    // constant
-            }
+            // No constant in times, but have one in extraTimes
+            combinedTimes.push_back(extraTimes[0]);
         }
-        forAll(times, i)
+
+        combinedTimes.push_back(std::move(times));
+
+        for (label i = (haveExtraConstant ? 1 : 0); i < extraTimes.size(); ++i)
         {
-            combinedTimes[sz++] = times[i];
+            combinedTimes.push_back(extraTimes[i]);
         }
-        for (; extrai < extraTimes.size(); extrai++)
-        {
-            combinedTimes[sz++] = extraTimes[extrai];
-        }
-        combinedTimes.setSize(sz);
+
         times.transfer(combinedTimes);
 
         // Sort
         if (times.size() > 1)
         {
-            label starti = 0;
+            label count = 0;
+
             if (times[0].name() == constantName)
             {
-                starti = 1;
+                // Exclude "constant" from sorting and duplicate checks
+                ++count;
             }
-            std::sort(&times[starti], times.end(), instant::less());
+            std::sort(times.begin()+count, times.end(), instant::less());
 
-            // Filter out duplicates
-            label newi = starti+1;
-            for (label i = newi; i < times.size(); i++)
+            // Filter any subsequent duplicates
+            ++count;
+
+            for (label i = count; i < times.size(); ++i)
             {
                 if (times[i].value() != times[i-1].value())
                 {
-                    if (newi != i)
+                    if (count != i)
                     {
-                        times[newi] = times[i];
+                        // copy (not move) - still needed for later comparison
+                        times[count] = times[i];
                     }
-                    newi++;
+                    ++count;
                 }
             }
 
-            times.setSize(newi);
+            times.resize(count);
         }
     }
 }
 
 
-bool Foam::fileOperation::isFileOrDir(const bool isFile, const fileName& f)
+bool Foam::fileOperation::isFileOrDir(bool checkIsFile, const fileName& f)
 {
-    return (isFile ? Foam::isFile(f) : Foam::isDir(f));
+    return (checkIsFile ? Foam::isFile(f) : Foam::isDir(f));
 }
 
 
@@ -446,7 +442,7 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
 
     fileName path, pDir, local;
     procRangeType group;
-    label numProcs;
+    label numProcs(-1);
     const label proci =
         splitProcessorPath(fName, path, pDir, local, group, numProcs);
 
@@ -456,16 +452,11 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
 
         if (cacheLevel() > 0)
         {
-            const auto iter = procsDirs_.cfind(procPath);
-
-            if (iter.good())
+            if (const auto iter = procsDirs_.cfind(procPath); iter.good())
             {
                 return iter.val();
             }
         }
-
-        DynamicList<dirIndex> procDirs;
-        fileNameList dirEntries;
 
         // Read all directories to see any beginning with processor
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -482,6 +473,7 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
         // The above selection excludes masterUncollated, which uses inotify or
         // timeStamp but provides its own internals for readDir() anyhow.
 
+        fileNameList dirEntries;
         if (readDirMasterOnly)
         {
             // Parallel and non-distributed
@@ -517,6 +509,8 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
         // - directory+offset containing data for proci
 
         label nProcs = 0;
+        DynamicList<dirIndex> procDirs;
+
         for (const fileName& dirN : dirEntries)
         {
             // Analyse directory name
@@ -548,7 +542,7 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
                     continue;
                 }
 
-                // "processorsNN" or "processorsNN_start-end"
+                // "processorsNN" or "processorsNN_min-max"
                 nProcs = Foam::max(nProcs, rNum);
 
                 if (group.empty())
@@ -566,7 +560,7 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
                 }
                 else if (group.contains(proci) || (nProcsFilter_ == 0))
                 {
-                    // "processorsNN_start-end"
+                    // "processorsNN_min-max"
                     // - save the local proc offset
 
                     pathTypeIdx.first() = pathType::PROCOBJECT;
@@ -676,19 +670,19 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
         {
             if (cacheLevel() > 0)
             {
-                procsDirs_.insert(procPath, procDirs);
+                procsDirs_(procPath) = std::move(procDirs);
 
                 // Make sure to return a reference
-                return procsDirs_[procPath];
+                return refPtr<dirIndexList>(procsDirs_[procPath]);
             }
             else
             {
-                return refPtr<dirIndexList>::New(procDirs);
+                return refPtr<dirIndexList>::New(std::move(procDirs));
             }
         }
     }
 
-    return refPtr<dirIndexList>::New();
+    return refPtr<dirIndexList>(dirIndexList::null());
 }
 
 
@@ -785,6 +779,8 @@ Foam::fileName Foam::fileOperation::objectPath
     const word& typeName
 ) const
 {
+    // Forward to IOobject::objectPath()
+
     return io.objectPath();
 }
 
@@ -848,7 +844,7 @@ Foam::fileName Foam::fileOperation::filePath
 
     fileName path, pDir, local;
     procRangeType group;
-    label numProcs;
+    label numProcs(-1);
     label proci =
         splitProcessorPath(fName, path, pDir, local, group, numProcs);
 
@@ -862,7 +858,7 @@ Foam::fileName Foam::fileOperation::filePath
     if (proci != -1)
     {
         // Get all processor directories
-        refPtr<dirIndexList> procDirs(lookupProcessorsPath(fName));
+        const refPtr<dirIndexList> procDirs(lookupProcessorsPath(fName));
         for (const dirIndex& dirIdx : procDirs())
         {
             const fileName& procDir = dirIdx.first();
@@ -925,7 +921,7 @@ bool Foam::fileOperation::removeWatch(const label watchIndex) const
 
 Foam::label Foam::fileOperation::findWatch
 (
-    const labelList& watchIndices,
+    const labelUList& watchIndices,
     const fileName& fName
 ) const
 {
@@ -946,7 +942,7 @@ void Foam::fileOperation::addWatches
     const fileNameList& files
 ) const
 {
-    const labelList& watchIndices = rio.watchIndices();
+    const labelUList& watchIndices = rio.watchIndices();
 
     DynamicList<label> newWatchIndices;
     labelHashSet removedWatches(watchIndices);
@@ -957,12 +953,12 @@ void Foam::fileOperation::addWatches
 
         if (index == -1)
         {
-            newWatchIndices.append(addWatch(f));
+            newWatchIndices.push_back(addWatch(f));
         }
         else
         {
             // Existing watch
-            newWatchIndices.append(watchIndices[index]);
+            newWatchIndices.push_back(watchIndices[index]);
             removedWatches.erase(index);
         }
     }
@@ -1024,12 +1020,14 @@ Foam::instantList Foam::fileOperation::findTimes
     // since this routine is called on an individual processorN directory
 
     // Read directory entries into a list
-    fileNameList dirEntries(Foam::readDir(directory, fileName::DIRECTORY));
-    instantList times = sortTimes(dirEntries, constantName);
-
+    instantList times;
+    {
+        fileNameList dirEntries(Foam::readDir(directory, fileName::DIRECTORY));
+        times = sortTimes(dirEntries, constantName);
+    }
 
     // Get all processor directories
-    refPtr<dirIndexList> procDirs(lookupProcessorsPath(directory));
+    const refPtr<dirIndexList> procDirs(lookupProcessorsPath(directory));
     for (const dirIndex& dirIdx : procDirs())
     {
         const fileName& procDir = dirIdx.first();
@@ -1344,7 +1342,7 @@ Foam::label Foam::fileOperation::nProcs
         {
             fileName rp, rd, rl;
             procRangeType group;
-            label rNum;
+            label rNum(-1);
 
             const label readProci =
                 splitProcessorPath(dirN, rp, rd, rl, group, rNum);
@@ -1376,8 +1374,7 @@ Foam::label Foam::fileOperation::nProcs
 
         // Override with any gaps in processorDDD numbering (can never happen
         // with collated)
-        const label gapIndex = foundDirs.find_first_not();
-        if (gapIndex > 0)
+        if (label gapIndex = foundDirs.find_first_not(); gapIndex > 0)
         {
             nProcs = gapIndex-1;
         }
@@ -1414,8 +1411,8 @@ void Foam::fileOperation::sync()
 {
     if (debug)
     {
-        Pout<< "fileOperation::sync : parallel synchronisation"
-            << endl;
+        Pout<< "fileOperation::sync : "
+            << "parallel synchronisation" << endl;
     }
 
     Pstream::broadcasts
@@ -1445,7 +1442,7 @@ Foam::fileName Foam::fileOperation::processorsPath
 ) const
 {
     return
-        processorsCasePath(io, procsDir)
+        io.rootPath()/io.globalCaseName()/procsDir
        /instance
        /io.db().dbDir()
        /io.local();
@@ -1468,7 +1465,7 @@ Foam::fileName Foam::fileOperation::processorsPath
         if (!std::isdigit(caseName[9]))
         {
             WarningInFunction << "Directory " << dir
-                << " does not end in old-style processorDDD" << endl;
+                << " does not end in 'processor<digits>'" << endl;
         }
 
         return dir.path()/procsDir;
@@ -1510,7 +1507,7 @@ Foam::label Foam::fileOperation::splitProcessorPath
     size_t pos = 0;
 
     // The slash starting the trailing (local) directory
-    size_t slashLocal = string::npos;
+    size_t slashLocal = std::string::npos;
 
 
     // Search for processor at start of string or after /processor
@@ -1522,7 +1519,7 @@ Foam::label Foam::fileOperation::splitProcessorPath
     for
     (
         /*nil*/;
-        (pos = objPath.find("processor", pos)) != string::npos;
+        (pos = objPath.find("processor", pos)) != std::string::npos;
         pos += 9
     )
     {
@@ -1555,7 +1552,7 @@ Foam::label Foam::fileOperation::splitProcessorPath
 
         // The last parse point is the slash, or end of string
         const size_t lastp =
-            (slashLocal == string::npos ? objPath.length() : slashLocal);
+            (slashLocal == std::string::npos ? objPath.size() : slashLocal);
 
         if (!std::isdigit(objPath[lastp-1]))
         {
@@ -1598,9 +1595,9 @@ Foam::label Foam::fileOperation::splitProcessorPath
         // Single
         // Match: '^processor(\d+)$'   -> proci
 
-        label proci = 0;
         if
         (
+            label proci = 0;
             Foam::read(objPath.substr(firstp, lastp-firstp), proci)
          && (proci >= 0)
         )
@@ -1613,7 +1610,7 @@ Foam::label Foam::fileOperation::splitProcessorPath
         }
     }
 
-    if (pos != string::npos)
+    if (pos != std::string::npos)
     {
         // The split succeeded, extract the components.
 
@@ -1624,7 +1621,7 @@ Foam::label Foam::fileOperation::splitProcessorPath
         }
 
         // The slash starting the trailing (local) directory
-        if (slashLocal != string::npos)
+        if (slashLocal != std::string::npos)
         {
             procDir = objPath.substr(pos, slashLocal-pos);
             local = objPath.substr(slashLocal+1);
@@ -1647,7 +1644,7 @@ Foam::label Foam::fileOperation::detectProcessorPath
 )
 {
     fileName path, procDir, local;
-    label nProcs;
+    label nProcs(-1);
 
     label proci = fileOperation::splitProcessorPath
     (

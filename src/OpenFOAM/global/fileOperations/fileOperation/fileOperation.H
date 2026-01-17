@@ -114,19 +114,19 @@ public:
         {
             NOTFOUND = 0,           //!< Not found
             ABSOLUTE,               //!< instance is absolute directory
-            OBJECT,                 //!< io.objectPath() exists
+            OBJECT,                 //!< IOobject::objectPath() exists
             WRITEOBJECT,            //!< write path exists
 
             // NOTE: increasing precedence (uncollated, collated, rank-collated)
 
+            //! The objectPath exists in 'processorN'
             PROCUNCOLLATED,
-                        //!< objectPath exists in 'processorN'
+            //! The objectPath exists in 'processorsNN'
             PROCBASEOBJECT = PROCUNCOLLATED + 1,
-                        //!< objectPath exists in 'processorsNN'
+            //! The objectPath exists in 'processorsNN_min-max'
             PROCOBJECT = PROCBASEOBJECT + 1,
-                        //!< objectPath exists in 'processorsNN_first-last'
 
-            PARENTOBJECT,           //!< parent of object path
+            PARENTOBJECT,           //!< IOobject::globalObjectPath() exists
             FINDINSTANCE,           //!< file found in time directory
             PROCUNCOLLATEDINSTANCE, //!< as PROCUNCOLLATED but with instance
             PROCBASEINSTANCE,       //!< as PROCBASEOBJECT but with instance
@@ -145,9 +145,6 @@ public:
 private:
 
     // Private Static Data
-
-        //- Storage of the dummy file handler (demand-driven)
-        static refPtr<fileOperation> dummyHandlerPtr_;
 
         //- Filtering of processorsDDD directories (in parallel):
         //      - >0 : only accept processorsDDD (default)
@@ -184,7 +181,7 @@ protected:
         const labelList ioRanks_;
 
         //- Detected processors directories
-        mutable HashTable<dirIndexList> procsDirs_;
+        mutable HashTable<dirIndexList, fileName> procsDirs_;
 
         //- File-change monitor for all registered files
         mutable std::unique_ptr<fileMonitor> monitorPtr_;
@@ -206,7 +203,7 @@ protected:
         );
 
         //- Helper: check for file (isFile) or directory (!isFile)
-        static bool isFileOrDir(const bool isFile, const fileName&);
+        static bool isFileOrDir(bool checkIsFile, const fileName&);
 
         //- Lookup name of processorsDDD using cache.
         //  \return empty fileName if not found.
@@ -392,9 +389,6 @@ public:
 
    // Factory Methods, Singleton-type Functions
 
-        //- The commonly used uncollatedFileOperation
-        static autoPtr<fileOperation> NewUncollated();
-
         //- Return the current file handler.
         //- Will create the default file handler if necessary.
         static const fileOperation& fileHandler();
@@ -442,6 +436,12 @@ public:
         (
             autoPtr<fileOperation>&& newHandler
         );
+
+        //- Return a basic (uncollated) file handler (singleton)
+        static const fileOperation& basicHandler();
+
+        //- Return a "fresh" uncollated file handler
+        static autoPtr<fileOperation> NewUncollated();
 
 
    // Static Functions
@@ -702,7 +702,8 @@ public:
             //- Search for an object
             virtual fileName filePath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject&,
                 //! The wanted object typeName [optional, likely unused]
@@ -713,7 +714,8 @@ public:
             //- Search for a directory
             virtual fileName dirPath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject& io,
                 const bool search = true
@@ -813,7 +815,7 @@ public:
             //- Find index (or -1) of file in list of handles
             virtual label findWatch
             (
-                const labelList& watchIndices,
+                const labelUList& watchIndices,
                 const fileName&
             ) const;
 

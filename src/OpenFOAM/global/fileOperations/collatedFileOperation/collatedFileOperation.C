@@ -626,67 +626,64 @@ Foam::word Foam::fileOperations::collatedFileOperation::processorsDir
     const fileName& fName
 ) const
 {
+    //  The begin/end range for a subset of ranks
+    label begProc = 0;
+    label endProc = nProcs_;
+
     if (UPstream::parRun())
     {
         const auto& procs = UPstream::procID(comm_);
 
-        word procDir(processorsBaseDir+Foam::name(nProcs_));
-
-        if (procs.size() != nProcs_)
+        if (procs.size() && procs.size() != nProcs_)
         {
-            procDir +=
-              + "_"
-              + Foam::name(procs.first())
-              + "-"
-              + Foam::name(procs.last());
+            begProc = procs.front();
+            endProc = procs.back()+1;  // +1 to make exclusive value
         }
-        return procDir;
     }
-    else
+    else if (ioRanks_.size())
     {
-        word procDir(processorsBaseDir+Foam::name(nProcs_));
+        // Serial but has IO ranks (eg, FOAM_IORANKS).
+        // Determine in which min-max subrange this rank belongs.
 
-        if (ioRanks_.size())
+        // The processor number embedded in the filename
+        label proci = fileOperation::detectProcessorPath(fName);
+        if (proci >= 0)
         {
-            // Detect current processor number
-            label proci = fileOperation::detectProcessorPath(fName);
-
-            if (proci != -1)
+            // Find lowest io rank
+            for (auto ranki : ioRanks_)
             {
-                // Find lowest io rank
-                label minProc = 0;
-                label maxProc = nProcs_-1;
-                for (const label ranki : ioRanks_)
+                if (ranki >= nProcs_)
                 {
-                    if (ranki >= nProcs_)
-                    {
-                        break;
-                    }
-                    else if (ranki <= proci)
-                    {
-                        minProc = ranki;
-                    }
-                    else
-                    {
-                        maxProc = ranki-1;
-                        break;
-                    }
+                    break;
                 }
-
-                // Add range if not all processors
-                if (maxProc-minProc+1 != nProcs_)
+                else if (ranki <= proci)
                 {
-                    procDir +=
-                      + "_"
-                      + Foam::name(minProc)
-                      + "-"
-                      + Foam::name(maxProc);
+                    begProc = ranki;
+                }
+                else
+                {
+                    endProc = ranki;
+                    break;
                 }
             }
         }
-
-        return procDir;
     }
+
+    // A subset of ranks: "processorsNN_min-max/"
+    if ((endProc-begProc) < nProcs_)
+    {
+        return
+        (
+            processorsBaseDir + Foam::name(nProcs_)
+          + "_"
+          + Foam::name(begProc)
+          + "-"
+          + Foam::name(endProc-1)  // inclusive value
+        );
+    }
+
+    // All ranks: "processorsNN/"
+    return (processorsBaseDir + Foam::name(nProcs_));
 }
 
 

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,22 +31,36 @@ License
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-Foam::refPtr<Foam::fileOperation> Foam::fileOperation::dummyHandlerPtr_;
-
 Foam::refPtr<Foam::fileOperation> Foam::fileOperation::fileHandlerPtr_;
 
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
-Foam::refPtr<Foam::fileOperation> Foam::fileOperation::null()
+const Foam::fileOperation& Foam::fileOperation::basicHandler()
 {
-    if (!dummyHandlerPtr_)
+    static std::unique_ptr<fileOperation> singleton;
+
+    if (!singleton)
     {
         // verbose = false
-        dummyHandlerPtr_.reset(new fileOperations::dummyFileOperation(false));
+        singleton.reset(new fileOperations::uncollatedFileOperation(false));
     }
 
-    return dummyHandlerPtr_;
+    return *singleton;
+}
+
+
+Foam::refPtr<Foam::fileOperation> Foam::fileOperation::null()
+{
+    static refPtr<fileOperation> singleton;
+
+    if (!singleton)
+    {
+        // verbose = false
+        singleton.reset(new fileOperations::dummyFileOperation(false));
+    }
+
+    return singleton;
 }
 
 

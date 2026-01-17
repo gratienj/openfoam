@@ -206,7 +206,8 @@ public:
             //- Search for an object
             virtual fileName filePath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject& io,
                 //! The wanted object typeName [optional, likely unused]
@@ -217,7 +218,8 @@ public:
             //- Search for a directory
             virtual fileName dirPath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject& io,
                 const bool search

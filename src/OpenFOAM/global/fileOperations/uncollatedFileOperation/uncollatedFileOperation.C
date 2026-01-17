@@ -76,6 +76,8 @@ Foam::fileName Foam::fileOperations::uncollatedFileOperation::filePathInfo
     const bool search
 ) const
 {
+    const auto& tm = io.time();
+
     if (io.instance().isAbsolute())
     {
         fileName objectPath(io.instance()/io.name());
@@ -98,11 +100,11 @@ Foam::fileName Foam::fileOperations::uncollatedFileOperation::filePathInfo
         {
             if
             (
-                checkGlobal
-             && io.time().processorCase()
+                tm.processorCase()
+             && checkGlobal
              && (
-                    io.instance() == io.time().system()
-                 || io.instance() == io.time().constant()
+                    io.instance() == tm.system()
+                 || io.instance() == tm.constant()
                 )
             )
             {
@@ -121,7 +123,7 @@ Foam::fileName Foam::fileOperations::uncollatedFileOperation::filePathInfo
             }
 
             // Check if parallel "procesors" directory
-            if (io.time().processorCase())
+            if (tm.processorCase())
             {
                 const refPtr<dirIndexList> pDirs
                 (
@@ -149,8 +151,20 @@ Foam::fileName Foam::fileOperations::uncollatedFileOperation::filePathInfo
             // directory is 0.01 (due to different time formats)
             if (search && !Foam::isDir(path))
             {
-                word newInstancePath = io.time().findInstancePath
+                // OLD (2512):
+                // word newInstancePath = tm.findInstancePath
+                // (
+                //     instant(io.instance())
+                // );
+
+                instantList timeDirs
                 (
+                    this->findTimes(tm.path(), tm.constant())
+                );
+
+                word newInstancePath = Time::findInstancePath
+                (
+                    timeDirs,
                     instant(io.instance())
                 );
 
@@ -521,6 +535,8 @@ Foam::fileNameList Foam::fileOperations::uncollatedFileOperation::readObjects
     word& newInstance
 ) const
 {
+    const auto& tm = db.time();
+
     if (debug)
     {
         Pout<< "uncollatedFileOperation::readObjects :"
@@ -537,7 +553,20 @@ Foam::fileNameList Foam::fileOperations::uncollatedFileOperation::readObjects
     if (newInstance.empty())
     {
         // Find similar time
-        word newInst = db.time().findInstancePath(instant(instance));
+
+        // OLD (2512):
+        // word newInst = tm.findInstancePath(instant(instance));
+
+        instantList timeDirs
+        (
+            this->findTimes(tm.path(), tm.constant())
+        );
+
+        word newInst = Time::findInstancePath
+        (
+            timeDirs,
+            instant(instance)
+        );
 
         if (!newInst.empty() && newInst != instance)
         {
