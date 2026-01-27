@@ -34,7 +34,7 @@ Description
 #ifndef Foam_ListPolicy_H
 #define Foam_ListPolicy_H
 
-#include "MemoryPool.H"  // Also includes <cstdint>
+#include "MemoryPool.H"  // Also includes <cstddef>
 #include "contiguous.H"  // Also includes <type_traits>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -124,6 +124,12 @@ template<> struct no_linebreak<wordRe> : std::true_type {};
 template<class T>
 inline constexpr bool is_aligned_type() noexcept
 {
+    #if defined(_WIN32)
+    // Placement alignment seems to fail on MINGW (#3488), so disable there.
+    // Note that returning false also effectively disables MemoryPool too,
+    // which is not currently supported on MINGW anyhow.
+    return false;
+    #else
     return
     (
         !std::is_enum_v<T>
@@ -132,6 +138,7 @@ inline constexpr bool is_aligned_type() noexcept
      && (sizeof(T) >= 4)    // skip small data (eg, char)
      && is_contiguous_v<T>
     );
+    #endif
 }
 
 
