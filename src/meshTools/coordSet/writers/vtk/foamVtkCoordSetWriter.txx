@@ -50,7 +50,7 @@ void Foam::vtk::coordSetWriter::writePointData
 
     label nValues = 0;
 
-    for (const Field<Type>& field : fieldPtrs)
+    for (const auto& field : fieldPtrs)
     {
         nValues += field.size();
     }
@@ -68,7 +68,7 @@ void Foam::vtk::coordSetWriter::writePointData
     // }
     // else
     {
-        for (const Field<Type>& field : fieldPtrs)
+        for (const auto& field : fieldPtrs)
         {
             vtk::writeList(format(), field);
         }

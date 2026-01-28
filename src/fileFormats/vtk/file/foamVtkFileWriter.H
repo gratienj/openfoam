@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -202,9 +202,10 @@ protected:
             const UList<Type>& field
         );
 
-        //- Write nValues of processor ids as CellData or PointData
-        //- (no-op in serial)
-        bool writeProcIDs(const label nValues);
+        //- In parallel, write "procID" field (processor ids)
+        //- as CellData or PointData (depending on the current context).
+        //  A no-op in serial.
+        bool writeProcIDs(label localSize);
 
 
     // Other
@@ -221,11 +222,7 @@ public:
     // Constructors
 
         //- Construct from components
-        fileWriter
-        (
-            const vtk::fileTag contentType,
-            const vtk::outputOptions opts
-        );
+        fileWriter(vtk::fileTag contentType, vtk::outputOptions opts);
 
 
     //- Destructor

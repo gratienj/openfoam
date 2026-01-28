@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -286,8 +286,8 @@ bool Foam::vtk::fileWriter::exit_File()
 
 Foam::vtk::fileWriter::fileWriter
 (
-    const vtk::fileTag contentType,
-    const vtk::outputOptions opts
+    vtk::fileTag contentType,
+    vtk::outputOptions opts
 )
 :
     state_(outputState::CLOSED),
@@ -295,10 +295,7 @@ Foam::vtk::fileWriter::fileWriter
     parallel_(false),
     opts_(opts),
     nCellData_(0),
-    nPointData_(0),
-    outputFile_(),
-    format_(nullptr),
-    os_()
+    nPointData_(0)
 {
     // We do not currently support append mode at all
     opts_.append(false);
@@ -541,7 +538,7 @@ void Foam::vtk::fileWriter::writeTimeValue(scalar timeValue)
 }
 
 
-bool Foam::vtk::fileWriter::writeProcIDs(const label nValues)
+bool Foam::vtk::fileWriter::writeProcIDs(label localSize)
 {
     // Write procIDs whenever running in parallel
 
@@ -574,11 +571,11 @@ bool Foam::vtk::fileWriter::writeProcIDs(const label nValues)
 
     // The per-rank sizes
     labelList procSizes;
-    label totalSize(nValues);
+    label totalSize(localSize);
 
     if (parallel_)
     {
-        procSizes = UPstream::listGatherValues(nValues);
+        procSizes = UPstream::listGatherValues(localSize);
         //totalSize = std::reduce(procSizes.begin(), procSizes.end());
 
         // Some compilers still seem to have issues with std::reduce()

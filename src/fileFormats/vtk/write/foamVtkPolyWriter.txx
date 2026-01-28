@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2021 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,27 +25,26 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::vtk::polyWriter::writeUniformValue
+void Foam::vtk::polyWriter::writeUniform
 (
-    const label nCellValues,
     const word& fieldName,
     const Type& val
 )
 {
-    label nValues(0);
+    label localSize(0);
 
     if (isState(outputState::CELL_DATA))
     {
         ++nCellData_;
-        nValues = nCellValues;
+        localSize = cellSlab_.size();
     }
     else if (isState(outputState::POINT_DATA))
     {
         ++nPointData_;
-        nValues = nLocalPoints_;
+        localSize = pointSlab_.size();
     }
     else
     {
@@ -61,11 +60,9 @@ void Foam::vtk::polyWriter::writeUniformValue
         return;
     }
 
-    vtk::fileWriter::writeUniform<Type>(fieldName, val, nValues);
+    vtk::fileWriter::writeUniform<Type>(fieldName, val, localSize);
 }
 
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
 void Foam::vtk::polyWriter::write
@@ -75,9 +72,8 @@ void Foam::vtk::polyWriter::write
 )
 {
     // Could check sizes:
-    // const label nValues = field.size();
-    // CELL_DATA:   nValues == (nLocalPolys | nLocalLines)
-    // POINT_DATA:  nValues == nLocalPoints
+    // CELL_DATA:   (field.size() == cellSlab_.size())
+    // POINT_DATA:  (field.size() == pointSlab_.size())
 
     if (isState(outputState::CELL_DATA))
     {
@@ -112,8 +108,7 @@ void Foam::vtk::polyWriter::writeCellData
 )
 {
     // Could check sizes:
-    // const label nValues = field.size();
-    // CELL_DATA:   nValues == (nLocalPolys | nLocalLines)
+    // CELL_DATA:   (field.size() == cellSlab_.size())
 
     if (isState(outputState::CELL_DATA))
     {
@@ -139,8 +134,7 @@ void Foam::vtk::polyWriter::writePointData
 )
 {
     // Could check sizes:
-    // const label nValues = field.size();
-    // POINT_DATA:  nValues == nLocalPoints
+    // POINT_DATA:  (field.size() == cellSlab_.size())
 
     if (isState(outputState::POINT_DATA))
     {
