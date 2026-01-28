@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,46 +38,13 @@ void Foam::vtk::internalWriter::write
     const GeometricField<Type, PatchField, pointMesh>& field
 )
 {
-    if (isState(outputState::POINT_DATA))
-    {
-        ++nPointData_;
-    }
-    else
-    {
-        reportBadState(FatalErrorInFunction, outputState::POINT_DATA)
-            << " for field " << field.name() << nl << endl
-            << exit(FatalError);
-    }
+    // Extra values corresponding to the decomposed cell centres
+    const Field<Type> extra
+    (
+        interpolatePointToCell(field, vtuCells_.addPointCellLabels())
+    );
 
-    const labelUList& addPointCellLabels = vtuCells_.addPointCellLabels();
-
-
-    this->beginDataArray<Type>(field.name(), nTotalPoints());
-
-    if (parallel_)
-    {
-        List<Type> addedValues(addPointCellLabels.size());
-        label outi = 0;
-
-        for (const label cellId : addPointCellLabels)
-        {
-            addedValues[outi++] = interpolatePointToCell(field, cellId);
-        }
-
-        vtk::writeListsParallel(format_.ref(), field, addedValues);
-    }
-    else
-    {
-        vtk::writeList(format(), field);
-
-        for (const label cellId : addPointCellLabels)
-        {
-            const Type val = interpolatePointToCell(field, cellId);
-            vtk::write(format(), val);
-        }
-    }
-
-    this->endDataArray();
+    writePointData(field.name(), field, extra);
 }
 
 
@@ -108,44 +75,20 @@ void Foam::vtk::internalWriter::write
     const volPointInterpolation& pInterp
 )
 {
-    if (isState(outputState::POINT_DATA))
-    {
-        ++nPointData_;
-    }
-    else
-    {
-        reportBadState(FatalErrorInFunction, outputState::POINT_DATA)
-            << " for field " << vfield.name() << nl << endl
-            << exit(FatalError);
-    }
-
     typedef DimensionedField<Type, pointMesh> PointFieldType;
 
     // Use tmp intermediate. Compiler sometimes weird otherwise.
-    tmp<PointFieldType> tfield = pInterp.interpolate(vfield);
+    const tmp<PointFieldType> tfield = pInterp.interpolate(vfield);
     const auto& pfield = tfield();
 
-    const labelUList& addPointCellLabels = vtuCells_.addPointCellLabels();
+    // Extra values corresponding to the decomposed cell centres
+    const List<Type> extra
+    (
+        vfield.field(),
+        vtuCells_.addPointCellLabels()
+    );
 
-
-    this->beginDataArray<Type>(vfield.name(), nTotalPoints());
-
-    if (parallel_)
-    {
-        vtk::writeListsParallel
-        (
-            format_.ref(),
-            pfield,
-            vfield,
-            addPointCellLabels
-        );
-    }
-    else
-    {
-        vtk::writeLists(format(), pfield, vfield, addPointCellLabels);
-    }
-
-    this->endDataArray();
+    writePointData(vfield.name(), pfield, extra);
 }
 
 
@@ -156,44 +99,20 @@ void Foam::vtk::internalWriter::write
     const volPointInterpolation& pInterp
 )
 {
-    if (isState(outputState::POINT_DATA))
-    {
-        ++nPointData_;
-    }
-    else
-    {
-        reportBadState(FatalErrorInFunction, outputState::POINT_DATA)
-            << " for field " << vfield.name() << nl << endl
-            << exit(FatalError);
-    }
-
     typedef GeometricField<Type, pointPatchField, pointMesh> PointFieldType;
 
     // Use tmp intermediate. Compiler sometimes weird otherwise.
-    tmp<PointFieldType> tfield = pInterp.interpolate(vfield);
+    const tmp<PointFieldType> tfield = pInterp.interpolate(vfield);
     const auto& pfield = tfield();
 
-    const labelList& addPointCellLabels = vtuCells_.addPointCellLabels();
+    // Extra values corresponding to the decomposed cell centres
+    const List<Type> extra
+    (
+        vfield.primitiveField(),
+        vtuCells_.addPointCellLabels()
+    );
 
-
-    this->beginDataArray<Type>(vfield.name(), nTotalPoints());
-
-    if (parallel_)
-    {
-        vtk::writeListsParallel
-        (
-            format_.ref(),
-            pfield,
-            vfield,
-            addPointCellLabels
-        );
-    }
-    else
-    {
-        vtk::writeLists(format(), pfield, vfield, addPointCellLabels);
-    }
-
-    this->endDataArray();
+    writePointData(vfield.name(), pfield, extra);
 }
 
 

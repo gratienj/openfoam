@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -74,29 +74,30 @@ void Foam::vtk::internalMeshWriter::beginPiece()
 
 void Foam::vtk::internalMeshWriter::writePoints()
 {
+    // Additional support points for decomposed polys
+    const UIndirectList<point> centres
+    (
+        mesh_.cellCentres(),
+        vtuCells_.addPointCellLabels()
+    );
+
     this->beginPoints(nTotalPoints());
 
     if (parallel_)
     {
-        vtk::writeListsParallel
-        (
-            format_.ref(),
-            mesh_.points(),
-            mesh_.cellCentres(),
-            vtuCells_.addPointCellLabels()
-        );
+        if (returnReduceOr(!centres.empty()))
+        {
+            vtk::writeListsParallel(format_.ref(), mesh_.points(), centres);
+        }
+        else
+        {
+            vtk::writeListParallel(format_.ref(), mesh_.points());
+        }
     }
     else
     {
-        vtk::writeLists
-        (
-            format(),
-            mesh_.points(),
-            mesh_.cellCentres(),
-            vtuCells_.addPointCellLabels()
-        );
+        vtk::writeLists(format(), mesh_.points(), centres);
     }
-
 
     this->endPoints();
 }

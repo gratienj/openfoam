@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,7 +40,7 @@ inline void Foam::vtk::formatter::xmlCommentLoop
     Args&&... args
 )
 {
-    if (text.length())
+    if (text.size())
     {
         indent(); indent(4);
         os_ << text << nl;
@@ -55,12 +55,12 @@ inline void Foam::vtk::formatter::xmlCommentLoop
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-inline Foam::vtk::formatter::formatter(std::ostream& os)
+inline Foam::vtk::formatter::formatter(std::ostream& os) noexcept
 :
     os_(os),
     xmlTags_(),
     inTag_(false),
-    quote_(SINGLE_QUOTE)
+    quote_(quoteChar::SINGLE_QUOTE)
 {}
 
 
@@ -160,11 +160,11 @@ inline Foam::vtk::formatter& Foam::vtk::formatter::openTag
 template<class... Args>
 inline Foam::vtk::formatter& Foam::vtk::formatter::tag
 (
-    const word& t,
+    const word& tagName,
     Args&&... args
 )
 {
-    openTagImpl(t);
+    openTagImpl(tagName);
     xmlAttr(std::forward<Args>(args)...);
     closeTag();
 
@@ -231,7 +231,7 @@ inline Foam::vtk::formatter& Foam::vtk::formatter::beginVTKFile(bool leaveOpen)
 template<class Type, Foam::direction nComp, int nTuple>
 inline Foam::vtk::formatter& Foam::vtk::formatter::beginDataArray
 (
-    const vtk::dataArrayAttr& dataName,
+    vtk::dataArrayAttr dataName,
     uint64_t payLoad,
     bool leaveOpen
 )
@@ -401,7 +401,7 @@ inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 template<class... Args>
 inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 (
-    const vtk::fileAttr& k,
+    vtk::fileAttr k,
     const std::string& v,
     Args&&... args
 )
@@ -416,7 +416,7 @@ inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 template<class... Args>
 inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 (
-    const vtk::fileAttr& k,
+    vtk::fileAttr k,
     const int32_t v,
     Args&&... args
 )
@@ -431,7 +431,7 @@ inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 template<class... Args>
 inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 (
-    const vtk::fileAttr& k,
+    vtk::fileAttr k,
     const int64_t v,
     Args&&... args
 )
@@ -446,7 +446,7 @@ inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 template<class... Args>
 inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 (
-    const vtk::fileAttr& k,
+    vtk::fileAttr k,
     const uint64_t v,
     Args&&... args
 )
@@ -461,7 +461,7 @@ inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 template<class... Args>
 inline Foam::vtk::formatter& Foam::vtk::formatter::xmlAttr
 (
-    const vtk::fileAttr& k,
+    vtk::fileAttr k,
     const scalar v,
     Args&&... args
 )

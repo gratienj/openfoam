@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -94,6 +94,37 @@ inline void Foam::vtk::write
 
 
 template<class Type>
+void Foam::vtk::writeValueParallel
+(
+    vtk::formatter& fmt,
+    const Type& val,
+    const label count
+)
+{
+    if constexpr (!is_contiguous_v<Type>)
+    {
+        // Non-contiguous data does not make sense
+        FatalErrorInFunction
+            << "Contiguous data only" << endl
+            << Foam::exit(FatalError);
+    }
+
+    // Gather [value, count] tuples, including from master
+    const auto values(UPstream::listGatherValues(val));
+    const auto counts(UPstream::listGatherValues(count));
+
+    if (UPstream::master())
+    {
+        forAll(counts, i)
+        {
+            // Write [value, count] tuple
+            vtk::write(fmt, values[i], counts[i]);
+        }
+    }
+}
+
+
+template<class Type>
 void Foam::vtk::writeList
 (
     vtk::formatter& fmt,
@@ -121,6 +152,22 @@ void Foam::vtk::writeList
 }
 
 
+template<class Type, class Addr>
+void Foam::vtk::writeList
+(
+    vtk::formatter& fmt,
+    const IndirectListBase<Type, Addr>& values
+)
+{
+    const label len = values.size();
+
+    for (label i = 0; i < len; ++i)
+    {
+        vtk::write(fmt, values[i]);
+    }
+}
+
+
 template<class Type>
 void Foam::vtk::writeList
 (
@@ -129,7 +176,7 @@ void Foam::vtk::writeList
     const labelUList& addressing
 )
 {
-    for (const label idx : addressing)
+    for (auto idx : addressing)
     {
         vtk::write(fmt, values[idx]);
     }
@@ -144,7 +191,7 @@ void Foam::vtk::writeList
     const bitSet& selected
 )
 {
-    for (const label idx : selected)
+    for (auto idx : selected)
     {
         vtk::write(fmt, values[idx]);
     }
@@ -155,49 +202,70 @@ template<class Type>
 void Foam::vtk::writeLists
 (
     vtk::formatter& fmt,
-    const UList<Type>& values,
-    const UList<Type>& indirect,
-    const labelUList& addressing
+    const UList<Type>& values1,
+    const UList<Type>& values2
 )
 {
-    vtk::writeList(fmt, values);
-    vtk::writeList(fmt, indirect, addressing);
+    vtk::writeList(fmt, values1);
+    vtk::writeList(fmt, values2);
 }
 
 
-template<class Type>
-void Foam::vtk::writeValueParallel
+template<class Type, class Addr>
+void Foam::vtk::writeLists
 (
     vtk::formatter& fmt,
-    const Type& val,
-    const label count
+    const UList<Type>& values1,
+    const IndirectListBase<Type, Addr>& values2
 )
 {
-    if constexpr (!is_contiguous_v<Type>)
-    {
-        // Non-contiguous data does not make sense
-        FatalErrorInFunction
-            << "Contiguous data only" << endl
-            << Foam::exit(FatalError);
-    }
+    vtk::writeList(fmt, values1);
+    vtk::writeList(fmt, values2);
+}
 
-    // Gather [count, value] tuples, including from master
-    const List<label> counts(UPstream::listGatherValues(count));
-    const List<Type> values(UPstream::listGatherValues(val));
 
-    if (UPstream::master())
-    {
-        forAll(counts, i)
-        {
-            // Write [count, value] tuple
-            vtk::write(fmt, counts[i], values[i]);
-        }
-    }
+template<class Type, class Addr>
+void Foam::vtk::writeLists
+(
+    vtk::formatter& fmt,
+    const IndirectListBase<Type, Addr>& values1,
+    const UList<Type>& values2
+)
+{
+    vtk::writeList(fmt, values1);
+    vtk::writeList(fmt, values2);
+}
+
+
+template<class Type, class Addr>
+void Foam::vtk::writeLists
+(
+    vtk::formatter& fmt,
+    const IndirectListBase<Type, Addr>& values1,
+    const IndirectListBase<Type, Addr>& values2
+)
+{
+    vtk::writeList(fmt, values1);
+    vtk::writeList(fmt, values2);
 }
 
 
 template<class Type>
-void Foam::vtk::writeListParallel
+void Foam::vtk::writeLists
+(
+    vtk::formatter& fmt,
+    const UList<Type>& values1,
+    const UList<Type>& values2,
+    const labelUList& addressing2
+)
+{
+    vtk::writeList(fmt, values1);
+    vtk::writeList(fmt, values2, addressing2);
+}
+
+
+template<class Type>
+void Foam::vtk::writeListParallel_subranks
 (
     vtk::formatter& fmt,
     const UList<Type>& values
@@ -216,12 +284,12 @@ void Foam::vtk::writeListParallel
 
     if (UPstream::master())
     {
-        const label maxRecvSize = recvSizes[0];
-
-        // Write master data
-        vtk::writeList(fmt, values);
-
         // Receive and write
+        const label maxRecvSize = recvSizes[0];
+        if (!maxRecvSize)
+        {
+            return;  // Nothing to receive/write
+        }
         DynamicList<Type> recvData(maxRecvSize);
 
         for (const int proci : UPstream::subProcs())
@@ -255,11 +323,11 @@ void Foam::vtk::writeListParallel
 
 
 template<class Type>
-void Foam::vtk::writeListParallel
+void Foam::vtk::writeListsParallel_subranks
 (
     vtk::formatter& fmt,
-    const UList<Type>& values,
-    const labelUList& addressing
+    const UList<Type>& values1,
+    const UList<Type>& values2
 )
 {
     if constexpr (!is_contiguous_v<Type>)
@@ -270,29 +338,37 @@ void Foam::vtk::writeListParallel
             << Foam::exit(FatalError);
     }
 
-
-    List<Type> sendData;
-    if (!UPstream::master())
-    {
-        sendData = UIndirectList<Type>(values, addressing);
-    }
-
     // The receive sizes
-    const labelList recvSizes(globalIndex::calcRecvSizes(sendData.size()));
+    const labelList recvSizes1(globalIndex::calcRecvSizes(values1.size()));
+    const labelList recvSizes2(globalIndex::calcRecvSizes(values2.size()));
 
     if (UPstream::master())
     {
-        const label maxRecvSize = recvSizes[0];
-
-        // Write master data
-        vtk::writeList(fmt, values, addressing);
-
         // Receive and write
+        const label maxRecvSize = std::max(recvSizes1[0], recvSizes2[0]);
+        if (!maxRecvSize)
+        {
+            return;  // Nothing to receive/write
+        }
         DynamicList<Type> recvData(maxRecvSize);
 
         for (const int proci : UPstream::subProcs())
         {
-            if (label procSize = recvSizes[proci]; procSize > 0)
+            // values1
+            if (label procSize = recvSizes1[proci]; procSize > 0)
+            {
+                recvData.resize_nocopy(procSize);
+                UIPstream::read
+                (
+                    UPstream::commsTypes::scheduled,
+                    proci,
+                    recvData
+                );
+                vtk::writeList(fmt, recvData);
+            }
+
+            // values2
+            if (label procSize = recvSizes2[proci]; procSize > 0)
             {
                 recvData.resize_nocopy(procSize);
                 UIPstream::read
@@ -307,16 +383,94 @@ void Foam::vtk::writeListParallel
     }
     else
     {
-        if (sendData.size())
+        if (values1.size())
         {
             UOPstream::write
             (
                 UPstream::commsTypes::scheduled,
                 UPstream::masterNo(),
-                sendData
+                values1
+            );
+        }
+        if (values2.size())
+        {
+            UOPstream::write
+            (
+                UPstream::commsTypes::scheduled,
+                UPstream::masterNo(),
+                values2
             );
         }
     }
+}
+
+
+template<class Type>
+void Foam::vtk::writeListParallel
+(
+    vtk::formatter& fmt,
+    const UList<Type>& values
+)
+{
+    if constexpr (!is_contiguous_v<Type>)
+    {
+        // Non-contiguous data does not make sense
+        FatalErrorInFunction
+            << "Contiguous data only" << endl
+            << Foam::exit(FatalError);
+    }
+
+    if (UPstream::master())
+    {
+        // Write master data
+        vtk::writeList(fmt, values);
+    }
+
+    vtk::writeListParallel_subranks(fmt, values);
+}
+
+
+template<class Type, class Addr>
+void Foam::vtk::writeListParallel
+(
+    vtk::formatter& fmt,
+    const IndirectListBase<Type, Addr>& values
+)
+{
+    if constexpr (!is_contiguous_v<Type>)
+    {
+        // Non-contiguous data does not make sense
+        FatalErrorInFunction
+            << "Contiguous data only" << endl
+            << Foam::exit(FatalError);
+    }
+
+    List<Type> sendData;
+
+    if (UPstream::master())
+    {
+        // Write master data
+        vtk::writeList(fmt, values);
+    }
+    else
+    {
+        sendData = values.list();
+    }
+
+    vtk::writeListParallel_subranks(fmt, sendData);
+}
+
+
+template<class Type>
+void Foam::vtk::writeListParallel
+(
+    vtk::formatter& fmt,
+    const UList<Type>& values,
+    const labelUList& addressing
+)
+{
+    const UIndirectList<Type> list(values, addressing);
+    vtk::writeListParallel(fmt, list);
 }
 
 
@@ -336,54 +490,19 @@ void Foam::vtk::writeListParallel
             << Foam::exit(FatalError);
     }
 
-
     List<Type> sendData;
-    if (!UPstream::master())
-    {
-        sendData = subset(selected, values);
-    }
-
-    // The receive sizes
-    const labelList recvSizes(globalIndex::calcRecvSizes(sendData.size()));
 
     if (UPstream::master())
     {
-        const label maxRecvSize = recvSizes[0];
-
         // Write master data
         vtk::writeList(fmt, values, selected);
-
-        // Receive and write
-        DynamicList<Type> recvData(maxRecvSize);
-
-        for (const int proci : UPstream::subProcs())
-        {
-            if (label procSize = recvSizes[proci]; procSize > 0)
-            {
-                recvData.resize_nocopy(procSize);
-
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData
-                );
-                vtk::writeList(fmt, recvData);
-            }
-        }
     }
     else
     {
-        if (sendData.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                sendData
-            );
-        }
+        sendData = Foam::subset(selected, values);
     }
+
+    vtk::writeListParallel_subranks(fmt, sendData);
 }
 
 
@@ -403,83 +522,23 @@ void Foam::vtk::writeListsParallel
             << Foam::exit(FatalError);
     }
 
-
-    // The receive sizes
-    const labelList recvSizes1(globalIndex::calcRecvSizes(values1.size()));
-    const labelList recvSizes2(globalIndex::calcRecvSizes(values2.size()));
-
     if (UPstream::master())
     {
-        const label maxRecvSize = std::max(recvSizes1[0], recvSizes2[0]);
-
         // Write master data
         vtk::writeList(fmt, values1);
         vtk::writeList(fmt, values2);
-
-        // Receive and write
-        DynamicList<Type> recvData(maxRecvSize);
-
-        for (const int proci : UPstream::subProcs())
-        {
-            // values1
-            if (label procSize = recvSizes1[proci]; procSize > 0)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData
-                );
-                vtk::writeList(fmt, recvData);
-            }
-
-            // values2
-            if (label procSize = recvSizes2[proci]; procSize > 0)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData
-                );
-                vtk::writeList(fmt, recvData);
-            }
-        }
     }
-    else
-    {
-        if (values1.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values1
-            );
-        }
 
-        if (values2.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values2
-            );
-        }
-    }
+    vtk::writeListsParallel_subranks(fmt, values1, values2);
 }
 
 
-template<class Type>
+template<class Type, class Addr>
 void Foam::vtk::writeListsParallel
 (
     vtk::formatter& fmt,
     const UList<Type>& values1,
-    const UList<Type>& values2,
-    const labelUList& addressing
+    const IndirectListBase<Type, Addr>& values2
 )
 {
     if constexpr (!is_contiguous_v<Type>)
@@ -490,79 +549,115 @@ void Foam::vtk::writeListsParallel
             << Foam::exit(FatalError);
     }
 
-
     List<Type> sendData2;
-    if (!UPstream::master())
-    {
-        sendData2 = UIndirectList<Type>(values2, addressing);
-    }
-
-    // The receive sizes
-    const labelList recvSizes1(globalIndex::calcRecvSizes(values1.size()));
-    const labelList recvSizes2(globalIndex::calcRecvSizes(sendData2.size()));
 
     if (UPstream::master())
     {
-        const label maxRecvSize = std::max(recvSizes1[0], recvSizes2[0]);
-
         // Write master data
         vtk::writeList(fmt, values1);
-        vtk::writeList(fmt, values2, addressing);
-
-        // Receive and write
-        DynamicList<Type> recvData(maxRecvSize);
-
-        for (const int proci : UPstream::subProcs())
-        {
-            // values1
-            if (label procSize = recvSizes1[proci]; procSize > 0)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData
-                );
-                vtk::writeList(fmt, recvData);
-            }
-
-            // values2
-            if (label procSize = recvSizes2[proci]; procSize > 0)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData
-                );
-                vtk::writeList(fmt, recvData);
-            }
-        }
+        vtk::writeList(fmt, values2);
     }
     else
     {
-        if (values1.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values1
-            );
-        }
+        sendData2 = values2.list();
+    }
 
-        if (sendData2.size())
+    vtk::writeListsParallel_subranks(fmt, values1, sendData2);
+}
+
+
+template<class Type, class Addr>
+void Foam::vtk::writeListsParallel
+(
+    vtk::formatter& fmt,
+    const IndirectListBase<Type, Addr>& values1,
+    const UList<Type>& values2
+)
+{
+    if constexpr (!is_contiguous_v<Type>)
+    {
+        // Non-contiguous data does not make sense
+        FatalErrorInFunction
+            << "Contiguous data only" << endl
+            << Foam::exit(FatalError);
+    }
+
+    List<Type> sendData1;
+
+    if (UPstream::master())
+    {
+        // Write master data
+        vtk::writeList(fmt, values1);
+        vtk::writeList(fmt, values2);
+    }
+    else
+    {
+        sendData1 = values1.list();
+    }
+
+    vtk::writeListsParallel_subranks(fmt, sendData1, values2);
+}
+
+
+template<class Type, class Addr>
+void Foam::vtk::writeListsParallel
+(
+    vtk::formatter& fmt,
+    const IndirectListBase<Type, Addr>& values1,
+    const IndirectListBase<Type, Addr>& values2
+)
+{
+    if constexpr (!is_contiguous_v<Type>)
+    {
+        // Non-contiguous data does not make sense
+        FatalErrorInFunction
+            << "Contiguous data only" << endl
+            << Foam::exit(FatalError);
+    }
+
+    List<Type> sendData;
+
+    if (UPstream::master())
+    {
+        // Write master data
+        vtk::writeList(fmt, values1);
+        vtk::writeList(fmt, values2);
+    }
+    else
+    {
+        // Flatten/concatenate both indirect lists
+        const label len1 = values1.size();
+        const label len2 = values2.size();
+
+        sendData.resize(len1+len2);
+        auto iter = sendData.begin();
+
+        for (label i = 0; i < len1; ++i)
         {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                sendData2
-            );
+            *iter++ = values1[i];
+        }
+        for (label i = 0; i < len2; ++i)
+        {
+            *iter++ = values2[i];
         }
     }
+
+    vtk::writeListParallel_subranks(fmt, sendData);
+}
+
+
+template<class Type>
+void Foam::vtk::writeListsParallel
+(
+    vtk::formatter& fmt,
+    const UList<Type>& values1,
+    const UList<Type>& values2,
+    const labelUList& addressing2
+)
+{
+    const UIndirectList<Type> list2(values2, addressing2);
+
+    vtk::writeListsParallel(fmt, values1, list2);
 }
 
 

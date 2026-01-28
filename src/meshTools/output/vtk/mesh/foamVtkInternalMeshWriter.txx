@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -130,6 +130,51 @@ void Foam::vtk::internalMeshWriter::writePointData
     else
     {
         vtk::writeList(format(), field);
+    }
+
+    this->endDataArray();
+}
+
+
+template<class Type>
+void Foam::vtk::internalMeshWriter::writePointData
+(
+    const word& fieldName,
+    const UList<Type>& field,
+    const UList<Type>& extra
+)
+{
+    if
+    (
+        isNull(extra)
+     || (parallel_ ? returnReduceAnd(extra.empty()) : extra.empty())
+    )
+    {
+        // Can write without the "extra" data...
+        writePointData(fieldName, field);
+        return;
+    }
+
+    if (isState(outputState::POINT_DATA))
+    {
+        ++nPointData_;
+    }
+    else
+    {
+        reportBadState(FatalErrorInFunction, outputState::POINT_DATA)
+            << " for field " << fieldName << nl << endl
+            << exit(FatalError);
+    }
+
+    this->beginDataArray<Type>(fieldName, nTotalPoints());
+
+    if (parallel_)
+    {
+        vtk::writeListsParallel(format_.ref(), field, extra);
+    }
+    else
+    {
+        vtk::writeLists(format(), field, extra);
     }
 
     this->endDataArray();

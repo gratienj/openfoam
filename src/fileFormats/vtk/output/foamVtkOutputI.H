@@ -65,7 +65,7 @@ inline void Foam::vtk::legacy::beginVerts
     label nConnectivity
 )
 {
-    if (!nConnectivity)
+    if (nConnectivity <= 0)
     {
         nConnectivity = nVerts;
     }
@@ -83,7 +83,7 @@ inline void Foam::vtk::legacy::beginLines
     label nConnectivity
 )
 {
-    if (!nConnectivity)
+    if (nConnectivity <= 0)
     {
         nConnectivity = 2*nLines;
     }

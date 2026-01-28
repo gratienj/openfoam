@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -228,13 +228,25 @@ public:
         template<class Type>
         void writeUniform(const word& fieldName, const Type& val);
 
-        //- Write primitive field of CellData
+        //- Write primitive field of CellData.
+        //- Uses cellMap (for decomposed poly cells).
         template<class Type>
         void writeCellData(const word& fieldName, const UList<Type>& field);
 
         //- Write primitive field of PointData
         template<class Type>
         void writePointData(const word& fieldName, const UList<Type>& field);
+
+        //- Write primitive field of PointData.
+        template<class Type>
+        void writePointData
+        (
+            const word& fieldName,
+            const UList<Type>& field,
+            //! Extra values corresponding to the decomposed cell centres.
+            //! Ignored if UList<Type>::null()
+            const UList<Type>& extra
+        );
 };
 
 

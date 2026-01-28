@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,7 +55,7 @@ Foam::autoPtr<Foam::vtk::formatter>
 Foam::vtk::newFormatter
 (
     std::ostream& os,
-    const enum formatType fmtType,
+    vtk::formatType fmtType,
     unsigned prec
 )
 {
@@ -133,21 +133,27 @@ void Foam::vtk::writeListParallel
     const globalIndex& procOffset
 )
 {
-    // The receive sizes
-    const labelList recvSizes(globalIndex::calcRecvSizes(values.size()));
-
     if (UPstream::master())
     {
-        const label maxRecvSize = recvSizes[0];
-
         // Write master data - with value offset
         const label offsetId = procOffset.localStart(0);
         for (const label val : values)
         {
             vtk::write(fmt, val + offsetId);
         }
+    }
 
+    // The receive sizes
+    const labelList recvSizes(globalIndex::calcRecvSizes(values.size()));
+
+    if (UPstream::master())
+    {
         // Receive and write
+        const label maxRecvSize = recvSizes[0];
+        if (!maxRecvSize)
+        {
+            return;  // Nothing to receive/write
+        }
         DynamicList<label> recvData(maxRecvSize);
 
         for (const int proci : UPstream::subProcs())
