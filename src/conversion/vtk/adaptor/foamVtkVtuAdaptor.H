@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,7 +46,7 @@ SourceFiles
 #ifndef Foam_vtk_vtuAdaptor_H
 #define Foam_vtk_vtuAdaptor_H
 
-#include "fvMesh.H"
+#include "polyMesh.H"
 #include "volFieldsFwd.H"
 #include "foamVtkTools.H"
 #include "foamVtkMeshMaps.H"
@@ -107,7 +107,7 @@ public:
         //  Calling this automatically populates the sizing and vtk::Caching
         inline vtkSmartPointer<vtkUnstructuredGrid> internal
         (
-            const fvMesh& mesh,
+            const polyMesh& mesh,
             //! Request polyhedral decomposition
             const bool decompPoly = false
         );

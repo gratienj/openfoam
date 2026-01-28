@@ -259,7 +259,6 @@ public:
         //- The \c "offsets" into the connectivity list vertLabels()
         //  The content depends on the format:
         //  - XML : end offset
-        //  - INTERNAL1 : begin location
         //  - INTERNAL2 : begin/end offsets
         //  - HDF : begin/end offsets
         inline const labelList& vertOffsets() const noexcept;

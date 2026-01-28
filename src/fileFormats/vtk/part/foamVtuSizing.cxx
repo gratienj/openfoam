@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -95,7 +95,6 @@ void Foam::vtk::vtuSizing::checkSizes
         }
 
         case contentType::XML :
-        case contentType::INTERNAL1 :
         case contentType::INTERNAL2 :
         {
             // XML, INTERNAL uses connectivity/offset pairs
@@ -214,7 +213,6 @@ Foam::vtk::vtuSizing::dummyFaceOffsets
         }
 
         case contentType::XML :
-        case contentType::INTERNAL1 :
         case contentType::INTERNAL2 :
         {
             // Primitive cells: -1 placeholder
@@ -611,39 +609,6 @@ Foam::label Foam::vtk::vtuSizing::sizeOf
             break;
         }
 
-        case contentType::INTERNAL1:
-        {
-            switch (slot)
-            {
-                case slotType::CELLS:
-                    // Cell connectivity and extra cell centres,
-                    // with size-prefix per cell
-                    return (nVertLabels() + nAddVerts() + nFieldCells());
-                    break;
-
-                case slotType::CELLS_OFFSETS:
-                    // The begin location per cell connectivity
-                    return nFieldCells();
-                    break;
-
-                case slotType::FACES:
-                    // Face stream with various prefixing
-                    return nFaceLabels(output);
-                    break;
-
-                case slotType::FACES_OFFSETS:
-                    // The per-cell begin location of each face stream
-                    return hasPolyCells() ? nFieldCells() : 0;
-                    break;
-
-                // HDF only
-                case slotType::POLY_FACEIDS:
-                case slotType::POLY_FACEIDS_OFFSETS:
-                    break;
-            }
-            break;
-        }
-
         case contentType::INTERNAL2:
         {
             switch (slot)
@@ -1029,39 +994,6 @@ void renumberVerts_legacy
     }
 }
 
-
-template<class IntListType, class OffsetIntType>
-void renumberVerts_internal1
-(
-    IntListType& vertLabels,
-    const OffsetIntType pointOffset
-)
-{
-    if (!pointOffset)
-    {
-        return;
-    }
-
-    // INTERNAL1 vertLabels contains
-    // - connectivity
-    // [nLabels, vertex labels...]
-
-    auto iter = vertLabels.begin();
-    const auto last = vertLabels.end();
-
-    while (iter < last)
-    {
-        auto nLabels = *iter;  // nLabels (for this cell)
-        ++iter;
-
-        while (nLabels--)
-        {
-            *iter += pointOffset;
-            ++iter;
-        }
-    }
-}
-
 } // End anonymous namespace
 
 
@@ -1082,12 +1014,6 @@ void Foam::vtk::vtuSizing::renumberVertLabels
         case contentType::LEGACY :
         {
             renumberVerts_legacy(vertLabels, pointOffset);
-            break;
-        }
-
-        case contentType::INTERNAL1 :
-        {
-            renumberVerts_internal1(vertLabels, pointOffset);
             break;
         }
 
@@ -1192,7 +1118,7 @@ void Foam::vtk::vtuSizing::renumberFaceOffsets
 
         default :
         {
-            // XML, INTERNAL1, INTERNAL2, etc offsets
+            // XML, INTERNAL2, etc offsets
             // [-1, off1, off2, ... -1, ..]
 
             // HDF offsets

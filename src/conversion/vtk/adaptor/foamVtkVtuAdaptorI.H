@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,13 +69,13 @@ Foam::vtk::vtuAdaptor::points
 
     // Normal points
     vtkIdType pointId = 0;
-    for (const point& p : pts)
+    for (const auto& p : pts)
     {
         vtkpoints->SetPoint(pointId++, p.cdata());
     }
 
     // Cell centres
-    for (const label celli : addPoints)
+    for (const auto celli : addPoints)
     {
         const auto& p = cc[celli];
         vtkpoints->SetPoint(pointId++, p.cdata());
@@ -107,14 +107,14 @@ Foam::vtk::vtuAdaptor::points
 
     // Normal points
     vtkIdType pointId = 0;
-    for (const label pointi : pointMap)
+    for (const auto pointi : pointMap)
     {
         const auto& p = pts[pointi];
         vtkpoints->SetPoint(pointId++, p.cdata());
     }
 
     // Cell centres
-    for (const label celli : addPoints)
+    for (const auto celli : addPoints)
     {
         const auto& p = cc[celli];
         vtkpoints->SetPoint(pointId++, p.cdata());
@@ -127,18 +127,17 @@ Foam::vtk::vtuAdaptor::points
 inline vtkSmartPointer<vtkUnstructuredGrid>
 Foam::vtk::vtuAdaptor::internal
 (
-    const fvMesh& mesh,
+    const polyMesh& mesh,
     const bool decompPoly
 )
 {
-    const vtk::vtuSizing::contentType output
-    (
-        #ifdef VTK_CELL_ARRAY_V2
-        vtk::vtuSizing::contentType::INTERNAL2
-        #else
-        vtk::vtuSizing::contentType::INTERNAL1
-        #endif
-    );
+    #ifndef VTK_CELL_ARRAY_V2
+    #error "No support for defunct (VTK <= 8.2.0) vtkCellArray content"
+    return vtkSmartPointer<vtkUnstructuredGrid>::New();
+    #else
+
+    constexpr vtk::vtuSizing::contentType output =
+        vtk::vtuSizing::contentType::INTERNAL2;
 
     vtk::vtuSizing sizing(mesh, decompPoly);
 
@@ -171,26 +170,12 @@ Foam::vtk::vtuAdaptor::internal
         )
     );
 
-    #ifdef VTK_CELL_ARRAY_V2
-
     auto cellConnect = vtkSmartPointer<vtkIdTypeArray>::New();
 
     UList<vtkIdType> cellsUL
     (
         vtk::Tools::asUList(cellConnect, nConnect)
     );
-
-    #else
-
-    cells->GetData()->SetNumberOfTuples(sizing.nFieldCells());
-
-    UList<vtkIdType> cellsUL
-    (
-        cells->WritePointer(sizing.nFieldCells(), nConnect),
-        nConnect
-    );
-
-    #endif
 
     UList<vtkIdType> facesUL
     (
@@ -227,8 +212,6 @@ Foam::vtk::vtuAdaptor::internal
     //   for any additional points (ie, mesh cell-centres)
     vtkmesh->SetPoints(this->points(mesh));
 
-    #ifdef VTK_CELL_ARRAY_V2
-
     // Move into a vtkCellArray
     cells->SetData(cellOffsets, cellConnect);
 
@@ -244,20 +227,9 @@ Foam::vtk::vtuAdaptor::internal
     {
         vtkmesh->SetCells(cellTypes, cells, nullptr, nullptr);
     }
-    #else
-
-    if (facesUL.size())
-    {
-        vtkmesh->SetCells(cellTypes, cellOffsets, cells, faceLocations, faces);
-    }
-    else
-    {
-        vtkmesh->SetCells(cellTypes, cellOffsets, cells, nullptr, nullptr);
-    }
-
-    #endif
 
     return vtkmesh;
+    #endif
 }
 
 

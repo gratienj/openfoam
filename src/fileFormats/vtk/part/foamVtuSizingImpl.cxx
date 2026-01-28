@@ -37,12 +37,10 @@ namespace
 {
 
 // Adjust \p vertOffset for all cells.
-// On input it contains the cell sizes, but for INTERNAL1 it also
-// contains an embedded size prefix.
+// On input it contains the cell sizes.
 //
 // On output, the cell connectivity offsets :
 // - XML format = end-offsets
-// - INTERNAL1 = begin-offsets
 // - INTERNAL2 = begin/end-offsets
 // - HDF = begin/end-offsets
 // .
@@ -63,28 +61,12 @@ void adjustCellOffsets
 
         case vtuSizing::contentType::XML :
         {
-            // Transform cell sizes (vertOffset) into begin offsets
+            // Transform cell sizes (vertOffset) into end offsets
 
             // vertOffset[0] already contains its size, leave untouched
             for (label i = 1; i < vertOffset.size(); ++i)
             {
                 vertOffset[i] += vertOffset[i-1];
-            }
-            break;
-        }
-
-        case vtuSizing::contentType::INTERNAL1 :
-        {
-            // Transform cell sizes (vertOffset) into begin offsets
-            {
-                IntType beg(0);
-
-                for (IntType& off : vertOffset)
-                {
-                    const IntType sz(off);
-                    off = beg;
-                    beg += 1 + sz;  // Additional 1 to skip embedded prefix
-                }
             }
             break;
         }
@@ -120,7 +102,6 @@ void adjustCellOffsets
 //
 // On output, the face connectivity offsets :
 // - XML format = end-offsets, with -1 placeholders
-// - INTERNAL1 = begin-offsets, with -1 placeholders
 // - INTERNAL2 = begin/end-offsets, with -1 placeholders
 // - HDF = begin/end-offsets
 // .
@@ -160,7 +141,6 @@ void adjustFaceOffsets
             break;
         }
 
-        case vtuSizing::contentType::INTERNAL1 :
         case vtuSizing::contentType::INTERNAL2 :
         {
             // Transform face sizes (faceOffset) into begin locations,
@@ -260,11 +240,7 @@ void Foam::vtk::vtuSizing::populateArrays
 
     // Are vertLabels prefixed with the size?
     // Also use as the size of the prefixed information
-    const int prefix =
-    (
-        output == contentType::LEGACY
-     || output == contentType::INTERNAL1
-    ) ? 1 : 0;
+    const int prefix = (output == contentType::LEGACY) ? 1 : 0;
 
 
     // Initialization
@@ -328,8 +304,11 @@ void Foam::vtk::vtuSizing::populateArrays
     // Placement of additional decomposed cells
     label nCellDecomp = mesh.nCells();
 
-    // Placement of additional point labels
-    label nPointDecomp = mesh.nPoints();
+    // Placement of additional point labels (apex of decomposed cells)
+    label apexVertLabel = mesh.nPoints();
+
+    // Count of additional point labels
+    label nAddPoints = 0;
 
     // Non-decomposed polyhedral are represented as a face-stream.
     // For legacy format, this stream replaces the normal connectivity
@@ -530,11 +509,8 @@ void Foam::vtk::vtuSizing::populateArrays
             // to avoid defining negative cells.
             // VTK may not care, but we'll do it anyhow for safety.
 
-            // Mapping from additional point to cell, and the new vertex from
-            // the cell-centre
-            const label newVertexLabel = nPointDecomp;
-
-            addPointsIds[nPointDecomp++] = celli;
+            // The cell-centre corresponding to the apexVertLabel
+            addPointsIds[nAddPoints] = celli;
 
             // Whether to insert cell in place of original or not.
             bool firstCell = true;
@@ -605,7 +581,7 @@ void Foam::vtk::vtuSizing::populateArrays
                     }
 
                     // The apex
-                    vertLabels[vrtLoc++] = newVertexLabel;
+                    vertLabels[vrtLoc++] = apexVertLabel;
                 }
 
                 for (const face& tria : faces3)
@@ -655,9 +631,13 @@ void Foam::vtk::vtuSizing::populateArrays
                     }
 
                     // The apex
-                    vertLabels[vrtLoc++] = newVertexLabel;
+                    vertLabels[vrtLoc++] = apexVertLabel;
                 }
             }
+
+            // Increment values
+            ++apexVertLabel;
+            ++nAddPoints;
         }
         else
         {
@@ -826,11 +806,7 @@ void Foam::vtk::vtuSizing::populateArrays
 
     // Are vertLabels prefixed with the size?
     // Also use as the size of the prefixed information
-    const int prefix =
-    (
-        output == contentType::LEGACY
-     || output == contentType::INTERNAL1
-    ) ? 1 : 0;
+    const int prefix = (output == contentType::LEGACY) ? 1 : 0;
 
 
     // Initialization

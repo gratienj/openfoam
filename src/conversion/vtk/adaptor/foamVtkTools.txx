@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,22 +41,23 @@ template<class Face>
 vtkSmartPointer<vtkCellArray>
 Foam::vtk::Tools::Faces(const UList<Face>& faces)
 {
-    auto cells = vtkSmartPointer<vtkCellArray>::New();
-
-    #ifdef VTK_CELL_ARRAY_V2
+    #ifndef VTK_CELL_ARRAY_V2
+    #error "No support for defunct (VTK <= 8.2.0) vtkCellArray content"
+    return vtkSmartPointer<vtkCellArray>::New();
+    #else
 
     // Offsets
     // [0, n1, n1+n2, n1+n2+n3... ]
 
-    const vtkIdType nOffsets(faces.size()+1);
-
     auto offsets = vtkSmartPointer<vtkIdTypeArray>::New();
+
+    const vtkIdType nOffsets(faces.size()+1);
 
     vtkIdType nConnect(0);
     {
         offsets->SetNumberOfTuples(nOffsets);
 
-        vtkIdType* iter = offsets->WritePointer(0, nOffsets);
+        auto* iter = offsets->WritePointer(0, nOffsets);
 
         // Assign offsets, determine overall connectivity size
 
@@ -78,13 +79,13 @@ Foam::vtk::Tools::Faces(const UList<Face>& faces)
     {
         connect->SetNumberOfTuples(nConnect);
 
-        vtkIdType* iter = connect->WritePointer(0, nConnect);
+        auto* iter = connect->WritePointer(0, nConnect);
 
         // Fill in the connectivity array
 
         for (const auto& f : faces)
         {
-            for (const label verti : f)
+            for (auto verti : f)
             {
                 *(iter++) = verti;
             }
@@ -93,47 +94,12 @@ Foam::vtk::Tools::Faces(const UList<Face>& faces)
 
     // Move into a vtkCellArray
 
+    auto cells = vtkSmartPointer<vtkCellArray>::New();
+
     cells->SetData(offsets, connect);
 
-    #else
-
-    // In VTK-8.2.0 and older,
-    // sizes are interwoven (prefixed) in the connectivity
-
-    // Cell connectivity for polygons
-    // [n1, verts..., n2, verts... ]
-
-
-    const vtkIdType nElem(faces.size());
-
-    // Connectivity size, with prefixed size information
-    vtkIdType nConnect(faces.size());
-    for (const auto& f : faces)
-    {
-        nConnect += f.size();
-    }
-
-    {
-        cells->GetData()->SetNumberOfTuples(nConnect);
-
-        vtkIdType* iter = cells->WritePointer(nElem, nConnect);
-
-        // Fill in the connectivity array, with prefixed size information
-
-        for (const auto& f : faces)
-        {
-            *(iter++) = f.size();
-
-            for (const label verti : f)
-            {
-                *(iter++) = verti;
-            }
-        }
-    }
-
-    #endif
-
     return cells;
+    #endif
 }
 
 
@@ -231,7 +197,7 @@ Foam::vtk::Tools::Patch::faceCentres(const PatchType& p)
 
     if (p.hasFaceCentres())
     {
-        for (const point& pt : p.faceCentres())
+        for (const auto& pt : p.faceCentres())
         {
             vtkpoints->SetPoint(pointId++, pt.cdata());
         }

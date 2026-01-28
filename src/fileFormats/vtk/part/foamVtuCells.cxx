@@ -205,7 +205,6 @@ void Foam::vtk::vtuCells::populateOutput(const polyMesh& mesh)
             break;
         }
 
-        case contentType::INTERNAL1 :
         case contentType::INTERNAL2 :
         {
             populateInternal

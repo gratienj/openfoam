@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -102,7 +102,7 @@ Foam::vtk::Tools::Points
     auto vtkpoints = vtk::Tools::NewPoints(addr.size());
 
     vtkIdType pointId = 0;
-    for (const label pointi : addr)
+    for (const auto pointi : addr)
     {
         const auto& p = pts[pointi];
         vtkpoints->SetPoint(pointId++, p.cdata());
@@ -170,15 +170,15 @@ Foam::vtk::Tools::identityVertices
     const vtkIdType size
 )
 {
-    auto cells = vtkSmartPointer<vtkCellArray>::New();
-
-    #ifdef VTK_CELL_ARRAY_V2
-
-    // Offsets
-    // [0, n1, n1+n2, n1+n2+n3... ]
+    #ifndef VTK_CELL_ARRAY_V2
+    #error "No support for defunct (VTK <= 8.2.0) vtkCellArray content"
+    return vtkSmartPointer<vtkCellArray>::New();
+    #else
 
     auto offsets = vtkSmartPointer<vtkIdTypeArray>::New();
 
+    // Offsets
+    // [0, n1, n1+n2, n1+n2+n3... ]
     {
         const vtkIdType nOffsets(size+1);
 
@@ -205,38 +205,11 @@ Foam::vtk::Tools::identityVertices
 
     // Move into a vtkCellArray
 
+    auto cells = vtkSmartPointer<vtkCellArray>::New();
     cells->SetData(offsets, connect);
 
-    #else
-
-    // In VTK-8.2.0 and older,
-    // sizes are interwoven (prefixed) in the connectivity
-
-    // Connectivity size, with prefixed size information
-
-    // Cell connectivity for vertex
-    // [size, ids.., size, ids...]  -> therefore  [1, id, 1, id, ...]
-
-    const vtkIdType nElem(size);
-    const vtkIdType nConnect(2*size);
-
-    {
-        cells->GetData()->SetNumberOfTuples(nConnect);
-
-        vtkIdType* iter = cells->WritePointer(nElem, nConnect);
-
-        // Fill in the connectivity array, with prefixed size information
-
-        for (vtkIdType id = 0; id < nElem; ++id)
-        {
-            *(iter++) = 1;
-            *(iter++) = id;
-        }
-    }
-
-    #endif
-
     return cells;
+    #endif
 }
 
 

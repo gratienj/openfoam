@@ -66,16 +66,6 @@ Description
     \endtable
 
     \table
-        internal1 storage (VTK-8 and earlier)
-        \c types        | vtk cell type (1-255)
-        \c connectivity | nLabels and unique vertex labels used by the cell
-        \c location     | begin location for each of \c connectivity
-        \c faces        | face stream for polyhedral cells
-                        | [nFaces, nFace0Pts, id0,id1,..., nFace1Pts, id0,...]
-        \c facelocation | begin location for each of \c faces, with -1 for primitive cells
-    \endtable
-
-    \table
         internal2 storage (with VTK_CELL_ARRAY_V2)
         \c types        | vtk cell type (1-255)
         \c connectivity | unique vertex labels used by the cell
@@ -151,7 +141,6 @@ public:
     {
         LEGACY,     //!< Legacy VTK content
         XML,        //!< XML (VTU) content
-        INTERNAL1,  //!< Internal vtkUnstructuredGrid content (old)
         INTERNAL2,  //!< Internal vtkUnstructuredGrid content, VTK_CELL_ARRAY_V2
         HDF,        //!< Similar to INTERNAL2, but with VTKHDF specifics
     };
@@ -162,8 +151,7 @@ public:
         //! Cell connectivity (ALL)
         CELLS,
         //! Cell connectivity offsets:
-        //! end-offsets (XML), locations (INTERNAL1),
-        //! begin/end offsets (INTERNAL2, HDF)
+        //! end-offsets (XML), begin/end offsets (INTERNAL2, HDF)
         CELLS_OFFSETS,
         //! Polyhedral face-stream (XML, INTERNAL) or face vertices (HDF)
         FACES,
@@ -729,13 +717,6 @@ public:
         label sizeXml(slotType slot) const
         {
             return sizeOf(contentType::XML, slot);
-        }
-
-        //- The calculated size for vtk-internal storage of the specified slot
-        FOAM_DEPRECATED_FOR(2025-11, "sizeOf(INTERNAL1, ...)")
-        label sizeInternal1(slotType slot) const
-        {
-            return sizeOf(contentType::INTERNAL1, slot);
         }
 
         //- The calculated size for vtk-internal storage of the specified slot
