@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -77,7 +77,7 @@ Description
     {
         typedef vtk::internalWriter writerType;
 
-        if (vtuMeshCells.empty())
+        if (vtuMeshCells.empty() && !vtuMeshCells.merged())
         {
             // Use the appropriate mesh (baseMesh or subMesh)
             vtuMeshCells.reset(meshProxy.mesh());
@@ -92,6 +92,12 @@ Description
                     << nl
                     << endl;
             }
+        }
+
+        if (!vtuMeshCells.merged())
+        {
+            // Topological point merge
+            vtuMeshCells.mergePoints(meshProxy.mesh());
         }
 
         auto writer = autoPtr<writerType>::New

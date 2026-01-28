@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,8 +27,9 @@ License
 
 #include "foamVtuSizing.H"
 #include "foamVtkCore.H"
-#include "polyMesh.H"
 #include "cellShape.H"
+#include "polyMesh.H"
+#include "processorPolyPatch.H"
 #include "manifoldCellsMeshObject.H"
 
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
@@ -356,6 +357,26 @@ void Foam::vtk::vtuSizing::populateArrays
     labelHashSet hashUniqId;
     if (!sizing.decompose()) { hashUniqId.reserve(256); }
 
+    // For polyhedral decomposition, ensure that the face tri/quad splits
+    // on the neighbour side of a processor patch follow that of the owner side.
+    bitSet flipBoundaryFace;
+    if (sizing.decompose() && UPstream::parRun())
+    {
+        flipBoundaryFace.resize(mesh.nBoundaryFaces());
+
+        for (const polyPatch& pp : mesh.boundaryMesh())
+        {
+            if
+            (
+                const auto* ppp = isA<processorPolyPatch>(pp);
+                (ppp && ppp->neighbour())
+            )
+            {
+                // Neighbour-side of processor patch
+                flipBoundaryFace.set(labelRange(pp.offset(), pp.size()));
+            }
+        }
+    }
 
     for
     (
@@ -515,22 +536,58 @@ void Foam::vtk::vtuSizing::populateArrays
             // Whether to insert cell in place of original or not.
             bool firstCell = true;
 
-            const labelList& cFaces = meshCells[celli];
+            // Count triangles/quads in decomposition
+            label nTria = 0, nQuad = 0;
+            DynamicList<face> faces3, faces4;
 
-            for (const label facei : cFaces)
+            for (const label facei : meshCells[celli])
             {
+                // Face decomposed into triangles and quads
+                // Tri -> Tet, Quad -> Pyr
                 const face& f = meshFaces[facei];
-                const bool isOwner = (owner[facei] == celli);
+                bool isOwner = (owner[facei] == celli);
 
-                // Count triangles/quads in decomposition
-                label nTria = 0, nQuad = 0;
-                f.nTrianglesQuads(mesh.points(), nTria, nQuad);
+                // Need to use a flipped face on the boundary?
+                if
+                (
+                    (f.size() > 4)
+                 && flipBoundaryFace.test(facei - mesh.nInternalFaces())
+                )
+                {
+                    isOwner = !isOwner;
 
-                // Do actual decomposition
-                faceList faces3(nTria);
-                faceList faces4(nQuad);
-                nTria = 0, nQuad = 0;
-                f.trianglesQuads(mesh.points(), nTria, nQuad, faces3, faces4);
+                    const face flipped(f.reverseFace());
+
+                    // Count triangles/quads in decomposition
+                    nTria = nQuad = 0;
+                    flipped.nTrianglesQuads(mesh.points(), nTria, nQuad);
+
+                    // Do actual decomposition
+                    faces3.resize_nocopy(nTria);
+                    faces4.resize_nocopy(nQuad);
+                    nTria = nQuad = 0;
+
+                    flipped.trianglesQuads
+                    (
+                        mesh.points(), nTria, nQuad, faces3, faces4
+                    );
+                }
+                else
+                {
+                    // Count triangles/quads in decomposition
+                    nTria = nQuad = 0;
+                    f.nTrianglesQuads(mesh.points(), nTria, nQuad);
+
+                    // Do actual decomposition
+                    faces3.resize_nocopy(nTria);
+                    faces4.resize_nocopy(nQuad);
+                    nTria = nQuad = 0;
+
+                    f.trianglesQuads
+                    (
+                        mesh.points(), nTria, nQuad, faces3, faces4
+                    );
+                }
 
                 for (const face& quad : faces4)
                 {

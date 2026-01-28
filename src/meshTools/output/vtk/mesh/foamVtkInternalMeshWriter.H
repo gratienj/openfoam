@@ -233,11 +233,13 @@ public:
         template<class Type>
         void writeCellData(const word& fieldName, const UList<Type>& field);
 
-        //- Write primitive field of PointData
+        //- Write primitive field of PointData.
+        //- Uses pointMap (for merged data).
         template<class Type>
         void writePointData(const word& fieldName, const UList<Type>& field);
 
         //- Write primitive field of PointData.
+        //- Uses pointMap (for merged data).
         template<class Type>
         void writePointData
         (

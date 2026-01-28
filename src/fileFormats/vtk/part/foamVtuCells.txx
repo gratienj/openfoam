@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2025-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,28 +46,56 @@ Foam::vtk::vtuCells::points(const polyMesh& mesh) const
 
     if constexpr (std::is_same_v<Foam::point, PointType>)
     {
-        if (addPoints.empty())
+        if (addPoints.empty() && !this->usePointMap())
         {
             // No decomposed cells etc
             return mesh.points();
         }
     }
 
-    auto tpoints = tmp<pointFieldType>::New(pts.size() + addPoints.size());
-
-    auto iter = tpoints.ref().begin();
-
-    // Normal points
-    iter = std::copy(pts.begin(), pts.end(), iter);
-
-    // Cell centres
-    for (const label celli : addPoints)
+    if (const auto& map = this->pointMap(); !map.empty())
     {
-        *iter = cc[celli];
-        ++iter;
-    }
+        // With pointMap
+        auto tpoints = tmp<pointFieldType>::New(map.size() + addPoints.size());
 
-    return tpoints;
+        auto iter = tpoints.ref().begin();
+
+        // Normal points (unique mesh points)
+        for (const auto pointi : map)
+        {
+            *iter = pts[pointi];
+            ++iter;
+        }
+
+        // Cell centres
+        for (const label celli : addPoints)
+        {
+            *iter = cc[celli];
+            ++iter;
+        }
+
+        return tpoints;
+    }
+    else
+    {
+        // All mesh points
+
+        auto tpoints = tmp<pointFieldType>::New(pts.size() + addPoints.size());
+
+        auto iter = tpoints.ref().begin();
+
+        // Normal points
+        iter = std::copy(pts.begin(), pts.end(), iter);
+
+        // Cell centres
+        for (const label celli : addPoints)
+        {
+            *iter = cc[celli];
+            ++iter;
+        }
+
+        return tpoints;
+    }
 }
 
 

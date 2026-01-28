@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -102,7 +102,7 @@ bool Foam::functionObjects::vtkWrite::update()
     label regioni = 0;
     for (const fvMesh& mesh : meshes_)
     {
-        if (meshSubsets_.set(regioni))
+        if (meshSubsets_.test(regioni))
         {
             meshSubsets_[regioni].clear();
         }
@@ -112,7 +112,7 @@ bool Foam::functionObjects::vtkWrite::update()
             meshSubsets_.set(regioni, new fvMeshSubset(mesh));
         }
 
-        if (vtuMappings_.set(regioni))
+        if (vtuMappings_.test(regioni))
         {
             // Trigger change for vtk cells too
             vtuMappings_[regioni].clear();
@@ -131,10 +131,11 @@ bool Foam::functionObjects::vtkWrite::update()
     }
 
     regioni = 0;
-    for (auto& subsetter : meshSubsets_)
+    for (auto& meshProxy : meshSubsets_)
     {
-        updateSubset(subsetter);
-        vtuMappings_[regioni].reset(subsetter.mesh());
+        updateSubset(meshProxy);
+        vtuMappings_[regioni].reset(meshProxy.mesh());
+        vtuMappings_[regioni].mergePoints(meshProxy.mesh());
         ++regioni;
     }
 

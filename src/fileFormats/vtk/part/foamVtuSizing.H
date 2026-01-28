@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -172,6 +172,15 @@ public:
         FULL_MESH,      //!< The entire mesh
         SUBSET_MESH,    //!< A mesh subset, using all mesh points
         SHAPE_MESH      //!< A limited subset of primitive shapes
+    };
+
+    //- Tracking of the point merge status.
+    //  Merging (if any) is typically done as a topological merge with
+    //  polyMesh mergePoints
+    enum class mergeType : unsigned char
+    {
+        NONE,           //!< Separate datasets
+        MERGED          //!< Topologically merged datasets
     };
 
 
@@ -538,6 +547,22 @@ public:
         (
             labelUList& faceLabels,
             const label pointOffset,
+            const contentType output
+        );
+
+        //- Renumber vertex labels
+        static void renumberVertLabels
+        (
+            labelUList& connectivity,
+            const labelUList& oldToNew,
+            const contentType output
+        );
+
+        //- Renumber faces stream labels
+        static void renumberFaceLabels
+        (
+            labelUList& faceLabels,
+            const labelUList& oldToNew,
             const contentType output
         );
 

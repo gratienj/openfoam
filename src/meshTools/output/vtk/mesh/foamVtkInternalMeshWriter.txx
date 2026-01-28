@@ -88,6 +88,15 @@ void Foam::vtk::internalMeshWriter::writeCellData
 
     const labelUList& cellMap = vtuCells_.cellMap();
 
+    // Needs adjustment??
+    // // Use the cellMap?
+    // const bool useMap
+    // (
+    //     vtuCells_.useCellMap()
+    //  || (cellMap.size() != cellSlab_.size())
+    //  || (cellMap.size() != field.size())
+    // );
+
     this->beginDataArray<Type>(fieldName, nTotalCells());
 
     if (parallel_)
@@ -125,10 +134,22 @@ void Foam::vtk::internalMeshWriter::writePointData
 
     if (parallel_)
     {
-        vtk::writeListParallel(format_.ref(), field);
+        if (returnReduceOr(vtuCells_.merged()))
+        {
+            // With pointMap...
+            const UIndirectList<Type> values(field, vtuCells_.pointMap());
+
+            vtk::writeListParallel(format_.ref(), values);
+        }
+        else
+        {
+            // No pointMap...
+            vtk::writeListParallel(format_.ref(), field);
+        }
     }
     else
     {
+        // No pointMap for non-parallel...
         vtk::writeList(format(), field);
     }
 
@@ -170,10 +191,22 @@ void Foam::vtk::internalMeshWriter::writePointData
 
     if (parallel_)
     {
-        vtk::writeListsParallel(format_.ref(), field, extra);
+        if (returnReduceOr(vtuCells_.merged()))
+        {
+            // With pointMap...
+            const UIndirectList<Type> values(field, vtuCells_.pointMap());
+
+            vtk::writeListsParallel(format_.ref(), values, extra);
+        }
+        else
+        {
+            // No pointMap...
+            vtk::writeListsParallel(format_.ref(), field, extra);
+        }
     }
     else
     {
+        // No pointMap for non-parallel...
         vtk::writeLists(format(), field, extra);
     }
 
