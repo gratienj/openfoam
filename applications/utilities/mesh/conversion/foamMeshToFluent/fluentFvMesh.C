@@ -111,15 +111,10 @@ void Foam::fluentFvMesh::writeFluentMesh() const
     fluentMeshFile.precision(10);
     fluentMeshFile.setf(ios::scientific);
 
-    const pointField& p = points();
-
-    forAll(p, pointi)
+    for (const auto& p : points())
     {
         fluentMeshFile
-            << "    "
-            << p[pointi].x() << " "
-            << p[pointi].y()
-            << " " << p[pointi].z() << std::endl;
+            << "    " << p.x() << " " << p.y() << " " << p.z() << '\n';
     }
 
     fluentMeshFile
@@ -127,8 +122,7 @@ void Foam::fluentFvMesh::writeFluentMesh() const
 
     const labelUList& own = owner();
     const labelUList& nei = neighbour();
-
-    const faceList& fcs = faces();
+    const auto& fcs = faces();
 
     // Writing (mixed) internal faces
     fluentMeshFile
@@ -137,10 +131,9 @@ void Foam::fluentFvMesh::writeFluentMesh() const
 
     forAll(own, facei)
     {
-        const labelList& l = fcs[facei];
+        const auto& l = fcs[facei];
 
         fluentMeshFile << "    ";
-
         fluentMeshFile << l.size() << " ";
 
         forAll(l, lI)
@@ -195,10 +188,9 @@ void Foam::fluentFvMesh::writeFluentMesh() const
 
         forAll(patchFaces, facei)
         {
-            const labelList& l = patchFaces[facei];
+            const auto& l = patchFaces[facei];
 
             fluentMeshFile << "    ";
-
             fluentMeshFile << l.size() << " ";
 
             // Note: In Fluent, all boundary faces point inwards, which is
@@ -227,7 +219,11 @@ void Foam::fluentFvMesh::writeFluentMesh() const
 
     const cellShapeList& cells = cellShapes();
 
-    label nPolys = 0;
+    label nHex = 0;
+    label nPrism = 0;
+    label nPyr = 0;
+    label nTet = 0;
+    label nPoly = 0;
 
     int nElemPerLine = 25;  // Start with linebreak and indent
 
@@ -251,35 +247,32 @@ void Foam::fluentFvMesh::writeFluentMesh() const
         if (cells[celli].model() == tet)
         {
             fluentMeshFile << 2;
+            ++nTet;
         }
         else if (cells[celli].model() == hex)
         {
             fluentMeshFile << 4;
+            ++nHex;
         }
         else if (cells[celli].model() == pyr)
         {
             fluentMeshFile << 5;
+            ++nPyr;
         }
         else if (cells[celli].model() == prism)
         {
             fluentMeshFile << 6;
+            ++nPrism;
         }
         else
         {
             fluentMeshFile << 7;
-            ++nPolys;
+            ++nPoly;
         }
     }
 
     fluentMeshFile
         << nl << "))" << nl;
-
-
-    if (nPolys)
-    {
-        Info<< "Mesh had " << nPolys << " polyhedrals." << endl;
-    }
-
 
     // Return to dec
     fluentMeshFile.setf(ios::dec, ios::basefield);
@@ -315,6 +308,15 @@ void Foam::fluentFvMesh::writeFluentMesh() const
         fluentMeshFile
             << boundary()[patchi].name() << ")())" << std::endl;
     }
+
+    // Report some information.
+    // NB: conversion is serial-only, so no need to reduce the values
+    Info<< "Mesh had cells of these type:" << nl
+        << "    hexahedra:  " << nHex << nl
+        << "    prisms:     " << nPrism << nl
+        << "    pyramids:   " << nPyr << nl
+        << "    tetrahedra: " << nTet << nl
+        << "    polyhedra:  " << nPoly << endl;
 }
 
 
