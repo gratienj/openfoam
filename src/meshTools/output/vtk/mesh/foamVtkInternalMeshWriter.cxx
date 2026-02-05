@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -74,29 +74,38 @@ void Foam::vtk::internalMeshWriter::beginPiece()
 
 void Foam::vtk::internalMeshWriter::writePoints()
 {
+    // Additional support points for decomposed polys
+    const UIndirectList<point> centres
+    (
+        mesh_.cellCentres(),
+        vtuCells_.addPointCellLabels()
+    );
+
     this->beginPoints(nTotalPoints());
 
     if (parallel_)
     {
-        vtk::writeListsParallel
-        (
-            format_.ref(),
-            mesh_.points(),
-            mesh_.cellCentres(),
-            vtuCells_.addPointCellLabels()
-        );
+        if (returnReduceAnd(vtuCells_.merged()))
+        {
+            const UIndirectList<point> points
+            (
+                mesh_.points(),
+                vtuCells_.pointMap()
+            );
+
+            vtk::writeListsParallel(format_.ref(), points, centres);
+        }
+        else
+        {
+            // No pointMap...
+            vtk::writeListsParallel(format_.ref(), mesh_.points(), centres);
+        }
     }
     else
     {
-        vtk::writeLists
-        (
-            format(),
-            mesh_.points(),
-            mesh_.cellCentres(),
-            vtuCells_.addPointCellLabels()
-        );
+        // No pointMap for non-parallel...
+        vtk::writeLists(format(), mesh_.points(), centres);
     }
-
 
     this->endPoints();
 }
@@ -104,8 +113,8 @@ void Foam::vtk::internalMeshWriter::writePoints()
 
 void Foam::vtk::internalMeshWriter::writeCells_legacy()
 {
-    // The processor-local point offset
-    const label pointOffset = pointSlab_.start();
+    // The processor-local point offset (if not already merged)
+    const label pointOffset = (vtuCells_.merged() ? 0 : pointSlab_.start());
 
     const UList<uint8_t>& cellTypes = vtuCells_.cellTypes();
     const auto tvertLabels = vtuCells_.vertLabels(pointOffset);
@@ -169,8 +178,8 @@ void Foam::vtk::internalMeshWriter::writeCells_legacy()
 
 void Foam::vtk::internalMeshWriter::writeCellsConnectivity()
 {
-    // The processor-local point offset
-    const label pointOffset = pointSlab_.start();
+    // The processor-local point offset (if not already merged)
+    const label pointOffset = (vtuCells_.merged() ? 0 : pointSlab_.start());
 
     //
     // 'connectivity'
@@ -298,8 +307,8 @@ void Foam::vtk::internalMeshWriter::writeCellsConnectivity()
 
 void Foam::vtk::internalMeshWriter::writeCellsFaces()
 {
-    // The processor-local point offset
-    const label pointOffset = pointSlab_.start();
+    // The processor-local point offset (if not already merged)
+    const label pointOffset = (vtuCells_.merged() ? 0 : pointSlab_.start());
 
     // Slab addressing for (polyhedral) face labels
     OffsetRange<label> facesSlab(vtuCells_.faceLabels().size());
@@ -601,7 +610,8 @@ void Foam::vtk::internalMeshWriter::writePointIDs()
     // Point offset for regular mesh points (without decomposed)
     const label pointOffset =
     (
-        parallel_ ? globalIndex::calcOffset(vtuCells_.nPoints()) : 0
+        (parallel_ && !vtuCells_.merged())
+      ? globalIndex::calcOffset(vtuCells_.nPoints()) : 0
     );
 
     // Cell offset for regular mesh cells (without decomposed)
@@ -612,6 +622,12 @@ void Foam::vtk::internalMeshWriter::writePointIDs()
 
 
     labelList pointIds = identity(vtuCells_.nFieldPoints(), pointOffset);
+
+    if (const auto& map = vtuCells_.pointMap(); !map.empty())
+    {
+        // Actually using a point map
+        labelList::subList(pointIds, map.size()) = map;
+    }
 
     // The pointID for added points is the cellID, tag as a negative number
     label pointi = vtuCells_.nPoints();

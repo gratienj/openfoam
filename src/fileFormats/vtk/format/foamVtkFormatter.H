@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -131,7 +131,7 @@ protected:
     // Constructors
 
         //- Construct and attach to an output stream
-        inline explicit formatter(std::ostream& os);
+        inline explicit formatter(std::ostream& os) noexcept;
 
 
 public:
@@ -224,7 +224,7 @@ public:
         //- Finish an XML tag, optional as an empty container.
         //  Always adds a trailing newline.
         //  \return formatter for chaining
-        formatter& closeTag(const bool isEmpty = false);
+        formatter& closeTag(bool isEmpty = false);
 
         //- An end XML tag, optional with sanity check
         //  Always adds a trailing newline.
@@ -365,7 +365,7 @@ public:
         template<class Type, direction nComp=1, int nTuple=0>
         inline formatter& beginDataArray
         (
-            const vtk::dataArrayAttr& dataName,
+            vtk::dataArrayAttr dataName,
             uint64_t payLoad = npos,
             bool leaveOpen = false
         );
@@ -470,7 +470,7 @@ public:
         template<class... Args>
         inline formatter& xmlAttr
         (
-            const vtk::fileAttr& k,
+            vtk::fileAttr k,
             const std::string& v,
             Args&&... args
         );
@@ -480,7 +480,7 @@ public:
         template<class... Args>
         inline formatter& xmlAttr
         (
-            const vtk::fileAttr& k,
+            vtk::fileAttr k,
             const int32_t v,
             Args&&... args
         );
@@ -490,7 +490,7 @@ public:
         template<class... Args>
         inline formatter& xmlAttr
         (
-            const vtk::fileAttr& k,
+            vtk::fileAttr k,
             const int64_t v,
             Args&&... args
         );
@@ -500,7 +500,7 @@ public:
         template<class... Args>
         inline formatter& xmlAttr
         (
-            const vtk::fileAttr& k,
+            vtk::fileAttr k,
             const uint64_t v,
             Args&&... args
         );
@@ -510,35 +510,10 @@ public:
         template<class... Args>
         inline formatter& xmlAttr
         (
-            const vtk::fileAttr& k,
+            vtk::fileAttr k,
             const scalar v,
             Args&&... args
         );
-
-
-    // Housekeeping
-
-        //- Open "DataArray" XML tag and leave open (requires a closeTag).
-        //  \deprecated Use beginDataArray instead (SEPT-2018)
-        template<class Type, direction nComp=1, int nTuple=0>
-        formatter& openDataArray(const word& dataName)
-        {
-            return beginDataArray<Type, nComp, nTuple>
-            (
-                dataName, formatter::npos, true
-            );
-        }
-
-        //- Open "DataArray" XML tag and leave open (requires a closeTag).
-        //  \deprecated Use beginDataArray instead (SEPT-2018)
-        template<class Type, direction nComp=1, int nTuple=0>
-        formatter& openDataArray(const vtk::dataArrayAttr& dataName)
-        {
-            return beginDataArray<Type, nComp, nTuple>
-            (
-                dataName, formatter::npos, true
-            );
-        }
 };
 
 

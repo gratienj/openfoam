@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,8 +27,9 @@ License
 
 #include "foamVtuSizing.H"
 #include "foamVtkCore.H"
-#include "polyMesh.H"
 #include "cellShape.H"
+#include "polyMesh.H"
+#include "processorPolyPatch.H"
 #include "manifoldCellsMeshObject.H"
 
 // Only used in this file
@@ -95,7 +96,6 @@ void Foam::vtk::vtuSizing::checkSizes
         }
 
         case contentType::XML :
-        case contentType::INTERNAL1 :
         case contentType::INTERNAL2 :
         {
             // XML, INTERNAL uses connectivity/offset pairs
@@ -214,7 +214,6 @@ Foam::vtk::vtuSizing::dummyFaceOffsets
         }
 
         case contentType::XML :
-        case contentType::INTERNAL1 :
         case contentType::INTERNAL2 :
         {
             // Primitive cells: -1 placeholder
@@ -374,6 +373,27 @@ void Foam::vtk::vtuSizing::reset
     labelHashSet hashUniqId;
     if (!decompose_) { hashUniqId.reserve(256); }
 
+    // For polyhedral decomposition, ensure that the face tri/quad splits
+    // on the neighbour side of a processor patch follow that of the owner side.
+    bitSet flipBoundaryFace;
+    if (decompose_ && UPstream::parRun())
+    {
+        flipBoundaryFace.resize(mesh.nBoundaryFaces());
+
+        for (const polyPatch& pp : mesh.boundaryMesh())
+        {
+            if
+            (
+                const auto* ppp = isA<processorPolyPatch>(pp);
+                (ppp && ppp->neighbour())
+            )
+            {
+                // Neighbour-side of processor patch
+                flipBoundaryFace.set(labelRange(pp.offset(), pp.size()));
+            }
+        }
+    }
+
     for (label inputi = 0; inputi < nInputCells; ++inputi)
     {
         const label celli(isSubsetMesh ? subsetCellsIds[inputi] : inputi);
@@ -409,24 +429,36 @@ void Foam::vtk::vtuSizing::reset
             ++nAddPoints_;
 
             // Count vertices into first decomposed cell
-            bool first = true;
+            bool firstCell = true;
 
-            const cell& cFaces = meshCells[celli];
-            for (const label facei : cFaces)
+            for (const label facei : meshCells[celli])
             {
-                const face& f = meshFaces[facei];
-
                 // Face decomposed into triangles and quads
                 // Tri -> Tet, Quad -> Pyr
+                const face& f = meshFaces[facei];
                 label nTria = 0, nQuad = 0;
-                f.nTrianglesQuads(mesh.points(), nTria, nQuad);
+
+                // Need to use a flipped face on the boundary?
+                if
+                (
+                    (f.size() > 4)
+                 && flipBoundaryFace.test(facei - mesh.nInternalFaces())
+                )
+                {
+                    const face flipped(f.reverseFace());
+                    flipped.nTrianglesQuads(mesh.points(), nTria, nQuad);
+                }
+                else
+                {
+                    f.nTrianglesQuads(mesh.points(), nTria, nQuad);
+                }
 
                 nAddCells_ += nTria + nQuad;
                 nAddVerts_ += (nTria * 4) + (nQuad * 5);
 
-                if (first)
+                if (firstCell)
                 {
-                    first = false;
+                    firstCell = false;
                     --nAddCells_;
 
                     const label nvrt = (nQuad ? 5 : 4);
@@ -600,39 +632,6 @@ Foam::label Foam::vtk::vtuSizing::sizeOf
 
                 case slotType::FACES_OFFSETS:
                     // End offset per face connectivity
-                    return hasPolyCells() ? nFieldCells() : 0;
-                    break;
-
-                // HDF only
-                case slotType::POLY_FACEIDS:
-                case slotType::POLY_FACEIDS_OFFSETS:
-                    break;
-            }
-            break;
-        }
-
-        case contentType::INTERNAL1:
-        {
-            switch (slot)
-            {
-                case slotType::CELLS:
-                    // Cell connectivity and extra cell centres,
-                    // with size-prefix per cell
-                    return (nVertLabels() + nAddVerts() + nFieldCells());
-                    break;
-
-                case slotType::CELLS_OFFSETS:
-                    // The begin location per cell connectivity
-                    return nFieldCells();
-                    break;
-
-                case slotType::FACES:
-                    // Face stream with various prefixing
-                    return nFaceLabels(output);
-                    break;
-
-                case slotType::FACES_OFFSETS:
-                    // The per-cell begin location of each face stream
                     return hasPolyCells() ? nFieldCells() : 0;
                     break;
 
@@ -971,7 +970,7 @@ void renumberVerts_legacy
     const OffsetIntType pointOffset
 )
 {
-    if (!pointOffset)
+    if (vertLabels.empty() || !pointOffset)
     {
         return;
     }
@@ -1009,7 +1008,7 @@ void renumberVerts_legacy
         }
         else
         {
-            // Polyhedral face-stream (explained above)
+            // Polyhedral face-stream
 
             auto nFaces = *iter;
             ++iter;
@@ -1030,21 +1029,30 @@ void renumberVerts_legacy
 }
 
 
-template<class IntListType, class OffsetIntType>
-void renumberVerts_internal1
+template<class IntListType, class IntListType2>
+void renumberVertLabels_legacy
 (
     IntListType& vertLabels,
-    const OffsetIntType pointOffset
+    const IntListType2& oldToNew
 )
 {
-    if (!pointOffset)
+    if (vertLabels.empty() || oldToNew.empty())
     {
         return;
     }
 
-    // INTERNAL1 vertLabels contains
+    // LEGACY vertLabels = "cells" contains
     // - connectivity
     // [nLabels, vertex labels...]
+    // - face-stream
+    // [nLabels nFaces, nFace0Pts, id0,id1,..., nFace1Pts, id0,...]
+
+    // Note the simplest volume cell is a tet (4 points, 4 faces)
+    // As a poly-face stream this would have
+    // 2 for nLabels, nFaces
+    // 4 labels (size + ids) per face * 4 == 16 labels
+    //
+    // Therefore anything with 18 labels or more must be a poly
 
     auto iter = vertLabels.begin();
     const auto last = vertLabels.end();
@@ -1054,10 +1062,34 @@ void renumberVerts_internal1
         auto nLabels = *iter;  // nLabels (for this cell)
         ++iter;
 
-        while (nLabels--)
+        if (nLabels < 18)
         {
-            *iter += pointOffset;
+            // Normal primitive type
+
+            while (nLabels--)
+            {
+                *iter = oldToNew[*iter];
+                ++iter;
+            }
+        }
+        else
+        {
+            // Polyhedral face-stream
+
+            auto nFaces = *iter;
             ++iter;
+
+            while (nFaces--)
+            {
+                nLabels = *iter;  // nLabels (for this face)
+                ++iter;
+
+                while (nLabels--)
+                {
+                    *iter = oldToNew[*iter];
+                    ++iter;
+                }
+            }
         }
     }
 }
@@ -1072,7 +1104,7 @@ void Foam::vtk::vtuSizing::renumberVertLabels
     const contentType output
 )
 {
-    if (pointOffset <= 0)
+    if (vertLabels.empty() || pointOffset <= 0)
     {
         return;
     }
@@ -1085,9 +1117,39 @@ void Foam::vtk::vtuSizing::renumberVertLabels
             break;
         }
 
-        case contentType::INTERNAL1 :
+        default :
         {
-            renumberVerts_internal1(vertLabels, pointOffset);
+            // XML, INTERNAL2, HDF etc
+            // vertLabels = "connectivity" contains
+            // [cell1-verts, cell2-verts, ...]
+
+            for (auto& id : vertLabels)
+            {
+                id += pointOffset;
+            }
+            break;
+        }
+    }
+}
+
+
+void Foam::vtk::vtuSizing::renumberVertLabels
+(
+    labelUList& vertLabels,
+    const labelUList& oldToNew,
+    const contentType output
+)
+{
+    if (vertLabels.empty() || oldToNew.empty())
+    {
+        return;
+    }
+
+    switch (output)
+    {
+        case contentType::LEGACY :
+        {
+            renumberVertLabels_legacy(vertLabels, oldToNew);
             break;
         }
 
@@ -1097,9 +1159,9 @@ void Foam::vtk::vtuSizing::renumberVertLabels
             // vertLabels = "connectivity" contains
             // [cell1-verts, cell2-verts, ...]
 
-            for (label& id : vertLabels)
+            for (auto& id : vertLabels)
             {
-                id += pointOffset;
+                id = oldToNew[id];
             }
             break;
         }
@@ -1114,7 +1176,7 @@ void Foam::vtk::vtuSizing::renumberFaceLabels
     const contentType output
 )
 {
-    if (!pointOffset)
+    if (faceLabels.empty() || !pointOffset)
     {
         return;
     }
@@ -1132,7 +1194,7 @@ void Foam::vtk::vtuSizing::renumberFaceLabels
             // HDF faces
             // [id1,id2,..., id1,id2,...]
 
-            for (label& id : faceLabels)
+            for (auto& id : faceLabels)
             {
                 id += pointOffset;
             }
@@ -1170,6 +1232,69 @@ void Foam::vtk::vtuSizing::renumberFaceLabels
 }
 
 
+void Foam::vtk::vtuSizing::renumberFaceLabels
+(
+    labelUList& faceLabels,
+    const labelUList& oldToNew,
+    const contentType output
+)
+{
+    if (faceLabels.empty() || oldToNew.empty())
+    {
+        return;
+    }
+
+    switch (output)
+    {
+        case contentType::LEGACY :
+        {
+            // Not applicable
+            break;
+        }
+
+        case contentType::HDF :
+        {
+            // HDF faces
+            // [id1,id2,..., id1,id2,...]
+
+            for (auto& id : faceLabels)
+            {
+                id = oldToNew[id];
+            }
+            break;
+        }
+
+        default :
+        {
+            // XML, INTERNAL face-stream
+            // [nFaces, nFace0Pts, id1,id2,..., nFace1Pts, id1,id2,...]
+
+            auto iter = faceLabels.begin();
+            const auto last = faceLabels.end();
+
+            while (iter < last)
+            {
+                auto nFaces = *iter;
+                ++iter;
+
+                while (nFaces--)
+                {
+                    auto nLabels = *iter;
+                    ++iter;
+
+                    while (nLabels--)
+                    {
+                        *iter = oldToNew[*iter];
+                        ++iter;
+                    }
+                }
+            }
+            break;
+        }
+    }
+}
+
+
 void Foam::vtk::vtuSizing::renumberFaceOffsets
 (
     labelUList& faceOffsets,
@@ -1177,7 +1302,7 @@ void Foam::vtk::vtuSizing::renumberFaceOffsets
     const contentType output
 )
 {
-    if (!beginOffset)
+    if (faceOffsets.empty() || !beginOffset)
     {
         return;
     }
@@ -1192,13 +1317,13 @@ void Foam::vtk::vtuSizing::renumberFaceOffsets
 
         default :
         {
-            // XML, INTERNAL1, INTERNAL2, etc offsets
+            // XML, INTERNAL2, etc offsets
             // [-1, off1, off2, ... -1, ..]
 
             // HDF offsets
             // [off1, off2, ...]
 
-            for (label& off : faceOffsets)
+            for (auto& off : faceOffsets)
             {
                 // Leave -1 placeholders untouched
                 if (off >= 0)

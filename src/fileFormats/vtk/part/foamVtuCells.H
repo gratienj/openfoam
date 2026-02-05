@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2014-2025 OpenCFD Ltd.
+    Copyright (C) 2014-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -88,6 +88,9 @@ class vtuCells
 
         //- Bookkeeping for polyhedral cell decomposition
         bool decomposeRequest_;
+
+        //- Bookkeeping for point merge status
+        vtk::vtuSizing::mergeType merged_;
 
 
     // Storage of output
@@ -188,6 +191,9 @@ public:
         //- Query the polyhedral decompose requested flag.
         inline bool decomposeRequested() const noexcept;
 
+        //- Query the point merge status.
+        inline bool merged() const noexcept;
+
         //- True if no cellTypes are populated.
         inline bool empty() const noexcept;
 
@@ -198,7 +204,7 @@ public:
         //- when there are decomposed cells.
         inline bool useCellMap() const noexcept;
 
-        //- The pointMap is available and non-identity [FUTURE USE]
+        //- The pointMap is available and non-identity (eg, after point merge)
         inline bool usePointMap() const noexcept;
 
         //- Test for hdf content type
@@ -244,6 +250,9 @@ public:
         //- Define which additional cell-centres are to be used (ADVANCED!)
         void addPointCellLabels(const labelUList& cellIds);
 
+        //- Determine topological point merging, renumbers contents accordingly
+        void mergePoints(const polyMesh& mesh);
+
 
     // Storage Access (legacy and non-legacy)
 
@@ -259,7 +268,6 @@ public:
         //- The \c "offsets" into the connectivity list vertLabels()
         //  The content depends on the format:
         //  - XML : end offset
-        //  - INTERNAL1 : begin location
         //  - INTERNAL2 : begin/end offsets
         //  - HDF : begin/end offsets
         inline const labelList& vertOffsets() const noexcept;

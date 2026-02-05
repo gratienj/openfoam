@@ -89,14 +89,14 @@ bool Foam::vtk::formatter::openTagImpl(const word& tagName)
     os_ << '<' << tagName;
 
     // Add to the stack and change the state.
-    xmlTags_.append(tagName);
+    xmlTags_.push_back(tagName);
     inTag_ = true;
 
     return true;
 }
 
 
-Foam::vtk::formatter& Foam::vtk::formatter::closeTag(const bool isEmpty)
+Foam::vtk::formatter& Foam::vtk::formatter::closeTag(bool isEmpty)
 {
     if (!inTag_)
     {

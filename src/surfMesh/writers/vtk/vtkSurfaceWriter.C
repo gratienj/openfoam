@@ -73,7 +73,7 @@ Foam::surfaceWriters::vtkWriter::vtkWriter()
 
 Foam::surfaceWriters::vtkWriter::vtkWriter
 (
-    const vtk::outputOptions& opts
+    vtk::outputOptions opts
 )
 :
     surfaceWriter(),

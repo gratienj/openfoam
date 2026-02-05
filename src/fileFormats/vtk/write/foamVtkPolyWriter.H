@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +29,8 @@ Class
 Description
     Write faces/points (optionally with fields)
     as a vtp file or a legacy vtk file.
+    The class is also slightly expanded to allow reuse as a line-writer,
+    but cannot be used to write both faces and lines at once.
 
     The file output states are managed by the Foam::vtk::fileWriter class.
     FieldData (eg, TimeValue) must appear before any geometry pieces.
@@ -73,66 +75,46 @@ protected:
 
     // Protected Data
 
-        //- The number of field points for the current Piece
-        label numberOfPoints_;
+        //- Slab addressing for field points of the current Piece
+        OffsetRange<label> pointSlab_;
 
-        //- The number of field cells (edges or faces) for the current Piece
-        label numberOfCells_;
-
-        //- Local number of points
-        label nLocalPoints_;
-
-        //- Local number of vertices (points)
-        label nLocalVerts_;
-
-        //- Local number of lines (edges)
-        label nLocalLines_;
-
-        //- Local number of polys (faces)
-        label nLocalPolys_;
+        //- Slab addressing for field cells (edges or faces)
+        //- of the current Piece
+        OffsetRange<label> cellSlab_;
 
 
     // Protected Member Functions
 
-        //- Write a uniform field of Cell (Poly or Line) or Point values
-        template<class Type>
-        void writeUniformValue
-        (
-            const label nCellValues,  // Could be Poly or Line!
-            const word& fieldName,
-            const Type& val
-        );
+        //- Total number of field points for the current Piece
+        label nTotalPoints() const noexcept { return pointSlab_.total(); }
+
+        //- Total number of field cells (edges or faces) for the current Piece
+        label nTotalCells() const noexcept { return cellSlab_.total(); }
 
 private:
 
     // Private Member Functions
 
-        //- Determine sizes (nLocalPoints_, nLocalLines_),
-        //- and begin piece
-        void beginPiece(const pointField& points, const edgeList& edges);
+        //- Determine sizes and begin piece (CellData == lines)
+        void beginPiece(const pointField& points, const UList<edge>& edges);
 
-        //- Determine sizes (nLocalPoints_, nLocalPolys_),
-        //- and begin piece
-        void beginPiece(const pointField& points, const faceList& faces);
+        //- Determine sizes and begin piece (CellData == polys)
+        void beginPiece(const pointField& points, const UList<face>& faces);
 
         //- Write points
         void writePoints(const pointField& points);
 
         //- Write lines, legacy format
-        //  \param pointOffset processor-local point offset
-        void writeLinesLegacy(const edgeList& edges, const label pointOffset);
+        void writeLines_legacy(const UList<edge>& edges);
 
         //- Write lines
-        //  \param pointOffset processor-local point offset
-        void writeLines(const edgeList& edges, const label pointOffset);
+        void writeLines(const UList<edge>& edges);
 
         //- Write faces, legacy format
-        //  \param pointOffset processor-local point offset
-        void writePolysLegacy(const faceList& faces, const label pointOffset);
+        void writePolys_legacy(const UList<face>& faces);
 
         //- Write faces
-        //  \param pointOffset processor-local point offset
-        void writePolys(const faceList& faces, const label pointOffset);
+        void writePolys(const UList<face>& faces);
 
         //- No copy construct
         polyWriter(const polyWriter&) = delete;
@@ -187,7 +169,7 @@ public:
 
         //- Dummy write mesh topology method - Fatal if called
         //  Provided for special-purpose writers that do not hold
-        //  their own geomety, but use writePolyGeometry() directly
+        //  their own geometry, but use writePolyGeometry() directly
         virtual bool writeGeometry();
 
         //- Low-level write edge/point topology.
@@ -197,7 +179,7 @@ public:
         bool writeLineGeometry
         (
             const pointField& points,
-            const edgeList& edges
+            const UList<edge>& edges
         );
 
         //- Low-level write face/point topology.
@@ -207,7 +189,7 @@ public:
         bool writePolyGeometry
         (
             const pointField& points,
-            const faceList& faces
+            const UList<face>& faces
         );
 
         //- Begin CellData output section for specified number of fields.
@@ -231,7 +213,17 @@ public:
 
     // Write
 
-        //- Write primitive field of CellData (Poly or Line) or PointData values
+        //- In parallel, write "procID" field as CellData or PointData
+        //- (depending on the current context). A no-op in serial.
+        bool writeProcIDs();
+
+        //- Write a uniform field of CellData or PointData
+        //- (depending on the current context).
+        template<class Type>
+        void writeUniform(const word& fieldName, const Type& val);
+
+        //- Write primitive field of CellData or PointData values
+        //- (size depending on the current context).
         template<class Type>
         void write(const word& fieldName, const UList<Type>& field);
 

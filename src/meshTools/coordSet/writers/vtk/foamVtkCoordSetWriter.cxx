@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,44 +33,44 @@ License
 
 void Foam::vtk::coordSetWriter::beginPiece()
 {
+    // Update sizes, similar to
+    // vtk::polyWriter::beginPiece(const pointField&, const edgeList&)
+
     // Basic sizes
-    nLocalPoints_ = 0;
-    nLocalVerts_  = 0;
-    nLocalLines_  = 0;
-    nLocalPolys_  = 0;
+    label nPoints = 0;
+    label nLines = 0;
 
     for (const pointField& pts : points_)
     {
-        const label npts = pts.size();
-        nLocalPoints_ += npts;
-
-        if (npts)
+        if (auto npts = pts.size(); npts > 0)
         {
-            ++nLocalLines_;
+            nPoints += npts;
+            ++nLines;
         }
     }
+
+    pointSlab_ = nPoints;
+    cellSlab_ = nLines;
 
     switch (elemOutput_)
     {
         case elemOutputType::NO_ELEMENTS:
         {
-            nLocalVerts_ = nLocalLines_ = 0;
+            cellSlab_ = 0;
             break;
         }
         case elemOutputType::DEFAULT_ELEMENTS:
         {
             if (points_.size() < 2)
             {
-                //OR  nLocalVerts_ = nLocalPoints_;
-                nLocalVerts_ = 0;
-                nLocalLines_ = 0;
+                cellSlab_ = 0;
             }
             break;
         }
         case elemOutputType::POINT_ELEMENTS:
         {
-            nLocalVerts_ = nLocalPoints_;
-            nLocalLines_ = 0;
+            // Vertex cells instead of lines
+            cellSlab_ = pointSlab_;
             break;
         }
         case elemOutputType::LINE_ELEMENTS:
@@ -80,16 +80,14 @@ void Foam::vtk::coordSetWriter::beginPiece()
         }
     }
 
-    // Update sizes, similar to
-    // vtk::polyWriter::beginPiece(const pointField&, const edgeList&)
-
-    numberOfPoints_ = nLocalPoints_;
-    numberOfCells_  = nLocalLines_;
-
     // if (parallel_)
     // {
-    //     reduce(numberOfPoints_, sumOp<label>());
-    //     reduce(numberOfCells_,  sumOp<label>());
+    //     Foam::reduceOffsets
+    //     (
+    //         UPstream::worldComm,
+    //         pointSlab_,
+    //         cellSlab_
+    //     );
     // }
 
 
@@ -101,15 +99,19 @@ void Foam::vtk::coordSetWriter::beginPiece()
         format().openTag
         (
             vtk::fileTag::PIECE,
-            vtk::fileAttr::NUMBER_OF_POINTS, numberOfPoints_
+            vtk::fileAttr::NUMBER_OF_POINTS, nTotalPoints()
         );
-        if (nLocalVerts_)
+
+        if (nTotalCells())
         {
-            format().xmlAttr(vtk::fileAttr::NUMBER_OF_VERTS, nLocalVerts_);
-        }
-        if (nLocalLines_)
-        {
-            format().xmlAttr(vtk::fileAttr::NUMBER_OF_LINES, nLocalLines_);
+            if (elemOutput_ == elemOutputType::POINT_ELEMENTS)
+            {
+                format().xmlAttr(vtk::fileAttr::NUMBER_OF_VERTS, nTotalCells());
+            }
+            else
+            {
+                format().xmlAttr(vtk::fileAttr::NUMBER_OF_LINES, nTotalCells());
+            }
         }
         format().closeTag();
     }
@@ -118,7 +120,7 @@ void Foam::vtk::coordSetWriter::beginPiece()
 
 void Foam::vtk::coordSetWriter::writePoints()
 {
-    this->beginPoints(numberOfPoints_);  //<- same as nLocalPoints_
+    this->beginPoints(nTotalPoints());
 
     {
         for (const pointField& pts : points_)
@@ -131,23 +133,28 @@ void Foam::vtk::coordSetWriter::writePoints()
 }
 
 
-void Foam::vtk::coordSetWriter::writeVertsLegacy()
+void Foam::vtk::coordSetWriter::writeVerts_legacy()
 {
-    if (!nLocalVerts_)
+    if
+    (
+        (elemOutput_ != elemOutputType::POINT_ELEMENTS)
+     || (cellSlab_.total() == 0)
+    )
     {
         return;  // Nothing to do
     }
 
     // connectivity = 1 per vertex
-    const label nLocalConns = nLocalVerts_;
+    const label nLocalVerts = cellSlab_.size();
+    const label nLocalConns = cellSlab_.size();
 
-    legacy::beginVerts(os_, nLocalVerts_, nLocalConns);
+    legacy::beginVerts(os_, nLocalVerts, nLocalConns);
 
-    labelList vertLabels(nLocalVerts_ + nLocalConns);
+    labelList vertLabels(nLocalVerts + nLocalConns);
 
     auto iter = vertLabels.begin();
 
-    for (label pointi = 0; pointi < nLocalVerts_; ++pointi)
+    for (label pointi = 0; pointi < nLocalVerts; ++pointi)
     {
         *iter++ = 1;
         *iter++ = pointi;
@@ -162,28 +169,31 @@ void Foam::vtk::coordSetWriter::writeVertsLegacy()
 }
 
 
-void Foam::vtk::coordSetWriter::writeLinesLegacy()
+void Foam::vtk::coordSetWriter::writeLines_legacy()
 {
-    if (!nLocalLines_)
+    if
+    (
+        (elemOutput_ == elemOutputType::POINT_ELEMENTS)
+     || (cellSlab_.total() == 0)
+    )
     {
         return;  // Nothing to do
     }
 
     // connectivity = use each point
-    label nLocalConns = nLocalPoints_;
+    const label nLocalLines = cellSlab_.size();
+    const label nLocalConns = pointSlab_.size();
 
-    legacy::beginLines(os_, nLocalLines_, nLocalConns);
+    legacy::beginLines(os_, nLocalLines, nLocalConns);
 
-    labelList vertLabels(nLocalLines_ + nLocalConns);
+    labelList vertLabels(nLocalLines + nLocalConns);
 
     auto iter = vertLabels.begin();
 
     label localPointi = 0;
     for (const pointField& pts : points_)
     {
-        label npts = pts.size();
-
-        if (npts)
+        if (label npts = pts.size(); npts > 0)
         {
             *iter++ = npts;
             while (npts--)
@@ -205,13 +215,18 @@ void Foam::vtk::coordSetWriter::writeLinesLegacy()
 
 void Foam::vtk::coordSetWriter::writeVerts()
 {
-    if (!nLocalVerts_)
+    if
+    (
+        (elemOutput_ != elemOutputType::POINT_ELEMENTS)
+     || (cellSlab_.total() == 0)
+    )
     {
         return;  // Nothing to do
     }
 
     // connectivity = 1 per vertex
-    const label nLocalConns = nLocalVerts_;
+    const label nLocalVerts = cellSlab_.size();
+    const label nLocalConns = cellSlab_.size();
 
     if (format_)
     {
@@ -222,7 +237,7 @@ void Foam::vtk::coordSetWriter::writeVerts()
     // 'offsets'  (connectivity offsets)
     //
     {
-        labelList vertOffsets(nLocalVerts_);
+        labelList vertOffsets(nLocalVerts);
         label nOffs = vertOffsets.size();
 
         // if (parallel_)
@@ -249,7 +264,7 @@ void Foam::vtk::coordSetWriter::writeVerts()
 
         auto iter = vertOffsets.begin();
 
-        for (label pointi = 0; pointi < nLocalVerts_; ++pointi)
+        for (label pointi = 0; pointi < nLocalVerts; ++pointi)
         {
             off += 1;  // End offset
             *iter = off;
@@ -288,14 +303,9 @@ void Foam::vtk::coordSetWriter::writeVerts()
 
         {
             // XML: connectivity only
-            // [id1, id2, ..., id1, id2, ...]
+            // [id1, id2, ...]
 
-            auto iter = vertLabels.begin();
-
-            for (label pointi = 0; pointi < nLocalVerts_; ++pointi)
-            {
-                *iter++ = pointi;
-            }
+            Foam::identity(vertLabels);
         }
 
         vtk::writeList(format(), vertLabels);
@@ -317,13 +327,18 @@ void Foam::vtk::coordSetWriter::writeVerts()
 
 void Foam::vtk::coordSetWriter::writeLines()
 {
-    if (!nLocalLines_)
+    if
+    (
+        (elemOutput_ == elemOutputType::POINT_ELEMENTS)
+     || (cellSlab_.total() == 0)
+    )
     {
         return;  // Nothing to do
     }
 
     // connectivity = use each point
-    label nLocalConns = nLocalPoints_;
+    const label nLocalLines = cellSlab_.size();
+    const label nLocalConns = pointSlab_.size();
 
     if (format_)
     {
@@ -334,7 +349,7 @@ void Foam::vtk::coordSetWriter::writeLines()
     // 'offsets'  (connectivity offsets)
     //
     {
-        labelList vertOffsets(nLocalLines_);
+        labelList vertOffsets(nLocalLines);
         label nOffs = vertOffsets.size();
 
         // if (parallel_)
@@ -351,7 +366,6 @@ void Foam::vtk::coordSetWriter::writeLines()
         }
 
         // processor-local connectivity offsets
-
         label off = 0;
 
         /// label off =
@@ -363,9 +377,7 @@ void Foam::vtk::coordSetWriter::writeLines()
 
         for (const pointField& pts : points_)
         {
-            const label npts = pts.size();
-
-            if (npts)
+            if (auto npts = pts.size(); npts > 0)
             {
                 off += npts;  // End offset
                 *iter = off;
@@ -451,7 +463,7 @@ Foam::vtk::coordSetWriter::coordSetWriter
 
     points_(points),
     instant_(),
-    elemOutput_(DEFAULT_ELEMENTS)
+    elemOutput_(elemOutputType::DEFAULT_ELEMENTS)
 {}
 
 
@@ -537,15 +549,10 @@ bool Foam::vtk::coordSetWriter::writeGeometry()
 
     writePoints();
 
-    //const label pointOffset =
-    //(
-    //   parallel_ ? globalIndex::calcOffset(nLocalPoints_) : 0
-    //);
-
     if (legacy())
     {
-        writeVertsLegacy();
-        writeLinesLegacy();
+        writeVerts_legacy();
+        writeLines_legacy();
     }
     else
     {

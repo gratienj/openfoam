@@ -57,7 +57,7 @@ Foam::coordSetWriters::vtkWriter::vtkWriter()
 
 Foam::coordSetWriters::vtkWriter::vtkWriter
 (
-    const vtk::outputOptions& opts
+    vtk::outputOptions opts
 )
 :
     coordSetWriter(),

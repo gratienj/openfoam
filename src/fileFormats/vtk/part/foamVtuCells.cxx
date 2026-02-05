@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,6 +26,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "polyMesh.H"
+#include "globalMeshData.H"
 #include "foamVtuCells.H"
 #include "foamVtkOutputOptions.H"
 
@@ -98,7 +99,8 @@ Foam::vtk::vtuCells::vtuCells
 :
     vtk::vtuSizing(),
     output_(output),
-    decomposeRequest_(decompose)
+    decomposeRequest_(decompose),
+    merged_(vtk::vtuSizing::mergeType::NONE)
 {}
 
 
@@ -176,6 +178,8 @@ void Foam::vtk::vtuCells::populateOutput(const polyMesh& mesh)
     // - vtuSizing::reset
     // - resize_all();
 
+    merged_ = vtk::vtuSizing::mergeType::NONE;
+
     switch (output_)
     {
         case contentType::LEGACY :
@@ -205,7 +209,6 @@ void Foam::vtk::vtuCells::populateOutput(const polyMesh& mesh)
             break;
         }
 
-        case contentType::INTERNAL1 :
         case contentType::INTERNAL2 :
         {
             populateInternal
@@ -255,7 +258,7 @@ void Foam::vtk::vtuCells::populateOutput(const UList<cellShape>& shapes)
     }
 
     vtuSizing::resetShapes(shapes);
-
+    merged_ = vtk::vtuSizing::mergeType::NONE;
     maps_.clear();
     resize_all();
     // Done in populate routine:
@@ -306,6 +309,7 @@ void Foam::vtk::vtuCells::populateOutput(const UList<cellShape>& shapes)
 void Foam::vtk::vtuCells::clear()
 {
     vtuSizing::clear();
+    merged_ = vtk::vtuSizing::mergeType::NONE;
     cellTypes_.clear();
     vertLabels_.clear();
     vertOffset_.clear();
@@ -321,6 +325,7 @@ void Foam::vtk::vtuCells::clear()
 void Foam::vtk::vtuCells::reset(const polyMesh& mesh)
 {
     vtuSizing::reset(mesh, decomposeRequest_);
+    merged_ = vtk::vtuSizing::mergeType::NONE;
     resize_all();
 
     populateOutput(mesh);
@@ -334,6 +339,7 @@ void Foam::vtk::vtuCells::reset
 )
 {
     vtuSizing::reset(mesh, subsetCellsIds, decomposeRequest_);
+    merged_ = vtk::vtuSizing::mergeType::NONE;
     resize_all();
 
     if (selectionMode() == selectionModeType::SUBSET_MESH)
@@ -374,6 +380,7 @@ void Foam::vtk::vtuCells::resetShapes
     }
 
     decomposeRequest_ = false;
+    merged_ = vtk::vtuSizing::mergeType::NONE;
 
     vtuSizing::resetShapes(shapes);
 
@@ -729,6 +736,75 @@ Foam::vtk::vtuCells::polyFaceOffsets
         }
 
         return tresult;
+    }
+}
+
+
+void Foam::vtk::vtuCells::mergePoints(const polyMesh& mesh)
+{
+    // NB: caller is responsible for ensuring consistent merge states
+    // on all ranks!
+
+    if (UPstream::parRun() && (merged_ == vtk::vtuSizing::mergeType::NONE))
+    {
+        labelList pointToGlobal;
+        labelList uniqueMeshPoints;
+
+        const autoPtr<globalIndex> globalPointsPtr =
+            mesh.globalData().mergePoints(pointToGlobal, uniqueMeshPoints);
+
+        if (returnReduceOr(this->nAddPoints() > 0))
+        {
+            // Needs additional effort with decomposed polyhedrals...
+            const globalIndex& gi = globalPointsPtr();
+
+            // Bookkeeping for the additional cell-centre points
+            const globalIndex giAdded
+            (
+                this->nAddPoints(),
+                UPstream::worldComm,
+                UPstream::parRun()
+            );
+
+            const auto myProci = UPstream::myProcNo(UPstream::worldComm);
+
+            // Re-index to account for the change in offsets due to
+            // the additional cell-centre points
+            for (auto& globalPointi : pointToGlobal)
+            {
+                if
+                (
+                    auto proci = gi.findProc(myProci, globalPointi);
+                    proci >= 0
+                )
+                {
+                    globalPointi += giAdded.localStart(proci);
+                }
+            }
+
+            // Extend to include the additional points.
+            // These are contiguous addressing starting after the number of
+            // regular (unique, merged) mesh points.
+
+            const label nOrigPoints = pointToGlobal.size();
+            pointToGlobal.resize(nOrigPoints + this->nAddPoints());
+
+            auto endSlice = pointToGlobal.slice(nOrigPoints);
+            Foam::identity
+            (
+                endSlice,
+                (giAdded.localStart(myProci) + gi.localEnd(myProci))
+            );
+        }
+
+        vtuSizing::renumberVertLabels(vertLabels_, pointToGlobal, output_);
+        vtuSizing::renumberFaceLabels(faceLabels_, pointToGlobal, output_);
+
+        // The unique mesh points define the point map
+        maps_.pointMap() = std::move(uniqueMeshPoints);
+        this->setNumPoints(maps_.pointMap().size());
+
+        merged_ = vtk::vtuSizing::mergeType::MERGED;
     }
 }
 

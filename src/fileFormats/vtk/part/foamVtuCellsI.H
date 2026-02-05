@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,6 +45,12 @@ inline bool Foam::vtk::vtuCells::is_hdf() const noexcept
 inline bool Foam::vtk::vtuCells::decomposeRequested() const noexcept
 {
     return decomposeRequest_;
+}
+
+
+inline bool Foam::vtk::vtuCells::merged() const noexcept
+{
+    return (merged_ == vtk::vtuSizing::mergeType::MERGED);
 }
 
 

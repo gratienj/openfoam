@@ -27,7 +27,7 @@ Application
     foamCellZoneToVTK.C
 
 Description
-    Write tet-decomposed OpenFOAM mesh in VTK format.
+    Write a single cellZone as VTK format.
     For diagnostic purposes.
 
 \*---------------------------------------------------------------------------*/

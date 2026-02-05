@@ -147,8 +147,8 @@ public:
         //- Default construct
         vtkWriter();
 
-        //- Construct with some output options
-        explicit vtkWriter(const vtk::outputOptions& opts);
+        //- Construct with VTK output options
+        explicit vtkWriter(vtk::outputOptions opts);
 
         //- Construct with some output options
         explicit vtkWriter(const dictionary& options);

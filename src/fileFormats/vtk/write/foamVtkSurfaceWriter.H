@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -154,18 +154,6 @@ public:
 
         //- Reset point/face references to begin a new piece
         void piece(const pointField& points, const faceList& faces);
-
-
-        //- Write processor ids for each poly as CellData or for each point
-        //- as PointData, depending on isPointData() state. No-op in serial.
-        bool writeProcIDs();
-
-        //- Write a uniform field of Cell (Poly) or Point values
-        template<class Type>
-        void writeUniform(const word& fieldName, const Type& val)
-        {
-            polyWriter::writeUniformValue<Type>(nLocalPolys_, fieldName, val);
-        }
 };
 
 

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -126,16 +126,6 @@ void Foam::vtk::surfaceWriter::piece
 
     points_ = std::cref<pointField>(points);
     faces_ = std::cref<faceList>(faces);
-}
-
-
-bool Foam::vtk::surfaceWriter::writeProcIDs()
-{
-    if (this->isPointData())
-    {
-        return vtk::fileWriter::writeProcIDs(nLocalPoints_);
-    }
-    return vtk::fileWriter::writeProcIDs(nLocalPolys_);
 }
 
 

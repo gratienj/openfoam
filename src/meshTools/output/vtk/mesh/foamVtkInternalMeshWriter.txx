@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -88,6 +88,15 @@ void Foam::vtk::internalMeshWriter::writeCellData
 
     const labelUList& cellMap = vtuCells_.cellMap();
 
+    // Needs adjustment??
+    // // Use the cellMap?
+    // const bool useMap
+    // (
+    //     vtuCells_.useCellMap()
+    //  || (cellMap.size() != cellSlab_.size())
+    //  || (cellMap.size() != field.size())
+    // );
+
     this->beginDataArray<Type>(fieldName, nTotalCells());
 
     if (parallel_)
@@ -125,11 +134,80 @@ void Foam::vtk::internalMeshWriter::writePointData
 
     if (parallel_)
     {
-        vtk::writeListParallel(format_.ref(), field);
+        if (returnReduceOr(vtuCells_.merged()))
+        {
+            // With pointMap...
+            const UIndirectList<Type> values(field, vtuCells_.pointMap());
+
+            vtk::writeListParallel(format_.ref(), values);
+        }
+        else
+        {
+            // No pointMap...
+            vtk::writeListParallel(format_.ref(), field);
+        }
     }
     else
     {
+        // No pointMap for non-parallel...
         vtk::writeList(format(), field);
+    }
+
+    this->endDataArray();
+}
+
+
+template<class Type>
+void Foam::vtk::internalMeshWriter::writePointData
+(
+    const word& fieldName,
+    const UList<Type>& field,
+    const UList<Type>& extra
+)
+{
+    if
+    (
+        isNull(extra)
+     || (parallel_ ? returnReduceAnd(extra.empty()) : extra.empty())
+    )
+    {
+        // Can write without the "extra" data...
+        writePointData(fieldName, field);
+        return;
+    }
+
+    if (isState(outputState::POINT_DATA))
+    {
+        ++nPointData_;
+    }
+    else
+    {
+        reportBadState(FatalErrorInFunction, outputState::POINT_DATA)
+            << " for field " << fieldName << nl << endl
+            << exit(FatalError);
+    }
+
+    this->beginDataArray<Type>(fieldName, nTotalPoints());
+
+    if (parallel_)
+    {
+        if (returnReduceOr(vtuCells_.merged()))
+        {
+            // With pointMap...
+            const UIndirectList<Type> values(field, vtuCells_.pointMap());
+
+            vtk::writeListsParallel(format_.ref(), values, extra);
+        }
+        else
+        {
+            // No pointMap...
+            vtk::writeListsParallel(format_.ref(), field, extra);
+        }
+    }
+    else
+    {
+        // No pointMap for non-parallel...
+        vtk::writeLists(format(), field, extra);
     }
 
     this->endDataArray();

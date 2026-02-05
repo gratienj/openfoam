@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -371,7 +371,7 @@ bool Foam::functionObjects::vtkWrite::write()
         {
             typedef vtk::internalWriter writerType;
 
-            if (vtuMeshCells.empty())
+            if (vtuMeshCells.empty() && !vtuMeshCells.merged())
             {
                 // Use the appropriate mesh (baseMesh or subMesh)
                 vtuMeshCells.reset(meshProxy.mesh());
@@ -383,6 +383,12 @@ bool Foam::functionObjects::vtkWrite::write()
                         << "Manifold cells detected - disabling PointData"
                         << endl;
                 }
+            }
+
+            if (!vtuMeshCells.merged())
+            {
+                // Topological point merge
+                vtuMeshCells.mergePoints(meshProxy.mesh());
             }
 
             auto writer = autoPtr<writerType>::New

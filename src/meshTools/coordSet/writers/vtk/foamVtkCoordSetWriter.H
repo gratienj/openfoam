@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -73,9 +73,9 @@ public:
         enum elemOutputType
         {
             NO_ELEMENTS = 0,
-            DEFAULT_ELEMENTS = 1,
-            POINT_ELEMENTS = 2,
-            LINE_ELEMENTS = 3
+            DEFAULT_ELEMENTS = 1, //!< lines for CellData, trim for single set
+            POINT_ELEMENTS = 2,   //!< vertices for CellData
+            LINE_ELEMENTS = 3     //!< lines for CellData
         };
 
 private:
@@ -94,27 +94,20 @@ private:
 
     // Private Member Functions
 
-
-    // Private Member Functions
-
-        //- Determine sizes (nLocalPoints_, nLocalLines_),
-        //- and begin piece
+        //- Determine sizes and begin piece (CellData == lines)
         void beginPiece();
 
         //- Write points
         void writePoints();
 
         //- Write vertices, legacy format
-        //  \param pointOffset processor-local point offset
-        void writeVertsLegacy();
+        void writeVerts_legacy();
 
         //- Write vertices
-        //  \param pointOffset processor-local point offset
         void writeVerts();
 
         //- Write lines, legacy format
-        //  \param pointOffset processor-local point offset
-        void writeLinesLegacy();
+        void writeLines_legacy();
 
         //- Write lines
         //  \param pointOffset processor-local point offset
@@ -147,7 +140,7 @@ public:
         (
             const UPtrList<const pointField>& pts,
             const fileName& file,
-            bool paralel = false  /* ignored: always false */
+            bool parallel = false  /* ignored: always false */
         );
 
         //- Construct from components and open the file for writing.
@@ -157,7 +150,7 @@ public:
             const UPtrList<const pointField>& pts,
             const vtk::outputOptions opts,
             const fileName& file,
-            bool paralel = false  /* ignored: always false */
+            bool parallel = false  /* ignored: always false */
         );
 
 

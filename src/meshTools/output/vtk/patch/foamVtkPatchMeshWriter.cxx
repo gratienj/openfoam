@@ -606,15 +606,11 @@ void Foam::vtk::patchMeshWriter::writePatchIDs()
 
 bool Foam::vtk::patchMeshWriter::writeProcIDs()
 {
-    // These are local counts - the backend does the rest
-    const label nValues =
+    return vtk::fileWriter::writeProcIDs
     (
-        this->isPointData()
-      ? pointSlab_.size()   // Local number of points
-      : cellSlab_.size()    // Local number of faces
+        // Appropriate rank-local size:
+        (this->isPointData() ? pointSlab_.size() : cellSlab_.size())
     );
-
-    return vtk::fileWriter::writeProcIDs(nValues);
 }
 
 

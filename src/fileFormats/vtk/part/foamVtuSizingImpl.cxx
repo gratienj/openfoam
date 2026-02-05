@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,8 +27,9 @@ License
 
 #include "foamVtuSizing.H"
 #include "foamVtkCore.H"
-#include "polyMesh.H"
 #include "cellShape.H"
+#include "polyMesh.H"
+#include "processorPolyPatch.H"
 #include "manifoldCellsMeshObject.H"
 
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
@@ -37,12 +38,10 @@ namespace
 {
 
 // Adjust \p vertOffset for all cells.
-// On input it contains the cell sizes, but for INTERNAL1 it also
-// contains an embedded size prefix.
+// On input it contains the cell sizes.
 //
 // On output, the cell connectivity offsets :
 // - XML format = end-offsets
-// - INTERNAL1 = begin-offsets
 // - INTERNAL2 = begin/end-offsets
 // - HDF = begin/end-offsets
 // .
@@ -63,28 +62,12 @@ void adjustCellOffsets
 
         case vtuSizing::contentType::XML :
         {
-            // Transform cell sizes (vertOffset) into begin offsets
+            // Transform cell sizes (vertOffset) into end offsets
 
             // vertOffset[0] already contains its size, leave untouched
             for (label i = 1; i < vertOffset.size(); ++i)
             {
                 vertOffset[i] += vertOffset[i-1];
-            }
-            break;
-        }
-
-        case vtuSizing::contentType::INTERNAL1 :
-        {
-            // Transform cell sizes (vertOffset) into begin offsets
-            {
-                IntType beg(0);
-
-                for (IntType& off : vertOffset)
-                {
-                    const IntType sz(off);
-                    off = beg;
-                    beg += 1 + sz;  // Additional 1 to skip embedded prefix
-                }
             }
             break;
         }
@@ -120,7 +103,6 @@ void adjustCellOffsets
 //
 // On output, the face connectivity offsets :
 // - XML format = end-offsets, with -1 placeholders
-// - INTERNAL1 = begin-offsets, with -1 placeholders
 // - INTERNAL2 = begin/end-offsets, with -1 placeholders
 // - HDF = begin/end-offsets
 // .
@@ -160,7 +142,6 @@ void adjustFaceOffsets
             break;
         }
 
-        case vtuSizing::contentType::INTERNAL1 :
         case vtuSizing::contentType::INTERNAL2 :
         {
             // Transform face sizes (faceOffset) into begin locations,
@@ -260,11 +241,7 @@ void Foam::vtk::vtuSizing::populateArrays
 
     // Are vertLabels prefixed with the size?
     // Also use as the size of the prefixed information
-    const int prefix =
-    (
-        output == contentType::LEGACY
-     || output == contentType::INTERNAL1
-    ) ? 1 : 0;
+    const int prefix = (output == contentType::LEGACY) ? 1 : 0;
 
 
     // Initialization
@@ -328,8 +305,11 @@ void Foam::vtk::vtuSizing::populateArrays
     // Placement of additional decomposed cells
     label nCellDecomp = mesh.nCells();
 
-    // Placement of additional point labels
-    label nPointDecomp = mesh.nPoints();
+    // Placement of additional point labels (apex of decomposed cells)
+    label apexVertLabel = mesh.nPoints();
+
+    // Count of additional point labels
+    label nAddPoints = 0;
 
     // Non-decomposed polyhedral are represented as a face-stream.
     // For legacy format, this stream replaces the normal connectivity
@@ -377,6 +357,26 @@ void Foam::vtk::vtuSizing::populateArrays
     labelHashSet hashUniqId;
     if (!sizing.decompose()) { hashUniqId.reserve(256); }
 
+    // For polyhedral decomposition, ensure that the face tri/quad splits
+    // on the neighbour side of a processor patch follow that of the owner side.
+    bitSet flipBoundaryFace;
+    if (sizing.decompose() && UPstream::parRun())
+    {
+        flipBoundaryFace.resize(mesh.nBoundaryFaces());
+
+        for (const polyPatch& pp : mesh.boundaryMesh())
+        {
+            if
+            (
+                const auto* ppp = isA<processorPolyPatch>(pp);
+                (ppp && ppp->neighbour())
+            )
+            {
+                // Neighbour-side of processor patch
+                flipBoundaryFace.set(labelRange(pp.offset(), pp.size()));
+            }
+        }
+    }
 
     for
     (
@@ -530,31 +530,64 @@ void Foam::vtk::vtuSizing::populateArrays
             // to avoid defining negative cells.
             // VTK may not care, but we'll do it anyhow for safety.
 
-            // Mapping from additional point to cell, and the new vertex from
-            // the cell-centre
-            const label newVertexLabel = nPointDecomp;
-
-            addPointsIds[nPointDecomp++] = celli;
+            // The cell-centre corresponding to the apexVertLabel
+            addPointsIds[nAddPoints] = celli;
 
             // Whether to insert cell in place of original or not.
             bool firstCell = true;
 
-            const labelList& cFaces = meshCells[celli];
+            // Count triangles/quads in decomposition
+            label nTria = 0, nQuad = 0;
+            DynamicList<face> faces3, faces4;
 
-            for (const label facei : cFaces)
+            for (const label facei : meshCells[celli])
             {
+                // Face decomposed into triangles and quads
+                // Tri -> Tet, Quad -> Pyr
                 const face& f = meshFaces[facei];
-                const bool isOwner = (owner[facei] == celli);
+                bool isOwner = (owner[facei] == celli);
 
-                // Count triangles/quads in decomposition
-                label nTria = 0, nQuad = 0;
-                f.nTrianglesQuads(mesh.points(), nTria, nQuad);
+                // Need to use a flipped face on the boundary?
+                if
+                (
+                    (f.size() > 4)
+                 && flipBoundaryFace.test(facei - mesh.nInternalFaces())
+                )
+                {
+                    isOwner = !isOwner;
 
-                // Do actual decomposition
-                faceList faces3(nTria);
-                faceList faces4(nQuad);
-                nTria = 0, nQuad = 0;
-                f.trianglesQuads(mesh.points(), nTria, nQuad, faces3, faces4);
+                    const face flipped(f.reverseFace());
+
+                    // Count triangles/quads in decomposition
+                    nTria = nQuad = 0;
+                    flipped.nTrianglesQuads(mesh.points(), nTria, nQuad);
+
+                    // Do actual decomposition
+                    faces3.resize_nocopy(nTria);
+                    faces4.resize_nocopy(nQuad);
+                    nTria = nQuad = 0;
+
+                    flipped.trianglesQuads
+                    (
+                        mesh.points(), nTria, nQuad, faces3, faces4
+                    );
+                }
+                else
+                {
+                    // Count triangles/quads in decomposition
+                    nTria = nQuad = 0;
+                    f.nTrianglesQuads(mesh.points(), nTria, nQuad);
+
+                    // Do actual decomposition
+                    faces3.resize_nocopy(nTria);
+                    faces4.resize_nocopy(nQuad);
+                    nTria = nQuad = 0;
+
+                    f.trianglesQuads
+                    (
+                        mesh.points(), nTria, nQuad, faces3, faces4
+                    );
+                }
 
                 for (const face& quad : faces4)
                 {
@@ -605,7 +638,7 @@ void Foam::vtk::vtuSizing::populateArrays
                     }
 
                     // The apex
-                    vertLabels[vrtLoc++] = newVertexLabel;
+                    vertLabels[vrtLoc++] = apexVertLabel;
                 }
 
                 for (const face& tria : faces3)
@@ -655,9 +688,13 @@ void Foam::vtk::vtuSizing::populateArrays
                     }
 
                     // The apex
-                    vertLabels[vrtLoc++] = newVertexLabel;
+                    vertLabels[vrtLoc++] = apexVertLabel;
                 }
             }
+
+            // Increment values
+            ++apexVertLabel;
+            ++nAddPoints;
         }
         else
         {
@@ -826,11 +863,7 @@ void Foam::vtk::vtuSizing::populateArrays
 
     // Are vertLabels prefixed with the size?
     // Also use as the size of the prefixed information
-    const int prefix =
-    (
-        output == contentType::LEGACY
-     || output == contentType::INTERNAL1
-    ) ? 1 : 0;
+    const int prefix = (output == contentType::LEGACY) ? 1 : 0;
 
 
     // Initialization

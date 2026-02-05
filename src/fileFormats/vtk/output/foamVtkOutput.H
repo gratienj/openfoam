@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -82,7 +82,7 @@ namespace vtk
     autoPtr<vtk::formatter> newFormatter
     (
         std::ostream& os,
-        const enum formatType fmtType,
+        vtk::formatType fmtType,
         unsigned prec = IOstream::defaultPrecision()
     );
 
@@ -120,6 +120,14 @@ namespace vtk
     template<class Type, unsigned N>
     void writeList(vtk::formatter& fmt, const FixedList<Type, N>& values);
 
+    //- Write an indirect list of values
+    //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeList
+    (
+        vtk::formatter& fmt,
+        const IndirectListBase<Type, Addr>& values
+    );
 
     //- Write a list of values via indirect addressing.
     //  The output does not include the payload size.
@@ -128,6 +136,7 @@ namespace vtk
     (
         vtk::formatter& fmt,
         const UList<Type>& values,
+        //! Indirect addressing into \p values
         const labelUList& addressing
     );
 
@@ -141,6 +150,46 @@ namespace vtk
         const bitSet& selected
     );
 
+    //- Write (concatenated) list of values and another list of values.
+    //  The output does not include the payload size.
+    template<class Type>
+    void writeLists
+    (
+        vtk::formatter& fmt,
+        const UList<Type>& values1,
+        const UList<Type>& values2
+    );
+
+    //- Write (concatenated) list of values and an indirect list of values.
+    //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeLists
+    (
+        vtk::formatter& fmt,
+        const UList<Type>& values1,
+        const IndirectListBase<Type, Addr>& values2
+    );
+
+    //- Write (concatenated) indirect list of values and a list of values.
+    //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeLists
+    (
+        vtk::formatter& fmt,
+        const IndirectListBase<Type, Addr>& values1,
+        const UList<Type>& values2
+    );
+
+    //- Write (concatenated) indirect lists of values.
+    //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeLists
+    (
+        vtk::formatter& fmt,
+        const IndirectListBase<Type, Addr>& values1,
+        const IndirectListBase<Type, Addr>& values2
+    );
+
     //- Write a list of values and a list of values via indirect addressing.
     //  The output does not include the payload size.
     template<class Type>
@@ -149,9 +198,30 @@ namespace vtk
         vtk::formatter& fmt,
         const UList<Type>& values1,
         const UList<Type>& values2,
-        const labelUList& addressing
+        //! Indirect addressing of \p values2
+        const labelUList& addressing2
     );
 
+
+    //- Receive list of values from sub-ranks and write on master.
+    //  This is infrastructure code, normally not called directly
+    template<class Type>
+    void writeListParallel_subranks
+    (
+        vtk::formatter& fmt,
+        const UList<Type>& values
+    );
+
+    //- Receive lists of values from sub-ranks and write on master.
+    //- The lists are treated as locally concatenated values.
+    //  This is infrastructure code, normally not called directly
+    template<class Type>
+    void writeListsParallel_subranks
+    (
+        vtk::formatter& fmt,
+        const UList<Type>& values1,
+        const UList<Type>& values2
+    );
 
     //- Write a list of values.
     //  The output does not include the payload size.
@@ -174,6 +244,15 @@ namespace vtk
 
     //- Write a list of values via indirect addressing.
     //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeListParallel
+    (
+        vtk::formatter& fmt,
+        const IndirectListBase<Type, Addr>& values
+    );
+
+    //- Write a list of values via indirect addressing.
+    //  The output does not include the payload size.
     template<class Type>
     void writeListParallel
     (
@@ -192,7 +271,7 @@ namespace vtk
         const bitSet& selected
     );
 
-    //- Write a list of values and another list of values.
+    //- Write (concatenated) list of values and another list of values.
     //  The output does not include the payload size.
     template<class Type>
     void writeListsParallel
@@ -202,6 +281,36 @@ namespace vtk
         const UList<Type>& values2
     );
 
+    //- Write (concatenated) list of values and an indirect list of values.
+    //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeListsParallel
+    (
+        vtk::formatter& fmt,
+        const UList<Type>& values1,
+        const IndirectListBase<Type, Addr>& values2
+    );
+
+    //- Write (concatenated) indirect list of values and a list of values.
+    //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeListsParallel
+    (
+        vtk::formatter& fmt,
+        const IndirectListBase<Type, Addr>& values1,
+        const UList<Type>& values2
+    );
+
+    //- Write (concatenated) indirect lists of values.
+    //  The output does not include the payload size.
+    template<class Type, class Addr>
+    void writeListsParallel
+    (
+        vtk::formatter& fmt,
+        const IndirectListBase<Type, Addr>& values1,
+        const IndirectListBase<Type, Addr>& values2
+    );
+
     //- Write a list of values and a list of values via indirect addressing.
     //  The output does not include the payload size.
     template<class Type>
@@ -209,10 +318,8 @@ namespace vtk
     (
         vtk::formatter& fmt,
         const UList<Type>& values1,
-        const UList<Type>& values2,
-        const labelUList& addressing
+        const UList<Type>& values2, const labelUList& addressing2
     );
-
 
 /*---------------------------------------------------------------------------*\
                                Namespace legacy
@@ -260,24 +367,24 @@ namespace legacy
     //  The nConnectivity is the sum of all connectivity points used,
     //  but \b without additional space for the size prefixes.
     //  The additional prefix sizes are added internally.
-    //  \note With nConnectivity == 0, assume one point per element
+    //  \note With nConnectivity <= 0, assume one point per element
     inline void beginVerts
     (
         std::ostream& os,
         label nVerts,
-        label nConnectivity = 0
+        label nConnectivity = -1
     );
 
     //- Emit header for LINES (with trailing newline).
     //  The nConnectivity is the sum of all connectivity points used,
     //  but \b without additional space for the size prefixes.
     //  The additional prefix sizes are added internally.
-    //  \note With nConnectivity == 0, assume two points per element
+    //  \note With nConnectivity <= 0, assume two points per element
     inline void beginLines
     (
         std::ostream& os,
         label nLines,
-        label nConnectivity = 0
+        label nConnectivity = -1
     );
 
     //- Emit header for POLYGONS (with trailing newline).
