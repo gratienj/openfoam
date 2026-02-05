@@ -844,7 +844,7 @@ int main(int argc, char *argv[])
             (
                 IOobject
                 (
-                    extrudedMesh::defaultRegion,
+                    regionName,
                     runTimeExtruded.constant(),
                     runTimeExtruded
                 ),
