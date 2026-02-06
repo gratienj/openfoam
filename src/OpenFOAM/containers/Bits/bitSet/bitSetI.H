@@ -574,40 +574,6 @@ inline void Foam::bitSet::flip(const label i)
 }
 
 
-inline Foam::bitSet& Foam::bitSet::bound(const label maxSize)
-{
-    if (maxSize < size())
-    {
-        resize(maxSize);
-    }
-
-    return *this;
-}
-
-
-inline Foam::bitSet& Foam::bitSet::bound(const bitSet& other)
-{
-    return bound(other.size());
-}
-
-
-inline Foam::bitSet& Foam::bitSet::extend(const label minSize)
-{
-    if (size() < minSize)
-    {
-        resize(minSize);
-    }
-
-    return *this;
-}
-
-
-inline Foam::bitSet& Foam::bitSet::extend(const bitSet& other)
-{
-    return extend(other.size());
-}
-
-
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
 inline bool Foam::bitSet::operator()(const label pos) const

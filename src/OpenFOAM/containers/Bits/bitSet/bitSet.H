@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -392,32 +392,6 @@ public:
 
     // Convenience methods
 
-        //- Ensure the addressable range does not exceed maxSize.
-        //  Either decreases the size of the bitSet or is a no-op.
-        //
-        //  \code
-        //      pointField& pts = mesh.points();
-        //      bitset.bound(pts.size());
-        //
-        //      for (const label pointi : bitset)
-        //      {
-        //          pts[pointi]  ...
-        //      }
-        //  \endcode
-        inline bitSet& bound(const label maxSize);
-
-        //- Ensure the addressable range does not exceed that of other.
-        //  Either decreases the size of the bitSet or is a no-op.
-        inline bitSet& bound(const bitSet& other);
-
-        //- Ensure that minSize is covered by the bitSet.
-        //  Either increases the size of the bitSet or is a no-op.
-        inline bitSet& extend(const label minSize);
-
-        //- Ensure the bitset is addressable throughout the range of other.
-        //  Either increases the size of the bitSet or is a no-op.
-        inline bitSet& extend(const bitSet& other);
-
         //- Set the locations listed by the iterator range,
         //- auto-vivify entries if needed.
         //
@@ -640,17 +614,8 @@ public:
         (
             //! The UPstream communicator (default is worldComm)
             int communicator = -1,
-            //! False: sizes already consistent. True: adjust sizes.
-            bool syncSizes = true
-        );
-
-        //- Broadcast the contents using the specified communicator/root
-        void broadcast
-        (
-            //! UPstream communicator and broadcast root
-            std::pair<int,int> communicator_root,
-            //! False: sizes already consistent. True: adjust sizes.
-            bool syncSizes = true
+            //! The broadcast root
+            int root = 0
         );
 
         //- Inplace \c bit_and parallel reduction
@@ -702,9 +667,30 @@ public:
         //- Same as contains()
         bool found(const label pos) const { return this->contains(pos); }
 
-        //- Deprecated(2020-11) use fill()
-        //  \deprecated(2020-11) use fill()
+        //- \deprecated(2020-11) use fill()
+        FOAM_DEPRECATED_FOR(2020-11, "fill()")
         void assign(const unsigned int val) { this->fill(val); }
+
+        //- \deprecated(2026-01) use two-parameter version
+        FOAM_DEPRECATED_FOR(2026-01, "broadcast(comm, root)")
+        void broadcast(std::pair<int,int> comm_root)
+        {
+            this->broadcast(comm_root.first, comm_root.second);
+        }
+
+        //- Ensure the addressable range does not exceed maxSize
+        FOAM_DEPRECATED_FOR(2026-01, "<removed>")
+        void bound(const label maxSize) = delete;
+
+        FOAM_DEPRECATED_FOR(2026-01, "<removed>")
+        void bound(const bitSet& other) = delete;
+
+        //- Ensure that minSize is covered by the bitSet
+        FOAM_DEPRECATED_FOR(2026-01, "<removed>")
+        void extend(label minSize) = delete;
+
+        FOAM_DEPRECATED_FOR(2026-01, "<removed>")
+        void extend(const bitSet& other) = delete;
 };
 
 
