@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -71,6 +71,26 @@ void Foam::inplaceRenumber
 }
 
 
+template<class IntListListType>
+void Foam::ListListOps::inplaceRenumber
+(
+    const labelUList& oldToNew,
+    IntListListType& lists
+)
+{
+    for (auto& sub : lists)
+    {
+        for (auto& element : sub)
+        {
+            if (element >= 0)
+            {
+                element = oldToNew[element];
+            }
+        }
+    }
+}
+
+
 template<class IntListType>
 void Foam::inplaceRenumber
 (
@@ -82,11 +102,29 @@ void Foam::inplaceRenumber
 
     for (label i = 0; i < len; ++i)
     {
-        const auto fnd = oldToNew.cfind(input[i]);
-
-        if (fnd.good())
+        if (auto fnd = oldToNew.cfind(input[i]); fnd.good())
         {
             input[i] = fnd.val();
+        }
+    }
+}
+
+
+template<class IntListListType>
+void Foam::ListListOps::inplaceRenumber
+(
+    const Map<label>& oldToNew,
+    IntListListType& lists
+)
+{
+    for (auto& sub : lists)
+    {
+        for (auto& element : sub)
+        {
+            if (auto fnd = oldToNew.cfind(element); fnd.good())
+            {
+                element = fnd.val();
+            }
         }
     }
 }
@@ -326,7 +364,7 @@ Foam::label Foam::inplaceMapValue
     {
         label& value = iter.val();
 
-        auto mapIter = mapper.find(value);
+        auto mapIter = mapper.cfind(value);
         if (mapIter.good() && value != mapIter.val())
         {
             value = mapIter.val();

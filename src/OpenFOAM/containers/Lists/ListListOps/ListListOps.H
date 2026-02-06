@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018 OpenCFD Ltd.
+    Copyright (C) 2018,2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,6 +31,8 @@ Description
     Various utility functions to work on Lists of Lists (usually resulting
     from 'gather'ing and combining information from individual processors)
 
+    - concat : \n
+        simple (move) concatenation of sublists into one big list.
     - combine : \n
         takes (elements of) sublists and appends them into one big list.
     - combineOffset : \n
@@ -113,6 +115,15 @@ struct offsetOp
 
 namespace ListListOps
 {
+    //- Concatenate sub-lists (moving their content) into a single list.
+    //  The input \p lists parameter is cleared on completion.
+    template<class ListType, class T>
+    ListType concat(List<T>& lists);
+
+    //- The total size of all sub-lists
+    template<class T>
+    label totalSize(const UList<T>& lists);
+
     //- Return the sizes of the sub-lists
     template<class T, class AccessOp>
     labelList subSizes(const UList<T>& lists, AccessOp aop = accessOp<T>());
