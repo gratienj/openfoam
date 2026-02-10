@@ -100,17 +100,10 @@ private:
         //- Write points
         void writePoints();
 
-        //- Write vertices, legacy format
-        void writeVerts_legacy();
-
-        //- Write vertices
-        void writeVerts();
-
         //- Write lines, legacy format
         void writeLines_legacy();
 
         //- Write lines
-        //  \param pointOffset processor-local point offset
         void writeLines();
 
 public:

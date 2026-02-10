@@ -133,42 +133,6 @@ void Foam::vtk::coordSetWriter::writePoints()
 }
 
 
-void Foam::vtk::coordSetWriter::writeVerts_legacy()
-{
-    if
-    (
-        (elemOutput_ != elemOutputType::POINT_ELEMENTS)
-     || (cellSlab_.total() == 0)
-    )
-    {
-        return;  // Nothing to do
-    }
-
-    // connectivity = 1 per vertex
-    const label nLocalVerts = cellSlab_.size();
-    const label nLocalConns = cellSlab_.size();
-
-    legacy::beginVerts(os_, nLocalVerts, nLocalConns);
-
-    labelList vertLabels(nLocalVerts + nLocalConns);
-
-    auto iter = vertLabels.begin();
-
-    for (label pointi = 0; pointi < nLocalVerts; ++pointi)
-    {
-        *iter++ = 1;
-        *iter++ = pointi;
-    }
-
-    vtk::writeList(format(), vertLabels);
-
-    if (format_)
-    {
-        format().flush();
-    }
-}
-
-
 void Foam::vtk::coordSetWriter::writeLines_legacy()
 {
     if
@@ -213,118 +177,6 @@ void Foam::vtk::coordSetWriter::writeLines_legacy()
 }
 
 
-void Foam::vtk::coordSetWriter::writeVerts()
-{
-    if
-    (
-        (elemOutput_ != elemOutputType::POINT_ELEMENTS)
-     || (cellSlab_.total() == 0)
-    )
-    {
-        return;  // Nothing to do
-    }
-
-    // connectivity = 1 per vertex
-    const label nLocalVerts = cellSlab_.size();
-    const label nLocalConns = cellSlab_.size();
-
-    if (format_)
-    {
-        format().tag(vtk::fileTag::VERTS);
-    }
-
-    //
-    // 'offsets'  (connectivity offsets)
-    //
-    {
-        labelList vertOffsets(nLocalVerts);
-        label nOffs = vertOffsets.size();
-
-        // if (parallel_)
-        // {
-        //     reduce(nOffs, sumOp<label>());
-        // }
-
-        if (format_)
-        {
-            const uint64_t payLoad = vtk::sizeofData<label>(nOffs);
-
-            format().beginDataArray<label>(vtk::dataArrayAttr::OFFSETS);
-            format().writeSize(payLoad);
-        }
-
-        // processor-local connectivity offsets
-
-        label off = 0;
-
-        /// label off =
-        /// (
-        ///     parallel_ ? globalIndex::calcOffset(nLocalConns) : 0
-        /// );
-
-        auto iter = vertOffsets.begin();
-
-        for (label pointi = 0; pointi < nLocalVerts; ++pointi)
-        {
-            off += 1;  // End offset
-            *iter = off;
-            ++iter;
-        }
-
-        vtk::writeList(format_.ref(), vertOffsets);
-
-        if (format_)
-        {
-            format().flush();
-            format().endDataArray();
-        }
-    }
-
-    //
-    // 'connectivity'
-    //
-    {
-        labelList vertLabels(nLocalConns);
-
-        label nConns = nLocalConns;
-
-        // if (parallel_)
-        // {
-        //     reduce(nConns, sumOp<label>());
-        // }
-
-        if (format_)
-        {
-            const uint64_t payLoad = vtk::sizeofData<label>(nConns);
-
-            format().beginDataArray<label>(vtk::dataArrayAttr::CONNECTIVITY);
-            format().writeSize(payLoad * sizeof(label));
-        }
-
-        {
-            // XML: connectivity only
-            // [id1, id2, ...]
-
-            Foam::identity(vertLabels);
-        }
-
-        vtk::writeList(format(), vertLabels);
-
-        if (format_)
-        {
-            format().flush();
-            format().endDataArray();
-        }
-    }
-
-
-    if (format_)
-    {
-        format().endTag(vtk::fileTag::VERTS);
-    }
-}
-
-
 void Foam::vtk::coordSetWriter::writeLines()
 {
     if
@@ -359,7 +211,7 @@ void Foam::vtk::coordSetWriter::writeLines()
 
         if (format_)
         {
-            const uint64_t payLoad = vtk::sizeofData<label>(nOffs);
+            auto payLoad = vtk::sizeofData<label>(nOffs);
 
             format().beginDataArray<label>(vtk::dataArrayAttr::OFFSETS);
             format().writeSize(payLoad);
@@ -409,10 +261,10 @@ void Foam::vtk::coordSetWriter::writeLines()
 
         if (format_)
         {
-            const uint64_t payLoad = vtk::sizeofData<label>(nConns);
+            auto payLoad = vtk::sizeofData<label>(nConns);
 
             format().beginDataArray<label>(vtk::dataArrayAttr::CONNECTIVITY);
-            format().writeSize(payLoad * sizeof(label));
+            format().writeSize(payLoad);
         }
 
         {
@@ -549,15 +401,23 @@ bool Foam::vtk::coordSetWriter::writeGeometry()
 
     writePoints();
 
-    if (legacy())
+    if (elemOutput_ == elemOutputType::POINT_ELEMENTS)
     {
-        writeVerts_legacy();
-        writeLines_legacy();
+        if (label nTotalVerts = cellSlab_.total(); nTotalVerts > 0)
+        {
+            vtk::polyWriter::writeVerts(nTotalVerts);
+        }
     }
     else
     {
-        writeVerts();
-        writeLines();
+        if (legacy())
+        {
+            writeLines_legacy();
+        }
+        else
+        {
+            writeLines();
+        }
     }
 
     return true;

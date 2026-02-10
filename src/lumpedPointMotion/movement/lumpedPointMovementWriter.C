@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2020 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,9 +28,8 @@ License
 #include "lumpedPointMovement.H"
 #include "polyMesh.H"
 #include "pointMesh.H"
-#include "OFstream.H"
-#include "foamVtkOutput.H"
 #include "foamVtkSurfaceWriter.H"
+#include "foamVtkVertexWriter.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
@@ -40,7 +39,7 @@ void Foam::lumpedPointMovement::writeStateVTP
     const fileName& file
 ) const
 {
-    if (!Pstream::master())
+    if (!UPstream::master())
     {
         // No extra information available from slaves, write on master only.
         return;
@@ -48,9 +47,7 @@ void Foam::lumpedPointMovement::writeStateVTP
 
     labelListList lines;
 
-    label nLines = controllers_.size();
-
-    if (nLines)
+    if (label nLines = controllers_.size(); nLines > 0)
     {
         lines.resize(nLines);
         nLines = 0;
@@ -85,131 +82,54 @@ void Foam::lumpedPointMovement::writeForcesAndMomentsVTP
     const UList<vector>& moments
 ) const
 {
-    if (!Pstream::master())
+    if (!UPstream::master())
     {
         // Force, moments already reduced
         return;
     }
 
-    OFstream fos(file);
-    std::ostream& os = fos.stdStream();
-
-    autoPtr<vtk::formatter> format = vtk::newFormatter
+    vtk::vertexWriter writer
     (
-        os,
-        vtk::formatType::INLINE_ASCII
+        state().points(),
+        vtk::formatType::INLINE_ASCII,
+        file,
+        false   // non-parallel
     );
 
-    format().xmlHeader()
-        .beginVTKFile<vtk::fileTag::POLY_DATA>();
+    writer.writeGeometry();
 
-    //
-    // The 'backbone' of lumped mass points
-    //
-    const label nPoints = state().points().size();
+    const auto nPoints = state().points().size();
 
+    int nFields(0);
+    if (forces.size() == nPoints) ++nFields;
+    if (moments.size() == nPoints) ++nFields;
+
+    if (!nFields)
     {
-        format()
-            .tag
-            (
-                vtk::fileTag::PIECE,
-                vtk::fileAttr::NUMBER_OF_POINTS, nPoints,
-                vtk::fileAttr::NUMBER_OF_VERTS,  nPoints
-            );
-
-        // 'points'
-        {
-            const uint64_t payLoad = vtk::sizeofData<float, 3>(nPoints);
-
-            format()
-                .tag(vtk::fileTag::POINTS)
-                .beginDataArray<float, 3>(vtk::dataArrayAttr::POINTS);
-
-            format().writeSize(payLoad);
-            vtk::writeList(format(), state().points());
-            format().flush();
-
-            format()
-                .endDataArray()
-                .endTag(vtk::fileTag::POINTS);
-        }
-
-        // <Verts>
-        format().tag(vtk::fileTag::VERTS);
-
-        //
-        // 'connectivity'
-        //
-        {
-            const uint64_t payLoad = vtk::sizeofData<label>(nPoints);
-
-            format().beginDataArray<label>(vtk::dataArrayAttr::CONNECTIVITY);
-            format().writeSize(payLoad);
-
-            vtk::writeIdentity(format(), nPoints);
-
-            format().flush();
-
-            format().endDataArray();
-        }
-
-        //
-        // 'offsets'  (connectivity offsets)
-        // = linear mapping onto points (with 1 offset)
-        //
-        {
-            const uint64_t payLoad = vtk::sizeofData<label>(nPoints);
-
-            format().beginDataArray<label>(vtk::dataArrayAttr::OFFSETS);
-            format().writeSize(payLoad);
-
-            vtk::writeIdentity(format(), nPoints, 1);
-
-            format().flush();
-
-            format().endDataArray();
-        }
-
-        format().endTag(vtk::fileTag::VERTS);
-        // </Verts>
+        return;
     }
 
-    format().beginPointData();
-
-    // forces
+    // CellData
+    writer.beginCellData(nFields);
     if (forces.size() == nPoints)
     {
-        const uint64_t payLoad = vtk::sizeofData<float, 3>(nPoints);
-
-        format().beginDataArray<float, 3>("forces");
-        format().writeSize(payLoad);
-
-        vtk::writeList(format(), forces);
-        format().flush();
-
-        format().endDataArray();
+        writer.writeCellData("forces", forces);
     }
-
-    // moments
     if (moments.size() == nPoints)
     {
-        const uint64_t payLoad = vtk::sizeofData<float, 3>(nPoints);
-
-        format().beginDataArray<float, 3>("moments");
-        format().writeSize(payLoad);
-
-        vtk::writeList(format(), moments);
-        format().flush();
-
-        format().endDataArray();
+        writer.writeCellData("moments", moments);
     }
 
-    format().endPointData();
-
-    format().endPiece();
-
-    format().endTag(vtk::fileTag::POLY_DATA)
-        .endVTKFile();
+    // PointData
+    writer.beginPointData(nFields);
+    if (forces.size() == nPoints)
+    {
+        writer.writePointData("forces", forces);
+    }
+    if (moments.size() == nPoints)
+    {
+        writer.writePointData("moments", moments);
+    }
 }
 
 

@@ -133,6 +133,57 @@ void Foam::vtk::polyWriter::beginPiece
 }
 
 
+void Foam::vtk::polyWriter::beginPiece
+(
+    const pointField& points,
+    const bool useVerts
+)
+{
+    // Basic sizes
+    pointSlab_ = points.size();
+    cellSlab_ = points.size();  // One vertex per point
+
+    if (parallel_)
+    {
+        Foam::reduceOffsets
+        (
+            UPstream::worldComm,
+            pointSlab_,
+            cellSlab_
+        );
+    }
+
+    if (!useVerts)
+    {
+        cellSlab_ = 0;
+    }
+
+    // Nothing else to do for legacy
+    if (legacy()) return;
+
+    if (format_)
+    {
+        if (useVerts)
+        {
+            format().tag
+            (
+                vtk::fileTag::PIECE,
+                vtk::fileAttr::NUMBER_OF_POINTS, nTotalPoints(),
+                vtk::fileAttr::NUMBER_OF_VERTS,  nTotalCells()
+            );
+        }
+        else
+        {
+            format().tag
+            (
+                vtk::fileTag::PIECE,
+                vtk::fileAttr::NUMBER_OF_POINTS, nTotalPoints()
+            );
+        }
+    }
+}
+
+
 void Foam::vtk::polyWriter::writePoints
 (
     const pointField& points
@@ -257,10 +308,10 @@ void Foam::vtk::polyWriter::writeLines
 
         if (format_)
         {
-            const uint64_t payLoad = vtk::sizeofData<label>(nConns);
+            const auto payLoad = vtk::sizeofData<label>(nConns);
 
             format().beginDataArray<label>(vtk::dataArrayAttr::CONNECTIVITY);
-            format().writeSize(payLoad * sizeof(label));
+            format().writeSize(payLoad);
         }
 
         {
@@ -292,11 +343,7 @@ void Foam::vtk::polyWriter::writeLines
             vtk::writeList(format(), vertLabels);
         }
 
-        if (format_)
-        {
-            format().flush();
-            format().endDataArray();
-        }
+        this->endDataArray();
     }
 
 
@@ -314,7 +361,7 @@ void Foam::vtk::polyWriter::writeLines
 
         if (format_)
         {
-            const uint64_t payLoad = vtk::sizeofData<label>(nOffs);
+            const auto payLoad = vtk::sizeofData<label>(nOffs);
 
             format().beginDataArray<label>(vtk::dataArrayAttr::OFFSETS);
             format().writeSize(payLoad);
@@ -348,11 +395,7 @@ void Foam::vtk::polyWriter::writeLines
         }
 
 
-        if (format_)
-        {
-            format().flush();
-            format().endDataArray();
-        }
+        this->endDataArray();
     }
 
     if (format_)
@@ -465,10 +508,10 @@ void Foam::vtk::polyWriter::writePolys
 
         if (format_)
         {
-            const uint64_t payLoad = vtk::sizeofData<label>(nConns);
+            const auto payLoad = vtk::sizeofData<label>(nConns);
 
             format().beginDataArray<label>(vtk::dataArrayAttr::CONNECTIVITY);
-            format().writeSize(payLoad * sizeof(label));
+            format().writeSize(payLoad);
         }
 
         {
@@ -499,11 +542,7 @@ void Foam::vtk::polyWriter::writePolys
             vtk::writeList(format(), vertLabels);
         }
 
-        if (format_)
-        {
-            format().flush();
-            format().endDataArray();
-        }
+        this->endDataArray();
     }
 
 
@@ -521,7 +560,7 @@ void Foam::vtk::polyWriter::writePolys
 
         if (format_)
         {
-            const uint64_t payLoad = vtk::sizeofData<label>(nOffs);
+            const auto payLoad = vtk::sizeofData<label>(nOffs);
 
             format().beginDataArray<label>(vtk::dataArrayAttr::OFFSETS);
             format().writeSize(payLoad);
@@ -555,16 +594,85 @@ void Foam::vtk::polyWriter::writePolys
         }
 
 
-        if (format_)
-        {
-            format().flush();
-            format().endDataArray();
-        }
+        this->endDataArray();
     }
 
     if (format_)
     {
         format().endTag(vtk::fileTag::POLYS);
+    }
+}
+
+
+void Foam::vtk::polyWriter::writeVerts
+(
+    const label nTotalVerts
+)
+{
+    // Note: nTotalVerts is usually identical to cellSlab_.total()
+    // and should be identical to pointSlab_.total() as well
+
+    if (legacy())
+    {
+        legacy::beginVerts(os_, nTotalVerts);
+
+        // Legacy: size + connectivity together
+        // [1, id1, 1, id2, ..., ...]
+
+        // Have enough information to write on master only
+        if (format_)
+        {
+            auto& fmt = format();
+
+            // connectivity = 1 per vertex
+            const label connect(1);
+
+            for (label verti = 0; verti < nTotalVerts; ++verti)
+            {
+                vtk::write(fmt, connect);  // The size prefix
+                vtk::write(fmt, verti);    // Vertex label
+            }
+
+            fmt.flush();
+        }
+    }
+    else
+    {
+        // Same payload for connectivity and offsets
+        const auto payLoad = vtk::sizeofData<label>(nTotalVerts);
+
+        // Have enough information to write on master only
+        if (format_)
+        {
+            auto& fmt = format();
+
+            fmt.tag(vtk::fileTag::VERTS);
+
+            // 'connectivity' = linear mapping onto points
+            {
+                fmt.beginDataArray<label>(vtk::dataArrayAttr::CONNECTIVITY);
+                fmt.writeSize(payLoad);
+
+                vtk::writeIdentity(fmt, nTotalVerts);
+
+                fmt.flush();
+                fmt.endDataArray();
+            }
+
+            // 'offsets' (connectivity end offsets)
+            // = linear mapping onto points (with 1 offset)
+            {
+                fmt.beginDataArray<label>(vtk::dataArrayAttr::OFFSETS);
+                fmt.writeSize(payLoad);
+
+                vtk::writeIdentity(fmt, nTotalVerts, 1);
+
+                fmt.flush();
+                fmt.endDataArray();
+            }
+
+            fmt.endTag(vtk::fileTag::VERTS);
+        }
     }
 }
 
@@ -672,6 +780,23 @@ bool Foam::vtk::polyWriter::writePolyGeometry
 }
 
 
+bool Foam::vtk::polyWriter::writeVertGeometry
+(
+    const pointField& points
+)
+{
+    enter_Piece();
+
+    beginPiece(points, true);  //< useVerts = true
+
+    writePoints(points);
+
+    writeVerts(nTotalCells());
+
+    return true;
+}
+
+
 bool Foam::vtk::polyWriter::beginCellData(label nFields)
 {
     return enter_CellData(nTotalCells(), nFields);
@@ -688,6 +813,28 @@ bool Foam::vtk::polyWriter::writeProcIDs()
 {
     return vtk::fileWriter::writeProcIDs
     (
+        // Appropriate rank-local size:
+        (this->isPointData() ? pointSlab_.size() : cellSlab_.size())
+    );
+}
+
+
+void Foam::vtk::polyWriter::writeLocalIDs(const word& fieldName)
+{
+    vtk::fileWriter::writeLocalIDs
+    (
+        fieldName,
+        // Appropriate rank-local size:
+        (this->isPointData() ? pointSlab_.size() : cellSlab_.size())
+    );
+}
+
+
+void Foam::vtk::polyWriter::writeGlobalIDs(const word& fieldName)
+{
+    vtk::fileWriter::writeGlobalIDs
+    (
+        fieldName,
         // Appropriate rank-local size:
         (this->isPointData() ? pointSlab_.size() : cellSlab_.size())
     );

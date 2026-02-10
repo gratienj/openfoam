@@ -207,6 +207,12 @@ protected:
         //  A no-op in serial.
         bool writeProcIDs(label localSize);
 
+        //- Write rank-local identity map
+        void writeLocalIDs(const word& fieldName, label localSize);
+
+        //- Write global identity map
+        void writeGlobalIDs(const word& fieldName, label localSize);
+
 
     // Other
 

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2026 OpenCFD Ltd.
+    Copyright (C) 2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,10 +24,10 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::vtk::surfaceWriter
+    Foam::vtk::vertexWriter
 
 Description
-    Write faces/points (optionally with fields)
+    Write vertex/points (optionally with fields)
     as a vtp file or a legacy vtk file.
 
     The file output states are managed by the Foam::vtk::fileWriter class.
@@ -37,16 +37,14 @@ Note
     Parallel output is combined into a single Piece without point merging,
     which is similar to using multi-piece data sets, but allows more
     convenient creation as a streaming process.
-    In the future, the duplicate points at processor connections
-    may be addressed using ghost points.
 
 SourceFiles
-    foamVtkSurfaceWriter.cxx
+    foamVtkVertexWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_vtk_surfaceWriter_H
-#define Foam_vtk_surfaceWriter_H
+#ifndef Foam_vtk_vertexWriter_H
+#define Foam_vtk_vertexWriter_H
 
 #include "foamVtkPolyWriter.H"
 #include "instant.H"
@@ -61,10 +59,10 @@ namespace vtk
 {
 
 /*---------------------------------------------------------------------------*\
-                     Class vtk::surfaceWriter Declaration
+                       Class vtk::vertexWriter Declaration
 \*---------------------------------------------------------------------------*/
 
-class surfaceWriter
+class vertexWriter
 :
     public vtk::polyWriter
 {
@@ -73,9 +71,6 @@ class surfaceWriter
         //- Reference to the points
         std::reference_wrapper<const pointField> points_;
 
-        //- Reference to the faces
-        std::reference_wrapper<const faceList> faces_;
-
         //- Time name/value
         instant instant_;
 
@@ -83,10 +78,10 @@ class surfaceWriter
     // Private Member Functions
 
         //- No copy construct
-        surfaceWriter(const surfaceWriter&) = delete;
+        vertexWriter(const vertexWriter&) = delete;
 
         //- No copy assignment
-        void operator=(const surfaceWriter&) = delete;
+        void operator=(const vertexWriter&) = delete;
 
 
 public:
@@ -94,30 +89,27 @@ public:
     // Constructors
 
         //- Construct from components (default format INLINE_BASE64)
-        surfaceWriter
+        explicit vertexWriter
         (
             const pointField& pts,
-            const faceList& faces,
             const vtk::outputOptions opts = vtk::formatType::INLINE_BASE64
         );
 
         //- Construct from components (default format INLINE_BASE64),
         //- and open the file for writing.
         //  The file name is with/without an extension.
-        surfaceWriter
+        vertexWriter
         (
             const pointField& pts,
-            const faceList& faces,
             const fileName& file,
             bool parallel = UPstream::parRun()
         );
 
         //- Construct from components and open the file for writing.
         //  The file name is with/without an extension.
-        surfaceWriter
+        vertexWriter
         (
             const pointField& pts,
-            const faceList& faces,
             const vtk::outputOptions opts,
             const fileName& file,
             bool parallel = UPstream::parRun()
@@ -125,7 +117,7 @@ public:
 
 
     //- Destructor
-    virtual ~surfaceWriter() = default;
+    virtual ~vertexWriter() = default;
 
 
     // Member Functions
@@ -137,7 +129,7 @@ public:
         //  \note Expected calling states: (OPENED).
         virtual bool beginFile(std::string title = "");
 
-        //- Write faces topology
+        //- Write vertex topology
         //  Also writes the file header if not previously written.
         //  \note Must be called prior to writing CellData or PointData
         virtual bool writeGeometry();
@@ -152,8 +144,8 @@ public:
         //- Write the currently set time as "TimeValue" FieldData
         void writeTimeValue();
 
-        //- Reset point/face references to begin a new piece
-        void piece(const pointField& points, const faceList& faces);
+        //- Reset point references to begin a new piece
+        void piece(const pointField& points);
 };
 
 

@@ -60,8 +60,7 @@ void Foam::vtk::fileWriter::beginDataArray
             }
             else
             {
-                const uint64_t payLoad =
-                    vtk::sizeofData<label, nCmpt>(nValues);
+                const auto payLoad = vtk::sizeofData<label, nCmpt>(nValues);
 
                 format().beginDataArray<label, nCmpt>(fieldName);
                 format().writeSize(payLoad);
@@ -75,8 +74,7 @@ void Foam::vtk::fileWriter::beginDataArray
             }
             else
             {
-                const uint64_t payLoad =
-                    vtk::sizeofData<float, nCmpt>(nValues);
+                const auto payLoad = vtk::sizeofData<float, nCmpt>(nValues);
 
                 format().beginDataArray<float, nCmpt>(fieldName);
                 format().writeSize(payLoad);

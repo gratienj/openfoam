@@ -91,6 +91,9 @@ protected:
         //- Total number of field cells (edges or faces) for the current Piece
         label nTotalCells() const noexcept { return cellSlab_.total(); }
 
+        //- Write verts (legacy or non-legacy format).
+        void writeVerts(const label nTotalVerts);
+
 private:
 
     // Private Member Functions
@@ -100,6 +103,9 @@ private:
 
         //- Determine sizes and begin piece (CellData == polys)
         void beginPiece(const pointField& points, const UList<face>& faces);
+
+        //- Determine sizes and begin piece (CellData == verts)
+        void beginPiece(const pointField& points, const bool useVerts);
 
         //- Write points
         void writePoints(const pointField& points);
@@ -192,6 +198,12 @@ public:
             const UList<face>& faces
         );
 
+        //- Low-level write vertex/point topology.
+        //- Normally used by writeGeometry() in a derived class
+        //  Also writes the file header if not previously written.
+        //  \note Must be called prior to writing CellData or PointData
+        bool writeVertGeometry(const pointField& points);
+
         //- Begin CellData output section for specified number of fields.
         //  Must be called prior to writing any cell data fields.
         //  \param nFields is for legacy format only.
@@ -216,6 +228,14 @@ public:
         //- In parallel, write "procID" field as CellData or PointData
         //- (depending on the current context). A no-op in serial.
         bool writeProcIDs();
+
+        //- Write rank-local identity map as CellData or PointData
+        //- (depending on the current context).
+        void writeLocalIDs(const word& fieldName);
+
+        //- Write global identity map as CellData or PointData
+        //- (depending on the current context).
+        void writeGlobalIDs(const word& fieldName);
 
         //- Write a uniform field of CellData or PointData
         //- (depending on the current context).

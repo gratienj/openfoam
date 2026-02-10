@@ -137,7 +137,7 @@ public:
         //  \note Expected calling states: (OPENED).
         virtual bool beginFile(std::string title = "");
 
-        //- Write patch topology
+        //- Write line topology
         //  Also writes the file header if not previously written.
         //  \note Must be called prior to writing CellData or PointData
         virtual bool writeGeometry();
