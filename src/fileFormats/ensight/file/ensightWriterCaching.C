@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2024 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,9 @@ License
 namespace Foam
 {
 
-// Compare time values with tolerance
-static const equalOp<scalar> equalTimes(ROOTSMALL);
+// Compare time values with tolerance, corresponding to ROOTSMALL (double)
+// to provide a consistent behaviour for float as well (issue #3493)
+static const equalOp<scalar> equalTimes(3.0e-8);
 
 // Use ListOps findLower (with tolerance), to find the location of the next
 // time-related index.
@@ -49,10 +50,7 @@ static label findTimeIndex(const UList<scalar>& list, const scalar val)
             list,
             val,
             0,
-            [](const scalar a, const scalar b)
-            {
-                return (a < b) && (Foam::mag(b - a) > ROOTSMALL);
-            }
+            [](auto a, auto b) { return (a < b) && !equalTimes(a, b); }
         );
 
     if (idx < 0 || !equalTimes(list[idx], val))
@@ -146,8 +144,6 @@ Foam::label Foam::ensightOutput::writerCaching::readPreviousTimes
         timeIndex = findTimeIndex(times_, timeValue);
 
         labelList geomIndices;
-        scalarList meshTimes;
-
         if (cache_.readIfPresent("geometry", geomIndices))
         {
             // Convert indices to bitSet entries
@@ -166,12 +162,12 @@ Foam::label Foam::ensightOutput::writerCaching::readPreviousTimes
 
 Foam::label Foam::ensightOutput::writerCaching::latestTimeIndex() const
 {
-    return max(0, times_.size()-1);
+    return Foam::max(0, times_.size()-1);
 }
 
 Foam::label Foam::ensightOutput::writerCaching::latestGeomIndex() const
 {
-    return max(0, geoms_.find_last());
+    return Foam::max(0, geoms_.find_last());
 }
 
 
