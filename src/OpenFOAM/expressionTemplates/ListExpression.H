@@ -93,10 +93,10 @@ public:
     Container& fill(Container& lst) const
     {
         const auto& expr = static_cast<E const&>(*this);
-        int loopLen = this->size();
+        label loopLen = this->size();
 #ifdef _OPENMP
         _Pragma("omp target teams distribute parallel for if(loopLen > 1000)")
-        for(int i = 0; i < loopLen; ++i)
+        for(label i = 0; i < loopLen; ++i)
         {
             auto src = expr.cbegin() + i;
             lst[i] = *src;

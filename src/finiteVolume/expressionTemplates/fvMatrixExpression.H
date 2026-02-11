@@ -328,7 +328,7 @@ public:
                     // Split into internal and boundary expressions
                     std::vector<UpperExpr> intExprs;
                     std::vector<UpperExpr> bouExprs;
-                    DynamicList<int> intID;
+                    DynamicList<label> intID;
 
                     intExprs.reserve(n);
                     bouExprs.reserve(n);
