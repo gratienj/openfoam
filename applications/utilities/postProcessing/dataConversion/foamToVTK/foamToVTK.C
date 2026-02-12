@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -476,8 +476,9 @@ int main(int argc, char *argv[])
     argList::addOption
     (
         "name",
-        "subdir",
-        "Directory name for VTK output (default: 'VTK')"
+        "dir",
+        "Directory name for VTK output (default: 'VTK'),"
+        " relative to case dir, or an absolute path."
     );
 
     // Prevent volume BCs from triggering finite-area
@@ -692,10 +693,23 @@ int main(int argc, char *argv[])
     // ------------------------------------------------------------------------
     // Directory management
 
-    // Sub-directory for output
-    const word vtkDirName = args.getOrDefault<word>("name", "VTK");
+    // Define directory name to use for output data.
+    // The output path is at case level (or global path) only.
+    // - For parallel cases, data only written from master
 
-    const fileName outputDir(args.globalPath()/vtkDirName);
+    fileName outputDir(args.globalPath()/"VTK");
+    if (fileName dir; args.readIfPresent("name", dir) && !dir.empty())
+    {
+        if (dir.isAbsolute())
+        {
+            outputDir = std::move(dir);
+        }
+        else
+        {
+            outputDir = args.globalPath()/dir;
+        }
+        outputDir.clean();  // Remove unneeded ".."
+    }
 
     if (UPstream::master())
     {

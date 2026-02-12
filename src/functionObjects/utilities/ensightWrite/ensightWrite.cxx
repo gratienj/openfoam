@@ -172,25 +172,27 @@ bool Foam::functionObjects::ensightWrite::read(const dictionary& dict)
     caseOpts_.timeFormat("timeFormat", dict);
     caseOpts_.timePrecision("timePrecision", dict);
 
-
     // Output directory
-
-    outputDir_.clear();
-    dict.readIfPresent("directory", outputDir_);
-
-    if (outputDir_.size())
+    if (fileName dir; dict.readIfPresent("directory", dir) && !dir.empty())
     {
         // User-defined output directory
-        outputDir_.expand();
-        if (!outputDir_.isAbsolute())
+        dir.expand();
+        if (dir.isAbsolute())
         {
-            outputDir_ = time_.globalPath()/outputDir_;
+            outputDir_ = std::move(dir);
+        }
+        else
+        {
+            outputDir_ = time_.globalPath()/dir;
         }
     }
     else
     {
         // Standard postProcessing/ naming
-        outputDir_ = time_.globalPath()/functionObject::outputPrefix/name();
+        outputDir_ =
+        (
+            time_.globalPath()/functionObject::outputPrefix/name()
+        );
     }
     outputDir_.clean();  // Remove unneeded ".."
 

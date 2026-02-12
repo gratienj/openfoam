@@ -184,7 +184,7 @@ class vtkCloud
         wordRes selectFields_;
 
         //- Output directory
-        fileName directory_;
+        fileName outputDir_;
 
         //- Per cloud output for file series
         HashTable<vtk::seriesWriter, fileName> series_;

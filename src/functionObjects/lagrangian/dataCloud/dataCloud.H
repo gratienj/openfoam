@@ -145,7 +145,7 @@ class dataCloud
         word fieldName_;
 
         //- Output directory
-        fileName directory_;
+        fileName outputDir_;
 
 
     // Private Member Functions

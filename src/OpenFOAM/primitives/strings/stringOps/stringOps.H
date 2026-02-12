@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2012 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -156,6 +156,8 @@ namespace stringOps
     //    - leading "./"
     //          : the current directory - Foam::cwd()
     //  -# Leading tag expansion for commonly used directories
+    //    - <b> \<home\>/ </b>
+    //          : home directory
     //    - <b> \<etc\>/ </b>
     //          : user/group/other OpenFOAM etc directory
     //    - <b> \<etc:</b><em>[ugoa]+</em>)<b>\>/ </b>

@@ -59,8 +59,7 @@ Foam::fileName Foam::functionObjects::writeFile::baseFileDir() const
     );
 
     // Append mesh region name if not default region
-    const auto* meshPtr = isA<polyMesh>(fileObr_);
-    if (meshPtr)
+    if (const auto* meshPtr = isA<polyMesh>(fileObr_); meshPtr)
     {
         baseDir /= meshPtr->regionName();
     }

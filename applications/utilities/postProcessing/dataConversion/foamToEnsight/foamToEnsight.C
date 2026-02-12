@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -191,8 +191,9 @@ int main(int argc, char *argv[])
     argList::addOption
     (
         "name",
-        "subdir",
-        "Sub-directory name for Ensight output (default: 'EnSight')"
+        "dir",
+        "Directory name for Ensight output (default: 'EnSight'),"
+        " relative to case dir, or an absolute path."
     );
     argList::addBoolOption
     (
@@ -452,20 +453,23 @@ int main(int argc, char *argv[])
     // ------------------------------------------------------------------------
     // Directory management
 
-    // Define sub-directory name to use for EnSight data.
-    // The path to the ensight directory is at case level only
+    // Define directory name to use for output data.
+    // The output path is at case level (or global path) only.
     // - For parallel cases, data only written from master
 
-    // Sub-directory for output
-    const word ensDirName = args.getOrDefault<word>("name", "EnSight");
-
-    fileName outputDir(args.globalPath()/ensDirName);
-
-    if (!outputDir.isAbsolute())
+    fileName outputDir(args.globalPath()/"EnSight");
+    if (fileName dir; args.readIfPresent("name", dir) && !dir.empty())
     {
-        outputDir = args.globalPath()/outputDir;
+        if (dir.isAbsolute())
+        {
+            outputDir = std::move(dir);
+        }
+        else
+        {
+            outputDir = args.globalPath()/dir;
+        }
+        outputDir.clean();  // Remove unneeded ".."
     }
-
 
     // ------------------------------------------------------------------------
     cpuTime timer;
