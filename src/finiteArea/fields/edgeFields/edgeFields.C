@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
+    Copyright (C) 2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -79,4 +80,32 @@ defineTemplateDebugSwitchWithName
 
 } // End namespace Foam
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// * * * * * * * * * * * * * * * * Global Data * * * * * * * * * * * * * * * //
+
+// Note hard-coded values are more reliable than other alternatives
+
+const Foam::wordList Foam::fieldTypes::edge
+({
+    "edgeScalarField",
+    "edgeVectorField",
+    // Probably don't need anything beyond scalar...
+    "edgeSphericalTensorField",
+    "edgeSymmTensorField",
+    "edgeTensorField"
+});
+
+
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+bool Foam::fieldTypes::is_edge(const word& clsName)
+{
+    return
+    (
+        clsName.starts_with("edge") && clsName.ends_with("Field")
+     && Foam::fieldTypes::edge.contains(clsName)
+    );
+}
+
+
+// ************************************************************************* //

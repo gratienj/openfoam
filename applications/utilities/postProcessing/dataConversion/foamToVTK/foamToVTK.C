@@ -62,6 +62,9 @@ Usage
         The quoting is required to avoid shell expansions and to pass the
         information as a single argument.
 
+      - \par -edgeFields
+        Write edgeScalarFields (e.g., phis)
+
       - \par -surfaceFields
         Write surfaceScalarFields (e.g., phi)
 
@@ -148,6 +151,7 @@ Note
 #include "reportFields.H"
 
 #include "foamVtmWriter.H"
+#include "foamVtkLineWriter.H"
 #include "foamVtkInternalWriter.H"
 #include "foamVtkPatchWriter.H"
 #include "foamVtkSurfaceMeshWriter.H"
@@ -157,6 +161,7 @@ Note
 #include "foamVtkSeriesWriter.H"
 
 #include "writeAreaFields.H"
+#include "writeEdgeFields.H"
 #include "writeDimFields.H"
 #include "writeVolFields.H"
 #include "writePointFields.H"
@@ -361,6 +366,12 @@ int main(int argc, char *argv[])
     );
     argList::addBoolOption
     (
+        "edgeFields",
+        "Write edgeScalarFields (eg, phis)",
+        true  // mark as an advanced option
+    );
+    argList::addBoolOption
+    (
         "surfaceFields",
         "Write surfaceScalarFields (eg, phi)",
         true  // mark as an advanced option
@@ -495,6 +506,7 @@ int main(int argc, char *argv[])
     const bool doInternal    = !args.found("no-internal");
     const bool doLagrangian  = !args.found("no-lagrangian");
     const bool doFiniteArea  = !args.found("no-finite-area");
+    const bool doEdgeFields  = args.found("edgeFields");
     const bool doSurfaceFields = args.found("surfaceFields");
     const bool oneBoundary   = args.found("one-boundary") && doBoundary;
     const bool nearCellValue = args.found("nearCellValue") && doBoundary;
@@ -820,6 +832,11 @@ int main(int argc, char *argv[])
                 {
                     objects.filterObjects(fieldSelector);
                 }
+                if (!doSurfaceFields)
+                {
+                    // Prune surface fields unless explicitly enabled
+                    objects.filterClasses(Foam::fieldTypes::is_surface, true);
+                }
                 if (!doPointValues)
                 {
                     // Prune point fields if disabled
@@ -847,6 +864,11 @@ int main(int argc, char *argv[])
                     if (fieldSelector)
                     {
                         objs.filterObjects(fieldSelector);
+                    }
+                    if (!doEdgeFields)
+                    {
+                        // Prune edge fields unless explicitly enabled
+                        objs.filterClasses(Foam::fieldTypes::is_edge, true);
                     }
 
                     if (!objs.empty())

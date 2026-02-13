@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
+    Copyright (C) 2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -77,6 +78,21 @@ typedef
     GeometricField<tensor, faePatchField, edgeMesh>
     edgeTensorField;
 
+
+/*---------------------------------------------------------------------------*\
+                       Namespace fieldTypes Declaration
+\*---------------------------------------------------------------------------*/
+
+namespace fieldTypes
+{
+
+//- Standard (finite-area) edge field types (scalar, vector, tensor, etc)
+extern const wordList edge;
+
+//- Test if the class name appears to be a (finite-area) edge field
+bool is_edge(const word& clsName);
+
+} // End namespace fieldTypes
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
