@@ -223,38 +223,56 @@ void Foam::volPointInterpolation::interpolateDimensionedInternalField
 
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::volPointInterpolation::flatBoundaryField
+void Foam::volPointInterpolation::flatBoundaryField
 (
-    const GeometricField<Type, fvPatchField, volMesh>& vf
+    UList<Type>& result,
+    const GeometricField<Type, fvPatchField, volMesh>& fld
 ) const
 {
-    const polyBoundaryMesh& pbm = vf.mesh().boundaryMesh();
+    const polyBoundaryMesh& pbm = fld.mesh().boundaryMesh();
 
-    auto tboundaryVals = tmp<Field<Type>>::New(pbm.nFaces(), Foam::zero{});
-    auto& values = tboundaryVals.ref();
-
-    forAll(vf.boundaryField(), patchi)
+    #ifdef FULLDEBUG
+    if (FOAM_UNLIKELY(result.size() != pbm.nFaces()))
     {
-        const auto& pp = pbm[patchi];
-        const auto& pfld = vf.boundaryField()[patchi];
+        FatalErrorInFunction
+            << "mesh nBoundaryFaces = " << pbm.nFaces()
+            << " but result size = " << result.size()
+            << abort(FatalError);
+    }
+    #endif
+
+    // Some patches (eg empty) may not contribute values. Init to zero
+    result = Foam::zero{};
+
+    const auto& bfield = fld.boundaryField();
+
+    forAll(bfield, patchi)
+    {
+        // Destination within the boundaryField
+        const auto start = pbm[patchi].offset();
+        const auto& pfld = bfield[patchi];
 
         // Note: restrict transcribing to actual size of the patch field
         // - handles "empty" patch type etc.
 
-        SubList<Type> slice(values, pfld.size(), pp.offset());
-
-        if
-        (
-            !isA<emptyPolyPatch>(pp)
-         && !pfld.coupled()
-        )
+        if (!pfld.coupled())
         {
-            slice = pfld;
+            result.slice(start, pfld.size()) = pfld;
         }
     }
+}
 
-    return tboundaryVals;
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::volPointInterpolation::flatBoundaryField
+(
+    const GeometricField<Type, fvPatchField, volMesh>& fld
+) const
+{
+    auto tresult = tmp<Field<Type>>::New(fld.mesh().nBoundaryFaces());
+    flatBoundaryField(tresult.ref(), fld);
+    return tresult;
 }
 
 

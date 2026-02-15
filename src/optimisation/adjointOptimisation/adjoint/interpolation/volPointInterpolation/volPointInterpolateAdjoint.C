@@ -81,47 +81,56 @@ void Foam::volPointInterpolationAdjoint::pushUntransformedData
 
 
 template<class Type>
+void Foam::volPointInterpolationAdjoint::flatBoundaryField
+(
+    UList<Type>& result,
+    const GeometricField<Type, fvPatchField, volMesh>& fld
+) const
+{
+    const polyBoundaryMesh& pbm = fld.mesh().boundaryMesh();
+
+    #ifdef FULLDEBUG
+    if (FOAM_UNLIKELY(result.size() != pbm.nFaces()))
+    {
+        FatalErrorInFunction
+            << "mesh nBoundaryFaces = " << pbm.nFaces()
+            << " but result size = " << result.size()
+            << abort(FatalError);
+    }
+    #endif
+
+    // Some patches (eg empty) may not contribute values. Init to zero
+    result = Foam::zero{};
+
+    const auto& bfield = fld.boundaryField();
+
+    forAll(bfield, patchi)
+    {
+        // Destination index within the boundaryField
+        const auto start = pbm[patchi].offset();
+        const auto& pfld = bfield[patchi];
+
+        // Note: restrict transcribing to actual size of the patch field
+        // - handles "empty" patch type etc.
+
+        if (!pfld.coupled())
+        {
+            result.slice(start, pfld.size()) = pfld;
+        }
+    }
+}
+
+
+template<class Type>
 Foam::tmp<Foam::Field<Type>>
 Foam::volPointInterpolationAdjoint::flatBoundaryField
 (
-    const GeometricField<Type, fvPatchField, volMesh>& vf
+    const GeometricField<Type, fvPatchField, volMesh>& fld
 ) const
 {
-    const fvMesh& mesh = vf.mesh();
-    const fvBoundaryMesh& bm = mesh.boundary();
-
-    auto tboundaryVals = tmp<Field<Type>>::New(mesh.nBoundaryFaces());
-    auto& boundaryVals = tboundaryVals.ref();
-
-    forAll(vf.boundaryField(), patchi)
-    {
-        label bFacei = bm[patchi].patch().start() - mesh.nInternalFaces();
-
-        if
-        (
-           !isA<emptyFvPatch>(bm[patchi])
-        && !vf.boundaryField()[patchi].coupled()
-        )
-        {
-            SubList<Type>
-            (
-                boundaryVals,
-                vf.boundaryField()[patchi].size(),
-                bFacei
-            ) = vf.boundaryField()[patchi];
-        }
-        else
-        {
-            const polyPatch& pp = bm[patchi].patch();
-
-            forAll(pp, i)
-            {
-                boundaryVals[bFacei++] = Zero;
-            }
-        }
-    }
-
-    return tboundaryVals;
+    auto tresult = tmp<Field<Type>>::New(fld.mesh().nBoundaryFaces());
+    flatBoundaryField(tresult.ref(), fld);
+    return tresult;
 }
 
 
@@ -227,16 +236,16 @@ void Foam::volPointInterpolationAdjoint::interpolateSensitivitiesField
     // Transfer values to face-based sensitivity field
     for (const label patchi : patchIDs)
     {
-        label bFacei = bm[patchi].patch().start() - Mesh.nInternalFaces();
-        if (!isA<emptyFvPatch>(bm[patchi]) && !vf[patchi].coupled())
+        // Destination within the boundaryField
+        const auto start = bm[patchi].patch().offset();
+        auto& pfld = vf[patchi];
+
+        // Note: restrict transcribing to actual size of the patch field
+        // - handles "empty" patch type etc.
+
+        if (!isA<emptyFvPatch>(bm[patchi]) && !pfld.coupled())
         {
-            vf[patchi] =
-                SubList<Type>
-                (
-                    boundaryVals,
-                    vf[patchi].size(),
-                    bFacei
-                );
+            pfld = boundaryVals.slice(start, pfld.size());
         }
     }
 }

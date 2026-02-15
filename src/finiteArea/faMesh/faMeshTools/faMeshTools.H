@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -78,6 +78,17 @@ class faMeshTools
         const polyMesh& pMesh,
         const bool decompose,  // Only used if readHandlerPtr == nullptr
         const bool verbose = false
+    );
+
+
+    //- Flatten an area or edge boundary field into linear addressing
+    template<class Type, template<class> class PatchField, class GeoMesh>
+    static void flatBoundaryField_impl
+    (
+        UList<Type>& result,
+        const GeometricField<Type, PatchField, GeoMesh>& fld,
+        //! Use primitive patch edge ordering instead of faMesh ordering
+        const bool primitiveOrdering = false
     );
 
 
@@ -237,12 +248,63 @@ public:
     );
 
 
-    //- Flatten an edge field into linear addressing
-    //  Optionally use primitive patch edge ordering
+    //- Extract and return the (primitive patch) edge labels of the faMesh
+    static labelList edgeLabels(const faMesh& mesh);
+
+    //- Flatten an area boundary field into linear addressing
+    template<class Type>
+    static void flatBoundaryField
+    (
+        UList<Type>& result,
+        const GeometricField<Type, faPatchField, areaMesh>& fld,
+        //! Use primitive patch edge ordering instead of faMesh ordering
+        const bool primitiveOrdering = false
+    );
+
+    //- Flatten an area boundary field into linear addressing
+    template<class Type>
+    static tmp<Field<Type>> flatBoundaryField
+    (
+        const GeometricField<Type, faPatchField, areaMesh>& fld,
+        //! Use primitive patch edge ordering instead of faMesh ordering
+        const bool primitiveOrdering = false
+    );
+
+    //- Flatten an edge boundary field into linear addressing
+    template<class Type>
+    static void flatBoundaryField
+    (
+        UList<Type>& result,
+        const GeometricField<Type, faePatchField, edgeMesh>& fld,
+        //! Use primitive patch edge ordering instead of faMesh ordering
+        const bool primitiveOrdering = false
+    );
+
+    //- Flatten an edge boundary field into linear addressing
+    template<class Type>
+    static tmp<Field<Type>> flatBoundaryField
+    (
+        const GeometricField<Type, faePatchField, edgeMesh>& fld,
+        //! Use primitive patch edge ordering instead of faMesh ordering
+        const bool primitiveOrdering = false
+    );
+
+    //- Flatten an edge field (internal and boundary) into linear addressing
+    template<class Type>
+    static void flattenEdgeField
+    (
+        UList<Type>& result,
+        const GeometricField<Type, faePatchField, edgeMesh>& fld,
+        //! Use primitive patch edge ordering instead of faMesh ordering
+        const bool primitiveOrdering = false
+    );
+
+    //- Flatten an edge field (internal and boundary) into linear addressing
     template<class Type>
     static tmp<Field<Type>> flattenEdgeField
     (
         const GeometricField<Type, faePatchField, edgeMesh>& fld,
+        //! Use primitive patch edge ordering instead of faMesh ordering
         const bool primitiveOrdering = false
     );
 

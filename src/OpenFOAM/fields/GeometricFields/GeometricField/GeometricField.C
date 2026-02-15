@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -59,17 +59,15 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::readFields
 
     boundaryField_.readField(*this, dict.subDict("boundaryField"));
 
-    Type refLevel;
-
-    if (dict.readIfPresent("referenceLevel", refLevel))
+    if (Type refLevel; dict.readIfPresent("referenceLevel", refLevel))
     {
         // Add to internal (primitive) field
         this->field() += refLevel;
 
         // Add to boundary fields
-        forAll(boundaryField_, patchi)
+        for (auto& pfld : boundaryField_)
         {
-            boundaryField_[patchi] == boundaryField_[patchi] + refLevel;
+            pfld == pfld + refLevel;
         }
     }
 }
@@ -308,12 +306,12 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     const IOobject& io,
     const Internal& diField,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(io, diField),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(this->mesh().boundary(), *this, ptfl)
+    boundaryField_(this->mesh().boundary(), *this, pflds)
 {
     DebugInFunction
         << "Copy construct from components" << nl << this->info() << endl;
@@ -327,12 +325,12 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     const IOobject& io,
     Internal&& diField,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(io, std::move(diField)),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(this->mesh().boundary(), *this, ptfl)
+    boundaryField_(this->mesh().boundary(), *this, pflds)
 {
     DebugInFunction
         << "Move construct from components" << nl << this->info() << endl;
@@ -346,12 +344,12 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     const IOobject& io,
     const tmp<Internal>& tfield,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(io, tfield),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(this->mesh().boundary(), *this, ptfl)
+    boundaryField_(this->mesh().boundary(), *this, pflds)
 {
     DebugInFunction
         << "Construct from tmp internalField" << nl << this->info() << endl;
@@ -364,12 +362,12 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     const Internal& diField,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(diField),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(this->mesh().boundary(), *this, ptfl)
+    boundaryField_(this->mesh().boundary(), *this, pflds)
 {
     DebugInFunction
         << "Copy construct from components" << nl << this->info() << endl;
@@ -382,12 +380,12 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
 (
     Internal&& diField,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(std::move(diField)),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(this->mesh().boundary(), *this, ptfl)
+    boundaryField_(this->mesh().boundary(), *this, pflds)
 {
     DebugInFunction
         << "Move construct from components" << nl << this->info() << endl;
@@ -466,12 +464,12 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const Mesh& mesh,
     const dimensionSet& dims,
     const Field<Type>& iField,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(io, mesh, dims, iField),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(mesh.boundary(), *this, ptfl)
+    boundaryField_(mesh.boundary(), *this, pflds)
 {
     DebugInFunction
         << "Copy construct from components" << nl << this->info() << endl;
@@ -487,12 +485,12 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const Mesh& mesh,
     const dimensionSet& dims,
     Field<Type>&& iField,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(io, mesh, dims, std::move(iField)),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(mesh.boundary(), *this, ptfl)
+    boundaryField_(mesh.boundary(), *this, pflds)
 {
     DebugInFunction
         << "Move construct from components" << nl << this->info() << endl;
@@ -508,12 +506,12 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::GeometricField
     const Mesh& mesh,
     const dimensionSet& dims,
     const tmp<Field<Type>>& tfield,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     Internal(io, mesh, dims, tfield),
     timeIndex_(this->time().timeIndex()),
-    boundaryField_(mesh.boundary(), *this, ptfl)
+    boundaryField_(mesh.boundary(), *this, pflds)
 {
     DebugInFunction
         << "Construct from tmp internalField" << nl << this->info() << endl;

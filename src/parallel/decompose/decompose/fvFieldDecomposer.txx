@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2021-2024 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,11 +27,11 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvFieldDecomposer.H"
+#include "emptyFvPatchFields.H"
 #include "processorFvPatchField.H"
 #include "processorFvsPatchField.H"
 #include "processorCyclicFvPatchField.H"
 #include "processorCyclicFvsPatchField.H"
-#include "emptyFvPatchFields.H"
 #include "volFields.H"
 #include "surfaceFields.H"
 
@@ -82,71 +82,74 @@ Foam::fvFieldDecomposer::decomposeField
     result.oriented() = field.oriented();
 
 
-    // 2. Change the fvPatchFields to the correct type using a mapper
-    //  constructor (with reference to the now correct internal field)
+    // Now redo the boundaries
+    const auto& origPatchFields = field.boundaryField();
+    //const auto nOldPatches = origPatchFields.size();
 
-    auto& bf = result.boundaryFieldRef();
+    const auto& tgtInternal = result.internalField();
+    auto& boundaries = result.boundaryFieldRef();
 
-    forAll(bf, patchi)
+    boundaries.resize_null(procMesh_.boundary().size());
+
+    forAll(boundaries, patchi)
     {
-        if (patchFieldDecomposerPtrs_.set(patchi))
+        const auto& tgtPatch = procMesh_.boundary()[patchi];
+        const auto oldPatchi = boundaryAddressing_[patchi];
+
+        if (oldPatchi >= 0 && patchFieldDecomposers_.test(patchi))
         {
-            bf.set
+            boundaries.set
             (
                 patchi,
                 fvPatchField<Type>::New
                 (
-                    field.boundaryField()[boundaryAddressing_[patchi]],
-                    procMesh_.boundary()[patchi],
-                    result.internalField(),
-                    patchFieldDecomposerPtrs_[patchi]
+                    origPatchFields[oldPatchi],
+                    tgtPatch,
+                    tgtInternal,
+                    patchFieldDecomposers_[patchi]
                 )
             );
         }
-        else if (isA<processorCyclicFvPatch>(procMesh_.boundary()[patchi]))
+        else if (isA<processorCyclicFvPatch>(tgtPatch))
         {
-            bf.set
+            boundaries.set
             (
                 patchi,
                 new processorCyclicFvPatchField<Type>
                 (
-                    procMesh_.boundary()[patchi],
-                    result.internalField(),
+                    tgtPatch,
+                    tgtInternal,
                     Field<Type>
                     (
                         field.primitiveField(),
-                        processorVolPatchFieldDecomposerPtrs_[patchi]
+                        processorVolPatchFieldDecomposers_[patchi]
                     )
                 )
             );
         }
-        else if (isA<processorFvPatch>(procMesh_.boundary()[patchi]))
+        else if (isA<processorFvPatch>(tgtPatch))
         {
-            bf.set
+            boundaries.set
             (
                 patchi,
                 new processorFvPatchField<Type>
                 (
-                    procMesh_.boundary()[patchi],
-                    result.internalField(),
+                    tgtPatch,
+                    tgtInternal,
                     Field<Type>
                     (
                         field.primitiveField(),
-                        processorVolPatchFieldDecomposerPtrs_[patchi]
+                        processorVolPatchFieldDecomposers_[patchi]
                     )
                 )
             );
         }
         else if (allowUnknownPatchFields)
         {
-            bf.set
+            boundaries.set
             (
                 patchi,
-                new emptyFvPatchField<Type>
-                (
-                    procMesh_.boundary()[patchi],
-                    result.internalField()
-                )
+                new emptyFvPatchField<Type>(tgtPatch, tgtInternal)
             );
         }
         else
@@ -170,7 +173,7 @@ Foam::fvFieldDecomposer::decomposeField
 {
     labelList mapAddr
     (
-        labelList::subList(faceAddressing_, procMesh_.nInternalFaces())
+        faceAddressing_.slice(0, procMesh_.nInternalFaces())
     );
     forAll(mapAddr, i)
     {
@@ -183,25 +186,23 @@ Foam::fvFieldDecomposer::decomposeField
     // I cannot find a better solution without making the internal storage
     // mechanism for surfaceFields correspond to the one of faces in polyMesh
     // (i.e. using slices)
-    Field<Type> allFaceField(field.mesh().nFaces());
 
+    Field<Type> fullField(field.mesh().nFaces());
     {
-        SubList<Type>(allFaceField, field.primitiveField().size()) =
-            field.primitiveField();
+        // Internal field
+        fullField.slice(0, field.size()) = field.primitiveField();
 
-        forAll(field.boundaryField(), patchi)
+        // Boundary fields
+        fullField.slice(field.mesh().nInternalFaces()) = Foam::zero{};
+        for (const auto& pfld : field.boundaryField())
         {
-            const Field<Type>& pfld = field.boundaryField()[patchi];
-
-            const label start = field.mesh().boundaryMesh()[patchi].start();
-
-            SubList<Type>(allFaceField, pfld.size(), start) = pfld;
+            fullField.slice(pfld.patch().start(), pfld.size()) = pfld;
         }
     }
 
 
-    // 1. Create the complete field with dummy patch fields
-
+    // Create the field for the processor
+    // - with dummy patch fields
     auto tresult = GeometricField<Type, fvsPatchField, surfaceMesh>::New
     (
         field.name(),
@@ -215,75 +216,82 @@ Foam::fvFieldDecomposer::decomposeField
     auto& result = tresult.ref();
     result.oriented() = field.oriented();
 
-    // 2. Change the fvsPatchFields to the correct type using a mapper
-    //  constructor (with reference to the now correct internal field)
 
-    auto& bf = result.boundaryFieldRef();
+    // Now redo the boundaries
+    const auto& origPatchFields = field.boundaryField();
+    //const auto nOldPatches = origPatchFields.size();
 
-    forAll(boundaryAddressing_, patchi)
+    const auto& tgtInternal = result.internalField();
+    auto& boundaries = result.boundaryFieldRef();
+
+    boundaries.resize_null(procMesh_.boundary().size());
+
+    forAll(boundaries, patchi)
     {
-        if (patchFieldDecomposerPtrs_.set(patchi))
+        bool applyFlips = result.is_oriented();
+
+        const auto& tgtPatch = procMesh_.boundary()[patchi];
+        const auto oldPatchi = boundaryAddressing_[patchi];
+
+        if (oldPatchi >= 0 && patchFieldDecomposers_.test(patchi))
         {
-            bf.set
+            applyFlips = false;  // No field flipping (local mapping)
+            boundaries.set
             (
                 patchi,
                 fvsPatchField<Type>::New
                 (
-                    field.boundaryField()[boundaryAddressing_[patchi]],
-                    procMesh_.boundary()[patchi],
-                    result.internalField(),
-                    patchFieldDecomposerPtrs_[patchi]
+                    origPatchFields[oldPatchi],
+                    tgtPatch,
+                    tgtInternal,
+                    patchFieldDecomposers_[patchi]
                 )
             );
         }
-        else if (isA<processorCyclicFvPatch>(procMesh_.boundary()[patchi]))
+        else if (isA<processorCyclicFvPatch>(tgtPatch))
         {
-            bf.set
+            boundaries.set
             (
                 patchi,
                 new processorCyclicFvsPatchField<Type>
                 (
-                    procMesh_.boundary()[patchi],
-                    result.internalField(),
+                    tgtPatch,
+                    tgtInternal,
                     Field<Type>
                     (
-                        allFaceField,
-                        processorSurfacePatchFieldDecomposerPtrs_[patchi]
+                        fullField,
+                        processorSurfacePatchFieldDecomposers_[patchi]
                     )
                 )
             );
-
-            if (result.is_oriented())
-            {
-                bf[patchi] *= faceSign_[patchi];
-            }
         }
-        else if (isA<processorFvPatch>(procMesh_.boundary()[patchi]))
+        else if (isA<processorFvPatch>(tgtPatch))
         {
-            bf.set
+            boundaries.set
             (
                 patchi,
                 new processorFvsPatchField<Type>
                 (
-                    procMesh_.boundary()[patchi],
-                    result.internalField(),
+                    tgtPatch,
+                    tgtInternal,
                     Field<Type>
                     (
-                        allFaceField,
-                        processorSurfacePatchFieldDecomposerPtrs_[patchi]
+                        fullField,
+                        processorSurfacePatchFieldDecomposers_[patchi]
                     )
                 )
             );
-
-            if (result.is_oriented())
-            {
-                bf[patchi] *= faceSign_[patchi];
-            }
         }
         else
         {
+            applyFlips = false;
             FatalErrorInFunction
                 << "Unknown type." << abort(FatalError);
+        }
+
+        if (applyFlips && faceSigns_.test(patchi))
+        {
+            boundaries[patchi] *= faceSigns_[patchi];
         }
     }
 

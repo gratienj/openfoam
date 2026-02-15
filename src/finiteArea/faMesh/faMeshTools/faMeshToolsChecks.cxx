@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,6 +31,30 @@ License
 #include "processorFaPatch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+Foam::labelList Foam::faMeshTools::edgeLabels(const faMesh& mesh)
+{
+    labelList values(Foam::identity(mesh.nEdges()));
+
+    // Internal edges are in the same order for faMesh and primitive patch
+    label start = mesh.nInternalEdges();
+
+    // Placeholder to detect if anything was missed
+    values.slice(start) = -1;
+
+    // Boundaries
+    for (const auto& p : mesh.boundary())
+    {
+        const auto& labels = p.edgeLabels();
+        const auto count = labels.size();
+
+        values.slice(start, count) = labels;
+        start += count;
+    }
+
+    return values;
+}
+
 
 void Foam::faMeshTools::printMeshChecks
 (

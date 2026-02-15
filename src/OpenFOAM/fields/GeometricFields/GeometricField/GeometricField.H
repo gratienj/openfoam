@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -236,42 +236,57 @@ public:
             const wordList& actualPatchTypes = wordList()
         );
 
-        //- Copy construct from internal field and a patch list to clone
+        //- Copy construct from internal field
+        //- and list of patch fields (to be cloned)
         GeometricField
         (
             const IOobject& io,
             const Internal& diField,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
-        //- Move construct from internal field and a patch list to clone
+        //- Move construct from internal field
+        //- and list of patch fields (to be cloned)
         GeometricField
         (
             const IOobject& io,
             Internal&& diField,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
-        //- Construct from internal field (tmp) and a patch list to clone
+        //- Construct from internal field (tmp)
+        //- and list of patch fields (to be cloned)
         GeometricField
         (
             const IOobject& io,
             const tmp<Internal>& tfield,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
-        //- Copy construct from internal field and a patch list to clone
+        //- Copy construct from internal field
+        //- and list of patch fields (to be cloned)
         GeometricField
         (
             const Internal& diField,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
-        //- Move construct from internal field and a patch list to clone
+        //- Move construct from internal field
+        //- and list of patch fields (to be cloned)
         GeometricField
         (
             Internal&& diField,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Copy construct from primitive field, with specified patch type
@@ -304,24 +319,30 @@ public:
             const word& patchFieldType = PatchField<Type>::calculatedType()
         );
 
-        //- Copy construct from primitive field and a patch list to clone
+        //- Copy construct from primitive field
+        //- and list of patch fields (to be cloned)
         GeometricField
         (
             const IOobject& io,
             const Mesh& mesh,
             const dimensionSet& dims,
             const Field<Type>& iField,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
-        //- Move construct from primitive field and a patch list to clone
+        //- Move construct from primitive field
+        //- and list of patch fields (to be cloned)
         GeometricField
         (
             const IOobject& io,
             const Mesh& mesh,
             const dimensionSet& dims,
             Field<Type>&& iField,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Copy construct from components
@@ -331,7 +352,9 @@ public:
             const Mesh& mesh,
             const dimensionSet& dims,
             const tmp<Field<Type>>& tfield,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Read construct using given IOobject. Always reads!
@@ -552,7 +575,7 @@ public:
 
         //- Return tmp field (NO_READ, NO_WRITE)
         //- from name, mesh, dimensions, copy of internal field contents
-        //- and patch list to clone.
+        //- and list of patch fields (to be cloned).
         //- [Takes current timeName from the mesh registry].
         //  For LEGACY_REGISTER, registration is determined by
         //  objectRegistry::is_cacheTemporaryObject().
@@ -563,12 +586,14 @@ public:
             const Mesh& mesh,
             const dimensionSet& dims,
             const Field<Type>& iField,
-            const PtrList<PatchField<Type>>& pflds
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Return tmp field (NO_READ, NO_WRITE)
         //- from name, mesh, dimensions, copy of internal field contents
-        //- and patch list to clone.
+        //- and list of patch fields (to be cloned).
         //- [Takes current timeName from the mesh registry].
         //  Registration/persistence determined by
         //  objectRegistry::is_cacheTemporaryObject().
@@ -578,12 +603,14 @@ public:
             const Mesh& mesh,
             const dimensionSet& dims,
             const Field<Type>& iField,
-            const PtrList<PatchField<Type>>& pflds
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Return tmp field (NO_READ, NO_WRITE)
         //- from name, mesh, dimensions, moved internal field contents
-        //- and patch list to clone.
+        //- and list of patch fields (to be cloned).
         //- [Takes current timeName from the mesh registry].
         //  For LEGACY_REGISTER, registration is determined by
         //  objectRegistry::is_cacheTemporaryObject().
@@ -594,12 +621,14 @@ public:
             const Mesh& mesh,
             const dimensionSet& dims,
             Field<Type>&& iField,
-            const PtrList<PatchField<Type>>& pflds
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Return tmp field (NO_READ, NO_WRITE)
         //- from name, mesh, dimensions, moved internal field contents
-        //- and patch list to clone.
+        //- and list of patch fields (to be cloned).
         //- [Takes current timeName from the mesh registry].
         //  Registration/persistence determined by
         //  objectRegistry::is_cacheTemporaryObject().
@@ -609,7 +638,9 @@ public:
             const Mesh& mesh,
             const dimensionSet& dims,
             Field<Type>&& iField,
-            const PtrList<PatchField<Type>>& pflds
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Return tmp field (NO_READ, NO_WRITE)
