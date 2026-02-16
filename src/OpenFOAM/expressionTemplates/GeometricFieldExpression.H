@@ -163,7 +163,7 @@ public:
         fld.oriented() = this->oriented();
 
         assert(fld.size() == this->size());
-        using ActualType = typename IntExpr::value_type;
+        typedef typename GeoField::value_type ActualType;
         ListRefWrap<ActualType> wfld(fld.internalFieldRef(), internalField());
 
         // Do boundary field
