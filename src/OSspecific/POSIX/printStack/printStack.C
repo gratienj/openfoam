@@ -40,6 +40,7 @@ License
 // Experimental - batch process addr2line.
 //#undef  Foam_batchPrintStack
 //#define Foam_batchPrintStack
+//#define Foam_useProcessPipe
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -258,6 +259,9 @@ inline void render_stack_direct
 
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 
+#ifdef Foam_useProcessPipe
+#include "ProcessPipe.cxx"
+#endif
 
 namespace
 {
@@ -659,6 +663,69 @@ void render_stack_batch
             {
                 // Shouldn't happen
             }
+            #ifdef Foam_useProcessPipe
+            else if
+            (
+                auto process
+              = PipeProcess::run_execve
+                (
+                    addr2linePath,
+                    "rw",
+                    addr2linePath, "--exe", fname
+                );
+                (process.is_read() && process.is_write())
+            )
+            {
+                FILE* write_handle = process.is_write();
+                FILE* read_handle = process.is_read();
+
+                // Bulk send all addresses (hex format)
+                for (const auto& [frameId, address] : input)
+                {
+                    // Remember the frame
+                    indices.push_back(frameId);
+
+                    ::fprintf
+                    (
+                        write_handle,
+                        "0x%lx\n",
+                        static_cast<unsigned long>(address)
+                    );
+                }
+                process.flush_write();
+
+                // Consume lines from pipe. One per input address
+                {
+                    char* buf = nullptr;
+                    size_t len = 0;
+                    ssize_t nread;
+
+                    // Read maxLines number of lines
+                    for
+                    (
+                        int lineCount = 0;
+                        (
+                            (lineCount < maxLines)
+                         && ((nread = ::getline(&buf, &len, read_handle)) >= 0)
+                        );
+                        ++lineCount
+                    )
+                    {
+                        if (nread > 0 && buf[nread-1] == '\n')
+                        {
+                            // Remove trailing newline
+                            buf[--nread] = '\0';
+                        }
+
+                        results[indices[lineCount]].assign(buf, nread);
+                    }
+
+                    ::free(buf);
+                }
+
+                // process.shutdown(); <- implicit
+            }
+            #else  /* Foam_useProcessPipe */
             else
             {
                 // Pass all addresses on the command line
@@ -710,6 +777,7 @@ void render_stack_batch
                     ::pclose(read_handle);
                 }
             }
+            #endif  /* Foam_useProcessPipe */
         }
 
         // Report. Note we are free to discard file/line at this point
