@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -124,6 +125,23 @@ Foam::IPstream::IPstream
         fmt
     )
 {}
+
+
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+
+Foam::DynamicList<char> Foam::IPstream::release()
+{
+    // Grab contents
+    DynamicList<char> contents(std::move(Pstream::transferBuf_));
+
+    // Reset input position parameters and sizes
+    UIPstreamBase::messageSize_ = 0;
+    UIPstreamBase::storedRecvBufPos_ = 0;
+    UIPstreamBase::recvBufPos_ = 0;
+    UIPstreamBase::rewind();
+
+    return contents;
+}
 
 
 // ************************************************************************* //

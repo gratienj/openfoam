@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -194,6 +195,67 @@ bool Foam::UOPstream::write
        &req,
         sendMode
     );
+}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class T>
+Foam::Ostream& Foam::UOPstreamBase::write_binary
+(
+    const T* buffer,
+    std::streamsize count
+)
+{
+    return this->write(reinterpret_cast<const char*>(buffer), count*sizeof(T));
+}
+
+
+template<class T>
+Foam::Ostream& Foam::UOPstreamBase::write_binary(const T& value)
+{
+    return this->write(reinterpret_cast<const char*>(&value), sizeof(T));
+}
+
+
+template<class T>
+Foam::Ostream& Foam::UOPstreamBase::write_at
+(
+    int64_t pos,
+    const T* buffer,
+    std::streamsize count
+)
+{
+    // Align on word boundary (64-bit)
+    constexpr size_t byteBoundary = 8;
+
+    // Verify position is aligned
+    #ifdef FULLDEBUG
+    if (pos > 0 && (pos % byteBoundary) != 0)
+    {
+        FatalErrorInFunction
+            << "Position " << pos << " is not aligned to word boundary"
+            << Foam::abort(FatalError);
+    }
+    #endif
+
+    // Write directly to the target position
+    writeToBuffer_at
+    (
+        pos,
+        reinterpret_cast<const char*>(buffer),
+        count * sizeof(T),
+        byteBoundary
+    );
+
+    return *this;
+}
+
+
+template<class T>
+Foam::Ostream& Foam::UOPstreamBase::write_at(int64_t pos, const T& value)
+{
+    return this->write_at(pos, &value, 1);
 }
 
 

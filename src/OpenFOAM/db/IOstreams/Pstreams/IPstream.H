@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2013 OpenFOAM Foundation
     Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -63,13 +64,43 @@ public:
         //- Construct given process index to read from
         IPstream
         (
+            //! Using \c nonBlocking probably does \b not work!
             const UPstream::commsTypes commsType,
+            //! The source rank (negative == ANY_SOURCE)
             const int fromProcNo,
             const int bufferSize = 0,  //!< optional buffer size
             const int tag = UPstream::msgType(),
             const int communicator = UPstream::worldComm,
             IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
         );
+
+        //- Construct given process index to read from.
+        //- Uses MPI_Probe and MPI_Recv.
+        explicit IPstream
+        (
+            //! The source rank (negative == ANY_SOURCE)
+            const int fromProcNo,
+            const int tag = UPstream::msgType(),
+            const int communicator = UPstream::worldComm,
+            IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
+        )
+        :
+            IPstream
+            (
+                UPstream::commsTypes::scheduled,  // ie, MPI_Recv()
+                fromProcNo,
+                0,  // bufferSize
+                tag,
+                communicator,
+                fmt
+            )
+        {}
+
+
+    // Member Functions
+
+        //- Release contents of the input buffer and reset the stream
+        DynamicList<char> release();
 
 
     // Static Functions
@@ -86,15 +117,7 @@ public:
             IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
         )
         {
-            IPstream is
-            (
-                UPstream::commsTypes::scheduled,  // ie, MPI_Recv()
-                fromProcNo,
-                0,  // bufferSize
-                tag,
-                communicator,
-                fmt
-            );
+            IPstream is(fromProcNo, tag, communicator, fmt);
             is >> value;
         }
 };

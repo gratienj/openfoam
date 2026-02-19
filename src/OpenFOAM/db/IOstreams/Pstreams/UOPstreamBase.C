@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017,2024 OpenFOAM Foundation
     Copyright (C) 2016-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,11 +34,12 @@ License
 
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 
-namespace Foam
+namespace
 {
 
-// Return the position with word boundary alignment
-inline static label byteAlign(const label pos, const size_t align)
+// Return the position with specified byte alignment (eg, word boundary)
+template<typename IntType>
+inline IntType byteAlign(IntType pos, size_t align) noexcept
 {
     return
     (
@@ -47,10 +49,20 @@ inline static label byteAlign(const label pos, const size_t align)
     );
 }
 
-} // End namespace Foam
+} // End anonymous namespace
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+void Foam::UOPstreamBase::alignp(size_t alignment)
+{
+    // Aligned position
+    const auto pos = byteAlign(sendBuf_.size(), alignment);
+
+    // Move to the aligned output position. Fill any gap with nul char.
+    sendBuf_.resize(pos, '\0');
+}
+
 
 inline void Foam::UOPstreamBase::prepareBuffer
 (
@@ -90,13 +102,21 @@ inline void Foam::UOPstreamBase::writeToBuffer
 {
     if (!count)
     {
+        // Nothing to do, don't even do any alignment
         return;
     }
 
     prepareBuffer(count, align);
 
     // The aligned output position
-    const label pos = sendBuf_.size();
+    const auto pos = sendBuf_.size();
+
+    if (!data)
+    {
+        // No data to write. Extend and fill with block of zeros
+        sendBuf_.resize(pos + count, '\0');
+        return;
+    }
 
     // Extend the addressable range for direct pointer access
     sendBuf_.resize(pos + count);
@@ -104,10 +124,57 @@ inline void Foam::UOPstreamBase::writeToBuffer
     char* const __restrict__ buf = (sendBuf_.data() + pos);
     const char* const __restrict__ input = reinterpret_cast<const char*>(data);
 
-    for (size_t i = 0; i < count; ++i)
+    std::copy(input, input + count, buf);
+}
+
+
+void Foam::UOPstreamBase::writeToBuffer_at
+(
+    // The target output position
+    int64_t pos,
+    const void* data,
+    const size_t count,
+    const size_t align
+)
+{
+    if (!count)
     {
-        buf[i] = input[i];
+        // Nothing to do
+        return;
     }
+
+    if (pos < 0)
+    {
+        prepareBuffer(count, align);
+        pos = sendBuf_.size();
+    }
+    else
+    {
+        // Align the position to the specified boundary
+        pos = byteAlign(pos, align);
+    }
+
+    // The end position after the write
+    const int64_t end_pos = pos + static_cast<int64_t>(count);
+
+    // Extend buffer if needed to accommodate the write at pos
+    if (sendBuf_.size() < end_pos)
+    {
+        sendBuf_.resize(end_pos, '\0');
+    }
+
+    if (!data)
+    {
+        // No data to write. Fill with zeros at the target position
+        std::fill(sendBuf_.data() + pos, sendBuf_.data() + end_pos, '\0');
+        return;
+    }
+
+    // Write data directly at the target position
+    char* const __restrict__ buf = (sendBuf_.data() + pos);
+    const char* const __restrict__ input = reinterpret_cast<const char*>(data);
+
+    std::copy(input, input + count, buf);
 }
 
 
@@ -380,6 +447,9 @@ Foam::Ostream& Foam::UOPstreamBase::write
             << Foam::abort(FatalError);
     }
 
+    // For count=0 (no-op, also no alignment) and data=nullptr are handled
+    // properly in writeToBuffer
+
     // Align on word boundary (64-bit)
     writeToBuffer(data, count, 8);
 
@@ -396,7 +466,10 @@ Foam::Ostream& Foam::UOPstreamBase::writeRaw
     // No check for IOstreamOption::BINARY since this is either done in the
     // beginRawWrite() method, or the caller knows what they are doing.
 
-    // Previously aligned and sizes reserved via beginRawWrite()
+    // For count=0 (no-op, also no alignment) and data=nullptr are handled
+    // properly in writeToBuffer
+
+    // Previously aligned and sizes reserved via beginRawWrite() etc.
     writeToBuffer(data, count, 1);
 
     return *this;
@@ -414,21 +487,11 @@ bool Foam::UOPstreamBase::beginRawWrite(std::streamsize count)
 
     // Align on word boundary (64-bit)
     // - as per write(const char*, streamsize)
+    // - for count=0 this is a no-op
     prepareBuffer(count, 8);
 
     return true;
 }
-
-
-// Not needed yet
-///
-/// //- The current put position (tellp) in the buffer
-/// label pos() const;
-///
-/// Foam::label Foam::UOPstreamBase::pos() const
-/// {
-///     return sendBuf_.size();
-/// }
 
 
 void Foam::UOPstreamBase::rewind()

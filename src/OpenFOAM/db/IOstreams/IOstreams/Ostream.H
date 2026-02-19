@@ -242,6 +242,9 @@ public:
             //- Write end entry (';') followed by newline.
             virtual Ostream& endEntry();
 
+
+       // Wrappers
+
             //- Write a keyword/value entry.
             //  The following two are functionally equivalent:
             // \code
@@ -256,23 +259,20 @@ public:
                 return endEntry();
             }
 
-            //- Write a keyword/value entry only when the two values differ.
-            //  \param key the name of the entry
-            //  \param value1 the reference value
-            //  \param value2 the value to write if it differs from value1
+            //- Write a keyword/value entry only if the value differs from
+            //- the reference value.
             template<class T>
             Ostream& writeEntryIfDifferent
             (
+                //! The name of the entry
                 const word& key,
-                const T& value1,
-                const T& value2
+                //! The reference value
+                const T& refValue,
+                //! The value to write if it differs from \p refValue
+                const T& value
             )
             {
-                if (value1 != value2)
-                {
-                    writeEntry(key, value2);
-                }
-
+                if (refValue != value) { writeEntry(key, value); }
                 return *this;
             }
 

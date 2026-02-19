@@ -79,19 +79,19 @@ public:
     // Constructors
 
         //- Construct for communication type with empty buffer
-        explicit Pstream(const UPstream::commsTypes commsType) noexcept
+        explicit Pstream(UPstream::commsTypes commsType) noexcept
         :
             UPstream(commsType)
         {}
 
         //- Construct for communication type with given buffer size
-        Pstream(const UPstream::commsTypes commsType, int bufferSize)
+        Pstream(UPstream::commsTypes commsType, int bufferSize)
         :
             UPstream(commsType)
         {
             if (bufferSize > 0)
             {
-                transferBuf_.setCapacity(bufferSize + 2*sizeof(scalar) + 1);
+                transferBuf_.setCapacity(bufferSize + 2*sizeof(double) + 1);
             }
         }
 

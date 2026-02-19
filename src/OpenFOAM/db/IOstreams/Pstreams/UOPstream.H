@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2014,2024 OpenFOAM Foundation
     Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,7 +66,7 @@ class UOPstreamBase
     // Private Member Functions
 
         //- Prepare send buffer for count bytes of output,
-        //- with specified alignment.
+        //- with specified alignment. Alignment padding is filled with zero.
         inline void prepareBuffer(const size_t count, const size_t align);
 
         //- Generic write data to the send buffer, aligned by sizeof(T)
@@ -73,9 +74,25 @@ class UOPstreamBase
         inline void writeToBuffer(const T& val);
 
         //- Write count bytes of data to the send buffer,
-        //- using align byte alignment
+        //- using \p align byte alignment
+        //- Writing with a null \p data pointer fills the output
+        //- with the corresponding \p count values of zero.
         inline void writeToBuffer
         (
+            const void* data,
+            const size_t count,
+            const size_t align
+        );
+
+        //- Write count bytes of data at absolute position in buffer.
+        //- Position will be aligned to \p align boundary.
+        //- Buffer is extended with nul-char fill if needed.
+        //- Writing with a null \p data pointer fills with zeros.
+        //- [ADVANCED USAGE]
+        void writeToBuffer_at
+        (
+            //! The target output position (negative == use end position)
+            int64_t pos,
             const void* data,
             const size_t count,
             const size_t align
@@ -145,6 +162,10 @@ public:
 
     // Member Functions
 
+        //- The target rank
+        int target() const noexcept { return toProcNo_; }
+
+
     // Stream State Functions
 
         //- Return current stream flags.
@@ -210,14 +231,20 @@ public:
         //- Write double
         virtual Ostream& write(const double val) override;
 
-        //- Write binary block with 8-byte alignment.
+        //- Write binary block with 8-byte alignment,
+        //- a no-op (also no alignment) if the \p count == 0.
+        //- If \p data is a null pointer:
+        //- an aligned fill with \p count values of \c nul.
         virtual Ostream& write
         (
             const char* data,
             std::streamsize count
         ) override;
 
-        //- Low-level raw binary output.
+        //- Low-level raw binary output (without alignment),
+        //- a no-op if the \p count == 0.
+        //- Writing with a null \p data pointer fills the output
+        //- with the corresponding \p count values of zero.
         virtual Ostream& writeRaw
         (
             const char* data,
@@ -238,6 +265,30 @@ public:
         //- Add indentation characters
         virtual void indent() override
         {}
+
+
+        //- Write contiguous content as binary block with 8-byte alignment.
+        template<class T>
+        Ostream& write_binary(const T* buffer, std::streamsize count);
+
+        //- Write single contiguous value as binary block with 8-byte alignment.
+        template<class T>
+        Ostream& write_binary(const T& value);
+
+        //- Write contiguous content at absolute position in buffer.
+        //- Position will be aligned on 8-byte boundary. If pos is beyond
+        //- current output position, buffer is extended with nul-char fill.
+        //- After writing, position is either restored to original if write
+        //- did not extend, or moved to end of write if it did extend.
+        //- [ADVANCED USAGE]
+        template<class T>
+        Ostream& write_at(int64_t pos, const T* buffer, std::streamsize count);
+
+        //- Write single contiguous value as binary block at specified
+        //- position in buffer (with 8-byte alignment).
+        //- [ADVANCED USAGE]
+        template<class T>
+        Ostream& write_at(int64_t pos, const T& value);
 
 
     // Stream state functions
@@ -291,6 +342,21 @@ public:
 
 
     // Positioning
+
+        //- Align the output position (byte boundary) to specified amount.
+        //- Fills padded area with nul char. [ADVANCED USAGE]
+        void alignp(size_t alignment);
+
+        //- Align the output position (byte boundary) for the data type.
+        //- Fills padded area with nul char. [ADVANCED USAGE]
+        template<class T>
+        void alignp() { alignp(sizeof(T)); }
+
+        //- The current output position in the output buffer.
+        int64_t tellp() const noexcept { return sendBuf_.size(); }
+
+        //- The current number of characters in the output buffer
+        int64_t size() const noexcept { return sendBuf_.size(); }
 
         //- Rewind the send buffer for overwriting
         virtual void rewind();

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015,2024 OpenFOAM Foundation
     Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,18 +59,6 @@ inline static void processFlags(Istream& is, int flagMask)
 }
 
 
-// Return the position with word boundary alignment
-inline static label byteAlign(const label pos, const size_t align)
-{
-    return
-    (
-        (align > 1)
-      ? (align + ((pos - 1) & ~(align - 1)))
-      : pos
-    );
-}
-
-
 // Read into compound token (assumed to be a known type)
 inline static bool readCompoundToken
 (
@@ -85,11 +74,29 @@ inline static bool readCompoundToken
 } // End namespace Foam
 
 
+namespace
+{
+
+// Return the position with specified byte alignment (eg, word boundary)
+template<typename IntType>
+inline IntType byteAlign(IntType pos, size_t align) noexcept
+{
+    return
+    (
+        (align > 1)
+      ? (align + ((pos - 1) & ~(align - 1)))
+      : pos
+    );
+}
+
+} // End anonymous namespace
+
+
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 inline void Foam::UIPstreamBase::checkEof()
 {
-    if (recvBufPos_ == messageSize_)
+    if (messageSize_ <= recvBufPos_)
     {
         setEof();
     }
@@ -119,8 +126,17 @@ inline void Foam::UIPstreamBase::readFromBuffer
     const size_t count
 )
 {
+    if (!count)
+    {
+        // Nothing to do, don't even do any alignment
+        return;
+    }
+
     if (data)
     {
+        // Only read into non-null pointers.
+        // With nullptr just behaves like a forward seek
+
         const char* const __restrict__ buf = &recvBuf_[recvBufPos_];
         char* const __restrict__ output = reinterpret_cast<char*>(data);
 
@@ -552,11 +568,13 @@ Foam::Istream& Foam::UIPstreamBase::read(double& val)
 
 Foam::Istream& Foam::UIPstreamBase::read(char* data, std::streamsize count)
 {
-    if (count)
+    if (count > 0)
     {
-        // For count == 0, a no-op
+        // For count=0 (no-op, also no alignment)
+        // Further handling (eg, data=nullptr) decided in readRaw()
         // - see UOPstream::write(const char*, streamsize)
-        beginRawRead();
+
+        beginRawRead();  // Check binary, enforce alignment
         readRaw(data, count);
         endRawRead();
     }
@@ -571,7 +589,10 @@ Foam::Istream& Foam::UIPstreamBase::readRaw(char* data, std::streamsize count)
     // beginRawRead() method, or the caller knows what they are doing.
 
     // Any alignment must have been done prior to this call
-    readFromBuffer(data, count);
+    if (count > 0)
+    {
+        readFromBuffer(data, count);
+    }
     return *this;
 }
 
@@ -594,21 +615,37 @@ bool Foam::UIPstreamBase::beginRawRead()
 }
 
 
-// Not needed yet
-///
-/// //- The current get position (tellg) in the buffer
-/// label pos() const;
-///
-/// Foam::label Foam::UIPstreamBase::pos() const
-/// {
-///     return recvBufPos_;
-/// }
+void Foam::UIPstreamBase::aligng(size_t alignment)
+{
+    // Aligned position - same as prepareBuffer()
+    recvBufPos_ = byteAlign(recvBufPos_, alignment);
+}
 
-Foam::label Foam::UIPstreamBase::remaining() const noexcept
+
+void Foam::UIPstreamBase::seekg(int64_t pos)
+{
+    recvBufPos_ = pos;
+}
+
+
+int64_t Foam::UIPstreamBase::remaining() const noexcept
 {
     if (messageSize_ && (recvBufPos_ < recvBuf_.size()))
     {
         return (recvBuf_.size() - recvBufPos_);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
+int64_t Foam::UIPstreamBase::size() const noexcept
+{
+    if (messageSize_ && !recvBuf_.empty())
+    {
+        return recvBuf_.size();
     }
     else
     {
