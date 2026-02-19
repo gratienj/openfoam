@@ -76,6 +76,7 @@ vtk/part/foamVtuSizing.cxx
 vtk/read/vtkUnstructuredReader.cxx
 vtk/write/foamVtkLineWriter.cxx
 vtk/write/foamVtkPolyWriter.cxx
+vtk/write/foamVtkVertexWriter.cxx
 vtk/write/foamVtkSurfaceWriter.cxx
 
 

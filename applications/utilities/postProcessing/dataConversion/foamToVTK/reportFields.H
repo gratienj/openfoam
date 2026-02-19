@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,6 +38,7 @@ Description
 #include "UPtrList.H"
 #include "Ostream.H"
 #include "areaFields.H"
+#include "edgeFields.H"
 #include "volFields.H"
 #include "pointFields.H"
 #include "IOobjectList.H"
@@ -72,12 +73,11 @@ struct foamToVtkReportFields
         }
     }
 
-
     static void print
     (
         const char* msg,
         Ostream& os,
-        const wordList& fieldNames
+        const wordUList& fieldNames
     )
     {
         if (fieldNames.size())
@@ -129,8 +129,7 @@ struct foamToVtkReportFields
         );
     }
 
-
-    //- Supported dimensioned field types
+    //- Supported volume internal field types
     static void internal(Ostream& os, const IOobjectList& objects)
     {
         print<volScalarField::Internal>
@@ -161,8 +160,7 @@ struct foamToVtkReportFields
     {
     }
 
-
-    //- Supported area field types
+    //- Supported finite-area area field types
     static void area(Ostream& os, const IOobjectList& objects)
     {
         print<areaScalarField>
@@ -187,6 +185,15 @@ struct foamToVtkReportFields
         );
     }
 
+
+    //- Supported finite-area edge field types
+    static void edge(Ostream& os, const IOobjectList& objects)
+    {
+        print<edgeScalarField>
+        (
+            "    edgeScalar    :", os, objects
+        );
+    }
 };
 
 

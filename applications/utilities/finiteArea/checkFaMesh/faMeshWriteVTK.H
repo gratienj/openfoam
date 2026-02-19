@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -15,6 +15,10 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
+// Preferred output format
+const vtk::outputOptions outputOpts =
+    vtk::formatType::INLINE_ASCII;  // vtk::formatType::INLINE_BASE64;
+
 // The base name for output files
 word vtkBaseFileName(aMesh.regionName());
 if (polyMesh::regionName(vtkBaseFileName).empty())
@@ -23,126 +27,241 @@ if (polyMesh::regionName(vtkBaseFileName).empty())
 }
 
 Info<< nl;
-Info<< "Write faMesh in vtk format:" << nl;
+Info<< "Write finite-area mesh in vtk format:" << nl;
 
 {
     // finiteArea - faces
+    const word& outputName = vtkBaseFileName;
+
     vtk::uindirectPatchWriter writer
     (
         aMesh.patch(),
-        // vtk::formatType::INLINE_ASCII,
-        fileName
-        (
-            aMesh.time().globalPath() / vtkBaseFileName
-        )
+        outputOpts,
+        (aMesh.time().globalPath() / outputName),
+        UPstream::parRun()
     );
 
     writer.writeGeometry();
 
-    globalIndex procAddr(aMesh.nFaces());
-    labelList cellIDs;
-
-    if (UPstream::master())
-    {
-        cellIDs.resize(procAddr.totalSize());
-        for (const labelRange& range : procAddr.ranges())
-        {
-            auto slice = cellIDs.slice(range);
-            slice = identity(range);
-        }
-    }
-
     // CellData
-    writer.beginCellData(4);
+    writer.beginCellData(writer.parallel() ? 4 : 3);
     writer.writeProcIDs();
-    writer.write("cellID", cellIDs);
-    writer.write("area", aMesh.S().field());
-    writer.write("normal", aMesh.faceAreaNormals());
+
+    // Cell ids in global numbering
+    writer.writeGlobalIDs("cellID");
+
+    writer.writeCellData("area", aMesh.S().field());
+    writer.writeCellData("normal", aMesh.faceAreaNormals());
 
     // PointData
     writer.beginPointData(1);
-    writer.write("normal", aMesh.pointAreaNormals());
+    writer.writePointData("normal", aMesh.pointAreaNormals());
 
     Info<< "    " << writer.output().name() << nl;
 }
 
 {
     // finiteArea - edges
+    const word outputName(vtkBaseFileName + "-edges");
+
+    // NB: edges are upper triangular, not primitive patch order
     vtk::lineWriter writer
     (
         aMesh.points(),
         aMesh.edges(),
-        // vtk::formatType::INLINE_ASCII,
-        fileName
-        (
-            aMesh.time().globalPath() / (vtkBaseFileName + "-edges")
-        )
+        outputOpts,
+        (aMesh.time().globalPath() / outputName),
+        UPstream::parRun()
     );
 
     writer.writeGeometry();
 
     // CellData
-    writer.beginCellData(4);
+    writer.beginCellData(writer.parallel() ? 4 : 3);
     writer.writeProcIDs();
+    // Edge ids in rank-local numbering (useful for comparing to edgeMap etc)
+    writer.writeLocalIDs("edgeID");
+    // Edge ids (patch order) in rank-local numbering
+    writer.writeCellData("edgeLabel", faMeshTools::edgeLabels(aMesh));
+
     {
         Field<scalar> fld
         (
-            // Use primitive patch order
-            faMeshTools::flattenEdgeField(aMesh.magLe(), true)
+            faMeshTools::flattenEdgeField(aMesh.magLe())
         );
-        writer.write("magLe", fld);
+        writer.writeCellData("magLe", fld);
     }
 
     // PointData
     writer.beginPointData(1);
-    writer.write("normal", aMesh.pointAreaNormals());
+    writer.writePointData("normal", aMesh.pointAreaNormals());
 
     Info<< "    " << writer.output().name() << nl;
 }
 
 {
+    // finiteArea - edgesCentres
+    // (no other convenient way to display vectors on the edges)
+    const word outputName(vtkBaseFileName + "-edgesCentres");
+
+    // NB: edges are upper triangular, not primitive patch order
     const Field<vector> edgeCentres
     (
-        // Use primitive patch order
-        faMeshTools::flattenEdgeField(aMesh.edgeCentres(), true)
+        faMeshTools::flattenEdgeField(aMesh.edgeCentres())
     );
 
-    // finiteArea - edgeCentres
-    // (no other convenient way to display vectors on the edges)
-    vtk::lineWriter writer
+    vtk::vertexWriter writer
     (
         edgeCentres,
-        edgeList::null(),
-        // vtk::formatType::INLINE_ASCII,
-        fileName
-        (
-            aMesh.time().globalPath() / (vtkBaseFileName + "-edgesCentres")
-        )
+        outputOpts,
+        (aMesh.time().globalPath() / outputName),
+        UPstream::parRun()
     );
 
     writer.writeGeometry();
 
+    // CellData
+    writer.beginCellData(writer.parallel() ? 3 : 2);
+    writer.writeProcIDs();
+    // Edge ids in rank-local numbering (useful for comparing to edgeMap etc)
+    writer.writeLocalIDs("edgeID");
+    // Edge ids (patch order) in rank-local numbering
+    writer.writeCellData("edgeLabel", faMeshTools::edgeLabels(aMesh));
+
+
     // PointData
     writer.beginPointData(3);
-    writer.writeProcIDs();  // Unfortunately cannot threshold on points
+    writer.writeLocalIDs("edgeID");
     {
-        Field<vector> fld
-        (
-            // Use primitive patch order
-            faMeshTools::flattenEdgeField(aMesh.Le(), true)
-        );
-        writer.write("Le", fld);
-    }
-    {
-        Field<vector> fld
-        (
-            // Use primitive patch order
-            faMeshTools::flattenEdgeField(aMesh.edgeAreaNormals(), true)
-        );
-        writer.write("normal", fld);
+        Field<vector> fld(aMesh.nEdges());
+
+        faMeshTools::flattenEdgeField(fld, aMesh.Le());
+        writer.writePointData("Le", fld);
+
+        faMeshTools::flattenEdgeField(fld, aMesh.edgeAreaNormals());
+        writer.writePointData("normal", fld);
     }
 
     Info<< "    " << writer.output().name() << nl;
+}
+
+
+// Per-proc edge output (debugging)
+if (UPstream::parRun() && args.found("write-edges-vtk"))
+{
+    // The base name for output file
+    word outputName(vtkBaseFileName + "-edges");
+
+    if (UPstream::parRun())
+    {
+        outputName += ("-proc" + Foam::name(UPstream::myProcNo()));
+    }
+
+    // finiteArea - edges.
+    // NB: edges are with reordered boundaries (not primitive patch order)
+    vtk::lineWriter writer
+    (
+        aMesh.points(),
+        aMesh.edges(),
+        outputOpts,
+        (aMesh.time().globalPath() / outputName),
+        false  // parallel = false. Every rank writes into separate files!
+    );
+
+    writer.writeGeometry();
+
+    // CellData
+    writer.beginCellData(UPstream::parRun() ? 4 : 3);
+    if (UPstream::parRun())
+    {
+        // DIY for procID since each writer is non-parallel
+        writer.writeUniform("procID", label(UPstream::myProcNo()));
+    }
+
+    // Edge ids in rank-local numbering (useful for comparing to edgeMap etc)
+    writer.writeLocalIDs("edgeID");
+
+    // Edge ids (patch order) in rank-local numbering
+    writer.writeCellData("edgeLabel", faMeshTools::edgeLabels(aMesh));
+
+    // Patch ids
+    {
+        labelList values(aMesh.nEdges());
+
+        // Internal
+        label patchId = -1;
+        values = patchId;
+
+        // Boundaries
+        label start = aMesh.nInternalEdges();
+        for (const auto& p : aMesh.boundary())
+        {
+            const auto count = p.nEdges();
+            values.slice(start, count) = ++patchId;
+            start += count;
+        }
+
+        writer.writeCellData("patchID", values);
+    }
+
+    Info<< "    " << writer.output().name() << nl;
+}
+
+
+if (UPstream::parRun() && args.found("write-edges-vtk"))
+{
+    // finiteArea - edgesCentres
+    // (no other convenient way to display vectors on the edges)
+    word outputName(vtkBaseFileName + "-edgesCentres");
+
+    if (UPstream::parRun())
+    {
+        outputName += ("-proc" + Foam::name(UPstream::myProcNo()));
+    }
+
+    // NB: edges are upper triangular, not primitive patch order
+    const Field<vector> edgeCentres
+    (
+        faMeshTools::flattenEdgeField(aMesh.edgeCentres())
+    );
+
+    vtk::vertexWriter writer
+    (
+        edgeCentres,
+        outputOpts,
+        (aMesh.time().globalPath() / outputName),
+        false  // parallel = false. Every rank writes into separate files!
+    );
+
+    writer.writeGeometry();
+
+    // CellData
+    writer.beginCellData(UPstream::parRun() ? 4 : 3);
+    if (UPstream::parRun())
+    {
+        // DIY for procID since each writer is non-parallel
+        writer.writeUniform("procID", label(UPstream::myProcNo()));
+    }
+    // Edge ids in rank-local numbering (useful for comparing to edgeMap etc)
+    writer.writeLocalIDs("edgeID");
+    // Edge ids (patch order) in rank-local numbering
+    writer.writeCellData("edgeLabel", faMeshTools::edgeLabels(aMesh));
+
+
+    // PointData
+    writer.beginPointData(3);
+    writer.writeLocalIDs("edgeID");
+    {
+        Field<vector> fld(aMesh.nEdges());
+
+        faMeshTools::flattenEdgeField(fld, aMesh.Le());
+        writer.writePointData("Le", fld);
+
+        faMeshTools::flattenEdgeField(fld, aMesh.edgeAreaNormals());
+        writer.writePointData("normal", fld);
+    }
+
+    Pout<< "    " << writer.output().name() << nl;
 }
 
 

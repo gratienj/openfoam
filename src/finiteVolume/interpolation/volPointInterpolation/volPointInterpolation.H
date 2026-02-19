@@ -131,12 +131,21 @@ class volPointInterpolation
         template<class Type>
         void pushUntransformedData(List<Type>&) const;
 
-        //- Get boundary field in same order as boundary faces. Field is
-        //  zero on all coupled and empty patches
+        //- Get boundary field in same order as boundary faces.
+        //- Field is zero on all coupled and empty patches
+        template<class Type>
+        void flatBoundaryField
+        (
+            UList<Type>& result,
+            const GeometricField<Type, fvPatchField, volMesh>& fld
+        ) const;
+
+        //- Get boundary field in same order as boundary faces.
+        //- Field is zero on all coupled and empty patches
         template<class Type>
         tmp<Field<Type>> flatBoundaryField
         (
-            const GeometricField<Type, fvPatchField, volMesh>& vf
+            const GeometricField<Type, fvPatchField, volMesh>& fld
         ) const;
 
         //- Add separated contributions

@@ -299,7 +299,7 @@ Foam::vtk::formatter& Foam::vtk::formatter::writeTimeValue(scalar timeValue)
     // Emit "TimeValue" as FieldData
     // NumberOfTuples="1" (required!)
 
-    uint64_t payLoad = vtk::sizeofData<float>(1);
+    const auto payLoad = vtk::sizeofData<float>(1);
 
     beginDataArray<float,1,1>("TimeValue");
     writeSize(payLoad);

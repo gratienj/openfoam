@@ -373,11 +373,7 @@ Foam::functionObjects::vtkCloud::vtkCloud
     printf_(),
     useVerts_(false),
     pruneEmpty_(false),
-    applyFilter_(false),
-    selectClouds_(),
-    selectFields_(),
-    directory_(),
-    series_()
+    applyFilter_(false)
 {
     // May still want this? (OCT-2018)
     // if (postProcess)
@@ -462,25 +458,28 @@ bool Foam::functionObjects::vtkCloud::read(const dictionary& dict)
     parcelSelect_ = dict.subOrEmptyDict("selection");
 
     // Output directory
-
-    directory_.clear();
-    dict.readIfPresent("directory", directory_);
-
-    if (directory_.size())
+    if (fileName dir; dict.readIfPresent("directory", dir) && !dir.empty())
     {
         // User-defined output directory
-        directory_.expand();
-        if (!directory_.isAbsolute())
+        dir.expand();
+        if (dir.isAbsolute())
         {
-            directory_ = time_.globalPath()/directory_;
+            outputDir_ = std::move(dir);
+        }
+        else
+        {
+            outputDir_ = time_.globalPath()/dir;
         }
     }
     else
     {
         // Standard postProcessing/ naming
-        directory_ = time_.globalPath()/functionObject::outputPrefix/name();
+        outputDir_ =
+        (
+            time_.globalPath()/functionObject::outputPrefix/name()
+        );
     }
-    directory_.clean();  // Remove unneeded ".."
+    outputDir_.clean();  // Remove unneeded ".."
 
     return true;
 }
@@ -524,7 +523,7 @@ bool Foam::functionObjects::vtkCloud::write()
 
         const fileName outputName
         (
-            directory_/cloudName + timeDesc + ".vtp"
+            outputDir_/cloudName + timeDesc + ".vtp"
         );
 
         // writeCloud() includes mkDir (on master)

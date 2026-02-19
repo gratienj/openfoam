@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017 OpenFOAM Foundation
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -271,7 +271,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::New
     const Mesh& mesh,
     const dimensionSet& dims,
     const Field<Type>& iField,
-    const PtrList<PatchField<Type>>& pflds
+    const UPtrList<PatchField<Type>>& pflds
 )
 {
     return GeometricField<Type, PatchField, GeoMesh>::New_impl
@@ -294,7 +294,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::New
     const Mesh& mesh,
     const dimensionSet& dims,
     const Field<Type>& iField,
-    const PtrList<PatchField<Type>>& pflds
+    const UPtrList<PatchField<Type>>& pflds
 )
 {
     return GeometricField<Type, PatchField, GeoMesh>::New_impl
@@ -318,7 +318,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::New
     const Mesh& mesh,
     const dimensionSet& dims,
     Field<Type>&& iField,
-    const PtrList<PatchField<Type>>& pflds
+    const UPtrList<PatchField<Type>>& pflds
 )
 {
     return GeometricField<Type, PatchField, GeoMesh>::New_impl
@@ -341,7 +341,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::New
     const Mesh& mesh,
     const dimensionSet& dims,
     Field<Type>&& iField,
-    const PtrList<PatchField<Type>>& pflds
+    const UPtrList<PatchField<Type>>& pflds
 )
 {
     return GeometricField<Type, PatchField, GeoMesh>::New_impl

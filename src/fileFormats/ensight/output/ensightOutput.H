@@ -56,61 +56,6 @@ SourceFiles
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Local definitions, could be relocated to ListListOps directly
-
-namespace Foam
-{
-namespace ListListOps
-{
-
-//- Return the sizes of the sub-lists
-template<class T, class Addr, class AccessOp>
-labelList subSizes
-(
-    const IndirectListBase<T, Addr>& lists,
-    AccessOp aop
-)
-{
-    labelList output(lists.size());
-    auto out = output.begin();
-
-    for (const T& sub : lists)
-    {
-        *out = aop(sub).size();
-        ++out;
-    }
-
-    return output;
-}
-
-
-//- Inplace renumber the values (not the indices) of a list of lists.
-//  Negative IntListType elements are left untouched.
-template<class IntListType>
-void inplaceRenumber
-(
-    const labelUList& oldToNew,
-    IntListType& lists
-)
-{
-    for (auto& sub : lists)
-    {
-        for (auto& item : sub)
-        {
-            if (item >= 0)
-            {
-                item = oldToNew[item];
-            }
-        }
-    }
-}
-
-} // End namespace ListListOps
-} // End namespace Foam
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 namespace Foam
 {
 

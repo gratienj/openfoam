@@ -41,20 +41,20 @@ Original Authors
 #include "Time.H"
 #include "argList.H"
 #include "faMesh.H"
-#include "faMeshTools.H"
 #include "IOdictionary.H"
 #include "IOobjectList.H"
 #include "areaFields.H"
 #include "edgeFields.H"
 #include "faFieldDecomposer.H"
+#include "faMeshTools.H"
 #include "faMeshReconstructor.H"
 #include "faMeshSubset.H"
 #include "PtrListOps.H"
-#include "foamVtkLineWriter.H"
 #include "foamVtkIndPatchWriter.H"
+#include "foamVtkLineWriter.H"
+#include "foamVtkVertexWriter.H"
 #include "regionProperties.H"
 #include "syncTools.H"
-#include "OBJstream.H"
 
 using namespace Foam;
 
@@ -98,8 +98,8 @@ int main(int argc, char *argv[])
     );
     argList::addBoolOption
     (
-        "write-edges-obj",
-        "Write mesh edges as obj files (one per processor)",
+        "write-edges-vtk",
+        "Write mesh edges as vtp (vtk) files (one per processor)",
         true  // advanced option (debugging only)
     );
 
@@ -171,12 +171,7 @@ int main(int argc, char *argv[])
         // Mesh information (less verbose)
         faMeshTools::printMeshChecks(aMesh, 0);
 
-        if (args.found("write-edges-obj"))
-        {
-            #include "faMeshWriteEdgesOBJ.H"
-        }
-
-        if (args.found("write-vtk"))
+        if (args.found("write-vtk") || args.found("write-edges-vtk"))
         {
             #include "faMeshWriteVTK.H"
         }

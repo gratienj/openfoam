@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -85,7 +85,7 @@ void testBroadcast(bitSet& values, int root = 0)
 
     if (root)
     {
-        values.broadcast( {UPstream::worldComm, root} );
+        values.broadcast(UPstream::worldComm, root);
     }
     else
     {

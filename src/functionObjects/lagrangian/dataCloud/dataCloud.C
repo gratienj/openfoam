@@ -137,10 +137,7 @@ Foam::functionObjects::dataCloud::dataCloud
     fvMeshFunctionObject(name, runTime, dict),
     printf_(),
     precision_(IOstream::defaultPrecision()),
-    applyFilter_(false),
-    selectClouds_(),
-    fieldName_(),
-    directory_()
+    applyFilter_(false)
 {
     read(dict);
 }
@@ -187,25 +184,28 @@ bool Foam::functionObjects::dataCloud::read(const dictionary& dict)
     parcelSelect_ = dict.subOrEmptyDict("selection");
 
     // Output directory
-
-    directory_.clear();
-    dict.readIfPresent("directory", directory_);
-
-    if (directory_.size())
+    if (fileName dir; dict.readIfPresent("directory", dir) && !dir.empty())
     {
         // User-defined output directory
-        directory_.expand();
-        if (!directory_.isAbsolute())
+        dir.expand();
+        if (dir.isAbsolute())
         {
-            directory_ = time_.globalPath()/directory_;
+            outputDir_ = std::move(dir);
+        }
+        else
+        {
+            outputDir_ = time_.globalPath()/dir;
         }
     }
     else
     {
         // Standard postProcessing/ naming
-        directory_ = time_.globalPath()/functionObject::outputPrefix/name();
+        outputDir_ =
+        (
+            time_.globalPath()/functionObject::outputPrefix/name()
+        );
     }
-    directory_.clean();  // Remove unneeded ".."
+    outputDir_.clean();  // Remove unneeded ".."
 
     return true;
 }
@@ -247,7 +247,7 @@ bool Foam::functionObjects::dataCloud::write()
 
         const fileName outputName
         (
-            directory_/cloudName + timeDesc + ".dat"
+            outputDir_/cloudName + timeDesc + ".dat"
         );
 
         // writeCloud() includes mkDir (on master)

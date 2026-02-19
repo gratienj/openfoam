@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -63,9 +63,23 @@ Foam::bitSet& Foam::bitSet::minusEq(const bitSet& other)
         return *this;
     }
 
+
+    label nblocks(0);
+
+    // Determine the overlap
+    {
+        const label thisExtent = (this->find_last()+1);
+        const label thatExtent = (other.find_last()+1);
+
+        // min overlap
+        if (label common = std::min(thisExtent, thatExtent); common > 0)
+        {
+            nblocks = num_blocks(common);
+        }
+    }
+
     // The operation (on overlapping blocks)
     {
-        const label nblocks = num_blocks(std::min(size(), other.size()));
         const auto& rhs = other.blocks_;
 
         for (label blocki = 0; blocki < nblocks; ++blocki)
@@ -105,19 +119,30 @@ Foam::bitSet& Foam::bitSet::andEq(const bitSet& other)
     }
 
 
-    const label origSize(size());
-    const label otherSize(other.size());
+    label nblocks(0);
 
-    if (origSize > otherSize)
+    // Determine the overlap
     {
-        // Clear bits (and blocks) that do not overlap at all
-        resize(otherSize);
-        resize(origSize);
+        const label thisExtent = (this->find_last()+1);
+        const label thatExtent = (other.find_last()+1);
+
+        // min overlap
+        if (label common = std::min(thisExtent, thatExtent); common > 0)
+        {
+            nblocks = num_blocks(common);
+        }
+
+        if (thatExtent < thisExtent)
+        {
+            // Clear bits (and blocks) that do not overlap at all
+            const auto origSize = size();
+            resize(thatExtent);
+            resize(origSize);
+        }
     }
 
     // The operation (on overlapping blocks)
     {
-        const label nblocks = num_blocks(std::min(origSize, otherSize));
         const auto& rhs = other.blocks_;
 
         for (label blocki = 0; blocki < nblocks; ++blocki)
@@ -151,18 +176,28 @@ Foam::bitSet& Foam::bitSet::orEq(const bitSet& other)
     }
 
 
-    // Largest new bit that could be introduced
-    const label otherMax(other.find_last());
+    label nblocks(0);
 
-    if (otherMax >= size())
+    // Determine the overlap
     {
-        // Extend to accommodate bits from 'other'
-        resize(otherMax+1);
+        const label thisExtent = (this->find_last()+1);
+        const label thatExtent = (other.find_last()+1);
+
+        // max overlap
+        if (label common = std::max(thisExtent, thatExtent); common > 0)
+        {
+            nblocks = num_blocks(common);
+        }
+
+        if (size() < thatExtent)
+        {
+            // Accommodate any extra bits from 'other'
+            resize(thatExtent);
+        }
     }
 
     // The operation (on overlapping blocks)
     {
-        const label nblocks = num_blocks(std::min(size(), other.size()));
         const auto& rhs = other.blocks_;
 
         for (label blocki = 0; blocki < nblocks; ++blocki)
@@ -197,18 +232,28 @@ Foam::bitSet& Foam::bitSet::xorEq(const bitSet& other)
     }
 
 
-    // Largest new bit that could be introduced
-    const label otherMax(other.find_last());
+    label nblocks(0);
 
-    if (otherMax >= size())
+    // Determine the overlap
     {
-        // Extend to accommodate bits from 'other'
-        resize(otherMax+1);
+        const label thisExtent = (this->find_last()+1);
+        const label thatExtent = (other.find_last()+1);
+
+        // max overlap
+        if (label common = std::max(thisExtent, thatExtent); common > 0)
+        {
+            nblocks = num_blocks(common);
+        }
+
+        if (size() < thatExtent)
+        {
+            // Accommodate any extra bits from 'other'
+            resize(thatExtent);
+        }
     }
 
     // The operation (on overlapping blocks)
     {
-        const label nblocks = num_blocks(std::min(size(), other.size()));
         const auto& rhs = other.blocks_;
 
         for (label blocki = 0; blocki < nblocks; ++blocki)
@@ -334,9 +379,6 @@ void Foam::bitSet::set(const labelRange& range)
     // Range finishes at or beyond the right side.
     // - zero fill any gaps that we might create.
     // - flood-fill the reset, which now corresponds to the full range.
-    //
-    // NB: use labelRange end_value() for the exclusive end-value, which
-    // corresponds to our new set size.
     if (slice.end_value() >= size())
     {
         reserve(slice.end_value());
@@ -411,9 +453,6 @@ void Foam::bitSet::unset(const labelRange& range)
     }
 
     // Range finishes at or beyond the right side.
-    //
-    // NB: use labelRange end_value() for the exclusive end-value, which
-    // corresponds to our new set size.
     if (slice.end_value() >= size())
     {
         // The original size
@@ -551,111 +590,58 @@ Foam::List<bool> Foam::bitSet::values() const
 
 // * * * * * * * * * * * * * *  Parallel Functions * * * * * * * * * * * * * //
 
-namespace
-{
-
 // Special purpose broadcast for bitSet which is more efficient than
 // either a regular broadcast (with serialization) or the usual
 // broadcast for lists.
 //
-// The initial broadcast sends both count (bits=on) and the length.
+// The initial broadcast sends the extent (last bit on) and the length.
 // The receive clears out its bits and resizes (ie, all zeros and the proper
 // length).
-// This allows the final broadcast to be skipped if either
-// the length or the content is zero.
-//
-// With syncSizes=false it assumes that the lengths are identical on all ranks
-// and doesn't do the initial broadcast. In this case it can only decide
-// about the final broadcast based on the length information allow.
+// The final broadcast can be skipped (if there is no non-zero content),
+// or simply minimized the amount of data broadcast.
 
-void broadcast_bitSet
-(
-    Foam::bitSet& bitset,
-    int communicator,
-    int root,
-    bool syncSizes
-)
-{
-    using namespace Foam;
-
-    if (!UPstream::is_parallel(communicator))  // Probably already checked...
-    {
-        return;
-    }
-
-    // Broadcast data content?
-    bool bcastContent(true);
-
-    if (syncSizes)
-    {
-        int64_t count_size[2] = { 0, 0 };
-
-        if (root == UPstream::myProcNo(communicator))
-        {
-            // Sender: knows the count/size
-            count_size[0] = static_cast<int64_t>(bitset.count());
-            count_size[1] = static_cast<int64_t>(bitset.size());
-
-            UPstream::broadcast(count_size, 2, communicator, root);
-        }
-        else
-        {
-            // Receiver: gets the count/size and makes a clean bitset
-            UPstream::broadcast(count_size, 2, communicator, root);
-
-            bitset.clear();  // Clear old contents
-            bitset.resize(count_size[1]);
-        }
-
-        if (count_size[0] == 0)
-        {
-            // All content is zero, don't need to broadcast it
-            bcastContent = false;
-        }
-    }
-
-    if (bcastContent && !bitset.empty())
-    {
-        // Only broadcast with non-empty content
-        UPstream::broadcast
-        (
-            bitset.data(),
-            bitset.num_blocks(),
-            communicator,
-            root
-        );
-    }
-}
-
-} // End anonymous namespace
-
-
-void Foam::bitSet::broadcast
-(
-    std::pair<int,int> communicator_root,
-    bool syncSizes
-)
-{
-    int comm = communicator_root.first;
-    int root = communicator_root.second;
-
-    if (UPstream::is_parallel(comm))
-    {
-        broadcast_bitSet(*this, comm, root, syncSizes);
-    }
-}
-
-
-void Foam::bitSet::broadcast(int communicator, bool syncSizes)
+void Foam::bitSet::broadcast(int communicator, int root)
 {
     if (communicator < 0)
     {
         communicator = UPstream::worldComm;
     }
 
-    if (UPstream::is_parallel(communicator))
+    if (!UPstream::is_parallel(communicator))
     {
-        broadcast_bitSet(*this, communicator, UPstream::masterNo(), syncSizes);
+        return;
+    }
+
+    // The number of data blocks for the operation
+    label nblocks(0);
+
+    // Determine the extent/sizing
+    {
+        int64_t sizing[2] = { 0, 0 };
+
+        if (root == UPstream::myProcNo(communicator))
+        {
+            // Sender: extent of content and size
+            sizing[0] = static_cast<int64_t>(find_last()+1);
+            sizing[1] = static_cast<int64_t>(size());
+
+            UPstream::broadcast(sizing, 2, communicator, root);
+        }
+        else
+        {
+            // Receiver: use a clean bitset with the updated size
+            UPstream::broadcast(sizing, 2, communicator, root);
+
+            clear();  // Clear old contents
+            resize(sizing[1]);
+        }
+
+        nblocks = num_blocks(sizing[0]);
+    }
+
+    if (nblocks > 0)
+    {
+        UPstream::broadcast(this->data(), nblocks, communicator, root);
     }
 }
 
@@ -672,39 +658,50 @@ void Foam::bitSet::reduceAnd(int communicator, bool syncSizes)
         return;
     }
 
-    const label origSize(size());
+    // The number of data blocks for the operation
+    label nblocks(0);
 
+    // Operation is an intersection.
+    // - can restrict to a smaller region than the original size
     if (syncSizes)
     {
-        // Operation is an intersection
-        // - common size may be smaller than the original size
-        int64_t commonSize(size());
+        int64_t common(find_last()+1);  // Size to include last bit
 
         UPstream::mpiAllReduce<UPstream::opCodes::op_min>
         (
-            &commonSize,
+            &common,
             1,
             communicator
         );
-        resize(commonSize);
+
+        nblocks = num_blocks(common);
+
+        if (common > 0)
+        {
+            // Clear bits (and blocks) that do not overlap at all
+            const auto origSize = size();
+            resize(common);
+            resize(origSize);
+        }
+        else
+        {
+            // No intersections
+            reset();
+        }
+    }
+    else
+    {
+        nblocks = this->num_blocks();
     }
 
-    if (!empty())
+    if (nblocks > 0)
     {
         UPstream::mpiAllReduce<UPstream::opCodes::op_bit_and>
         (
             this->data(),
-            this->num_blocks(),
+            nblocks,
             communicator
         );
-
-        clear_trailing_bits();  // safety
-    }
-
-    // Undo side effects from the reduction
-    if (syncSizes)
-    {
-        resize(origSize);
     }
 }
 
@@ -721,40 +718,56 @@ void Foam::bitSet::reduceOr(int communicator, bool syncSizes)
         return;
     }
 
-    // const label origSize(size());
+    // The number of data blocks needed for the operation
+    label nblocks(0);
 
+    // Operation can increase the addressed size
     if (syncSizes)
     {
-        // Operation can increase the addressed size
-
-        // Extend size based on the addressed length.
-        // This is greedy, but produces consistent sizing
-        int64_t commonSize(size());
-
-        // Alternative: Extend size based on the bits used.
-        // - tighter, but inconsistent sizes result
-        // // label commonSize(find_last()+1);
+        // Operational sizes
+        int64_t sizing[2] =
+        {
+            static_cast<int64_t>(find_last()+1),  // Size to include last bit
+            static_cast<int64_t>(size())          // The overall size
+        };
 
         UPstream::mpiAllReduce<UPstream::opCodes::op_max>
         (
-            &commonSize,
-            1,
+            sizing,
+            2,
             communicator
         );
 
-        extend(commonSize);
+        nblocks = num_blocks(sizing[0]);
+
+        // Extend local size to the max size encountered
+        // This is greedy, but produces consistent sizing
+        if (size() < sizing[1])
+        {
+            resize(sizing[1]);
+        }
+
+        // Alternative:
+        // Extend local size to include any 'on' bits.
+        // The resulting bitsets will not have identical sizes on all ranks.
+        // if (size() < sizing[0])
+        // {
+        //     resize(sizing[0]);
+        // }
+    }
+    else
+    {
+        nblocks = this->num_blocks();
     }
 
-    if (!empty())
+    if (nblocks > 0)
     {
         UPstream::mpiAllReduce<UPstream::opCodes::op_bit_or>
         (
             this->data(),
-            this->num_blocks(),
+            nblocks,
             communicator
         );
-
-        clear_trailing_bits();  // safety
     }
 }
 
@@ -818,8 +831,13 @@ Foam::bitSet Foam::bitSet::allGather(bool localValue, int communicator)
         // Identical size on all ranks
         allValues.resize(UPstream::nProcs(communicator));
 
-        // Sizes are consistent - broadcast without resizing
-        allValues.broadcast(communicator, false);
+        UPstream::broadcast
+        (
+            allValues.data(),
+            allValues.num_blocks(),
+            communicator
+            // root = 0
+        );
     }
 
     return allValues;

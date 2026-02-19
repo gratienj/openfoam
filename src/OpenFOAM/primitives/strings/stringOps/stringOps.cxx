@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2023 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,6 +69,7 @@ static inline unsigned short modeToLocation
 //
 //   <etc>/        => user/group/other etc - findEtcEntry()
 //   <etc(:[ugoa]+)?>/ => user/group/other etc - findEtcEntry()
+//   <home>/       => user home directory
 //   <case>/       => FOAM_CASE directory
 //   <constant>/   => FOAM_CASE/constant directory
 //   <system>/     => FOAM_CASE/system directory
@@ -100,8 +101,8 @@ static void expandLeadingTag(std::string& s, const char b, const char e)
         file.assign(s.substr(delim + 1));
     }
 
+    // const auto tag = std::string_view(s).substr(1, delim-2);
     const std::string tag(s, 1, delim-2);
-    const auto tagLen = tag.length();
 
     // Note that file is also allowed to be an empty string.
 
@@ -113,11 +114,15 @@ static void expandLeadingTag(std::string& s, const char b, const char e)
     {
         s = fileName(Foam::getEnv("FOAM_CASE"))/file;
     }
+    else if (tag == "home")
+    {
+        s = Foam::home()/file;
+    }
     else if (tag == "constant" || tag == "system")
     {
         s = fileName(Foam::getEnv("FOAM_CASE"))/tag/file;
     }
-    else if (tagLen >= 4 && tag.compare(0, 4, "etc:") == 0)
+    else if (tag.size() >= 4 && (tag.compare(0, 4, "etc:") == 0))
     {
         // <etc:[ugoa]+> type of tag - convert "ugo" to numeric
 
@@ -140,15 +145,14 @@ static void expandLeadingTilde(std::string& s)
     std::string user;
     fileName file;
 
-    const auto slash = s.find('/');
-    if (slash == std::string::npos)
-    {
-        user = s.substr(1);
-    }
-    else
+    if (auto slash = s.find('/'); slash != std::string::npos)
     {
         user = s.substr(1, slash - 1);
         file = s.substr(slash + 1);
+    }
+    else
+    {
+        user = s.substr(1);
     }
 
     // NB: be a bit lazy and expand ~unknownUser as an
@@ -158,7 +162,7 @@ static void expandLeadingTilde(std::string& s)
     if (user == "OpenFOAM")
     {
         // Compat Warning
-        const int version(1806);
+        constexpr int version(1806);
 
         if (error::master())
         {

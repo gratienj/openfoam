@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017,2022 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -128,12 +128,14 @@ public:
         );
 
         //- Construct from a BoundaryMesh, reference to the internal field
-        //- and a PtrList<PatchField<Type>> (to be cloned)
+        //- and list of patch fields (to be cloned)
         GeometricBoundaryField
         (
             const BoundaryMesh& bmesh,
             const Internal& iField,
-            const PtrList<PatchField<Type>>& ptfl
+            //! Patch fields to be cloned.
+            //! [For advanced usage: can be empty == set patches later]
+            const UPtrList<PatchField<Type>>& pflds
         );
 
         //- Construct as copy, setting the reference to the internal field
@@ -149,7 +151,7 @@ public:
         (
             const Internal& iField,
             const GeometricBoundaryField<Type, PatchField, GeoMesh>& btf,
-            const labelList& patchIDs,
+            const labelUList& patchIDs,
             const word& patchFieldName
         );
 

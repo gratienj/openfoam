@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2013 OpenFOAM Foundation
-    Copyright (C) 2018 OpenCFD Ltd.
+    Copyright (C) 2018,2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,7 @@ Foam::labelList Foam::ListListOps::subSizes
     labelList output(lists.size());
     auto out = output.begin();
 
-    for (const T& sub : lists)
+    for (const auto& sub : lists)
     {
         *out = aop(sub).size();
         ++out;
@@ -55,12 +55,52 @@ Foam::label Foam::ListListOps::sumSizes
 {
     label len = 0;
 
-    for (const T& sub : lists)
+    for (const auto& sub : lists)
     {
         len += aop(sub).size();
     }
 
     return len;
+}
+
+
+template<class T>
+Foam::label Foam::ListListOps::totalSize(const UList<T>& lists)
+{
+    label len = 0;
+
+    for (const auto& sub : lists)
+    {
+        len += sub.size();
+    }
+
+    return len;
+}
+
+
+template<class ListType, class T>
+ListType Foam::ListListOps::concat(List<T>& lists)
+{
+    label len = 0;
+
+    for (const auto& sub : lists)
+    {
+        len += sub.size();
+    }
+
+    ListType output(len);
+    output.resize(len);     // Consistent sizing (eg, DynamicList)
+
+    auto out = output.begin();
+
+    for (auto& sub : lists)
+    {
+        out = std::move(sub.begin(), sub.end(), out);
+    }
+
+    lists.clear();
+
+    return output;
 }
 
 
@@ -73,7 +113,7 @@ AccessType Foam::ListListOps::combine
 {
     label len = 0;
 
-    for (const T& sub : lists)
+    for (const auto& sub : lists)
     {
         len += aop(sub).size();
     }
@@ -81,7 +121,7 @@ AccessType Foam::ListListOps::combine
     AccessType output(len);
     auto out = output.begin();
 
-    for (const T& sub : lists)
+    for (const auto& sub : lists)
     {
         for (const auto& item : aop(sub))
         {
@@ -105,7 +145,7 @@ AccessType Foam::ListListOps::combineOffset
 {
     label len = 0;
 
-    for (const T& sub : lists)
+    for (const auto& sub : lists)
     {
         len += aop(sub).size();
     }
@@ -115,7 +155,7 @@ AccessType Foam::ListListOps::combineOffset
     auto off = offsets.begin();
 
     label offset = 0;
-    for (const T& sub : lists)
+    for (const auto& sub : lists)
     {
         for (const auto& item : aop(sub))
         {

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -230,16 +230,19 @@ private:
         //- Reference to boundary addressing
         const labelUList& boundaryAddressing_;
 
-        //- List of patch field decomposers
-        PtrList<patchFieldDecomposer> patchFieldDecomposerPtrs_;
+        //- Patch field decomposers for regular patches
+        PtrList<patchFieldDecomposer> patchFieldDecomposers_;
 
+        //- Processor-patch field decomposers (volume fields)
         PtrList<processorVolPatchFieldDecomposer>
-            processorVolPatchFieldDecomposerPtrs_;
+            processorVolPatchFieldDecomposers_;
 
+        //- Processor-patch field decomposers (surface fields)
         PtrList<processorSurfacePatchFieldDecomposer>
-            processorSurfacePatchFieldDecomposerPtrs_;
+            processorSurfacePatchFieldDecomposers_;
 
-        PtrList<scalarField> faceSign_;
+        //- Processor-patch surface field flipping (as -1/+1 multipliers)
+        PtrList<scalarField> faceSigns_;
 
 
     // Private Member Functions

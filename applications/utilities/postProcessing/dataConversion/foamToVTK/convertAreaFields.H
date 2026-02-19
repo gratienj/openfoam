@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -62,10 +62,14 @@ if (doFiniteArea && !areaRegionNames.empty())
         }
 
         const label nAreaFields = faObjs.count(Foam::fieldTypes::is_area);
+        const label nEdgeFields =
+        (
+            doEdgeFields ? faObjs.count(Foam::fieldTypes::is_edge) : 0
+        );
 
         autoPtr<faMesh> faMeshPtr;
 
-        if (nAreaFields || withMeshIds)
+        if (nAreaFields || nEdgeFields || withMeshIds)
         {
             faMeshPtr = faMesh::TryNew(areaName, basePolyMesh);
         }
@@ -90,6 +94,10 @@ if (doFiniteArea && !areaRegionNames.empty())
 
 
         reportFields::area(Info, faObjs);
+        if (nEdgeFields)
+        {
+            reportFields::edge(Info, faObjs);
+        }
 
         const auto& pp = faMeshPtr->patch();
 
@@ -125,10 +133,8 @@ if (doFiniteArea && !areaRegionNames.empty())
 
         if (withMeshIds)
         {
-            const globalIndex procAddr(areaMesh.nFaces());
-
-            // Use global indexed values for the 'cell' ids
-            writer.writeCellData("cellID", identity(procAddr.range()));
+            // Cell ids in global numbering
+            writer.writeGlobalIDs("cellID");
 
             // The patch ids can also be quite useful
             const polyBoundaryMesh& pbm = areaMesh.mesh().boundaryMesh();
@@ -152,8 +158,58 @@ if (doFiniteArea && !areaRegionNames.empty())
             writer,
             areaMesh,
             faObjs,
-            true // syncPar
+            true  // syncPar
         );
+
+        if (nEdgeFields)
+        {
+            vtkWriterType_edgeMesh eWriter
+            (
+                areaMesh.points(),
+                areaMesh.edges(),
+                writeOpts,
+                (
+                    outputDir/regionDir/"edge-fields"
+                  / (
+                       isDefaultRegion
+                     ? fileName("finiteArea")
+                     : fileName(areaName/areaName)
+                    )
+                  + timeDesc
+                ),
+                UPstream::parRun()
+            );
+            Info<< "    Edge      : "
+                << args.relativePath(eWriter.output()) << nl;
+
+            eWriter.beginFile(areaMesh.name());
+
+            eWriter.writeTimeValue(timeValue);
+            eWriter.writeGeometry();
+
+            // Optionally with (edgeID, procID) fields
+            eWriter.beginCellData
+            (
+                (withMeshIds ? 1 + (eWriter.parallel() ? 1 : 0) : 0)
+              + nEdgeFields
+            );
+
+            if (withMeshIds)
+            {
+                eWriter.writeProcIDs();  // parallel only
+
+                // Edge ids in rank-local numbering
+                eWriter.writeLocalIDs("edgeID");
+            }
+
+            writeAllEdgeFields
+            (
+                eWriter,
+                areaMesh,
+                faObjs,
+                true  // syncPar
+            );
+        }
 
         fileName outputName(writer.output());
 

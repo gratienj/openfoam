@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -61,6 +61,9 @@ Usage
         \endverbatim
         The quoting is required to avoid shell expansions and to pass the
         information as a single argument.
+
+      - \par -edgeFields
+        Write edgeScalarFields (e.g., phis)
 
       - \par -surfaceFields
         Write surfaceScalarFields (e.g., phi)
@@ -148,6 +151,7 @@ Note
 #include "reportFields.H"
 
 #include "foamVtmWriter.H"
+#include "foamVtkLineWriter.H"
 #include "foamVtkInternalWriter.H"
 #include "foamVtkPatchWriter.H"
 #include "foamVtkSurfaceMeshWriter.H"
@@ -157,6 +161,7 @@ Note
 #include "foamVtkSeriesWriter.H"
 
 #include "writeAreaFields.H"
+#include "writeEdgeFields.H"
 #include "writeDimFields.H"
 #include "writeVolFields.H"
 #include "writePointFields.H"
@@ -361,6 +366,12 @@ int main(int argc, char *argv[])
     );
     argList::addBoolOption
     (
+        "edgeFields",
+        "Write edgeScalarFields (eg, phis)",
+        true  // mark as an advanced option
+    );
+    argList::addBoolOption
+    (
         "surfaceFields",
         "Write surfaceScalarFields (eg, phi)",
         true  // mark as an advanced option
@@ -476,8 +487,9 @@ int main(int argc, char *argv[])
     argList::addOption
     (
         "name",
-        "subdir",
-        "Directory name for VTK output (default: 'VTK')"
+        "dir",
+        "Directory name for VTK output (default: 'VTK'),"
+        " relative to case dir, or an absolute path."
     );
 
     // Prevent volume BCs from triggering finite-area
@@ -494,6 +506,7 @@ int main(int argc, char *argv[])
     const bool doInternal    = !args.found("no-internal");
     const bool doLagrangian  = !args.found("no-lagrangian");
     const bool doFiniteArea  = !args.found("no-finite-area");
+    const bool doEdgeFields  = args.found("edgeFields");
     const bool doSurfaceFields = args.found("surfaceFields");
     const bool oneBoundary   = args.found("one-boundary") && doBoundary;
     const bool nearCellValue = args.found("nearCellValue") && doBoundary;
@@ -692,10 +705,23 @@ int main(int argc, char *argv[])
     // ------------------------------------------------------------------------
     // Directory management
 
-    // Sub-directory for output
-    const word vtkDirName = args.getOrDefault<word>("name", "VTK");
+    // Define directory name to use for output data.
+    // The output path is at case level (or global path) only.
+    // - For parallel cases, data only written from master
 
-    const fileName outputDir(args.globalPath()/vtkDirName);
+    fileName outputDir(args.globalPath()/"VTK");
+    if (fileName dir; args.readIfPresent("name", dir) && !dir.empty())
+    {
+        if (dir.isAbsolute())
+        {
+            outputDir = std::move(dir);
+        }
+        else
+        {
+            outputDir = args.globalPath()/dir;
+        }
+        outputDir.clean();  // Remove unneeded ".."
+    }
 
     if (UPstream::master())
     {
@@ -806,6 +832,11 @@ int main(int argc, char *argv[])
                 {
                     objects.filterObjects(fieldSelector);
                 }
+                if (!doSurfaceFields)
+                {
+                    // Prune surface fields unless explicitly enabled
+                    objects.filterClasses(Foam::fieldTypes::is_surface, true);
+                }
                 if (!doPointValues)
                 {
                     // Prune point fields if disabled
@@ -833,6 +864,11 @@ int main(int argc, char *argv[])
                     if (fieldSelector)
                     {
                         objs.filterObjects(fieldSelector);
+                    }
+                    if (!doEdgeFields)
+                    {
+                        // Prune edge fields unless explicitly enabled
+                        objs.filterClasses(Foam::fieldTypes::is_edge, true);
                     }
 
                     if (!objs.empty())

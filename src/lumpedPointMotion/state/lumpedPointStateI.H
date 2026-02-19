@@ -25,33 +25,9 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-inline bool Foam::lumpedPointState::good() const
+inline bool Foam::lumpedPointState::good() const noexcept
 {
     return points_.size() && points_.size() == angles_.size();
-}
-
-
-inline bool Foam::lumpedPointState::empty() const
-{
-    return points_.empty();
-}
-
-
-inline Foam::label Foam::lumpedPointState::size() const
-{
-    return points_.size();
-}
-
-
-inline const Foam::pointField& Foam::lumpedPointState::points() const
-{
-    return points_;
-}
-
-
-inline const Foam::vectorField& Foam::lumpedPointState::angles() const
-{
-    return angles_;
 }
 
 
@@ -63,19 +39,6 @@ inline const Foam::tensorField& Foam::lumpedPointState::rotations() const
     }
 
     return *rotationPtr_;
-}
-
-
-inline Foam::quaternion::eulerOrder
-Foam::lumpedPointState::rotationOrder() const
-{
-    return order_;
-}
-
-
-inline bool Foam::lumpedPointState::degrees() const
-{
-    return degrees_;
 }
 
 

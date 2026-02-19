@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,7 +48,9 @@ template<class DirectFieldMapperType> class DistributedFieldMapper;
 // Standard Types
 
 //- A directFieldMapper with distributed (with local or remote) quantities
-typedef DistributedFieldMapper<directFieldMapper> distributedFieldMapper;
+typedef
+    DistributedFieldMapper<directFieldMapper>
+    distributedFieldMapper;
 
 
 /*---------------------------------------------------------------------------*\
@@ -75,6 +77,13 @@ public:
 
 
     // Constructors
+
+        //- Construct with distribute map (no direct addressing)
+        explicit DistributedFieldMapper(const mapDistributeBase& distMap)
+        :
+            DirectFieldMapperType(),
+            distMap_(distMap)
+        {}
 
         //- Construct with addressing and distribute map
         DistributedFieldMapper

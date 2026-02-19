@@ -129,6 +129,7 @@ int main(int argc, char *argv[])
                 "$FOAM_CASE/xyz",           "<case>/xyz",
                 "$FOAM_CASE/constant/xyz",  "<constant>/xyz",
                 "$FOAM_CASE/system/xyz",    "<system>/xyz",
+                "~/xyz",                    "<home>/xyz",
 
                 // corner cases
                 "~OpenFOAM",                "<etc>",

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,6 +48,7 @@ Original Authors
 #include "processorFaPatch.H"
 #include "foamVtkIndPatchWriter.H"
 #include "foamVtkLineWriter.H"
+#include "foamVtkVertexWriter.H"
 #include "regionProperties.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -67,6 +68,12 @@ int main(int argc, char *argv[])
     (
         "write-vtk",
         "Write mesh as a vtp (vtk) file for display or debugging"
+    );
+    argList::addBoolOption
+    (
+        "write-edges-vtk",
+        "Write mesh edges as obj files (one per processor)",
+        true  // advanced option (debugging only)
     );
 
     argList::addOption
@@ -129,7 +136,7 @@ int main(int argc, char *argv[])
         // Mesh information (verbose)
         faMeshTools::printMeshChecks(aMesh);
 
-        if (args.found("write-vtk"))
+        if (args.found("write-vtk") || args.found("write-edges-vtk"))
         {
             #include "faMeshWriteVTK.H"
         }

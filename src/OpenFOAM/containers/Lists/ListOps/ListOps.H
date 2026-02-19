@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -988,6 +988,27 @@ List<T> createWithValue
 );
 
 } // End namespace ListOps
+
+/*---------------------------------------------------------------------------*\
+                       Namespace ListListOps Declaration
+\*---------------------------------------------------------------------------*/
+
+namespace ListListOps
+{
+
+//- Inplace renumber the values (not the indices) of a list of lists.
+//  Negative elements are left untouched.
+template<class IntListListType>
+void inplaceRenumber(const labelUList& oldToNew, IntListListType& lists);
+
+//- Inplace renumber the values of a list of lists.
+//  Values that are not mapped by oldToNew are left untouched.
+template<class IntListListType>
+void inplaceRenumber(const Map<label>& oldToNew, IntListListType& lists);
+
+
+} // End namespace ListListOps
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

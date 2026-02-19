@@ -223,8 +223,7 @@ void Foam::vtk::fileWriter::beginPoints(const label nPoints)
         }
         else
         {
-            const uint64_t payLoad =
-                vtk::sizeofData<float, 3>(nPoints);
+            const auto payLoad = vtk::sizeofData<float, 3>(nPoints);
 
             format()
                 .tag(vtk::fileTag::POINTS)
@@ -588,8 +587,6 @@ bool Foam::vtk::fileWriter::writeProcIDs(label localSize)
 
     this->beginDataArray<label>("procID", totalSize);
 
-    bool good = true;
-
     if (parallel_)
     {
         if (UPstream::master())
@@ -600,9 +597,6 @@ bool Foam::vtk::fileWriter::writeProcIDs(label localSize)
                 vtk::write(format(), proci, procSizes[proci]);
             }
         }
-
-        // MPI barrier
-        Pstream::broadcast(good);
     }
     else
     {
@@ -611,7 +605,124 @@ bool Foam::vtk::fileWriter::writeProcIDs(label localSize)
 
     this->endDataArray();
 
-    return good;
+    return true;
+}
+
+
+void Foam::vtk::fileWriter::writeLocalIDs
+(
+    const word& fieldName,
+    label localSize
+)
+{
+    if (isState(outputState::CELL_DATA))
+    {
+        ++nCellData_;
+    }
+    else if (isState(outputState::POINT_DATA))
+    {
+        ++nPointData_;
+    }
+    else
+    {
+        reportBadState
+        (
+            FatalErrorInFunction,
+            outputState::CELL_DATA,
+            outputState::POINT_DATA
+        )   << " for writeLocalIDs: " << fieldName << nl << endl
+            << exit(FatalError);
+    }
+
+    // The per-rank sizes
+    labelList procSizes;
+    label totalSize(localSize);
+
+    if (parallel_)
+    {
+        procSizes = UPstream::listGatherValues(localSize);
+
+        // Some compilers still seem to have issues with std::reduce()
+        totalSize = 0;
+        for (auto len : procSizes)
+        {
+            totalSize += len;
+        }
+    }
+
+    this->beginDataArray<label>(fieldName, totalSize);
+
+    if (parallel_)
+    {
+        // Have enough information to write on master only
+        if (UPstream::master())
+        {
+            // Per-processor numbering
+            for (auto len : procSizes)
+            {
+                vtk::writeIdentity(format(), len);
+            }
+        }
+
+    }
+    else
+    {
+        vtk::writeIdentity(format(), localSize);
+    }
+
+    this->endDataArray();
+}
+
+
+void Foam::vtk::fileWriter::writeGlobalIDs
+(
+    const word& fieldName,
+    label localSize
+)
+{
+    if (isState(outputState::CELL_DATA))
+    {
+        ++nCellData_;
+    }
+    else if (isState(outputState::POINT_DATA))
+    {
+        ++nPointData_;
+    }
+    else
+    {
+        reportBadState
+        (
+            FatalErrorInFunction,
+            outputState::CELL_DATA,
+            outputState::POINT_DATA
+        )   << " for writeGlobalIDs: " << fieldName << nl << endl
+            << exit(FatalError);
+    }
+
+    label totalSize(localSize);
+
+    if (parallel_)
+    {
+        reduce(totalSize, sumOp<label>());
+    }
+
+    this->beginDataArray<label>(fieldName, totalSize);
+
+    if (parallel_)
+    {
+        // Have enough information to write on master only
+        if (UPstream::master())
+        {
+            // Global ID numbering
+            vtk::writeIdentity(format(), totalSize);
+        }
+    }
+    else
+    {
+        vtk::writeIdentity(format(), totalSize);
+    }
+
+    this->endDataArray();
 }
 
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,7 +48,9 @@ template<class FieldMapperType> class DirectFieldMapper;
 // Standard Types
 
 //- A FieldMapper with direct mapping
-typedef DirectFieldMapper<FieldMapper> directFieldMapper;
+typedef
+    DirectFieldMapper<FieldMapper>
+    directFieldMapper;
 
 
 /*---------------------------------------------------------------------------*\
@@ -74,9 +76,9 @@ class DirectFieldMapper
         //- Any negative (unmapped) values in the addressing?
         static bool hasUnmappedEntry(const labelUList& directAddr)
         {
-            for (const label val : directAddr)
+            for (auto val : directAddr)
             {
-                if (val < 0) return true;  // early exit
+                if (val < 0) return true;
             }
             return false;
         }
@@ -91,11 +93,19 @@ public:
 
     // Constructors
 
+        //- Construct an empty mapper
+        DirectFieldMapper()
+        :
+            FieldMapperType(),
+            directAddressing_(labelUList::null()),
+            hasUnmapped_(false)
+        {}
+
         //- Construct given addressing, check for unmapped (negative) values
         explicit DirectFieldMapper
         (
             const labelUList& directAddr,
-            const bool checkUnmapped = true
+            bool checkUnmapped = true
         )
         :
             FieldMapperType(),

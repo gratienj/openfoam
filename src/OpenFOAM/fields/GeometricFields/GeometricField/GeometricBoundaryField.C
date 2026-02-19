@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017,2022 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -187,9 +187,7 @@ void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::readField
     // DebugInFunction << nl;
 
     // Clear the boundary field if already initialised
-    this->clear();
-
-    this->resize(bmesh_.size());
+    this->resize_null(bmesh_.size());
 
     label nUnset = this->size();
 
@@ -239,8 +237,10 @@ void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::readField
 
         if (subdict && dEntry.keyword().isLiteral())
         {
-            const labelList patchIds =
-                bmesh_.indices(dEntry.keyword(), true); // use patchGroups
+            const labelList patchIds
+            (
+                bmesh_.indices(dEntry.keyword(), true)  // use patchGroups
+            );
 
             for (const label patchi : patchIds)
             {
@@ -391,44 +391,32 @@ Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::GeometricBoundaryField
     {
         FatalErrorInFunction
             << "Incorrect number of patch type specifications given" << nl
-            << "    Number of patches in mesh = " << bmesh.size()
-            << " number of patch type specifications = "
-            << patchFieldTypes.size()
+            << "    Number of patches = " << bmesh.size()
+            << " number of patchTypes = " << patchFieldTypes.size()
+            << " number of contraintTypes = " << constraintTypes.size()
             << abort(FatalError);
     }
 
-    if (constraintTypes.size())
+    forAll(bmesh_, patchi)
     {
-        forAll(bmesh_, patchi)
-        {
-            this->set
+        const word& constraintType =
+        (
+            patchi < constraintTypes.size()
+          ? constraintTypes[patchi]
+          : word::null
+        );
+
+        this->set
+        (
+            patchi,
+            PatchField<Type>::New
             (
-                patchi,
-                PatchField<Type>::New
-                (
-                    patchFieldTypes[patchi],
-                    constraintTypes[patchi],
-                    bmesh_[patchi],
-                    iField
-                )
-            );
-        }
-    }
-    else
-    {
-        forAll(bmesh_, patchi)
-        {
-            this->set
-            (
-                patchi,
-                PatchField<Type>::New
-                (
-                    patchFieldTypes[patchi],
-                    bmesh_[patchi],
-                    iField
-                )
-            );
-        }
+                patchFieldTypes[patchi],
+                constraintType,
+                bmesh_[patchi],
+                iField
+            )
+        );
     }
 }
 
@@ -438,17 +426,22 @@ Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::GeometricBoundaryField
 (
     const BoundaryMesh& bmesh,
     const Internal& iField,
-    const PtrList<PatchField<Type>>& ptfl
+    const UPtrList<PatchField<Type>>& pflds
 )
 :
     FieldField<PatchField, Type>(bmesh.size()),
     bmesh_(bmesh)
 {
-    // DebugInFunction << nl;
-
-    forAll(bmesh_, patchi)
+    if (pflds.empty())
     {
-        this->set(patchi, ptfl[patchi].clone(iField));
+        // Accept an empty PtrList - ie, populate later
+    }
+    else
+    {
+        forAll(bmesh_, patchi)
+        {
+            this->set(patchi, pflds[patchi].clone(iField));
+        }
     }
 }
 
@@ -477,7 +470,7 @@ Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::GeometricBoundaryField
 (
     const Internal& iField,
     const GeometricBoundaryField<Type, PatchField, GeoMesh>& btf,
-    const labelList& patchIDs,
+    const labelUList& patchIDs,
     const word& patchFieldType
 )
 :
@@ -810,7 +803,14 @@ Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::types() const
 
     forAll(pff, patchi)
     {
-        list[patchi] = pff[patchi].type();
+        if (const auto* pfld = pff.get(patchi))
+        {
+            list[patchi] = pfld->type();
+        }
+        else
+        {
+            list[patchi] = "null";
+        }
     }
 
     return list;
@@ -845,12 +845,14 @@ Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::interfaces() const
 {
     LduInterfaceFieldPtrsList<Type> list(this->size());
 
+    typedef LduInterfaceField<Type> InterfaceType;
+
     forAll(list, patchi)
     {
         list.set
         (
             patchi,
-            isA<LduInterfaceField<Type>>(this->operator[](patchi))
+            dynamic_cast<const InterfaceType*>(this->get(patchi))
         );
     }
 
@@ -865,12 +867,14 @@ scalarInterfaces() const
 {
     lduInterfaceFieldPtrsList list(this->size());
 
+    typedef lduInterfaceField InterfaceType;
+
     forAll(list, patchi)
     {
         list.set
         (
             patchi,
-            isA<lduInterfaceField>(this->operator[](patchi))
+            dynamic_cast<const InterfaceType*>(this->get(patchi))
         );
     }
 

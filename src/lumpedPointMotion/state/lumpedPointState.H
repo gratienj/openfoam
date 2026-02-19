@@ -192,22 +192,23 @@ public:
     // Member Functions
 
         //- Has positions and consistent number of rotations?
-        inline bool good() const;
+        inline bool good() const noexcept;
 
         //- If no points were specified
-        inline bool empty() const;
+        bool empty() const noexcept { return points_.empty(); }
 
         //- The number of points
-        inline label size() const;
+        label size() const noexcept { return points_.size(); }
 
         //- Same as good()
         bool valid() const { return good(); }
 
         //- The points corresponding to mass centres
-        inline const pointField& points() const;
+        const pointField& points() const noexcept { return points_; }
 
         //- The orientation of the points (mass centres)
-        inline const vectorField& angles() const;
+        const vectorField& angles() const noexcept { return angles_; }
+
 
         //- The local-to-global transformation for each point
         inline const tensorField& rotations() const;
@@ -217,10 +218,10 @@ public:
         void scalePoints(const scalar scaleFactor);
 
         //- The Euler-angle rotation order
-        inline quaternion::eulerOrder rotationOrder() const;
+        quaternion::eulerOrder rotationOrder() const noexcept { return order_; }
 
         //-  Rotation angles in degrees
-        inline bool degrees() const;
+        bool degrees() const noexcept { return degrees_; }
 
         //- Relax the state
         //  alpha = 1 : no relaxation
