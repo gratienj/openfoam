@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2018 OpenFOAM Foundation
     Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -144,6 +145,18 @@ Foam::UPstream::probeMessage
 )
 {
     return {-1, 0};
+}
+
+
+void Foam::UPstream::probeMessages
+(
+    DynamicList<int64_t>& messageSizes,
+    const UList<int>& fromProcs,
+    const int tag,
+    const int communicator
+)
+{
+    messageSizes.clear();
 }
 
 

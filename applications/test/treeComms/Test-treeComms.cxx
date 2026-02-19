@@ -39,11 +39,16 @@ Description
 
 using namespace Foam;
 
-void printConnection(Ostream& os, const label proci, const labelUList& below)
+void printConnection(Ostream& os, label proci, const labelUList& below)
 {
-    for (const label connectProci : below)
+    if (!below.empty())
     {
-        os << indent << proci << " -- " << connectProci << nl;
+        os << indent << proci << " -- " << token::BEGIN_BLOCK;
+        for (auto connectProci : below)
+        {
+            os << ' ' << connectProci;
+        }
+        os << token::SPACE << token::END_BLOCK << nl;
     }
 }
 
@@ -69,10 +74,10 @@ void printRecvCount_gatherList
             nMesg[proci] += comms[proci].below().size();
 
             // Receive from my downstairs neighbours
-            for (const label belowID : comms[proci].below())
+            for (auto belowID : comms[proci].below())
             {
-                const labelList& belowLeaves = comms[belowID].allBelow();
-                nRecv[proci] += (belowLeaves.size() + 1);
+                const auto& leaves = comms[belowID].allBelow();
+                nRecv[proci] += (leaves.size() + 1);
             }
         }
     }
@@ -109,9 +114,9 @@ void printSendCount_scatterList
             nMesg[proci] += comms[proci].below().size();
 
             // Send to my downstairs neighbours
-            for (const label belowID : comms[proci].below())
+            for (auto belowID : comms[proci].below())
             {
-                const labelList& notBelowLeaves = comms[belowID].allNotBelow();
+                const auto& notBelowLeaves = comms[belowID].allNotBelow();
                 nSend[proci] += notBelowLeaves.size();
             }
         }
@@ -149,13 +154,13 @@ void printWidths
             label& max0 = maxBelow[proci];
             label& max1 = maxNotBelow[proci];
 
-            for (const label belowID : comms[proci].below())
+            for (const auto belowID : comms[proci].below())
             {
                 // Receive from my downstairs neighbours
-                const labelList& belowLeaves = comms[belowID].allBelow();
+                const auto& belowLeaves = comms[belowID].allBelow();
 
                 // Send to my downstairs neighbours
-                const labelList& notBelowLeaves = comms[belowID].allNotBelow();
+                const auto& notBelowLeaves = comms[belowID].allNotBelow();
 
                 max0 = max(max0, belowLeaves.size());
                 max1 = max(max1, notBelowLeaves.size());
@@ -183,7 +188,7 @@ int main(int argc, char *argv[])
         FatalErrorInFunction
             << "Please run in parallel" << exit(FatalError);
     }
-    const auto& comms = UPstream::treeCommunication();
+    const auto& comms = UPstream::treeCommunication(UPstream::worldComm);
 
     printRecvCount_gatherList(comms);
     printSendCount_scatterList(comms);
@@ -191,6 +196,11 @@ int main(int argc, char *argv[])
 
     // My communication order
     const UPstream::commsStruct& myComm = comms[UPstream::myProcNo()];
+
+    // My communication order
+    Perr<< "above: " << myComm.above()
+        << " allBelow: " << myComm.allBelow().size()
+        << " below: "; myComm.below().writeList(Perr) << nl;
 
     // Info<< "allComms: " << comms << nl;
 
@@ -204,7 +214,7 @@ int main(int argc, char *argv[])
         printConnection(os, 0, myComm.below());
         // Pout<< flatOutput(myComm.allBelow()) << nl;
 
-        for (const int proci : UPstream::subProcs())
+        for (int proci : UPstream::subProcs())
         {
             labelList below;
             IPstream::recv(below, proci);

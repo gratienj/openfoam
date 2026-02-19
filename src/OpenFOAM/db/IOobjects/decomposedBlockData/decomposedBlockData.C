@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
     Copyright (C) 2020-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -523,22 +524,16 @@ bool Foam::decomposedBlockData::readBlocks
         List<char>& slot = localData;
 
         // Probe for the message size
-        const auto [fromProci, numBytes] =
-            UPstream::probeMessage
-            (
-                UPstream::commsTypes::scheduled,  // blocking call
-                UPstream::masterNo(),
-                messageTag,
-                comm
-            );
-
-        slot.resize_nocopy(numBytes);
+        auto [fromProci, num_bytes] =
+            UPstream::probeMessage(UPstream::masterNo(), messageTag, comm);
 
         if (debug)
         {
-            Pout<< "probed to receive " << label(numBytes) << " from "
-                << fromProci << endl;
+            Pout<< "probed to receive " << num_bytes
+                << " from " << fromProci << endl;
         }
+
+        slot.resize_nocopy(num_bytes);
 
         // Receive content (can also be zero-sized)
         UIPstream::read
@@ -640,22 +635,16 @@ Foam::autoPtr<Foam::ISstream> Foam::decomposedBlockData::readBlocks
         List<char>& slot = localData;
 
         // Probe for the message size
-        const auto [fromProci, numBytes] =
-            UPstream::probeMessage
-            (
-                UPstream::commsTypes::scheduled,  // blocking call
-                UPstream::masterNo(),
-                messageTag,
-                comm
-            );
-
-        slot.resize_nocopy(numBytes);
+        auto [fromProci, num_bytes] =
+            UPstream::probeMessage(UPstream::masterNo(), messageTag, comm);
 
         if (debug)
         {
-            Pout<< "probed to receive " << label(numBytes) << " from "
-                << fromProci << endl;
+            Pout<< "probed to receive " << num_bytes
+                << " from " << fromProci << endl;
         }
+
+        slot.resize_nocopy(num_bytes);
 
         // Receive content (can also be zero-sized)
         UIPstream::read

@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,7 +38,7 @@ bool Foam::UPstream::mpi_broadcast
     std::streamsize count,
     const UPstream::dataTypes dataTypeId,  // Proper type passed by caller
     const int communicator,         // Index into MPICommunicators_
-    const int root                  // The broadcast root (usually 0)
+    int root                        // The broadcast root (usually 0)
 )
 {
     MPI_Datatype datatype = PstreamGlobals::getDataType(dataTypeId);
@@ -75,6 +76,12 @@ bool Foam::UPstream::mpi_broadcast
             << " comm:" << communicator
             << " root:" << root
             << " topo:" << withTopo << Foam::endl;
+    }
+
+    if (root < 0)
+    {
+        // Use last rank as the root
+        root = static_cast<int>(UPstream::nProcs(communicator)-1);
     }
 
     int returnCode = MPI_SUCCESS;
@@ -127,7 +134,7 @@ bool Foam::UPstream::mpi_broadcast
             buf,
             count,
             datatype,
-            root,  // The broadcast root (usually 0 == UPstream::masterNo())
+            root,  // The broadcast root
             PstreamGlobals::MPICommunicators_[communicator]
         );
     }

@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 
     for (bool barrier_active = false, done = false; !done; /*nil*/)
     {
-        std::pair<int, int64_t> probed =
+        auto [proci, num_bytes] =
             UPstream::probeMessage
             (
                 UPstream::commsTypes::nonBlocking,
@@ -128,11 +128,10 @@ int main(int argc, char *argv[])
                 comm
             );
 
-        if (probed.second > 0)
+        if (proci >= 0)
         {
-            // Message found and had size: receive it
-            const label proci(probed.first);
-            const label count(probed.second);
+            // Message found
+            const label count(num_bytes);
 
             if (optNonBlocking)
             {

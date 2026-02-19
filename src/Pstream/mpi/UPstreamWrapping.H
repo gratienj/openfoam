@@ -56,7 +56,7 @@ bool broadcast
     int count,
     MPI_Datatype datatype,
     const int communicator,
-    const int root = 0
+    int root = 0
 );
 
 // MPI_Reduce, using root=0

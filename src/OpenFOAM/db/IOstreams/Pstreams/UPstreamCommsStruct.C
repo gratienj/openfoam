@@ -160,46 +160,47 @@ static void printGraph_impl
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Create a tree-like schedule. For 8 procs:
-// (level 0)
-//      0 receives from 1
-//      2 receives from 3
-//      4 receives from 5
-//      6 receives from 7
-// (level 1)
-//      0 receives from 2
-//      4 receives from 6
-// (level 2)
-//      0 receives from 4
-//
+// Create a binomial tree-like schedule.
 // The sends/receives for all levels are collected per processor
-// (one send per processor; multiple receives possible) creating
-// a table:
+// (one upward connection per rank; multiple downward connections possible).
 //
-// So per processor:
-// proc     receives from   sends to
-// ----     -------------   --------
-//  0       1,2,4           -
-//  1       -               0
-//  2       3               0
-//  3       -               2
-//  4       5               0
-//  5       -               4
-//  6       7               4
-//  7       -               6
+// Example table for 16 ranks:
+//
+// rank |above | below     | allBelow
+// -----+------+-----------+----------
+//    0 | n/a  | (1 2 4 8) | (1 (2 3) (4 5 (6 7))) (8 9 10 11 (12 13 (14 15))))
+//    1 |   0  | ()        | ()
+//    2 |   0  | (3)       | (3)
+//    3 |   2  | ()        | ()
+//    4 |   0  | (5 6)     | (5 (6 7))
+//    5 |   4  | ()        | ()
+//    6 |   4  | (7)       | (7)
+//    7 |   6  | ()        | ()
+//    8 |   0  | (9 10 12) | (9 (10 11) (12 13 (14 15)))
+//    9 |   8  | ()        | ()
+//   10 |   8  | (11)      | (11)
+//   11 |  10  | ()        | ()
+//   12 |   8  | (13 14)   | (13 (14 15))
+//   13 |  12  | ()        | ()
+//   14 |  12  | (15)      | (15)
+//   15 |  14  | ()        | ()
+// -----+------+-----------+----------
 
-namespace Foam
+namespace
 {
 
-static int simpleTree
+int simpleTree
 (
     const int myProci,
     const int numProcs,
 
-    DynamicList<int>& below,
-    DynamicList<int>& allBelow
+    Foam::DynamicList<int>& below,
+    Foam::DynamicList<int>& allBelow
 )
 {
+    // assert(myProci >= 0);
+    // assert(numProcs > 0);
+    // assert(myProci < numProcs);
     int above(-1);
 
     for (int mod = 2, step = 1; step < numProcs; step = mod)
@@ -238,7 +239,7 @@ static int simpleTree
     return above;
 }
 
-} // End namespace Foam
+} // End anonymous namespace
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
