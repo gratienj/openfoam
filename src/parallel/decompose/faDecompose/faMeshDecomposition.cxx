@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,12 +30,10 @@ License
 #include "Time.H"
 #include "dictionary.H"
 #include "labelIOList.H"
-#include "processorFaPatch.H"
-#include "OSspecific.H"
 #include "Map.H"
-#include "SLList.H"
 #include "ListOps.H"
 #include "globalMeshData.H"
+#include "processorFaPatch.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -120,7 +118,7 @@ void Foam::faMeshDecomposition::distributeFaces()
             // With +1 for lookup in faceMap with flip encoding
             const label index = (faceLabels()[facei] + 1);
 
-            if (faceProcAddressingHash.found(index))
+            if (faceProcAddressingHash.contains(index))
             {
                 faceToProc_[facei] = proci;
             }
@@ -148,6 +146,7 @@ Foam::faMeshDecomposition::faMeshDecomposition
     nProcs_(nProcessors),
     distributed_(false),
     hasGlobalFaceZones_(false),
+    cyclicParallel_(false),
     faceToProc_(faMesh::nFaces()),
     procFaceLabels_(nProcs_),
     procMeshEdgesMap_(nProcs_),
@@ -163,8 +162,7 @@ Foam::faMeshDecomposition::faMeshDecomposition
     procNeighbourProcessors_(nProcs_),
     procProcessorPatchSize_(nProcs_),
     procProcessorPatchStartIndex_(nProcs_),
-    globallySharedPoints_(),
-    cyclicParallel_(false)
+    globallySharedPoints_()
 {
     updateParameters(params);
 }
@@ -310,7 +308,7 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
         labelList& curFaceLabels = procFaceLabels_[procI];
 
-        curFaceLabels = labelList(curProcFaceAddressing.size(), -1);
+        curFaceLabels.resize_fill(curProcFaceAddressing.size(), -1);
 
         forAll(curProcFaceAddressing, faceI)
         {
@@ -333,6 +331,7 @@ void Foam::faMeshDecomposition::decomposeMesh()
         const Map<label>& map = patch.meshPointMap();
 
         EdgeMap<label> edgesHash;
+        edgesHash.reserve(patch.nEdges());
 
         const label nIntEdges = patch.nInternalEdges();
 
@@ -352,7 +351,7 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
 
         const uindirectPrimitivePatch& procPatch = procMesh.patch();
-        const labelList& procMeshPoints = procPatch.meshPoints();
+        const labelUList& procMeshPoints = procPatch.meshPoints();
         const edgeList& procEdges = procPatch.edges();
 
         labelList& curPatchPointAddressing = procPatchPointAddressing_[procI];
@@ -364,7 +363,9 @@ void Foam::faMeshDecomposition::decomposeMesh()
                 map[fvPointProcAddressing[procMeshPoints[pointi]]];
         }
 
-        labelList& curPatchEdgeAddressing = procPatchEdgeAddressing_[procI];
+        procNInternalEdges_[procI] = procPatch.nInternalEdges();
+
+        auto& curPatchEdgeAddressing = procPatchEdgeAddressing_[procI];
         curPatchEdgeAddressing.resize(procEdges.size(), -1);
 
         Map<label>& curMap = procMeshEdgesMap_[procI];
@@ -374,15 +375,26 @@ void Foam::faMeshDecomposition::decomposeMesh()
         forAll(procEdges, edgeI)
         {
             edge curGlobalEdge(curPatchPointAddressing, procEdges[edgeI]);
-            curPatchEdgeAddressing[edgeI] = edgesHash.find(curGlobalEdge).val();
-        }
 
-        forAll(curPatchEdgeAddressing, edgeI)
-        {
-            curMap.insert(curPatchEdgeAddressing[edgeI], edgeI);
-        }
+            if (auto iter = edgesHash.cfind(curGlobalEdge); iter.good())
+            {
+                // The edgeID (not edgeLabel) in serial
+                auto globalEdgeId = iter.val();
 
-        procNInternalEdges_[procI] = procPatch.nInternalEdges();
+                // For each proc edgeLabel, the serial edgeID.
+                curPatchEdgeAddressing[edgeI] = globalEdgeId;
+
+                // (key = serial edgeID; val = proc edgeLabel)
+                curMap.insert(globalEdgeId, edgeI);
+            }
+            else
+            {
+                // Only fails if the polyMesh pointProcAddressing is corrupt
+                FatalErrorInFunction
+                    << "Failed edge lookup of " << curGlobalEdge << endl
+                    << exit(FatalError);
+            }
+        }
     }
 
 
@@ -394,35 +406,41 @@ void Foam::faMeshDecomposition::decomposeMesh()
     // set references to the original mesh
     const faBoundaryMesh& patches = boundary();
     const edgeList& edges = this->edges();
-    const labelList& owner = edgeOwner();
-    const labelList& neighbour = edgeNeighbour();
+    const labelUList& owner = edgeOwner();
+    const labelUList& neighbour = edgeNeighbour();
 
     // Memory management
     {
-        List<SLList<label>> procEdgeList(nProcs());
+        List<DynamicList<label>> procEdgeList(nProcs());
 
         forAll(procEdgeList, procI)
         {
-            for(label i=0; i<procNInternalEdges_[procI]; i++)
-            {
-                procEdgeList[procI].append(procPatchEdgeAddressing_[procI][i]);
-            }
+            const auto& procEdgeAddr = procPatchEdgeAddressing_[procI];
+            const auto nProcInternalEdges = procNInternalEdges_[procI];
+
+            // Copy the internal edges ids
+            procEdgeList[procI].reserve(procEdgeAddr.size());
+            procEdgeList[procI].push_back
+            (
+                procEdgeAddr.slice(0, nProcInternalEdges)
+            );
         }
 
 
         // Detect inter-processor boundaries
-
-        // Neighbour processor for each subdomain
-        List<SLList<label>> interProcBoundaries(nProcs());
-
-        // Edge labels belonging to each inter-processor boundary
-        List<SLList<SLList<label>>> interProcBEdges(nProcs());
-
-        List<SLList<label>> procPatchIndex(nProcs());
+        // Track processor boundaries as (neighbour rank, edgeLabels)
+        // lists for each subdomain
+        List
+        <
+            DynamicList<std::pair<label, DynamicList<label>>>
+        > interProcBoundaries(nProcs());
 
         forAll(neighbour, edgeI)
         {
-            if (faceToProc_[owner[edgeI]] != faceToProc_[neighbour[edgeI]])
+            const label ownProc = faceToProc_[owner[edgeI]];
+            const label neiProc = faceToProc_[neighbour[edgeI]];
+
+            if (ownProc != neiProc)
             {
                 // inter - processor patch edge found. Go through the list of
                 // inside boundaries for the owner processor and try to find
@@ -430,58 +448,33 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
                 bool interProcBouFound = false;
 
-                const label ownProc = faceToProc_[owner[edgeI]];
-                const label neiProc = faceToProc_[neighbour[edgeI]];
-
-                auto curInterProcBdrsOwnIter =
-                    interProcBoundaries[ownProc].cbegin();
-
-                auto curInterProcBEdgesOwnIter =
-                    interProcBEdges[ownProc].begin();
-
-                // WARNING: Synchronous SLList iterators
-
                 for
                 (
-                    ;
-                    curInterProcBdrsOwnIter.good()
-                 && curInterProcBEdgesOwnIter.good();
-                    ++curInterProcBdrsOwnIter,
-                    ++curInterProcBEdgesOwnIter
+                    auto& [ownNbrProc, ownProcEdges]
+                  : interProcBoundaries[ownProc]
                 )
                 {
-                    if (curInterProcBdrsOwnIter() == neiProc)
+                    if (ownNbrProc == neiProc)
                     {
-                        // the inter - processor boundary exists. Add the face
+                        // the inter - processor boundary exists
                         interProcBouFound = true;
+
+                        ownProcEdges.push_back(edgeI);
 
                         bool neighbourFound = false;
 
-                        curInterProcBEdgesOwnIter().append(edgeI);
-
-                        auto curInterProcBdrsNeiIter =
-                            interProcBoundaries[neiProc].cbegin();
-
-                        auto curInterProcBEdgesNeiIter =
-                            interProcBEdges[neiProc].begin();
-
-                        // WARNING: Synchronous SLList iterators
-
                         for
                         (
-                            ;
-                            curInterProcBdrsNeiIter.good()
-                         && curInterProcBEdgesNeiIter.good();
-                            ++curInterProcBdrsNeiIter,
-                            ++curInterProcBEdgesNeiIter
+                            auto& [neiNbrProc, neiProcEdges]
+                          : interProcBoundaries[neiProc]
                         )
                         {
-                            if (curInterProcBdrsNeiIter() == ownProc)
+                            if (neiNbrProc == ownProc)
                             {
                                 // boundary found. Add the face
                                 neighbourFound = true;
 
-                                curInterProcBEdgesNeiIter().append(edgeI);
+                                neiProcEdges.push_back(edgeI);
                             }
 
                             if (neighbourFound) break;
@@ -489,10 +482,9 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
                         if (interProcBouFound && !neighbourFound)
                         {
-                            FatalErrorIn
-                                ("faDomainDecomposition::decomposeMesh()")
-                                << "Inconsistency in inter - "
-                                << "processor boundary lists for processors "
+                            FatalErrorInFunction
+                                << "Inconsistency in inter-processor"
+                                << " boundary lists for processors "
                                 << ownProc << " and " << neiProc
                                 << abort(FatalError);
                         }
@@ -503,22 +495,22 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
                 if (!interProcBouFound)
                 {
-                    // inter - processor boundaries do not exist and need to
-                    // be created
+                    // inter - processor boundaries do not exist
+                    // and need to be created
 
-                    // set the new addressing information
+                    // owner -> neighbour
+                    auto& [ownNbrProc, ownProcEdges] =
+                        interProcBoundaries[ownProc].emplace_back();
 
-                    // owner
-                    interProcBoundaries[ownProc].append(neiProc);
-                    interProcBEdges[ownProc].append(SLList<label>(edgeI));
+                    ownNbrProc = neiProc;
+                    ownProcEdges.push_back(edgeI);
 
-                    // neighbour
-                    interProcBoundaries[neiProc].append(ownProc);
-                    interProcBEdges[neiProc]
-                        .append
-                        (
-                            SLList<label>(edgeI)
-                        );
+                    // neighbour -> owner
+                    auto& [neiNbrProc, neiProcEdges] =
+                        interProcBoundaries[neiProc].emplace_back();
+
+                    neiNbrProc = ownProc;
+                    neiProcEdges.push_back(edgeI);
                 }
             }
         }
@@ -556,23 +548,19 @@ void Foam::faMeshDecomposition::decomposeMesh()
                 // Normal patch. Add edges to processor where the face
                 // next to the edge lives
 
+                // These edgeFaces are patch edges (ie, edgeLabels)
                 const labelListList& eF = patch().edgeFaces();
 
-                const label size = patches[patchI].labelList::size();
+                const labelUList& patchEdgeLabels = fap.edgeLabels();
 
-                labelList patchEdgeFaces(size, -1);
-
-                for(int eI=0; eI<size; eI++)
+                forAll(patchEdgeLabels, patchEdgei)
                 {
-                    patchEdgeFaces[eI] = eF[patches[patchI][eI]][0];
-                }
+                    const label edgeLabel = patchEdgeLabels[patchEdgei];
+                    const label facei = eF[edgeLabel][0];
+                    const label curProc = faceToProc_[facei];
 
-                forAll(patchEdgeFaces, edgeI)
-                {
-                    const label curProc = faceToProc_[patchEdgeFaces[edgeI]];
-
-                    // add the face
-                    procEdgeList[curProc].append(patchStart + edgeI);
+                    // Add to the list of edges
+                    procEdgeList[curProc].push_back(patchStart + patchEdgei);
 
                     // increment the number of edges for this patch
                     procPatchSize_[curProc][patchI]++;
@@ -587,26 +575,28 @@ void Foam::faMeshDecomposition::decomposeMesh()
                 const label cycOffset = cPatch.size()/2;
 
                 // Set reference to faceCells for both patches
-                const labelList::subList firstEdgeFaces
+                const auto firstEdgeFaces
                 (
-                    cPatch.edgeFaces(),
-                    cycOffset
+                    cPatch.edgeFaces().slice(0, cycOffset)
                 );
 
-                const labelList::subList secondEdgeFaces
+                const auto secondEdgeFaces
                 (
-                    cPatch.edgeFaces(),
-                    cycOffset,
-                    cycOffset
+                    cPatch.edgeFaces().slice(cycOffset)
                 );
+
+                const auto startPart1 = (patchStart);
+                const auto startPart2 = (patchStart + cycOffset);
 
                 forAll(firstEdgeFaces, edgeI)
                 {
-                    if
-                    (
-                        faceToProc_[firstEdgeFaces[edgeI]]
-                     != faceToProc_[secondEdgeFaces[edgeI]]
-                    )
+                    const label ownProc = faceToProc_[firstEdgeFaces[edgeI]];
+                    const label neiProc = faceToProc_[secondEdgeFaces[edgeI]];
+
+                    const label firstEdgei  = (startPart1 + edgeI);
+                    const label secondEdgei = (startPart2 + edgeI);
+
+                    if (ownProc != neiProc)
                     {
                         // This edge becomes an inter-processor boundary edge
                         // inter - processor patch edge found. Go through
@@ -618,68 +608,33 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
                         bool interProcBouFound = false;
 
-                        const label ownProc =
-                            faceToProc_[firstEdgeFaces[edgeI]];
-                        const label neiProc =
-                            faceToProc_[secondEdgeFaces[edgeI]];
-
-                        auto curInterProcBdrsOwnIter =
-                            interProcBoundaries[ownProc].cbegin();
-
-                        auto curInterProcBEdgesOwnIter =
-                            interProcBEdges[ownProc].begin();
-
-                        // WARNING: Synchronous SLList iterators
-
                         for
                         (
-                            ;
-                            curInterProcBdrsOwnIter.good()
-                         && curInterProcBEdgesOwnIter.good();
-                            ++curInterProcBdrsOwnIter,
-                            ++curInterProcBEdgesOwnIter
+                            auto& [ownNbrProc, ownProcEdges]
+                          : interProcBoundaries[ownProc]
                         )
                         {
-                            if (curInterProcBdrsOwnIter() == neiProc)
+                            if (ownNbrProc == neiProc)
                             {
                                 // the inter - processor boundary exists.
-                                // Add the face
                                 interProcBouFound = true;
+
+                                ownProcEdges.push_back(firstEdgei);
 
                                 bool neighbourFound = false;
 
-                                curInterProcBEdgesOwnIter()
-                                    .append(patchStart + edgeI);
-
-                                auto curInterProcBdrsNeiIter
-                                   = interProcBoundaries[neiProc].cbegin();
-
-                                auto curInterProcBEdgesNeiIter =
-                                    interProcBEdges[neiProc].begin();
-
-                                // WARNING: Synchronous SLList iterators
-
                                 for
                                 (
-                                    ;
-                                    curInterProcBdrsNeiIter.good()
-                                 && curInterProcBEdgesNeiIter.good();
-                                    ++curInterProcBdrsNeiIter,
-                                    ++curInterProcBEdgesNeiIter
+                                    auto& [neiNbrProc, neiProcEdges]
+                                  : interProcBoundaries[neiProc]
                                 )
                                 {
-                                    if (curInterProcBdrsNeiIter() == ownProc)
+                                    if (neiNbrProc == ownProc)
                                     {
                                         // boundary found. Add the face
                                         neighbourFound = true;
 
-                                        curInterProcBEdgesNeiIter()
-                                           .append
-                                            (
-                                                patchStart
-                                              + cycOffset
-                                              + edgeI
-                                            );
+                                        neiProcEdges.push_back(secondEdgei);
                                     }
 
                                     if (neighbourFound) break;
@@ -687,11 +642,9 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
                                 if (interProcBouFound && !neighbourFound)
                                 {
-                                    FatalErrorIn
-                                    (
-                                        "faDomainDecomposition::decomposeMesh()"
-                                    )   << "Inconsistency in inter-processor "
-                                        << "boundary lists for processors "
+                                    FatalErrorInFunction
+                                        << "Inconsistency in inter-processor"
+                                        << " boundary lists for processors "
                                         << ownProc << " and " << neiProc
                                         << " in cyclic boundary matching"
                                         << abort(FatalError);
@@ -706,34 +659,27 @@ void Foam::faMeshDecomposition::decomposeMesh()
                             // inter - processor boundaries do not exist
                             // and need to be created
 
-                            // set the new addressing information
+                            // owner -> neighbour
+                            auto& [ownNbrProc, ownProcEdges] =
+                                interProcBoundaries[ownProc].emplace_back();
 
-                            // owner
-                            interProcBoundaries[ownProc].append(neiProc);
-                            interProcBEdges[ownProc]
-                                .append(SLList<label>(patchStart + edgeI));
+                            ownNbrProc = neiProc;
+                            ownProcEdges.push_back(firstEdgei);
 
-                            // neighbour
-                            interProcBoundaries[neiProc].append(ownProc);
-                            interProcBEdges[neiProc]
-                               .append
-                                (
-                                    SLList<label>
-                                    (
-                                        patchStart
-                                      + cycOffset
-                                      + edgeI
-                                    )
-                                );
+                            // neighbour -> owner
+                            auto& [neiNbrProc, neiProcEdges] =
+                                interProcBoundaries[neiProc].emplace_back();
+
+                            neiNbrProc = ownProc;
+                            neiProcEdges.push_back(secondEdgei);
                         }
                     }
                     else
                     {
                         // This cyclic edge remains on the processor
-                        label ownProc = faceToProc_[firstEdgeFaces[edgeI]];
 
-                        // add the edge
-                        procEdgeList[ownProc].append(patchStart + edgeI);
+                        // add the first edge
+                        procEdgeList[ownProc].push_back(firstEdgei);
 
                         // increment the number of edges for this patch
                         procPatchSize_[ownProc][patchI]++;
@@ -749,18 +695,18 @@ void Foam::faMeshDecomposition::decomposeMesh()
                 // that remain on the processor
                 forAll(secondEdgeFaces, edgeI)
                 {
-                    if
-                    (
-                        faceToProc_[firstEdgeFaces[edgeI]]
-                     == faceToProc_[secondEdgeFaces[edgeI]]
-                    )
+                    const label ownProc = faceToProc_[firstEdgeFaces[edgeI]];
+                    const label neiProc = faceToProc_[secondEdgeFaces[edgeI]];
+
+                    //const label firstEdgei  = (startPart1 + edgeI);
+                    const label secondEdgei = (startPart2 + edgeI);
+
+                    if (ownProc == neiProc)
                     {
                         // This cyclic edge remains on the processor
-                        label ownProc = faceToProc_[firstEdgeFaces[edgeI]];
 
                         // add the second edge
-                        procEdgeList[ownProc].append
-                            (patchStart + cycOffset + edgeI);
+                        procEdgeList[ownProc].push_back(secondEdgei);
 
                         // increment the number of edges for this patch
                         procPatchSize_[ownProc][patchI]++;
@@ -769,12 +715,21 @@ void Foam::faMeshDecomposition::decomposeMesh()
             }
         }
 
-        // Convert linked lists into normal lists
+
+        // Sort processor connections according to neighbProcNo.
+        // Not needed for functionality, but gives consistently
+        // ordered boundaries.
+
+        for (auto& procBoundaries : interProcBoundaries)
+        {
+            Foam::sort(procBoundaries);
+        }
+
         // Add inter-processor boundaries and remember start indices
         forAll(procEdgeList, procI)
         {
             // Get internal and regular boundary processor faces
-            SLList<label>& curProcEdges = procEdgeList[procI];
+            const auto& curProcEdges = procEdgeList[procI];
 
             // Get reference to processor edge addressing
             labelList& curProcEdgeAddressing = procEdgeAddressing_[procI];
@@ -782,21 +737,46 @@ void Foam::faMeshDecomposition::decomposeMesh()
             labelList& curProcNeighbourProcessors =
                 procNeighbourProcessors_[procI];
 
-            labelList& curProcProcessorPatchSize =
-                procProcessorPatchSize_[procI];
-
             labelList& curProcProcessorPatchStartIndex =
                 procProcessorPatchStartIndex_[procI];
 
-            // calculate the size
-            label nEdgesOnProcessor = curProcEdges.size();
+            labelList& curProcProcessorPatchSize =
+                procProcessorPatchSize_[procI];
 
-            for (const auto& bedges : interProcBEdges[procI])
+            // Number of internal and non-processor edges
+            const label nNonProcessorEdges = curProcEdges.size();
+
+            const auto& curInterProcBoundaries = interProcBoundaries[procI];
+
+            const auto nProcPatches = interProcBoundaries[procI].size();
+
+            // Flattened values for processor patches
+            curProcNeighbourProcessors.resize_nocopy(nProcPatches);
+            curProcProcessorPatchStartIndex.resize_nocopy(nProcPatches);
+            curProcProcessorPatchSize.resize_nocopy(nProcPatches);
+
+            // Number of processor edges
+            label nProcessorEdges = 0;
+
+            for (label procPatchi = 0; procPatchi < nProcPatches; ++procPatchi)
             {
-                nEdgesOnProcessor += bedges.size();
+                const auto& [bndNbrProc, bndProcEdges] =
+                    curInterProcBoundaries[procPatchi];
+
+                curProcNeighbourProcessors[procPatchi] = bndNbrProc;
+                curProcProcessorPatchSize[procPatchi] = bndProcEdges.size();
+
+                // Starts after all previous
+                curProcProcessorPatchStartIndex[procPatchi] =
+                (
+                    nNonProcessorEdges + nProcessorEdges
+                );
+
+                nProcessorEdges += bndProcEdges.size();
             }
 
-            curProcEdgeAddressing.setSize(nEdgesOnProcessor);
+            // Resize addressing
+            curProcEdgeAddressing.resize(nNonProcessorEdges + nProcessorEdges);
 
             // Fill in the list. Calculate turning index.
             // Turning index will be -1 only for some edges on processor
@@ -816,58 +796,14 @@ void Foam::faMeshDecomposition::decomposeMesh()
                 ++nEdges;
             }
 
-            // Add inter-processor boundary edges. At the beginning of each
-            // patch, grab the patch start index and size
-
-            curProcNeighbourProcessors.setSize
-            (
-                interProcBoundaries[procI].size()
-            );
-
-            curProcProcessorPatchSize.setSize
-            (
-                interProcBoundaries[procI].size()
-            );
-
-            curProcProcessorPatchStartIndex.setSize
-            (
-                interProcBoundaries[procI].size()
-            );
-
-            label nProcPatches = 0;
-
-            auto curInterProcBdrsIter =
-                interProcBoundaries[procI].cbegin();
-
-            auto curInterProcBEdgesIter =
-                interProcBEdges[procI].cbegin();
-
-            for
-            (
-                ;
-                curInterProcBdrsIter.good()
-             && curInterProcBEdgesIter.good();
-                ++curInterProcBdrsIter,
-                ++curInterProcBEdgesIter
-            )
+            // Processor boundaries
+            for (label procPatchi = 0; procPatchi < nProcPatches; ++procPatchi)
             {
-                curProcNeighbourProcessors[nProcPatches] =
-                    curInterProcBdrsIter();
+                const auto& [bndNbrProc, bndProcEdges] =
+                    curInterProcBoundaries[procPatchi];
 
-                // Get start index for processor patch
-                curProcProcessorPatchStartIndex[nProcPatches] = nEdges;
-
-                label& curSize =
-                    curProcProcessorPatchSize[nProcPatches];
-
-                curSize = 0;
-
-                // add faces for this processor boundary
-
-                for (const label edgei : *curInterProcBEdgesIter)
+                for (label edgei : bndProcEdges)
                 {
-                    // add the edges
-
                     // Remember to increment the index by one such that the
                     // turning index works properly.
                     if (faceToProc_[owner[edgei]] == procI)
@@ -881,82 +817,41 @@ void Foam::faMeshDecomposition::decomposeMesh()
                         curProcEdgeAddressing[nEdges] = edgei;
 //                      curProcEdgeAddressing[nEdges] = -(edgei + 1);
                     }
-
-                    // increment the size
-                    ++curSize;
-
                     ++nEdges;
                 }
 
-                ++nProcPatches;
+                // Debug and suppress [[maybe_unused]] warning
+                if (debug & 2)
+                {
+                    Info<< "proc" << procI << "to" << bndNbrProc
+                        << " edgeLabels "; bndProcEdges.writeList(Info) << endl;
+                }
             }
         }
     }
 
     Info << "\nCalculating processor boundary addressing" << endl;
-    // For every patch of processor boundary, find the index of the original
-    // patch. Mis-alignment is caused by the fact that patches with zero size
-    // are omitted. For processor patches, set index to -1.
-    // At the same time, filter the procPatchSize_ and procPatchStartIndex_
-    // lists to exclude zero-size patches
-    forAll(procPatchSize_, procI)
+    // For every patch: the original patch index.
+    // - identity for non-processor patches (ie, globally identical)
+    // - '-1' for processor patches
+    forAll(procPatchSize_, proci)
     {
-        // Make a local copy of old lists
-        const labelList oldPatchSizes = procPatchSize_[procI];
+        const auto nNonProcessorPatches = procPatchSize_[proci].size();
+        const auto nProcPatches = procProcessorPatchSize_[proci].size();
 
-        const labelList oldPatchStarts = procPatchStartIndex_[procI];
+        auto& curBoundaryAddressing = procBoundaryAddressing_[proci];
 
-        labelList& curPatchSizes = procPatchSize_[procI];
+        curBoundaryAddressing =
+            Foam::identity(nNonProcessorPatches + nProcPatches);
 
-        labelList& curPatchStarts = procPatchStartIndex_[procI];
-
-        const labelList& curProcessorPatchSizes =
-            procProcessorPatchSize_[procI];
-
-        labelList& curBoundaryAddressing = procBoundaryAddressing_[procI];
-
-        curBoundaryAddressing.setSize
-        (
-            oldPatchSizes.size()
-          + curProcessorPatchSizes.size()
-        );
-
-        label nPatches = 0;
-
-        forAll(oldPatchSizes, patchI)
-        {
-            //- Do not suppress zero sized patches since make parallel
-            //  actions inside patches near impossible.
-            //if (oldPatchSizes[patchI] > 0)
-            {
-                curBoundaryAddressing[nPatches] = patchI;
-
-                curPatchSizes[nPatches] = oldPatchSizes[patchI];
-
-                curPatchStarts[nPatches] = oldPatchStarts[patchI];
-
-                nPatches++;
-            }
-        }
-
-        // reset to the size of live patches
-        curPatchSizes.setSize(nPatches);
-        curPatchStarts.setSize(nPatches);
-
-        forAll(curProcessorPatchSizes, procPatchI)
-        {
-            curBoundaryAddressing[nPatches] = -1;
-
-            nPatches++;
-        }
-
-        curBoundaryAddressing.setSize(nPatches);
+        // Mark processor patches
+        curBoundaryAddressing.slice(nNonProcessorPatches) = -1;
     }
 
 
     // Gather data about globally shared points
 
-    labelList globallySharedPoints_(0);
+    labelList globallySharedPoints_;
 
     // Memory management
     {
@@ -988,21 +883,18 @@ void Foam::faMeshDecomposition::decomposeMesh()
 
             forAll(curProcessorPatchStarts, patchI)
             {
-                const label curStart = curProcessorPatchStarts[patchI];
-                const label curEnd = curStart + curProcessorPatchSizes[patchI];
-
-                for
+                const auto patchEdgeLabels = curEdgeLabels.slice
                 (
-                    label edgeI = curStart;
-                    edgeI < curEnd;
-                    edgeI++
-                )
+                    curProcessorPatchStarts[patchI],
+                    curProcessorPatchSizes[patchI]
+                );
+
+                for (const label edgei : patchEdgeLabels)
                 {
                     // Mark the original edge as used
                     // Remember to decrement the index by one (turning index)
-                    const label curE = curEdgeLabels[edgeI];
 
-                    const edge& e = edges[curE];
+                    const edge& e = edges[edgei];
 
                     forAll(e, pointI)
                     {
@@ -1060,7 +952,7 @@ void Foam::faMeshDecomposition::decomposeMesh()
             labelList(procFaceLabels_[procI])
         );
 
-
+        // The serial edgeId values for the local mesh edges
         const labelList& curEdgeAddressing = procEdgeAddressing_[procI];
 
         const labelList& curPatchStartIndex = procPatchStartIndex_[procI];
@@ -1072,53 +964,46 @@ void Foam::faMeshDecomposition::decomposeMesh()
         const labelList& curProcessorPatchSize =
             procProcessorPatchSize_[procI];
 
+        const label nNonProcessorPatches = curPatchSize.size();
+        const label nProcPatches = curProcessorPatchSize.size();
+
         labelListList& curPatchEdgeLabels = procPatchEdgeLabels_[procI];
-        curPatchEdgeLabels.resize
-        (
-            curPatchSize.size()
-          + curProcessorPatchSize.size()
-        );
+        curPatchEdgeLabels.resize_nocopy(nNonProcessorPatches + nProcPatches);
 
-        forAll(curPatchSize, patchI)
+        for (label patchi = 0; patchi < nNonProcessorPatches; ++patchi)
         {
-            labelList& curEdgeLabels = curPatchEdgeLabels[patchI];
-            curEdgeLabels.setSize(curPatchSize[patchI], -1);
+            // [output] : edgeLabels for the patch
+            auto& curEdgeLabels = curPatchEdgeLabels[patchi];
 
-            label edgeI = 0;
-
-            for
+            // Copy the local mesh edge ids for the patch
+            curEdgeLabels = curEdgeAddressing.slice
             (
-                int i=curPatchStartIndex[patchI];
-                i<(curPatchStartIndex[patchI]+curPatchSize[patchI]);
-                i++
-            )
-            {
-                curEdgeLabels[edgeI] =
-                    procMeshEdgesMap_[procI][curEdgeAddressing[i]];
-                edgeI++;
-            }
+                curPatchStartIndex[patchi],
+                curPatchSize[patchi]
+            );
+
+            // Inplace renumber with Map
+            // (key = serial edgeID; val = proc edgeLabel)
+
+            inplaceRenumber(procMeshEdgesMap_[procI], curEdgeLabels);
         }
 
-        forAll(curProcessorPatchSize, patchI)
+        for (label procPatchi = 0; procPatchi < nProcPatches; ++procPatchi)
         {
-            labelList& curEdgeLabels  =
-                curPatchEdgeLabels[curPatchSize.size() + patchI];
-            curEdgeLabels.setSize(curProcessorPatchSize[patchI], -1);
+            // [output] : edgeLabels for the patch
+            auto& curEdgeLabels =
+                curPatchEdgeLabels[nNonProcessorPatches + procPatchi];
 
-            label edgeI = 0;
-
-            for
+            // Copy the local mesh edge ids for the patch
+            curEdgeLabels = curEdgeAddressing.slice
             (
-                int i=curProcessorPatchStartIndex[patchI];
-                i<(curProcessorPatchStartIndex[patchI]
-                +curProcessorPatchSize[patchI]);
-                i++
-            )
-            {
-                curEdgeLabels[edgeI] =
-                    procMeshEdgesMap_[procI][curEdgeAddressing[i]];
-                edgeI++;
-            }
+                curProcessorPatchStartIndex[procPatchi],
+                curProcessorPatchSize[procPatchi]
+            );
+
+            // Inplace renumber with Map
+            // (key = serial edgeID; val = proc edgeLabel)
+            inplaceRenumber(procMeshEdgesMap_[procI], curEdgeLabels);
         }
     }
 }
@@ -1134,12 +1019,9 @@ bool Foam::faMeshDecomposition::writeDecomposition() const
     Map<label> sharedPointLookup(invertToMap(globallySharedPoints_));
 
 
-    label maxProcFaces = 0;
-    label totProcFaces = 0;
-    label maxProcEdges = 0;
-    label totProcEdges = 0;
-    label maxProcPatches = 0;
-    label totProcPatches = 0;
+    label maxProcFaces = 0, totProcFaces = 0;
+    label maxProcEdges = 0, totProcEdges = 0;
+    label maxProcPatches = 0, totProcPatches = 0;
 
     // Write out the meshes
     for (label procI = 0; procI < nProcs(); procI++)
@@ -1300,9 +1182,7 @@ bool Foam::faMeshDecomposition::writeDecomposition() const
 
         for (const faPatch& fap : procMesh.boundary())
         {
-            const auto* ppp = isA<processorFaPatch>(fap);
-
-            if (ppp)
+            if (const auto* ppp = isA<processorFaPatch>(fap); ppp)
             {
                 const auto& procPatch = *ppp;
 
@@ -1328,8 +1208,8 @@ bool Foam::faMeshDecomposition::writeDecomposition() const
 
         totProcEdges += nProcEdges;
         totProcPatches += nProcPatches;
-        maxProcEdges = max(maxProcEdges, nProcEdges);
-        maxProcPatches = max(maxProcPatches, nProcPatches);
+        maxProcEdges = Foam::max(maxProcEdges, nProcEdges);
+        maxProcPatches = Foam::max(maxProcPatches, nProcPatches);
 
         // Write the addressing information
         IOobject ioAddr
