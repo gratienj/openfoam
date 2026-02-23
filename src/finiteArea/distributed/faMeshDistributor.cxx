@@ -78,24 +78,6 @@ void Foam::faMeshDistributor::createPatchMaps() const
 }
 
 
-void Foam::faMeshDistributor::createInternalEdgeMap() const
-{
-    // area: edgeMap (volume: faceMap)
-    const auto& faEdgeMap = distMap_.faceMap();
-
-    // Copy full map
-    internalEdgeMapPtr_ = std::make_unique<mapDistributeBase>(faEdgeMap);
-
-    // Retain internal edges
-    internalEdgeMapPtr_->compactRemoteData
-    (
-        bitSet(tgtMesh_.nInternalEdges(), true),
-        UPstream::msgType(),
-        true  // Also renumber/resize the compact maps
-    );
-}
-
-
 void Foam::faMeshDistributor::checkAddressing() const
 {
     #ifdef FULLDEBUG

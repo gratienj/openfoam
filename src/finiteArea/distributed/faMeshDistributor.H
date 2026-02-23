@@ -42,6 +42,7 @@ SourceFiles
 #define Foam_faMeshDistributor_H
 
 #include "faMesh.H"
+#include "faMeshTools.H"
 #include "mapDistributePolyMesh.H"
 #include "areaFieldsFwd.H"
 #include "edgeFieldsFwd.H"
@@ -88,9 +89,6 @@ class faMeshDistributor
 
 
     // Private Member Functions
-
-        //- Construct internal edge mapping
-        void createInternalEdgeMap() const;
 
         //- Construct per-patch edge mapping
         void createPatchMaps() const;
