@@ -160,7 +160,7 @@ public:
     static void decompose
     (
         const faFieldDecomposer& decomposer,
-        const PtrList<GeoField>& fields,
+        const UPtrList<GeoField>& fields,
         bool report
     )
     {
