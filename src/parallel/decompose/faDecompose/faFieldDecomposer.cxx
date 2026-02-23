@@ -42,6 +42,7 @@ Foam::faFieldDecomposer::patchFieldDecomposer::patchFieldDecomposer
 {
     forAll(directAddressing_, i)
     {
+// if constexpr (withTurningIndex_)
         // Subtract one to align addressing.
         // directAddressing_[i] -= addressingOffset + 1;
         // ZT, 12/Nov/2010
@@ -67,6 +68,7 @@ processorAreaPatchFieldDecomposer
     {
         // Subtract one to align addressing.
         label ai = addressingSlice[i];
+// if constexpr (withTurningIndex_)
 //         label ai = mag(addressingSlice[i]) - 1;
 
         if (ai < neigh.size())
@@ -75,15 +77,17 @@ processorAreaPatchFieldDecomposer
             // of the original mesh and now it has become a edge
             // on the parallel boundary
 
-            if (flip[i])
-            {
-                // We are the neighbour side so use the owner value
-                directAddressing_[i] = owner[ai];
-            }
-            else
+// if constexpr (withTurningIndex_)
+            // if (addressingSlice[i] >= 0)
+            if (!flip.test(i))
             {
                 // We are the owner side so use the neighbour value
                 directAddressing_[i] = neigh[ai];
+            }
+            else
+            {
+                // We are the neighbour side so use the owner value
+                directAddressing_[i] = owner[ai];
             }
         }
         else
@@ -116,8 +120,12 @@ processorEdgePatchFieldDecomposer
         addressing_[i].resize(1);
         weights_[i].resize(1);
 
-        addressing_[i][0] = mag(addressingSlice[i]) - 1;
-        weights_[i][0] = sign(addressingSlice[i]);
+// if constexpr (withTurningIndex_)
+//      addressing_[i][0] = mag(addressingSlice[i]) - 1;
+//      weights_[i][0] = sign(addressingSlice[i]);
+
+        addressing_[i][0] = mag(addressingSlice[i]);
+        weights_[i][0] = 1;
     }
 }
 

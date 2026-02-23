@@ -119,10 +119,12 @@ Foam::faFieldDecomposer::decomposeField
             procMesh_.nInternalEdges()
         )
     );
-    forAll(mapAddr, i)
-    {
-        mapAddr[i] -= 1;
-    }
+
+// if constexpr (withTurningIndex_)
+    // forAll(mapAddr, i)
+    // {
+    //     mapAddr[i] -= 1;
+    // }
 
     // Create and map the internal field values
     Field<Type> internalField
