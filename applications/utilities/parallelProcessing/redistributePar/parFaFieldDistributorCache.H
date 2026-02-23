@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -80,18 +80,9 @@ class parFaFieldDistributorCache
             const bool decompose,  // i.e. read from undecomposed case
 
             const BoolListType& areaMeshOnProc,
-            refPtr<fileOperation>& readHandler,
+            const refPtr<fileOperation>& readHandler,
             const fileName& areaMeshInstance,
             faMesh& mesh
-        );
-
-        //- Redistribute and write fields of given type (file-scope use)
-        template<class GeoField>
-        static void redistributeAndWrite
-        (
-            const faMeshDistributor& distributor,
-            PtrList<GeoField>& fields,
-            const bool isWriteProc
         );
 
 
@@ -111,16 +102,22 @@ public:
 
     // Member Functions
 
+        //- Nothing in the cache
+        bool empty() const;
+
+        //- Report names of cached fields
+        void info(Ostream& os) const;
+
         //- Read distributed fields
         void read
         (
             const Time& baseRunTime,
             const fileName& proc0CaseName,
-            //! read from undecomposed case?
+            //! Read from undecomposed case? (ignores \p readHandler)
             const bool decompose,
             //! Existence of the processor-local mesh (bitset)
             const bitSet& areaMeshOnProc,
-            refPtr<fileOperation>& readHandler,
+            const refPtr<fileOperation>& readHandler,
             const fileName& areaMeshInstance,
             faMesh& mesh
         );
@@ -130,20 +127,17 @@ public:
         (
             const Time& baseRunTime,
             const fileName& proc0CaseName,
-            //! read from undecomposed case?
+            //! Read from undecomposed case? (ignores \p readHandler)
             const bool decompose,
             //! Existence of the processor-local mesh (bool list)
             const boolUList& areaMeshOnProc,
-            refPtr<fileOperation>& readHandler,
+            const refPtr<fileOperation>& readHandler,
             const fileName& areaMeshInstance,
             faMesh& mesh
         );
 
-        void redistributeAndWrite
-        (
-            const faMeshDistributor& distributor,
-            const bool isWriteProc
-        );
+        //- Redistribute and write all cached area, edge fields
+        void redistributeAndWrite(const faMeshDistributor& distributor);
 };
 
 

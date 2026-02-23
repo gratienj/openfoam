@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -85,8 +85,8 @@ Foam::parFvFieldDistributor::parFvFieldDistributor
     srcMesh_(srcMesh),
     tgtMesh_(tgtMesh),
     distMap_(distMap),
-    dummyHandler_(fileOperation::null()),
-    writeHandler_(dummyHandler_),
+    noHandler_(),
+    writeHandler_(noHandler_),
     isWriteProc_(isWriteProc)
 {
     createPatchFaceMaps();
@@ -98,15 +98,15 @@ Foam::parFvFieldDistributor::parFvFieldDistributor
     const fvMesh& srcMesh,
     fvMesh& tgtMesh,
     const mapDistributePolyMesh& distMap,
-    refPtr<fileOperation>& writeHandler
+    const refPtr<fileOperation>& writeHandler
 )
 :
     srcMesh_(srcMesh),
     tgtMesh_(tgtMesh),
     distMap_(distMap),
-    dummyHandler_(nullptr),
+    noHandler_(),
     writeHandler_(writeHandler),
-    isWriteProc_(Switch::INVALID)
+    isWriteProc_(false)  // Writing controlled via file handler
 {
     createPatchFaceMaps();
 }
@@ -126,22 +126,26 @@ void Foam::parFvFieldDistributor::reconstructPoints()
     pointField newPoints(srcMesh_.points(), mapper);
     tgtMesh_.movePoints(newPoints);
 
-    if (isWriteProc_.good())
+    if (writeHandler_)
     {
+        // Writing control via handler
+        auto handler = writeHandler_.shallowClone();
+        handler = fileOperation::fileHandler(handler);
+        auto oldComm = UPstream::commWorld(fileHandler().comm());
+
+        tgtMesh_.write();
+
+        // Restore
+        (void)UPstream::commWorld(oldComm);
+        (void)fileOperation::fileHandler(handler);
+    }
+    else if (isWriteProc_)
+    {
+        // Writing with bool control (uses current fileHandler)
         if (UPstream::master())
         {
             tgtMesh_.write();
         }
-    }
-    else if (writeHandler_ && writeHandler_->good())
-    {
-        auto oldHandler = fileOperation::fileHandler(writeHandler_);
-        const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-        tgtMesh_.write();
-
-        writeHandler_  = fileOperation::fileHandler(oldHandler);
-        UPstream::commWorld(oldComm);
     }
 }
 

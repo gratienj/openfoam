@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,6 +32,32 @@ License
 #include "distributedPointPatchFieldMapper.H"
 #include "emptyPointPatch.H"
 #include "pointFields.H"
+
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+template<class FieldType>
+void Foam::parPointFieldDistributor::writeField(const FieldType& fld) const
+{
+    if (writeHandler_)
+    {
+        // Writing control via handler
+        auto handler = writeHandler_.shallowClone();
+        handler = fileOperation::fileHandler(handler);
+        auto oldComm = UPstream::commWorld(fileHandler().comm());
+
+        fld.write();
+
+        // Restore
+        (void)UPstream::commWorld(oldComm);
+        (void)fileOperation::fileHandler(handler);
+    }
+    else if (isWriteProc_)
+    {
+        // Writing with bool control (uses current fileHandler)
+        fld.write();
+    }
+}
+
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -208,24 +234,7 @@ Foam::label Foam::parPointFieldDistributor::distributePointFields
 
         tmp<fieldType> tfld(distributePointField<Type>(io));
 
-
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;
@@ -236,7 +245,7 @@ Foam::label Foam::parPointFieldDistributor::distributePointFields
 template<class Type>
 void Foam::parPointFieldDistributor::distributeAndStore
 (
-    const PtrList<GeometricField<Type, pointPatchField, pointMesh>>& fields
+    const UPtrList<GeometricField<Type, pointPatchField, pointMesh>>& fields
 ) const
 {
     for (const auto& fld : fields)

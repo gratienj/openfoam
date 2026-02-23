@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -200,8 +200,8 @@ Foam::faMeshDistributor::faMeshDistributor
     srcMesh_(srcMesh),
     tgtMesh_(tgtMesh),
     distMap_(distMap),
-    dummyHandler_(fileOperation::null()),
-    writeHandler_(dummyHandler_),
+    noHandler_(),
+    writeHandler_(noHandler_),
     isWriteProc_(isWriteProc)
 {
     checkAddressing();
@@ -213,15 +213,15 @@ Foam::faMeshDistributor::faMeshDistributor
     const faMesh& srcMesh,
     const faMesh& tgtMesh,
     const mapDistributePolyMesh& distMap,
-    refPtr<fileOperation>& writeHandler
+    const refPtr<fileOperation>& writeHandler
 )
 :
     srcMesh_(srcMesh),
     tgtMesh_(tgtMesh),
     distMap_(distMap),
-    dummyHandler_(nullptr),
+    noHandler_(),
     writeHandler_(writeHandler),
-    isWriteProc_(Switch::INVALID)
+    isWriteProc_(false)  // Writing controlled via file handler
 {
     checkAddressing();
 }
@@ -235,19 +235,47 @@ Foam::label Foam::faMeshDistributor::distributeAllFields
     const wordRes& selected
 ) const
 {
+    const label maxCount =
+    (
+        selected.empty()
+      ? objects.size()
+      : objects.count<void>(selected)
+    );
+
     label nTotal = 0;
 
-    nTotal += distributeAreaFields<scalar>(objects, selected);
-    nTotal += distributeAreaFields<vector>(objects, selected);
-    nTotal += distributeAreaFields<symmTensor>(objects, selected);
-    nTotal += distributeAreaFields<sphericalTensor>(objects, selected);
-    nTotal += distributeAreaFields<tensor>(objects, selected);
+    // Dispatch with early termination
+    if (maxCount) do
+    {
+        #undef  doLocalCode
+        #define doLocalCode(Type)                                     \
+        {                                                             \
+            nTotal += distributeAreaFields<Type>(objects, selected);  \
+            if (nTotal >= maxCount) break;                            \
+        }                                                             \
 
-    nTotal += distributeEdgeFields<scalar>(objects, selected);
-    nTotal += distributeEdgeFields<vector>(objects, selected);
-    nTotal += distributeEdgeFields<symmTensor>(objects, selected);
-    nTotal += distributeEdgeFields<sphericalTensor>(objects, selected);
-    nTotal += distributeEdgeFields<tensor>(objects, selected);
+        doLocalCode(scalar);
+        doLocalCode(vector);
+        doLocalCode(symmTensor);
+        doLocalCode(sphericalTensor);
+        doLocalCode(tensor);
+
+        #undef  doLocalCode
+        #define doLocalCode(Type)                                     \
+        {                                                             \
+            nTotal += distributeEdgeFields<Type>(objects, selected);  \
+            if (nTotal >= maxCount) break;                            \
+        }                                                             \
+
+        doLocalCode(scalar);
+        doLocalCode(vector);
+        doLocalCode(symmTensor);
+        doLocalCode(sphericalTensor);
+        doLocalCode(tensor);
+
+        #undef doLocalCode
+    }
+    while (false);
 
     return nTotal;
 }

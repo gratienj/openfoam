@@ -74,7 +74,7 @@ class faMeshTools
     (
         const word& areaName,
         const IOobject& io,  // Describes the base polyMesh
-        refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
+        const refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
         const polyMesh& pMesh,
         const bool decompose,  // Only used if readHandlerPtr == nullptr
         const bool verbose = false
@@ -193,7 +193,7 @@ public:
         const IOobject& io,
         const polyMesh& pMesh,
         //! Non-null reference if a mesh exists on given processor
-        refPtr<fileOperation>& readHandler,
+        const refPtr<fileOperation>& readHandler,
         const bool verbose = false
     );
 
@@ -207,7 +207,7 @@ public:
         const IOobject& io,
         const polyMesh& pMesh,
         //! Non-null reference if a mesh exists on given processor
-        refPtr<fileOperation>& readHandler,
+        const refPtr<fileOperation>& readHandler,
         const bool verbose = false
     )
     {
@@ -242,7 +242,7 @@ public:
         //! running in decompose vs reconstruct mode
         const bool decompose,
         //! The output file handler
-        refPtr<fileOperation>& writeHandler,
+        const refPtr<fileOperation>& writeHandler,
         //! optional processor mesh in reconstruct mode
         const faMesh* procMesh = nullptr
     );

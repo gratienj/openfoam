@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,49 +38,29 @@ int Foam::parPointFieldDistributor::verbose_ = 1;
 Foam::parPointFieldDistributor::parPointFieldDistributor
 (
     const pointMesh& srcMesh,
-    const bool savePoints,
     const bool isWriteProc
 )
 :
     srcMesh_(srcMesh),
     nOldPoints_(srcMesh.size()),
-    patchMeshPoints_(),
-    tgtMeshRef_(nullptr),
-    distMapRef_(nullptr),
-    patchPointMaps_(),
-    dummyHandler_(fileOperation::null()),
-    writeHandler_(dummyHandler_),
+    noHandler_(),
+    writeHandler_(noHandler_),
     isWriteProc_(isWriteProc)
-{
-    if (savePoints)
-    {
-        saveMeshPoints();
-    }
-}
+{}
 
 
 Foam::parPointFieldDistributor::parPointFieldDistributor
 (
     const pointMesh& srcMesh,
-    const bool savePoints,
-    refPtr<fileOperation>& writeHandler
+    const refPtr<fileOperation>& writeHandler
 )
 :
     srcMesh_(srcMesh),
     nOldPoints_(srcMesh.size()),
-    patchMeshPoints_(),
-    tgtMeshRef_(nullptr),
-    distMapRef_(nullptr),
-    patchPointMaps_(),
-    dummyHandler_(nullptr),
+    noHandler_(),
     writeHandler_(writeHandler),
-    isWriteProc_(Switch::INVALID)
-{
-    if (savePoints)
-    {
-        saveMeshPoints();
-    }
-}
+    isWriteProc_(false)  // Writing controlled via file handler
+{}
 
 
 Foam::parPointFieldDistributor::parPointFieldDistributor
@@ -88,25 +68,17 @@ Foam::parPointFieldDistributor::parPointFieldDistributor
     const pointMesh& srcMesh,
     const pointMesh& tgtMesh,
     const mapDistributePolyMesh& distMap,
-    const bool savePoints,
     const bool isWriteProc
 )
 :
     srcMesh_(srcMesh),
     nOldPoints_(srcMesh.size()),
-    patchMeshPoints_(),
     tgtMeshRef_(tgtMesh),
     distMapRef_(distMap),
-    patchPointMaps_(),
-    dummyHandler_(fileOperation::null()),
-    writeHandler_(dummyHandler_),
+    noHandler_(),
+    writeHandler_(noHandler_),
     isWriteProc_(isWriteProc)
-{
-    if (savePoints)
-    {
-        saveMeshPoints();
-    }
-}
+{}
 
 
 Foam::parPointFieldDistributor::parPointFieldDistributor
@@ -114,25 +86,17 @@ Foam::parPointFieldDistributor::parPointFieldDistributor
     const pointMesh& srcMesh,
     const pointMesh& tgtMesh,
     const mapDistributePolyMesh& distMap,
-    const bool savePoints,
-    refPtr<fileOperation>& writeHandler
+    const refPtr<fileOperation>& writeHandler
 )
 :
     srcMesh_(srcMesh),
     nOldPoints_(srcMesh.size()),
-    patchMeshPoints_(),
     tgtMeshRef_(tgtMesh),
     distMapRef_(distMap),
-    patchPointMaps_(),
-    dummyHandler_(nullptr),
+    noHandler_(),
     writeHandler_(writeHandler),
-    isWriteProc_(Switch::INVALID)
-{
-    if (savePoints)
-    {
-        saveMeshPoints();
-    }
-}
+    isWriteProc_(false)  // Writing controlled via file handler
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -160,6 +124,7 @@ void Foam::parPointFieldDistributor::clearMeshPoints()
     patchMeshPoints_.clear();
 }
 
+
 void Foam::parPointFieldDistributor::clearPatchPointMaps()
 {
     patchPointMaps_.clear();
@@ -170,19 +135,14 @@ void Foam::parPointFieldDistributor::saveMeshPoints()
 {
     const pointBoundaryMesh& patches = srcMesh_.boundary();
 
-    patchMeshPoints_.clear();
-    patchMeshPoints_.resize(patches.size());
+    patchMeshPoints_.resize_null(patches.size());
 
     forAll(patches, patchi)
     {
         if (!isA<processorPointPatch>(patches[patchi]))
         {
             // Copy meshPoints
-            patchMeshPoints_.set
-            (
-                patchi,
-                new labelList(patches[patchi].meshPoints())
-            );
+            patchMeshPoints_.emplace_set(patchi) = patches[patchi].meshPoints();
         }
     }
 }
@@ -203,8 +163,7 @@ void Foam::parPointFieldDistributor::createPatchPointMaps()
     const auto& newPatches = tgtMesh.boundary();
     const auto& oldPatches = srcMesh_.boundary();
 
-    patchPointMaps_.clear();
-    patchPointMaps_.resize(oldPatches.size());
+    patchPointMaps_.resize_null(oldPatches.size());
 
     // if (patchPointMaps_.size() != patchMeshPoints_.size())
     // {
@@ -220,11 +179,7 @@ void Foam::parPointFieldDistributor::createPatchPointMaps()
             labelList oldToNewConstruct;
 
             // Copy point map
-            patchPointMaps_.set
-            (
-                patchi,
-                new mapDistributeBase(distMap.pointMap())
-            );
+            patchPointMaps_.emplace_set(patchi, distMap.pointMap());
 
             const labelList& oldMeshPoints =
             (

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2016-2024 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,6 +38,32 @@ License
 
 #include "distributedFieldMapper.H"
 #include "distributedFvPatchFieldMapper.H"
+
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+template<class FieldType>
+void Foam::parFvFieldDistributor::writeField(const FieldType& fld) const
+{
+    if (writeHandler_)
+    {
+        // Writing control via handler
+        auto handler = writeHandler_.shallowClone();
+        handler = fileOperation::fileHandler(handler);
+        auto oldComm = UPstream::commWorld(fileHandler().comm());
+
+        fld.write();
+
+        // Restore
+        (void)UPstream::commWorld(oldComm);
+        (void)fileOperation::fileHandler(handler);
+    }
+    else if (isWriteProc_)
+    {
+        // Writing with bool control (uses current fileHandler)
+        fld.write();
+    }
+}
+
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -432,7 +458,7 @@ Foam::label Foam::parFvFieldDistributor::distributeInternalFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -444,23 +470,7 @@ Foam::label Foam::parFvFieldDistributor::distributeInternalFields
             distributeInternalField<Type>(io)
         );
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;
@@ -497,7 +507,7 @@ Foam::label Foam::parFvFieldDistributor::distributeVolumeFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -509,23 +519,7 @@ Foam::label Foam::parFvFieldDistributor::distributeVolumeFields
             distributeVolumeField<Type>(io)
         );
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;
@@ -557,7 +551,7 @@ Foam::label Foam::parFvFieldDistributor::distributeSurfaceFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -569,23 +563,7 @@ Foam::label Foam::parFvFieldDistributor::distributeSurfaceFields
             distributeSurfaceField<Type>(io)
         );
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;

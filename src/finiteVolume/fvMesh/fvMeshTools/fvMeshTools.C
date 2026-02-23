@@ -761,7 +761,7 @@ Foam::autoPtr<Foam::fvMesh>
 Foam::fvMeshTools::loadOrCreateMeshImpl
 (
     const IOobject& io,
-    refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
+    const refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
     const bool decompose,
     const bool verbose
 )
@@ -962,8 +962,8 @@ Foam::fvMeshTools::loadOrCreateMeshImpl
 
         UPstream::communicator newCommunicator;
 
-        auto& readHandler = *readHandlerPtr;
-        auto oldHandler = fileOperation::fileHandler(readHandler);
+        auto handler = readHandlerPtr->shallowClone();
+        handler = fileOperation::fileHandler(handler);
 
         // With IO ranks the communicator of the fileOperation will
         // only include the ranks for the current IO rank.
@@ -990,8 +990,9 @@ Foam::fvMeshTools::loadOrCreateMeshImpl
         // Load but do not initialise
         meshPtr = autoPtr<fvMesh>::New(io, false);
 
-        readHandler = fileOperation::fileHandler(oldHandler);
-        UPstream::commWorld(realWorldComm);
+        // Restore
+        (void)UPstream::commWorld(realWorldComm);
+        (void)fileOperation::fileHandler(handler);
 
         // Reset mesh communicator to the real world comm
         meshPtr().polyMesh::comm() = realWorldComm;
@@ -1216,7 +1217,7 @@ Foam::autoPtr<Foam::fvMesh>
 Foam::fvMeshTools::loadOrCreateMesh
 (
     const IOobject& io,
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const bool verbose
 )
 {

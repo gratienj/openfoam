@@ -256,7 +256,7 @@ Foam::faMeshTools::loadOrCreateMesh_impl
 (
     const word& areaName,
     const IOobject& io,
-    refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
+    const refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
     const polyMesh& pMesh,
     const bool decompose,
     const bool verbose
@@ -440,8 +440,8 @@ Foam::faMeshTools::loadOrCreateMesh_impl
 
         UPstream::communicator newCommunicator;
 
-        auto& readHandler = *readHandlerPtr;
-        auto oldHandler = fileOperation::fileHandler(readHandler);
+        auto handler = readHandlerPtr->shallowClone();
+        handler = fileOperation::fileHandler(handler);
 
         // With IO ranks the communicator of the fileOperation will
         // only include the ranks for the current IO rank.
@@ -468,8 +468,9 @@ Foam::faMeshTools::loadOrCreateMesh_impl
         // Load but do not initialise
         meshPtr = autoPtr<faMesh>::New(areaName, pMesh, false);
 
-        readHandler = fileOperation::fileHandler(oldHandler);
-        UPstream::commWorld(realWorldComm);
+        // Restore
+        (void)UPstream::commWorld(realWorldComm);
+        (void)fileOperation::fileHandler(handler);
 
         // Reset mesh communicator to the real world comm
         meshPtr().comm() = realWorldComm;
@@ -597,7 +598,7 @@ Foam::faMeshTools::loadOrCreateMesh
     const word& areaName,
     const IOobject& io,
     const polyMesh& pMesh,
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const bool verbose
 )
 {

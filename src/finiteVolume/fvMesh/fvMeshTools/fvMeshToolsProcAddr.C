@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,20 +41,23 @@ namespace Foam
 // The baseMeshPtr is non-null (and probably has cells) on the master
 // is ignored elsewhere.
 //
-// The incomming faceProcAddressing is assumed to have flip addressing.
+// The incoming faceProcAddressing is assumed to have flip addressing.
 static autoPtr<mapDistributePolyMesh> createReconstructMap
 (
     const fvMesh& mesh,
     const fvMesh* baseMeshPtr,
-    const labelList& cellProcAddressing,
-    const labelList& faceProcAddressing,
-    const labelList& pointProcAddressing,
-    const labelList& boundaryProcAddressing
+    const labelUList& cellProcAddressing,
+    const labelUList& faceProcAddressing,
+    const labelUList& pointProcAddressing,
+    const labelUList& boundaryProcAddressing
 )
 {
     const label nOldPoints = mesh.nPoints();
     const label nOldFaces = mesh.nFaces();
     const label nOldCells = mesh.nCells();
+
+    const label numProc = UPstream::nProcs();
+    const label myProci = UPstream::myProcNo();
 
     const polyBoundaryMesh& pbm = mesh.boundaryMesh();
 
@@ -77,34 +80,34 @@ static autoPtr<mapDistributePolyMesh> createReconstructMap
     );
 
 
-    labelListList cellSubMap(Pstream::nProcs());
+    labelListList cellSubMap(numProc);
     cellSubMap[Pstream::masterNo()] = identity(nOldCells);
 
-    labelListList faceSubMap(Pstream::nProcs());
+    labelListList faceSubMap(numProc);
     faceSubMap[Pstream::masterNo()] = identity(nOldFaces);
 
-    labelListList pointSubMap(Pstream::nProcs());
+    labelListList pointSubMap(numProc);
     pointSubMap[Pstream::masterNo()] = identity(nOldPoints);
 
-    labelListList patchSubMap(Pstream::nProcs());
+    labelListList patchSubMap(numProc);
     patchSubMap[Pstream::masterNo()] = patchProcAddressing;
 
 
     // Gather addressing on master
-    labelListList cellAddressing(Pstream::nProcs());
-    cellAddressing[Pstream::myProcNo()] = cellProcAddressing;
+    labelListList cellAddressing(numProc);
+    cellAddressing[myProci] = cellProcAddressing;
     Pstream::gatherList(cellAddressing);
 
-    labelListList faceAddressing(Pstream::nProcs());
-    faceAddressing[Pstream::myProcNo()] = faceProcAddressing;
+    labelListList faceAddressing(numProc);
+    faceAddressing[myProci] = faceProcAddressing;
     Pstream::gatherList(faceAddressing);
 
-    labelListList pointAddressing(Pstream::nProcs());
-    pointAddressing[Pstream::myProcNo()] = pointProcAddressing;
+    labelListList pointAddressing(numProc);
+    pointAddressing[myProci] = pointProcAddressing;
     Pstream::gatherList(pointAddressing);
 
-    labelListList patchAddressing(Pstream::nProcs());
-    patchAddressing[Pstream::myProcNo()] = patchProcAddressing;
+    labelListList patchAddressing(numProc);
+    patchAddressing[myProci] = patchProcAddressing;
     Pstream::gatherList(patchAddressing);
 
 
@@ -169,14 +172,14 @@ static autoPtr<mapDistributePolyMesh> createReconstructMap
         (
             0,  // nNewCells
             std::move(cellSubMap),
-            labelListList(Pstream::nProcs())    // constructMap
+            labelListList(numProc)      // constructMap
         );
 
         mapDistribute faceMap
         (
             0,  // nNewFaces
             std::move(faceSubMap),
-            labelListList(Pstream::nProcs()),   // constructMap
+            labelListList(numProc),     // constructMap
             false,  // subHasFlip
             true    // constructHasFlip
         );
@@ -185,14 +188,14 @@ static autoPtr<mapDistributePolyMesh> createReconstructMap
         (
             0,  // nNewPoints
             std::move(pointSubMap),
-            labelListList(Pstream::nProcs())    // constructMap
+            labelListList(numProc)      // constructMap
         );
 
         mapDistribute patchMap
         (
             0,  // nNewPatches
             std::move(patchSubMap),
-            labelListList(Pstream::nProcs())    // constructMap
+            labelListList(numProc)      // constructMap
         );
 
         return autoPtr<mapDistributePolyMesh>::New
@@ -246,19 +249,19 @@ Foam::fvMeshTools::readProcAddressing
     {
         Info<< "Reading (cell|face|point|boundary)ProcAddressing from "
             << mesh.facesInstance().c_str() << '/'
-            << polyMesh::meshSubDir << nl << endl;
+            << mesh.meshDir().c_str() << nl << endl;
 
-        ioAddr.rename("cellProcAddressing");
-        labelIOList cellProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("cellProcAddressing");
+        labelIOList cellProcAddressing(ioAddr);
 
-        ioAddr.rename("faceProcAddressing");
-        labelIOList faceProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("faceProcAddressing");
+        labelIOList faceProcAddressing(ioAddr);
 
-        ioAddr.rename("pointProcAddressing");
-        labelIOList pointProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("pointProcAddressing");
+        labelIOList pointProcAddressing(ioAddr);
 
-        ioAddr.rename("boundaryProcAddressing");
-        labelIOList boundaryProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("boundaryProcAddressing");
+        labelIOList boundaryProcAddressing(ioAddr);
 
         if
         (
@@ -304,14 +307,14 @@ void Foam::fvMeshTools::writeProcAddressing
     const mapDistributePolyMesh& map,
     const bool decompose,
     const fileName& writeInstance,
-    refPtr<fileOperation>& writeHandler
+    const refPtr<fileOperation>& writeHandler
 )
 {
     Info<< "Writing ("
         << (decompose ? "decompose" : "reconstruct")
         << ") procAddressing files to "
         << mesh.facesInstance().c_str() << '/'
-        << polyMesh::meshSubDir << endl;
+        << mesh.meshDir().c_str() << endl;
 
     // Processor-local outputs for components
     // NB: the full "procAddressing" output is presumed to already have
@@ -329,19 +332,19 @@ void Foam::fvMeshTools::writeProcAddressing
 
     // cellProcAddressing (polyMesh)
     ioAddr.rename("cellProcAddressing");
-    labelIOList cellMap(ioAddr, Zero);
+    labelIOList cellMap(ioAddr);
 
     // faceProcAddressing (polyMesh)
     ioAddr.rename("faceProcAddressing");
-    labelIOList faceMap(ioAddr, Zero);
+    labelIOList faceMap(ioAddr);
 
     // pointProcAddressing (polyMesh)
     ioAddr.rename("pointProcAddressing");
-    labelIOList pointMap(ioAddr, Zero);
+    labelIOList pointMap(ioAddr);
 
     // boundaryProcAddressing (polyMesh)
     ioAddr.rename("boundaryProcAddressing");
-    labelIOList patchMap(ioAddr, Zero);
+    labelIOList patchMap(ioAddr);
 
 
     if (decompose)
@@ -442,14 +445,15 @@ void Foam::fvMeshTools::writeProcAddressing
     const auto& tm = cellMap.time();
     const IOstreamOption opt(tm.writeStreamOption());
     {
-        auto oldHandler = fileOperation::fileHandler(writeHandler);
+        auto handler = writeHandler.shallowClone();
+        handler = fileOperation::fileHandler(handler);
 
         const bool cellOk = fileHandler().writeObject(cellMap, opt, true);
         const bool faceOk = fileHandler().writeObject(faceMap, opt, true);
         const bool pointOk = fileHandler().writeObject(pointMap, opt, true);
         const bool patchOk = fileHandler().writeObject(patchMap, opt, true);
 
-        writeHandler = fileOperation::fileHandler(oldHandler);
+        (void)fileOperation::fileHandler(handler);
 
         if (!cellOk || !faceOk || !pointOk || !patchOk)
         {

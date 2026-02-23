@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,7 +62,7 @@ class fieldsDistributor
     static void readFieldsImpl
     (
         //! Optional filehandler (nullptr if unused). NB: pointer to refPtr!
-        refPtr<fileOperation>* readHandlerPtr,
+        const refPtr<fileOperation>* readHandlerPtr,
         const BoolListType& haveMeshOnProc,
         //! Optional subsetting (nullptr if unused)
         const MeshSubsetter* subsetter,
@@ -185,7 +185,7 @@ public:
     static void readFields
     (
         const bitSet& haveMeshOnProc,
-        refPtr<fileOperation>& readHandler,
+        const refPtr<fileOperation>& readHandler,
         const typename GeoField::Mesh& mesh,
         //! Optional subsetting (can be nullptr)
         const autoPtr<MeshSubsetter>& subsetter,
@@ -200,7 +200,7 @@ public:
     static void readFields
     (
         const boolUList& haveMeshOnProc,
-        refPtr<fileOperation>& readHandler,
+        const refPtr<fileOperation>& readHandler,
         const typename GeoField::Mesh& mesh,
         //! Optional subsetting (can be nullptr)
         const autoPtr<MeshSubsetter>& subsetter,

@@ -741,10 +741,11 @@ void Foam::faMeshReconstructor::writeMesh
     const labelUList& singlePatchFaceLabels
 )
 {
-    refPtr<fileOperation> writeHandler(fileOperation::NewUncollated());
+    refPtr<fileOperation> newHandler(fileOperation::NewUncollated());
 
-    auto oldHandler = fileOperation::fileHandler(writeHandler);
-    const bool oldDistributed = fileHandler().distributed(true);
+    const auto oldDistributed = fileHandler().distributed();
+    auto oldHandler = fileOperation::fileHandler(newHandler);
+    fileHandler().distributed(true);
 
     if (UPstream::master())
     {
@@ -761,8 +762,8 @@ void Foam::faMeshReconstructor::writeMesh
     }
 
     // Restore settings
-    fileHandler().distributed(oldDistributed);
     (void) fileOperation::fileHandler(oldHandler);
+    (void) fileHandler().distributed(oldDistributed);
 }
 
 

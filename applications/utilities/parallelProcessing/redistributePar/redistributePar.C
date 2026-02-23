@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -185,8 +185,10 @@ void createTimeDirs(const fileName& path)
 
 void copyUniform
 (
-    refPtr<fileOperation>& readHandler,
-    refPtr<fileOperation>& writeHandler,
+    //! Alternative read handler (or use global handler if unset)
+    const refPtr<fileOperation>& readHandler,
+    //! Alternative write handler (or use global handler if unset)
+    const refPtr<fileOperation>& writeHandler,
 
     const bool reconstruct,
     const bool decompose,
@@ -212,22 +214,32 @@ void copyUniform
     // - read using readDb + readHandler
     // - write using writeDb + writeHandler
 
+    // This rank participates in IO if it has a override fileHandler,
+    // or when no ranks use an override fileHandler (ie, they use the default)
+
+    const bool isWriteProc
+    (
+        bool(writeHandler) == returnReduceOr(bool(writeHandler))
+    );
+
     fileName readPath;
 
+    // Reading, with specified read handler
     if (readHandler)
     {
-        const label oldComm = UPstream::commWorld(readHandler().comm());
+        auto& readTime = const_cast<Time&>(readDb.time());
 
-        Time& readTime = const_cast<Time&>(readDb.time());
-        bool oldProcCase = readTime.processorCase();
-        string oldCaseName;
+        const auto oldComm = UPstream::commWorld(readHandler().comm());
+        const auto oldProcCase = readTime.processorCase();
+
+        fileName oldCaseName;
         if (decompose)
         {
             //Pout<< "***Setting caseName to " << readCaseName
             //    << " to read undecomposed uniform" << endl;
             oldCaseName = readTime.caseName();
             readTime.caseName() = readCaseName;
-            oldProcCase = readTime.processorCase(false);
+            readTime.processorCase(false);
         }
 
         // Detect uniform/ at original database + time
@@ -239,6 +251,7 @@ void copyUniform
         );
 
 
+        // Restore
         UPstream::commWorld(oldComm);
 
         if (decompose)
@@ -275,18 +288,19 @@ void copyUniform
             writeDb
         );
 
-        // Switch to writeHandler
-        if (writeHandler)
+        // Writing, possibly with alternative write handler
+        if (isWriteProc)
         {
-            auto oldHandler = fileOperation::fileHandler(writeHandler);
+            auto oldHandler = writeHandler.shallowClone();
+            oldHandler = fileOperation::fileHandler(oldHandler);
 
             // Check: fileHandler.comm() is size 1 for uncollated
-            const label writeComm = fileHandler().comm();
+            const auto writeComm = fileHandler().comm();
 
             if (reconstruct)
             {
-                const bool oldParRun = UPstream::parRun(false);
-                const label oldNumProcs(fileHandler().nProcs());
+                const auto oldParRun = UPstream::parRun(false);
+                const auto oldNumProcs = fileHandler().nProcs();
                 const fileName writePath
                 (
                     fileHandler().objectPath
@@ -296,7 +310,7 @@ void copyUniform
                     )
                 );
                 fileHandler().cp(readPath, writePath);
-                const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+                fileHandler().constCast().nProcs(oldNumProcs);
                 UPstream::parRun(oldParRun);
             }
             else
@@ -324,7 +338,9 @@ void copyUniform
                     writePath
                 );
             }
-            writeHandler = fileOperation::fileHandler(oldHandler);
+
+            // Restore
+            (void)fileOperation::fileHandler(oldHandler);
         }
     }
 }
@@ -500,7 +516,7 @@ void writeDecomposition
 
 void determineDecomposition
 (
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const Time& baseRunTime,
     const fileName& decompDictFile, // optional location for decomposeParDict
     const bool decompose,       // decompose, i.e. read from undecomposed case
@@ -514,7 +530,8 @@ void determineDecomposition
 {
     // Switch to readHandler since decomposition method might do IO
     // (e.g. read decomposeParDict)
-    auto oldHandler = fileOperation::fileHandler(readHandler);
+    auto oldHandler = readHandler.shallowClone();
+    oldHandler = fileOperation::fileHandler(oldHandler);
 
     // Read decomposeParDict (on all processors)
     const decompositionModel& method = decompositionModel::New
@@ -572,8 +589,8 @@ void determineDecomposition
     nDestProcs = decomposer.nDomains();
     decomp = decomposer.decompose(mesh, cellWeights);
 
-    readHandler = fileOperation::fileHandler(oldHandler);
-
+    // Restore
+    (void)fileOperation::fileHandler(oldHandler);
 
     if (decompose)
     {
@@ -635,8 +652,8 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
 // Inplace redistribute mesh and any fields
 autoPtr<mapDistributePolyMesh> redistributeAndWrite
 (
-    refPtr<fileOperation>& readHandler,
-    refPtr<fileOperation>& writeHandler,
+    const refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& writeHandler,
     const Time& baseRunTime,
     const fileName& proc0CaseName,
 
@@ -662,6 +679,18 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     //// Print some statistics
     //Pout<< "Before distribution:" << endl;
     //printMeshData(mesh);
+
+    // This rank participates in IO if it has a override fileHandler,
+    // or when no ranks use an override fileHandler (ie, they use the default)
+
+    const bool isReadProc
+    (
+        bool(readHandler) == returnReduceOr(bool(readHandler))
+    );
+    const bool isWriteProc
+    (
+        bool(writeHandler) == returnReduceOr(bool(writeHandler))
+    );
 
 
     // Storage of fields
@@ -696,16 +725,11 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     // Track how many (if any) pointFields are read/mapped
     label nPointFields = 0;
 
-    refPtr<fileOperation> noWriteHandler;
-
     parPointFieldDistributor pointDistributor
     (
         oldPointMesh,   // source mesh
-        false,          // savePoints=false (ie, delay until later)
-        //false           // Do not write
-        noWriteHandler    // Do not write
+        false           // Do not write
     );
-
 
     if (doReadFields)
     {
@@ -739,17 +763,18 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
             runTime.processorCase(false);
         }
 
-        //IOobjectList objects(mesh, runTime.timeName());
-        // Swap to reading fileHandler and read IOobjects
+        // Reading, possibly with alternative read handler
         IOobjectList objects;
-        if (readHandler)
         {
-            auto oldHandler = fileOperation::fileHandler(readHandler);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
+            auto handler = readHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
+            auto oldComm = UPstream::commWorld(fileHandler().comm());
 
             objects = IOobjectList(mesh, runTime.timeName());
-            readHandler = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
+
+            // Restore
+            (void)UPstream::commWorld(oldComm);
+            (void)fileOperation::fileHandler(handler);
         }
 
         if (decompose)
@@ -870,14 +895,16 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
 
         if (readHandler)
         {
-            auto oldHandler = fileOperation::fileHandler(readHandler);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
+            auto handler = readHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
+            auto oldComm = UPstream::commWorld(fileHandler().comm());
 
             // Read
             refDataPtr.reset(new hexRef8Data(io));
 
-            UPstream::commWorld(oldComm);
-            readHandler = fileOperation::fileHandler(oldHandler);
+            // Restore
+            (void)UPstream::commWorld(oldComm);
+            (void)fileOperation::fileHandler(handler);
         }
         else
         {
@@ -993,13 +1020,15 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
 
     if (reconstruct)
     {
-        auto oldHandler = fileOperation::fileHandler(writeHandler);
+        auto handler = writeHandler.shallowClone();
+        handler = fileOperation::fileHandler(handler);
 
         if (UPstream::master())
         {
             InfoOrPout
                 << "Setting caseName to " << baseRunTime.caseName()
                 << " to write reconstructed mesh (and fields)." << endl;
+
             runTime.caseName() = baseRunTime.caseName();
             const bool oldProcCase(runTime.processorCase(false));
             const label oldNumProcs
@@ -1019,20 +1048,26 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
             runTime.processorCase(oldProcCase);
         }
 
-        writeHandler = fileOperation::fileHandler(oldHandler);
+        // Restore
+        (void)fileOperation::fileHandler(handler);
     }
     else
     {
-        auto oldHandler = fileOperation::fileHandler(writeHandler);
+        if (isWriteProc)
+        {
+            auto handler = writeHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
 
-        const label oldNumProcs
-        (
-            const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs)
-        );
-        mesh.write();
-        const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+            const auto oldNumProcs
+            (
+                fileHandler().constCast().nProcs(nDestProcs)
+            );
+            mesh.write();
 
-        writeHandler = fileOperation::fileHandler(oldHandler);
+            // Restore
+            (void)fileHandler().constCast().nProcs(oldNumProcs);
+            (void)fileOperation::fileHandler(handler);
+        }
 
         topoSet::removeFiles(mesh);
     }
@@ -1045,14 +1080,17 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     {
         // Decompose (1 -> N)
         // so {boundary,cell,face,point}ProcAddressing have meaning
-        fvMeshTools::writeProcAddressing
-        (
-            mesh,
-            distMap(),
-            decompose,
-            mesh.facesInstance(),    //oldFacesInstance,
-            writeHandler             // to write *ProcAddressing
-        );
+        if (isWriteProc)
+        {
+            fvMeshTools::writeProcAddressing
+            (
+                mesh,
+                distMap(),
+                decompose,
+                mesh.facesInstance(),    //oldFacesInstance,
+                writeHandler             // to write *ProcAddressing
+            );
+        }
     }
     else if (reconstruct)
     {
@@ -1060,14 +1098,18 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
         // so {boundary,cell,face,point}ProcAddressing have meaning. Make sure
         // to write these to meshes containing the source meshes (i.e. using
         // the read handler)
-        fvMeshTools::writeProcAddressing
-        (
-            mesh,
-            distMap(),
-            decompose,
-            volMeshInstance,    //oldFacesInstance,
-            readHandler //writeHandler
-        );
+
+        if (isReadProc)
+        {
+            fvMeshTools::writeProcAddressing
+            (
+                mesh,
+                distMap(),
+                decompose,
+                volMeshInstance,    //oldFacesInstance,
+                readHandler         // (sic) readHandler is used for writing
+            );
+        }
     }
     else
     {
@@ -1100,24 +1142,23 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
         // Distribute
         refData.distribute(distMap());
 
-
-        auto oldHandler = fileOperation::fileHandler(writeHandler);
-
+        // Writing, possibly with alternative handler
         if (reconstruct)
         {
+            auto handler = writeHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
+
             if (UPstream::master())
             {
-                const bool oldParRun = UPstream::parRun(false);
-                const label oldNumProcs
-                (
-                    const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs)
-                );
+                auto oldParRun = UPstream::parRun(false);
+                auto oldNumProcs = fileHandler().constCast().nProcs(nDestProcs);
 
                 InfoOrPout
                     << "Setting caseName to " << baseRunTime.caseName()
                     << " to write reconstructed refinement data." << endl;
+
                 runTime.caseName() = baseRunTime.caseName();
-                const bool oldProcCase(runTime.processorCase(false));
+                auto oldProcCase = runTime.processorCase(false);
 
                 refData.write();
 
@@ -1126,21 +1167,30 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
                 runTime.caseName() = proc0CaseName;
                 runTime.processorCase(oldProcCase);
 
-                const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+                fileHandler().constCast().nProcs(oldNumProcs);
                 UPstream::parRun(oldParRun);
+
             }
+
+            // Restore
+            (void)fileOperation::fileHandler(handler);
         }
         else
         {
-            const label oldNumProcs
-            (
-                const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs)
-            );
-            refData.write();
-            const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
-        }
+            if (isWriteProc)
+            {
+                auto handler = writeHandler.shallowClone();
+                handler = fileOperation::fileHandler(handler);
 
-        writeHandler = fileOperation::fileHandler(oldHandler);
+                auto oldNumProcs = fileHandler().constCast().nProcs(nDestProcs);
+
+                refData.write();
+
+                // Restore
+                fileHandler().constCast().nProcs(oldNumProcs);
+                (void)fileOperation::fileHandler(handler);
+            }
+        }
     }
 
     //// Sets. Disabled for now.
@@ -2261,8 +2311,6 @@ int main(int argc, char *argv[])
                     procPointMesh,   // source
                     basePointMesh,   // target
                     distMap(),
-                    false,           // delay
-                    //UPstream::master()  // Write reconstructed on master
                     masterOnlyHandler   // Write on master only
                 );
 
@@ -2385,7 +2433,6 @@ int main(int argc, char *argv[])
                             procPointMesh,  // source
                             basePointMesh,  // target
                             distMap(),
-                            false,          // delay until later
                             masterOnlyHandler   // Write on master only
                         )
                     );
@@ -2453,6 +2500,7 @@ int main(int argc, char *argv[])
                     mesh,
                     baseMeshPtr()
                 );
+
                 // Non-region specific. Note: should do outside region loop
                 // but would then have to replicate the whole time loop ...
                 copyUniform
@@ -3022,9 +3070,14 @@ int main(int argc, char *argv[])
                         runTime.processorCase(oldProcCase);
                     }
                 }
-                else
+                else if
+                (
+                    // With override fileHandler, or all ranks use default
+                    bool(writeHandler) == returnReduceOr(bool(writeHandler))
+                )
                 {
-                    auto oldHandler = fileOperation::fileHandler(writeHandler);
+                    auto oldHandler = writeHandler.shallowClone();
+                    oldHandler = fileOperation::fileHandler(oldHandler);
 
                     IOmapDistributePolyMesh::writeContents
                     (
@@ -3040,7 +3093,8 @@ int main(int argc, char *argv[])
 
                     areaProcMeshPtr->write();
 
-                    writeHandler = fileOperation::fileHandler(oldHandler);
+                    // Restore
+                    (void)fileOperation::fileHandler(oldHandler);
 
                     if (decompose)
                     {
@@ -3054,6 +3108,19 @@ int main(int argc, char *argv[])
                     }
                 }
 
+                // Not so nice. In faMeshDistributor it uses fileHandler
+                // to decide writeOnProc, but when decomposing there will not
+                // be a special write handler - just the regular one.
+                // So reference the write handler or the global handler
+                // for that case...
+
+                auto defltHandler = writeHandler.shallowClone();
+                if (!returnReduceOr(bool(writeHandler)))
+                {
+                    // Use default if no ranks specified an override
+                    defltHandler.cref(Foam::fileHandler());
+                }
+
                 InfoOrPout
                     << "Written redistributed mesh to "
                     << areaProcMeshPtr->facesInstance() << nl << endl;
@@ -3063,29 +3130,16 @@ int main(int argc, char *argv[])
                     areaMeshPtr(),      // source
                     areaProcMeshPtr(),  // target
                     faDistMap,
-                    writeHandler
+                    defltHandler        //<- writeHandler
                 );
 
-                areaFields.redistributeAndWrite(distributor, true);
+                areaFields.redistributeAndWrite(distributor);
             }
-
-
-            // Get reference to standard write handler
-            refPtr<fileOperation> defaultHandler;
-            if (writeHandler)
-            {
-                defaultHandler.ref(writeHandler.ref());
-            }
-            else
-            {
-                defaultHandler.ref(const_cast<fileOperation&>(fileHandler()));
-            }
-
 
             copyUniform
             (
                 volMeshReadHandler, // read handler
-                defaultHandler,     //TBD: should be all IOranks
+                writeHandler,       // if unspecified, uses global handler
 
                 reconstruct,        // reconstruct
                 decompose,          // decompose
@@ -3097,22 +3151,10 @@ int main(int argc, char *argv[])
             );
         }
 
-
-        // Get reference to standard write handler
-        refPtr<fileOperation> defaultHandler;
-        if (writeHandler)
-        {
-            defaultHandler.ref(writeHandler.ref());
-        }
-        else
-        {
-            defaultHandler.ref(const_cast<fileOperation&>(fileHandler()));
-        }
-
         copyUniform
         (
             volMeshReadHandler, // read handler
-            defaultHandler,     //TBD: should be all IOranks
+            writeHandler,       // if unspecified, uses global handler
 
             reconstruct,        // reconstruct (=false)
             decompose,          // decompose

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,28 +32,9 @@ License
 #include "fieldsDistributor.H"
 #include "faMeshDistributor.H"
 #include "faMeshSubset.H"
+#include "faMeshTools.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
-template<class GeoField>
-void Foam::parFaFieldDistributorCache::redistributeAndWrite
-(
-    const faMeshDistributor& distributor,
-    PtrList<GeoField>& fields,
-    const bool isWriteProc
-)
-{
-    for (GeoField& fld : fields)
-    {
-        tmp<GeoField> tfld = distributor.distributeField(fld);
-
-        if (isWriteProc)
-        {
-            tfld().write();
-        }
-    }
-}
-
 
 template<class BoolListType>
 void Foam::parFaFieldDistributorCache::readImpl
@@ -63,12 +44,12 @@ void Foam::parFaFieldDistributorCache::readImpl
     const bool decompose,  // i.e. read from undecomposed case
 
     const BoolListType& areaMeshOnProc,
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const fileName& areaMeshInstance,
     faMesh& mesh
 )
 {
-    Time& runTime = const_cast<Time&>(mesh.time());
+    auto& runTime = const_cast<Time&>(mesh.time());
     const bool oldProcCase = runTime.processorCase();
 
     autoPtr<faMeshSubset> subsetterPtr;
@@ -76,50 +57,48 @@ void Foam::parFaFieldDistributorCache::readImpl
     // Missing an area mesh somewhere?
     if (!areaMeshOnProc.all())
     {
-        const bool oldParRun = UPstream::parRun(false);
-        const int oldCache = fileOperation::cacheLevel(0);
+        const auto oldParRun = UPstream::parRun(false);
+        const auto oldCache = fileOperation::cacheLevel(0);
 
         // A zero-sized mesh with boundaries.
         // This is used to create zero-sized fields.
         subsetterPtr.reset(new faMeshSubset(mesh, Foam::zero{}));
+        auto& subMesh = subsetterPtr().subMesh();
 
+        // Restore states
         fileOperation::cacheLevel(oldCache);
-        UPstream::parRun(oldParRun);  // Restore parallel state
+        UPstream::parRun(oldParRun);
 
-        // Deregister from polyMesh ...
-        auto& obr = const_cast<objectRegistry&>
-        (
-            subsetterPtr->subMesh().thisDb()
-        );
-
-        obr.checkOut(faMesh::typeName);
-        obr.checkOut("faBoundaryMesh");
-        obr.checkOut("faSchemes");
-        obr.checkOut("faSolution");
+        // Avoid conflicts...
+        faMeshTools::forceDemandDriven(subMesh);
     }
 
     // Get original objects (before incrementing time!)
     if (UPstream::master() && decompose)
     {
+        Info<< "Setting caseName to " << baseRunTime.caseName()
+            << " to read finite-area IOobjects" << endl;
         runTime.caseName() = baseRunTime.caseName();
         runTime.processorCase(false);
     }
 
     IOobjectList objects;
-
     if (readHandler)
     {
-        auto oldHandler = fileOperation::fileHandler(readHandler);
-        const auto oldComm = UPstream::commWorld(fileHandler().comm());
+        auto handler = readHandler.shallowClone();
+        handler = fileOperation::fileHandler(handler);
+        auto oldComm = UPstream::commWorld(fileHandler().comm());
 
         objects = IOobjectList(mesh.thisDb(), runTime.timeName());
-        readHandler = fileOperation::fileHandler(oldHandler);
-        UPstream::commWorld(oldComm);
-    }
 
+        // Restore
+        (void)UPstream::commWorld(oldComm);
+        (void)fileOperation::fileHandler(handler);
+    }
 
     if (UPstream::master() && decompose)
     {
+        Info<< "Restoring caseName (finite-area IOobjects)" << endl;
         runTime.caseName() = proc0CaseName;
         runTime.processorCase(oldProcCase);
     }
@@ -134,6 +113,7 @@ void Foam::parFaFieldDistributorCache::readImpl
         runTime.processorCase(false);
     }
 
+    // Field reading
 
     #undef  doFieldReading
     #define doFieldReading(Storage)                                   \
@@ -158,6 +138,14 @@ void Foam::parFaFieldDistributorCache::readImpl
     doFieldReading(sphericalTensorEdgeFields_);
     doFieldReading(symmTensorEdgeFields_);
     #undef doFieldReading
+
+
+    // Done reading
+    if (decompose)
+    {
+        runTime.caseName() = proc0CaseName;
+        runTime.processorCase(oldProcCase);
+    }
 }
 
 
@@ -170,7 +158,7 @@ void Foam::parFaFieldDistributorCache::read
     const bool decompose,  // i.e. read from undecomposed case
 
     const bitSet& areaMeshOnProc,
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const fileName& areaMeshInstance,
     faMesh& mesh
 )
@@ -196,7 +184,7 @@ void Foam::parFaFieldDistributorCache::read
     const bool decompose,  // i.e. read from undecomposed case
 
     const boolUList& areaMeshOnProc,
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const fileName& areaMeshInstance,
     faMesh& mesh
 )
@@ -217,21 +205,75 @@ void Foam::parFaFieldDistributorCache::read
 
 void Foam::parFaFieldDistributorCache::redistributeAndWrite
 (
-    const faMeshDistributor& distributor,
-    const bool isWriteProc
+    const faMeshDistributor& distributor
 )
 {
-    redistributeAndWrite(distributor, scalarAreaFields_, isWriteProc);
-    redistributeAndWrite(distributor, vectorAreaFields_, isWriteProc);
-    redistributeAndWrite(distributor, sphericalTensorAreaFields_, isWriteProc);
-    redistributeAndWrite(distributor, symmTensorAreaFields_, isWriteProc);
-    redistributeAndWrite(distributor, tensorAreaFields_, isWriteProc);
+    distributor.redistributeAndWrite(scalarAreaFields_);
+    distributor.redistributeAndWrite(vectorAreaFields_);
+    distributor.redistributeAndWrite(sphericalTensorAreaFields_);
+    distributor.redistributeAndWrite(symmTensorAreaFields_);
+    distributor.redistributeAndWrite(tensorAreaFields_);
 
-    redistributeAndWrite(distributor, scalarEdgeFields_, isWriteProc);
-    redistributeAndWrite(distributor, vectorEdgeFields_, isWriteProc);
-    redistributeAndWrite(distributor, sphericalTensorEdgeFields_, isWriteProc);
-    redistributeAndWrite(distributor, symmTensorEdgeFields_, isWriteProc);
-    redistributeAndWrite(distributor, tensorEdgeFields_, isWriteProc);
+    distributor.redistributeAndWrite(scalarEdgeFields_);
+    distributor.redistributeAndWrite(vectorEdgeFields_);
+    distributor.redistributeAndWrite(sphericalTensorEdgeFields_);
+    distributor.redistributeAndWrite(symmTensorEdgeFields_);
+    distributor.redistributeAndWrite(tensorEdgeFields_);
+}
+
+
+bool Foam::parFaFieldDistributorCache::empty() const
+{
+    #undef  checkOperation
+    #define checkOperation(Type) \
+    (Type##AreaFields_.empty() && Type##EdgeFields_.empty())
+
+    return
+    (
+        checkOperation(scalar)
+     && checkOperation(vector)
+     && checkOperation(sphericalTensor)
+     && checkOperation(symmTensor)
+     && checkOperation(tensor)
+    );
+    #undef checkOperation
+}
+
+
+void Foam::parFaFieldDistributorCache::info(Ostream& os) const
+{
+    do
+    {
+        bool isEmpty = true;
+
+        #undef  doLocalCode
+        #define doLocalCode(Tag, Member)                                      \
+        if (!Member.empty())                                                  \
+        {                                                                     \
+            isEmpty = false;                                                  \
+            os << Tag << ": ";                                                \
+            PtrListOps::names(Member).writeList(os) << endl;                  \
+        }
+
+        doLocalCode("area scalar", scalarAreaFields_);
+        doLocalCode("area vector", vectorAreaFields_);
+        doLocalCode("area sphTensor", sphericalTensorAreaFields_);
+        doLocalCode("area symmTensor", symmTensorAreaFields_);
+        doLocalCode("area tensor", tensorAreaFields_);
+
+        doLocalCode("edge scalar", scalarEdgeFields_);
+        doLocalCode("edge vector", vectorEdgeFields_);
+        doLocalCode("edge sphTensor", sphericalTensorEdgeFields_);
+        doLocalCode("edge symmTensor", symmTensorEdgeFields_);
+        doLocalCode("edge tensor", tensorEdgeFields_);
+
+        #undef doLocalCode
+        if (isEmpty)
+        {
+            os << "empty" << endl;
+        }
+    }
+    while (false);
 }
 
 

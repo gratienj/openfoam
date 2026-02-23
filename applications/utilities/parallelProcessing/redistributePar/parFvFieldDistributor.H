@@ -46,7 +46,6 @@ SourceFiles
 
 #include "fvMesh.H"
 #include "PtrList.H"
-#include "Switch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -78,20 +77,24 @@ class parFvFieldDistributor
         //- Patch mappers
         PtrList<mapDistributeBase> patchFaceMaps_;
 
-        //- Storage for dummy handler (when using bool control)
-        refPtr<fileOperation> dummyHandler_;
+        //- Storage for unused handler (when using bool control)
+        const refPtr<fileOperation> noHandler_;
 
         //- Write control via a file handler
-        refPtr<fileOperation>& writeHandler_;
+        const refPtr<fileOperation>& writeHandler_;
 
-        //- Write control as a bool
-        Switch isWriteProc_;
+        //- Write control as a bool (instead of via file handler)
+        bool isWriteProc_;
 
 
     // Private Member Functions
 
         //- Construct per-patch addressing
         void createPatchFaceMaps();
+
+        //- Write using writeHandler_ or isWriteProc_ to guide the output
+        template<class FieldType>
+        void writeField(const FieldType& fld) const;
 
 
 public:
@@ -121,7 +124,7 @@ public:
             //! The distribution map
             const mapDistributePolyMesh& distMap,
             //! Tagged for output writing (on this proc)
-            const bool isWriteProc
+            const bool isWriteProc = true
         );
 
         //- Construct from components
@@ -133,8 +136,8 @@ public:
             fvMesh& tgtMesh,
             //! The distribution map
             const mapDistributePolyMesh& distMap,
-            //! Handler for output writing (on this proc)
-            refPtr<fileOperation>& writeHandler
+            //! Handler for output writing
+            const refPtr<fileOperation>& writeHandler
         );
 
 
