@@ -75,8 +75,7 @@ Foam::parFvFieldDistributor::distributeField
 ) const
 {
     // Create internalField by remote mapping
-
-    distributedFieldMapper mapper
+    const distributedFieldMapper mapper
     (
         labelUList::null(),
         distMap_.cellMap()
@@ -112,7 +111,7 @@ Foam::parFvFieldDistributor::distributeField
 ) const
 {
     // Create internalField by remote mapping
-    distributedFieldMapper mapper
+    const distributedFieldMapper mapper
     (
         labelUList::null(),
         distMap_.cellMap()
@@ -174,9 +173,9 @@ Foam::parFvFieldDistributor::distributeField
 
     forAll(oldPatchFields, patchi)
     {
-        if (oldPatchFields.set(patchi))
+        if (auto pfldPtr = oldPatchFields.release(patchi); pfldPtr)
         {
-            const auto& pfld = oldPatchFields[patchi];
+            const auto& pfld = pfldPtr();
 
             labelList dummyMap(identity(pfld.size()));
             directFvPatchFieldMapper dummyMapper(dummyMap);
@@ -233,37 +232,41 @@ Foam::parFvFieldDistributor::distributeField
 ) const
 {
     // Create internalField by remote mapping
-    distributedFieldMapper mapper
+    const distributedFieldMapper mapper
     (
         labelUList::null(),
         distMap_.faceMap()
     );
 
 
+    const auto internalSize = tgtMesh_.nInternalFaces();
+
     Field<Type> primitiveField;
+    //Field<Type> flatBoundary;
     {
         // Create flat field of internalField + all patch fields
-        Field<Type> flatFld(fld.mesh().nFaces(), Type(Zero));
-        SubList<Type>(flatFld, fld.internalField().size())
-            = fld.internalField();
+        Field<Type> fullField(fld.mesh().nFaces(), Foam::zero{});
 
-        for (const fvsPatchField<Type>& fvp : fld.boundaryField())
+        // Internal field
+        fullField.slice(0, fld.internalField().size()) = fld.internalField();
+
+        for (const auto& pfld : fld.boundaryField())
         {
-            SubList<Type>(flatFld, fvp.size(), fvp.patch().start()) = fvp;
+            fullField.slice(pfld.patch().start(), pfld.size()) = pfld;
         }
 
         // Map all faces
-        primitiveField = Field<Type>(flatFld, mapper, fld.is_oriented());
+        primitiveField = Field<Type>(fullField, mapper, fld.is_oriented());
 
         // Trim to internal faces (note: could also have special mapper)
-        primitiveField.resize
-        (
-            min
-            (
-                primitiveField.size(),
-                tgtMesh_.nInternalFaces()
-            )
-        );
+        if (internalSize < primitiveField.size())
+        {
+            // // Save boundary values
+            // flatBoundary = primitiveField.slice(internalSize);
+
+            // Internal values
+            primitiveField.resize(internalSize);
+        }
     }
 
 
@@ -322,9 +325,9 @@ Foam::parFvFieldDistributor::distributeField
     // the reference to the patch, size and content stay the same.
     forAll(oldPatchFields, patchi)
     {
-        if (oldPatchFields.set(patchi))
+        if (auto pfldPtr = oldPatchFields.release(patchi); pfldPtr)
         {
-            const fvsPatchField<Type>& pfld = oldPatchFields[patchi];
+            const auto& pfld = pfldPtr();
 
             labelList dummyMap(identity(pfld.size()));
             directFvPatchFieldMapper dummyMapper(dummyMap);
