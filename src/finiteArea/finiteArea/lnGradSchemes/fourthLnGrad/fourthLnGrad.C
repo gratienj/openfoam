@@ -31,49 +31,30 @@ License
 #include "correctedLnGrad.H"
 #include "gaussFaGrad.H"
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-namespace Foam
-{
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-namespace fa
-{
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class Type>
-fourthLnGrad<Type>::~fourthLnGrad()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-tmp<GeometricField<Type, faePatchField, edgeMesh>>
-fourthLnGrad<Type>::correction
+Foam::tmp<Foam::GeometricField<Type, Foam::faePatchField, Foam::edgeMesh>>
+Foam::fa::fourthLnGrad<Type>::correction
 (
     const GeometricField<Type, faPatchField, areaMesh>& vf
 ) const
 {
     const faMesh& mesh = this->mesh();
 
-    tmp<GeometricField<Type, faePatchField, edgeMesh>> tcorr
+    auto tcorr = tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
     (
-        new GeometricField<Type, faePatchField, edgeMesh>
+        IOobject
         (
-            IOobject
-            (
-                "lnGradCorr("+vf.name()+')',
-                vf.instance(),
-                vf.db()
-            ),
-            mesh,
-            vf.dimensions()*this->mesh().deltaCoeffs().dimensions()
-        )
+            "lnGradCorr("+vf.name()+')',
+            vf.instance(),
+            vf.db()
+        ),
+        mesh,
+        vf.dimensions()*this->mesh().deltaCoeffs().dimensions()
     );
-    GeometricField<Type, faePatchField, edgeMesh>& corr = tcorr.ref();
+    auto& corr = tcorr.ref();
+    corr.setOriented();
 
     edgeVectorField m(mesh.Le()/mesh.magLe());
 
@@ -109,6 +90,8 @@ fourthLnGrad<Type>::correction
 //             )/mesh.magLe()
 //         )
 //     );
+//     tcorr.ref().setOriented();
+
 
     if (correctedLnGrad<Type>(mesh).corrected())
     {
@@ -118,13 +101,5 @@ fourthLnGrad<Type>::correction
     return tcorr;
 }
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace fa
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
 
 // ************************************************************************* //

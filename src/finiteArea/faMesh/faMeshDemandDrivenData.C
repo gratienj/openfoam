@@ -691,7 +691,8 @@ void Foam::faMesh::calcLe() const
         dimLength
         // -> calculatedType()
     );
-    edgeVectorField& Le = *LePtr_;
+    auto& Le = *LePtr_;
+    Le.setOriented();
 
     // Need face centres
     const areaVectorField& fCentres = areaCentres();

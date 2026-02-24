@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2019-2023 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -677,7 +677,7 @@ Foam::faMatrix<Type>::flux() const
         lduMatrix::faceH(psi_.primitiveField())
     );
     auto& fieldFlux = tfieldFlux.ref();
-    // not yet: fieldFlux.setOriented();
+    fieldFlux.setOriented();
 
 
     FieldField<Field, Type> InternalContrib = internalCoeffs_;

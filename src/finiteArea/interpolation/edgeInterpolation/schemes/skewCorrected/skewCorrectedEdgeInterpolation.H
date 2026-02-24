@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef skewCorrectedEdgeInterpolation_H
-#define skewCorrectedEdgeInterpolation_H
+#ifndef Foam_skewCorrectedEdgeInterpolation_H
+#define Foam_skewCorrectedEdgeInterpolation_H
 
 #include "edgeInterpolationScheme.H"
 #include "gaussFaGrad.H"
@@ -134,9 +134,8 @@ public:
 
             const edgeVectorField& scv = mesh.skewCorrectionVectors();
 
-            tmp<GeometricField<Type, faePatchField, edgeMesh>> tsfCorr
-            (
-                new GeometricField<Type, faePatchField, edgeMesh>
+            auto tsfCorr =
+                tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
                 (
                     IOobject
                     (
@@ -146,10 +145,9 @@ public:
                     ),
                     mesh,
                     dimensioned<Type>(vf.dimensions(), Zero)
-                )
-            );
-
-            GeometricField<Type, faePatchField, edgeMesh>& corr = tsfCorr.ref();
+                );
+            auto& corr = tsfCorr.ref();
+            corr.setOriented();
 
             for (direction cmpt=0; cmpt<pTraits<Type>::nComponents; ++cmpt)
             {
@@ -200,11 +198,7 @@ public:
             }
             else
             {
-                return
-                    tmp<GeometricField<Type, faePatchField, edgeMesh>>
-                    (
-                        nullptr
-                    );
+                return nullptr;
             }
         }
 };

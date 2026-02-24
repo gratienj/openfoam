@@ -90,7 +90,7 @@ public:
 
 
     //- Destructor
-    virtual ~fourthLnGrad();
+    virtual ~fourthLnGrad() = default;
 
 
     // Member Functions
