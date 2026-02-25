@@ -50,8 +50,11 @@ Foam::faFieldDecomposer::decomposeField
         field.dimensions(),
         // Internal field - mapped values
         Field<Type>(field.primitiveField(), faceAddressing_),
-        // Future: UPtrList<faPatchField>()
+        #if (OPENFOAM <= 2512)
         faPatchFieldBase::calculatedType()
+        #else
+        UPtrList<faPatchField<Type>>()
+        #endif
     );
     auto& result = tresult.ref();
     result.oriented() = field.oriented();
@@ -62,6 +65,8 @@ Foam::faFieldDecomposer::decomposeField
 
     const auto& tgtInternal = result.internalField();
     auto& boundaries = result.boundaryFieldRef();
+
+    boundaries.resize_null(procMesh_.boundary().size());
 
     forAll(boundaries, patchi)
     {
@@ -117,11 +122,13 @@ Foam::faFieldDecomposer::decomposeField
         edgeAddressing_.slice(0, procMesh_.nInternalEdges())
     );
 
-// if constexpr (withTurningIndex_)
-    // forAll(mapAddr, i)
-    // {
-    //     mapAddr[i] -= 1;
-    // }
+    if (!noEdgeEncoding_)
+    {
+        for (auto& addr : mapAddr)
+        {
+            addr -= 1;
+        }
+    }
 
     // Problem with addressing when a processor patch picks up both internal
     // edges and edges from cyclic boundaries. This is a bit of a hack, but
@@ -154,8 +161,11 @@ Foam::faFieldDecomposer::decomposeField
         field.dimensions(),
         // Internal field - mapped values
         Field<Type>(field.internalField(), mapAddr),
-        // Future: UPtrList<faePatchField>()
+        #if (OPENFOAM <= 2512)
         faePatchFieldBase::calculatedType()
+        #else
+        UPtrList<faePatchField<Type>>()
+        #endif
     );
     auto& result = tresult.ref();
     result.oriented() = field.oriented();
@@ -172,10 +182,13 @@ Foam::faFieldDecomposer::decomposeField
 
     forAll(boundaries, patchi)
     {
+        #if (OPENFOAM <= 2512)
         // HACK (2026-02-16) - edge fields are currently not marked
         // as oriented, but mostly have "phi", which is oriented.
         bool applyFlips = true;
-        //bool applyFlips = result.is_oriented();
+        #else
+        bool applyFlips = result.is_oriented();
+        #endif
 
         const auto& tgtPatch = procMesh_.boundary()[patchi];
         const auto oldPatchi = boundaryAddressing_[patchi];
