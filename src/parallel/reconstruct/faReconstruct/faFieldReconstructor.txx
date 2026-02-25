@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,98 +48,72 @@ Foam::faFieldReconstructor::reconstructField
     // Create the patch fields
     PtrList<faPatchField<Type>> patchFields(mesh_.boundary().size());
 
+    // The patch starts (global mesh)
+    const labelList gStarts(mesh_.boundary().patchStarts());
 
-    // Create global mesh patches starts
-
-    labelList gStarts(mesh_.boundary().size(), -1);
-
-    if (mesh_.boundary().size() > 0)
+    forAll(procMeshes_, proci)
     {
-        gStarts[0] = mesh_.nInternalEdges();
-    }
+        const auto& procField = procFields[proci];
+        const auto& procMesh = procMeshes_[proci];
 
-    for(label i=1; i<mesh_.boundary().size(); i++)
-    {
-        gStarts[i] = gStarts[i-1] + mesh_.boundary()[i-1].labelList::size();
-    }
-
-    forAll(procMeshes_, procI)
-    {
-        const GeometricField<Type, faPatchField, areaMesh>& procField =
-            procFields[procI];
+        // The (edge,face,boundary)ProcAddressing for the current procMesh
+        const auto& edgeProcAddr = edgeProcAddressing_[proci];
+        const auto& faceProcAddr = faceProcAddressing_[proci];
+        const auto& boundaryProcAddr = boundaryProcAddressing_[proci];
 
         // Set the face values in the reconstructed field
-        internalField.rmap
-        (
-            procField.internalField(),
-            faceProcAddressing_[procI]
-        );
+        internalField.rmap(procField.internalField(), faceProcAddr);
 
 
+        // The patch starts (local mesh)
+        const labelList starts(procMesh.boundary().patchStarts());
 
         // Set the boundary patch values in the reconstructed field
 
-        labelList starts(procMeshes_[procI].boundary().size(), -1);
-
-        if(procMeshes_[procI].boundary().size() > 0)
+        forAll(boundaryProcAddr, patchI)
         {
-            starts[0] = procMeshes_[procI].nInternalEdges();
-        }
-
-        for(label i=1; i<procMeshes_[procI].boundary().size(); i++)
-        {
-            starts[i] =
-                starts[i-1]
-              + procMeshes_[procI].boundary()[i-1].labelList::size();
-        }
-
-        forAll(boundaryProcAddressing_[procI], patchI)
-        {
-            // Get patch index of the original patch
-            const label curBPatch = boundaryProcAddressing_[procI][patchI];
-
             // Get addressing slice for this patch
-
-//             const labelList::subList cp =
-//                 procMeshes_[procI].boundary()[patchI].patchSlice
-//                 (
-//                     edgeProcAddressing_[procI]
-//                 );
-
-            const labelList::subList cp =
-                labelList::subList
+//             const auto cp =
+//                 procMesh.boundary()[patchI].patchSlice(edgeProcAddr);
+            const auto cp =
+                edgeProcAddr.slice
                 (
-                    edgeProcAddressing_[procI],
-                    procMeshes_[procI].boundary()[patchI].size(),
-                    starts[patchI]
+                    starts[patchI],
+                    procMesh.boundary()[patchI].size()
                 );
 
+
+            // Get patch index of the original patch,
             // check if the boundary patch is not a processor patch
-            if (curBPatch >= 0)
+            if
+            (
+                const auto tgtPatchi = boundaryProcAddr[patchI];
+                (tgtPatchi >= 0)
+            )
             {
                 // Regular patch. Fast looping
 
-                if (!patchFields.set(curBPatch))
+                if (!patchFields.test(tgtPatchi))
                 {
                     patchFields.set
                     (
-                        curBPatch,
+                        tgtPatchi,
                         faPatchField<Type>::New
                         (
                             procField.boundaryField()[patchI],
-                            mesh_.boundary()[curBPatch],
+                            mesh_.boundary()[tgtPatchi],
                             faPatchField<Type>::Internal::null(),
                             faPatchFieldReconstructor
                             (
-                                mesh_.boundary()[curBPatch].size(),
+                                mesh_.boundary()[tgtPatchi].size(),
                                 procField.boundaryField()[patchI].size()
                             )
                         )
                     );
                 }
 
-                const label curPatchStart = gStarts[curBPatch];
-//                     mesh_.boundary()[curBPatch].start();
+                const label tgtPatchStart = gStarts[tgtPatchi];
+//                     mesh_.boundary()[tgtPatchi].start();
 
                 labelList reverseAddressing(cp.size());
 
@@ -147,11 +121,11 @@ Foam::faFieldReconstructor::reconstructField
                 {
                     // Subtract one to take into account offsets for
                     // face direction.
-//                     reverseAddressing[edgeI] = cp[edgeI] - 1 - curPatchStart;
-                    reverseAddressing[edgeI] = cp[edgeI] - curPatchStart;
+//                     reverseAddressing[edgeI] = cp[edgeI] - 1 - tgtPatchStart;
+                    reverseAddressing[edgeI] = cp[edgeI] - tgtPatchStart;
                 }
 
-                patchFields[curBPatch].rmap
+                patchFields[tgtPatchi].rmap
                 (
                     procField.boundaryField()[patchI],
                     reverseAddressing
@@ -159,7 +133,9 @@ Foam::faFieldReconstructor::reconstructField
             }
             else
             {
-                const Field<Type>& curProcPatch =
+                // Processor patch
+
+                const Field<Type>& curPatchField =
                     procField.boundaryField()[patchI];
 
                 // In processor patches, there's a mix of internal faces (some
@@ -168,54 +144,63 @@ Foam::faFieldReconstructor::reconstructField
                 {
                     // Subtract one to take into account offsets for
                     // face direction.
-//                     label curE = cp[edgeI] - 1;
-                    label curE = cp[edgeI];
+//                     label tgtEdgei = cp[edgeI] - 1;
+                    label tgtEdgei = cp[edgeI];
 
-                    // Is the face on the boundary?
-                    if (curE >= mesh_.nInternalEdges())
+                    // The target edge
+                    if (tgtEdgei < 0)
                     {
-//                         label curBPatch = mesh_.boundary().whichPatch(curE);
-                        label curBPatch = -1;
+                        // Edge is incorrectly flipped - should not happen
+                    }
+                    else if (tgtEdgei < mesh_.nInternalEdges())
+                    {
+                        // Target edge is an internal edge - ignore
+                    }
+                    else
+                    {
+                        // Target edge is a boundary, find which one.
 
-                        forAll(mesh_.boundary(), pI)
+//                     label tgtPatchi =
+//                         mesh_.boundary().whichPatch(tgtEdgei);
+
+                        // Binary search in patch starts (with +1 to
+                        // include the start in the comparison)
+
+                        const label tgtPatchi =
+                            Foam::findLower(gStarts, (tgtEdgei+1));
+
+                        if (tgtPatchi < 0)
                         {
-                            if
-                            (
-                                curE >= gStarts[pI]
-                             && curE <
-                                (
-                                    gStarts[pI]
-                                  + mesh_.boundary()[pI].labelList::size()
-                                )
-                            )
-                            {
-                                curBPatch = pI;
-                            }
+                            FatalErrorInFunction
+                                << "Edge " << tgtEdgei
+                                << " not found in any of the patches" << nl
+                                << "The patches appear to be inconsistent"
+                                   " with the mesh :" << endl
+                                << abort(FatalError);
                         }
 
-                        if (!patchFields.set(curBPatch))
+                        if (!patchFields.test(tgtPatchi))
                         {
                             patchFields.set
                             (
-                                curBPatch,
+                                tgtPatchi,
                                 faPatchField<Type>::New
                                 (
-                                    mesh_.boundary()[curBPatch].type(),
-                                    mesh_.boundary()[curBPatch],
+                                    mesh_.boundary()[tgtPatchi].type(),
+                                    mesh_.boundary()[tgtPatchi],
                                     faPatchField<Type>::Internal::null()
                                 )
                             );
                         }
 
                         // add the edge
-//                         label curPatchEdge =
-//                             mesh_.boundary()
-//                                 [curBPatch].whichEdge(curE);
+//                         label tgtPatchEdgei =
+//                             mesh_.boundary()[tgtPatchi].whichEdge(tgtEdgei);
 
-                        label curPatchEdge = curE - gStarts[curBPatch];
+                        label tgtPatchEdgei = (tgtEdgei - gStarts[tgtPatchi]);
 
-                        patchFields[curBPatch][curPatchEdge] =
-                            curProcPatch[edgeI];
+                        patchFields[tgtPatchi][tgtPatchEdgei] =
+                            curPatchField[edgeI];
                     }
                 }
             }
@@ -228,7 +213,7 @@ Foam::faFieldReconstructor::reconstructField
         if
         (
             isA<emptyFaPatch>(mesh_.boundary()[patchI])
-         && !patchFields.set(patchI)
+         && !patchFields.test(patchI)
         )
         {
             patchFields.set
@@ -247,21 +232,19 @@ Foam::faFieldReconstructor::reconstructField
 
     // Now construct and write the field
     // setting the internalField and patchFields
-    return tmp<GeometricField<Type, faPatchField, areaMesh>>::New
+    auto tfield = tmp<GeometricField<Type, faPatchField, areaMesh>>::New
     (
-        IOobject
-        (
-            fieldObject.name(),
-            mesh_.thisDb().time().timeName(),
-            mesh_.thisDb(),
-            IOobject::NO_READ,
-            IOobject::NO_WRITE
-        ),
+        fieldObject,
         mesh_,
         procFields[0].dimensions(),
         internalField,
         patchFields
     );
+
+    tfield.ref().oriented() = procFields[0].oriented();
+
+    return tfield;
+
 }
 
 
@@ -280,107 +263,123 @@ Foam::faFieldReconstructor::reconstructField
     PtrList<faePatchField<Type>> patchFields(mesh_.boundary().size());
 
 
-    labelList gStarts(mesh_.boundary().size(), -1);
+    // The patch starts (global mesh)
+    const labelList gStarts(mesh_.boundary().patchStarts());
 
-    if(mesh_.boundary().size() > 0)
+    // HACK: until we add flip information there is no other way
+    // to track when the processor boundary value has flipped
+
+    const auto& edgeOwner = mesh_.edgeOwner();
+
+    Field<scalar> boundaryEdgeSigns;
     {
-        gStarts[0] = mesh_.nInternalEdges();
+        label maxBndEdges = 0;
+        for (const auto& m : procMeshes_)
+        {
+            maxBndEdges = Foam::max(maxBndEdges, m.nBoundaryEdges());
+        }
+
+        boundaryEdgeSigns.resize(maxBndEdges, scalar(1));
     }
 
-    for(label i=1; i<mesh_.boundary().size(); i++)
+    forAll(procMeshes_, proci)
     {
-        gStarts[i] = gStarts[i-1] + mesh_.boundary()[i-1].labelList::size();
-    }
+        const auto& procField = procFields[proci];
+        const auto& procMesh = procMeshes_[proci];
 
+        // The (edge,face,boundary)ProcAddressing for the current procMesh
+        const auto& edgeProcAddr = edgeProcAddressing_[proci];
+        const auto& faceProcAddr = faceProcAddressing_[proci];
+        const auto& boundaryProcAddr = boundaryProcAddressing_[proci];
 
-    forAll(procMeshes_, procI)
-    {
-        const GeometricField<Type, faePatchField, edgeMesh>& procField =
-            procFields[procI];
-
-        // Set the face values in the reconstructed field
+        // Set the edge values in the reconstructed field
 
         // It is necessary to create a copy of the addressing array to
         // take care of the face direction offset trick.
         //
         {
-            labelList curAddr(edgeProcAddressing_[procI]);
+            labelList curAddr(edgeProcAddr);
 
 //             forAll(curAddr, addrI)
 //             {
 //                 curAddr[addrI] -= 1;
 //             }
 
-            internalField.rmap
+            // Set the edge values in the reconstructed field
+            internalField.rmap(procField.internalField(), curAddr);
+
+            // HACK: track sign flips without any edge flip information!!
+
+            label bndEdgei = 0;
+            for
             (
-                procField.internalField(),
-                curAddr
-            );
+                label edgei = procMesh.nInternalEdges();
+                edgei < procMesh.nEdges();
+                ++edgei
+            )
+            {
+                // The corresponding owner face in the serial mesh:
+                auto serialEdgei = edgeProcAddr[edgei];
+                auto ownFacei = faceProcAddr[procMesh.edgeOwner()[edgei]];
+
+                boundaryEdgeSigns[bndEdgei] =
+                (
+                    (edgeOwner[serialEdgei] == ownFacei) ? 1 : -1
+                );
+
+                ++bndEdgei;
+            }
         }
+
+        // The patch starts (local mesh)
+        const labelList starts(procMesh.boundary().patchStarts());
 
         // Set the boundary patch values in the reconstructed field
 
-        labelList starts(procMeshes_[procI].boundary().size(), -1);
-
-        if(procMeshes_[procI].boundary().size() > 0)
+        forAll(boundaryProcAddr, patchI)
         {
-            starts[0] = procMeshes_[procI].nInternalEdges();
-        }
-
-        for(label i=1; i<procMeshes_[procI].boundary().size(); i++)
-        {
-            starts[i] =
-                starts[i-1]
-              + procMeshes_[procI].boundary()[i-1].labelList::size();
-        }
-
-        forAll(boundaryProcAddressing_[procI], patchI)
-        {
-            // Get patch index of the original patch
-            const label curBPatch = boundaryProcAddressing_[procI][patchI];
-
             // Get addressing slice for this patch
+//             const auto cp =
+//                 procMesh.boundary()[patchI].patchSlice(edgeProcAddr);
 
-//             const labelList::subList cp =
-//                 procMeshes_[procI].boundary()[patchI].patchSlice
-//                 (
-//                     faceProcAddressing_[procI]
-//                 );
-
-            const labelList::subList cp =
-                labelList::subList
+            const auto cp =
+                edgeProcAddr.slice
                 (
-                    edgeProcAddressing_[procI],
-                    procMeshes_[procI].boundary()[patchI].size(),
-                    starts[patchI]
+                    starts[patchI],
+                    procMesh.boundary()[patchI].size()
                 );
 
+            // Get patch index of the original patch,
             // check if the boundary patch is not a processor patch
-            if (curBPatch >= 0)
+            if
+            (
+                const auto tgtPatchi = boundaryProcAddr[patchI];
+                (tgtPatchi >= 0)
+            )
             {
                 // Regular patch. Fast looping
 
-                if (!patchFields.set(curBPatch))
+                if (!patchFields.test(tgtPatchi))
                 {
                     patchFields.set
                     (
-                        curBPatch,
+                        tgtPatchi,
                         faePatchField<Type>::New
                         (
                             procField.boundaryField()[patchI],
-                            mesh_.boundary()[curBPatch],
+                            mesh_.boundary()[tgtPatchi],
                             faePatchField<Type>::Internal::null(),
                             faPatchFieldReconstructor
                             (
-                                mesh_.boundary()[curBPatch].size(),
+                                mesh_.boundary()[tgtPatchi].size(),
                                 procField.boundaryField()[patchI].size()
                             )
                         )
                     );
                 }
 
-                const label curPatchStart = gStarts[curBPatch];
-//                     mesh_.boundary()[curBPatch].start();
+                const label tgtPatchStart = gStarts[tgtPatchi];
+//                     mesh_.boundary()[tgtPatchi].start();
 
                 labelList reverseAddressing(cp.size());
 
@@ -388,11 +387,11 @@ Foam::faFieldReconstructor::reconstructField
                 {
                     // Subtract one to take into account offsets for
                     // face direction.
-//                     reverseAddressing[faceI] = cp[faceI] - 1 - curPatchStart;
-                    reverseAddressing[edgeI] = cp[edgeI] - curPatchStart;
+//                     reverseAddressing[faceI] = cp[faceI] - 1 - tgtPatchStart;
+                    reverseAddressing[edgeI] = cp[edgeI] - tgtPatchStart;
                 }
 
-                patchFields[curBPatch].rmap
+                patchFields[tgtPatchi].rmap
                 (
                     procField.boundaryField()[patchI],
                     reverseAddressing
@@ -400,72 +399,95 @@ Foam::faFieldReconstructor::reconstructField
             }
             else
             {
-                const Field<Type>& curProcPatch =
+                // Processor patch
+
+                const Field<Type>& curPatchField =
                     procField.boundaryField()[patchI];
 
                 // In processor patches, there's a mix of internal faces (some
                 // of them turned) and possible cyclics. Slow loop
-                forAll(cp, edgeI)
+
+                // For the loop:
+                // - track boundaryEdgei on the proc-local mesh as addressing
+                //   into boundaryEdgeSigns.
+                // - track patchEdgei on the proc-local mesh patch.
+                for
+                (
+                    label boundaryEdgei
+                  = (starts[patchI] - procMesh.nInternalEdges()),
+                    patchEdgei = 0;
+                    (patchEdgei < cp.size());
+                  ++patchEdgei, ++boundaryEdgei
+                )
                 {
-//                     label curF = cp[edgeI] - 1;
-                    label curE = cp[edgeI];
+                    // The target edge
+//                     label tgtEdgei = cp[patchEdgei] - 1;
+                    label tgtEdgei = cp[patchEdgei];
 
-                    // Is the face turned the right side round
-                    if (curE >= 0)
+                    if (tgtEdgei < 0)
                     {
-                        // Is the face on the boundary?
-                        if (curE >= mesh_.nInternalEdges())
+                        // Edge is incorrectly flipped - should not happen
+                    }
+                    else if (tgtEdgei < mesh_.nInternalEdges())
+                    {
+                        // Target edge is an internal edge
+
+                        // Processor patch -> internal face
+                        // TBD: avoid copying with sign change, which
+                        // would preserve the owner side and ignore
+                        // (de-duplicate) the neigbour side
+                        internalField[tgtEdgei] =
+                        (
+                            curPatchField[patchEdgei]
+                            // HACK: sign flip without edge flip info!
+                          * boundaryEdgeSigns[boundaryEdgei]
+                        );
+                    }
+                    else
+                    {
+                        // Target edge is a boundary, find which one.
+
+//                         label tgtPatchi =
+//                             mesh_.boundary().whichPatch(tgtEdgei);
+
+                        // Binary search in patch starts (with +1 to
+                        // include the start in the comparison)
+
+                        const label tgtPatchi =
+                            Foam::findLower(gStarts, (tgtEdgei+1));
+
+                        if (tgtPatchi < 0)
                         {
-//                             label curBPatch =
-//                                 mesh_.boundary().whichPatch(curF);
+                            FatalErrorInFunction
+                                << "Edge " << tgtEdgei
+                                << " not found in any of the patches" << nl
+                                << "The patches appear to be inconsistent"
+                                   " with the mesh :" << endl
+                                << abort(FatalError);
+                        }
 
-                            label curBPatch = -1;
-
-                            forAll(mesh_.boundary(), pI)
-                            {
-                                if
+                        if (!patchFields.test(tgtPatchi))
+                        {
+                            patchFields.set
+                            (
+                                tgtPatchi,
+                                faePatchField<Type>::New
                                 (
-                                    curE >= gStarts[pI]
-                                 && curE <
-                                    (
-                                        gStarts[pI]
-                                      + mesh_.boundary()[pI].labelList::size()
-                                    )
+                                    mesh_.boundary()[tgtPatchi].type(),
+                                    mesh_.boundary()[tgtPatchi],
+                                    faePatchField<Type>::Internal::null()
                                 )
-                                {
-                                    curBPatch = pI;
-                                }
-                            }
-
-                            if (!patchFields.set(curBPatch))
-                            {
-                                patchFields.set
-                                (
-                                    curBPatch,
-                                    faePatchField<Type>::New
-                                    (
-                                        mesh_.boundary()[curBPatch].type(),
-                                        mesh_.boundary()[curBPatch],
-                                        faePatchField<Type>::Internal::null()
-                                    )
-                                );
-                            }
-
-                            // add the face
-//                             label curPatchFace =
-//                                 mesh_.boundary()
-//                                 [curBPatch].whichEdge(curF);
-
-                            label curPatchEdge = curE - gStarts[curBPatch];
-
-                            patchFields[curBPatch][curPatchEdge] =
-                                curProcPatch[edgeI];
+                            );
                         }
-                        else
-                        {
-                            // Internal face
-                            internalField[curE] = curProcPatch[edgeI];
-                        }
+
+                        // add the value
+//                         label tgtPatchEdgei =
+//                             mesh_.boundary()[tgtPatchi].whichEdge(tgtEdgei);
+
+                        label tgtPatchEdgei(tgtEdgei - gStarts[tgtPatchi]);
+
+                        patchFields[tgtPatchi][tgtPatchEdgei] =
+                            curPatchField[patchEdgei];
                     }
                 }
             }
@@ -478,7 +500,7 @@ Foam::faFieldReconstructor::reconstructField
         if
         (
             isA<emptyFaPatch>(mesh_.boundary()[patchI])
-         && !patchFields.set(patchI)
+         && !patchFields.test(patchI)
         )
         {
             patchFields.set
@@ -497,21 +519,18 @@ Foam::faFieldReconstructor::reconstructField
 
     // Now construct and write the field
     // setting the internalField and patchFields
-    return tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
+    auto tfield = tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
     (
-        IOobject
-        (
-            fieldObject.name(),
-            mesh_.thisDb().time().timeName(),
-            mesh_.thisDb(),
-            IOobject::NO_READ,
-            IOobject::NO_WRITE
-        ),
+        fieldObject,
         mesh_,
         procFields[0].dimensions(),
         internalField,
         patchFields
     );
+
+    tfield.ref().oriented() = procFields[0].oriented();
+
+    return tfield;
 }
 
 
@@ -530,21 +549,19 @@ Foam::faFieldReconstructor::reconstructAreaField
 
     forAll(procMeshes_, proci)
     {
-        procFields.set
+        procFields.emplace_set
         (
             proci,
-            new GeometricField<Type, faPatchField, areaMesh>
+            IOobject
             (
-                IOobject
-                (
-                    fieldObject.name(),
-                    procMeshes_[proci].thisDb().time().timeName(),
-                    procMeshes_[proci].thisDb(),
-                    IOobject::MUST_READ,
-                    IOobject::NO_WRITE
-                ),
-                procMeshes_[proci]
-            )
+                fieldObject.name(),
+                procMeshes_[proci].thisDb().time().timeName(),
+                procMeshes_[proci].thisDb(),
+                IOobjectOption::MUST_READ,
+                IOobjectOption::NO_WRITE,
+                IOobjectOption::NO_REGISTER
+            ),
+            procMeshes_[proci]
         );
     }
 
@@ -578,21 +595,19 @@ Foam::faFieldReconstructor::reconstructEdgeField
 
     forAll(procMeshes_, proci)
     {
-        procFields.set
+        procFields.emplace_set
         (
             proci,
-            new GeometricField<Type, faePatchField, edgeMesh>
+            IOobject
             (
-                IOobject
-                (
-                    fieldObject.name(),
-                    procMeshes_[proci].thisDb().time().timeName(),
-                    procMeshes_[proci].thisDb(),
-                    IOobject::MUST_READ,
-                    IOobject::NO_WRITE
-                ),
-                procMeshes_[proci]
-            )
+                fieldObject.name(),
+                procMeshes_[proci].thisDb().time().timeName(),
+                procMeshes_[proci].thisDb(),
+                IOobjectOption::MUST_READ,
+                IOobjectOption::NO_WRITE,
+                IOobjectOption::NO_REGISTER
+            ),
+            procMeshes_[proci]
         );
     }
 

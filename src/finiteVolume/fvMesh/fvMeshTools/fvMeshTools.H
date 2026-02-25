@@ -106,7 +106,7 @@ class fvMeshTools
     static autoPtr<fvMesh> loadOrCreateMeshImpl
     (
         const IOobject& io,
-        refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
+        const refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
         const bool decompose,  // Only used if readHandlerPtr == nullptr
         const bool verbose = false
     );
@@ -200,8 +200,9 @@ public:
     static autoPtr<fvMesh> loadOrCreateMesh
     (
         const IOobject& io,
-        //! Non-null reference if a mesh exists on given processor
-        refPtr<fileOperation>& readHandler,
+        //! Read handler for ranks with mesh, is dummyFileOperation for ranks
+        //! without a mesh.
+        const refPtr<fileOperation>& readHandler,
         const bool verbose = true
     );
 
@@ -231,8 +232,8 @@ public:
         const bool decompose,
         //! the instance for maps
         const fileName& writeInstance,
-        //! The output file handler
-        refPtr<fileOperation>& writeHandler
+        //! Alternative handler for output writing
+        const refPtr<fileOperation>& writeHandler
     );
 
 

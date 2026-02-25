@@ -42,10 +42,10 @@ SourceFiles
 #define Foam_faMeshDistributor_H
 
 #include "faMesh.H"
+#include "faMeshTools.H"
 #include "mapDistributePolyMesh.H"
 #include "areaFieldsFwd.H"
 #include "edgeFieldsFwd.H"
-#include "Switch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -78,20 +78,17 @@ class faMeshDistributor
         //- Patch edge mappers
         mutable PtrList<mapDistributeBase> patchEdgeMaps_;
 
-        //- Storage for dummy handler (when using bool control)
-        refPtr<fileOperation> dummyHandler_;
+        //- Storage for unused handler (when using bool control)
+        const refPtr<fileOperation> noHandler_;
 
         //- Write control via a file handler
-        refPtr<fileOperation>& writeHandler_;
+        const refPtr<fileOperation>& writeHandler_;
 
-        //- Write control as a bool
-        Switch isWriteProc_;
+        //- Write control as a bool (instead of via file handler)
+        bool isWriteProc_;
 
 
     // Private Member Functions
-
-        //- Construct internal edge mapping
-        void createInternalEdgeMap() const;
 
         //- Construct per-patch edge mapping
         void createPatchMaps() const;
@@ -109,6 +106,10 @@ class faMeshDistributor
             const labelUList& pointProcAddr,
             const labelUList& boundaryProcAddr
         );
+
+        //- Write using writeHandler_ or isWriteProc_ to guide the output
+        template<class FieldType>
+        void writeField(const FieldType& fld) const;
 
 
 public:
@@ -138,7 +139,7 @@ public:
             //! The distribution map
             const mapDistributePolyMesh& faDistMap,
             //! Tagged for output writing (on this proc)
-            const bool isWriteProc
+            const bool isWriteProc = true
         );
 
         //- Construct from components, using file handler to control writing
@@ -150,8 +151,8 @@ public:
             const faMesh& tgtMesh,
             //! The distribution map
             const mapDistributePolyMesh& faDistMap,
-            //! Handler for output writing (on this proc)
-            refPtr<fileOperation>& writeHandler
+            //! Handler for output writing
+            const refPtr<fileOperation>& writeHandler
         );
 
 
@@ -242,6 +243,20 @@ public:
         (
             const IOobjectList& objects,
             const wordRes& selectedFields = wordRes()
+        ) const;
+
+        //- Redistribute and write area fields
+        template<class Type>
+        void redistributeAndWrite
+        (
+            UPtrList<GeometricField<Type, faPatchField, areaMesh>>& flds
+        ) const;
+
+        //- Redistribute and write edge fields
+        template<class Type>
+        void redistributeAndWrite
+        (
+            UPtrList<GeometricField<Type, faePatchField, edgeMesh>>& flds
         ) const;
 };
 

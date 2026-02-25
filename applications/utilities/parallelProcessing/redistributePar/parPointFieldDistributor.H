@@ -57,7 +57,6 @@ SourceFiles
 #include "pointMesh.H"
 #include "pointFieldsFwd.H"
 #include "PtrList.H"
-#include "Switch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -95,14 +94,21 @@ class parPointFieldDistributor
         //- Point patch mappers
         PtrList<mapDistributeBase> patchPointMaps_;
 
-        //- Storage for dummy handler (when using bool control)
-        refPtr<fileOperation> dummyHandler_;
+        //- Storage for unused handler (when using bool control)
+        const refPtr<fileOperation> noHandler_;
 
         //- Write control via a file handler
-        refPtr<fileOperation>& writeHandler_;
+        const refPtr<fileOperation>& writeHandler_;
 
-        //- Write control as a bool
-        Switch isWriteProc_;
+        //- Write control as a bool (instead of via file handler)
+        bool isWriteProc_;
+
+
+    // Private Member Functions
+
+        //- Write using writeHandler_ or isWriteProc_ to guide the output
+        template<class FieldType>
+        void writeField(const FieldType& fld) const;
 
 
 public:
@@ -127,25 +133,21 @@ public:
         (
             //! The source pointMesh
             const pointMesh& srcMesh,
-            //! Call saveMeshPoints() immediately. Normally false
-            const bool savePoints,
             //! Tagged for output writing (on this proc)
-            const bool isWriteProc
+            const bool isWriteProc = true
         );
 
         //- Basic construction
-        explicit parPointFieldDistributor
+        parPointFieldDistributor
         (
             //! The source pointMesh
             const pointMesh& srcMesh,
-            //! Call saveMeshPoints() immediately. Normally false
-            const bool savePoints,
-            //! Valid for output writing (on this proc)
-            refPtr<fileOperation>& writeHandler
+            //! Handler for output writing
+            const refPtr<fileOperation>& writeHandler
         );
 
         //- Full construction of source/target
-        explicit parPointFieldDistributor
+        parPointFieldDistributor
         (
             //! The source pointMesh
             const pointMesh& srcMesh,
@@ -153,14 +155,12 @@ public:
             const pointMesh& tgtMesh,
             //! The distribution map
             const mapDistributePolyMesh& distMap,
-            //! Call saveMeshPoints() immediately. Normally false
-            const bool savePoints,
             //! Tagged for output writing (on this proc)
-            const bool isWriteProc
+            const bool isWriteProc = true
         );
 
         //- Full construction of source/target
-        explicit parPointFieldDistributor
+        parPointFieldDistributor
         (
             //! The source pointMesh
             const pointMesh& srcMesh,
@@ -168,10 +168,8 @@ public:
             const pointMesh& tgtMesh,
             //! The distribution map
             const mapDistributePolyMesh& distMap,
-            //! Call saveMeshPoints() immediately. Normally false
-            const bool savePoints,
-            //! Valid for output writing (on this proc)
-            refPtr<fileOperation>& writeHandler
+            //! Handler for output writing
+            const refPtr<fileOperation>& writeHandler
         );
 
 
@@ -253,7 +251,7 @@ public:
         template<class Type>
         void distributeAndStore
         (
-            const PtrList<GeometricField<Type, pointPatchField, pointMesh>>&
+            const UPtrList<GeometricField<Type, pointPatchField, pointMesh>>&
         ) const;
 };
 

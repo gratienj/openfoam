@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,6 +40,32 @@ License
 #include "distributedFieldMapper.H"
 #include "distributedFaPatchFieldMapper.H"
 
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+template<class FieldType>
+void Foam::faMeshDistributor::writeField(const FieldType& fld) const
+{
+    if (writeHandler_)
+    {
+        // Writing control via handler
+        auto handler = writeHandler_.shallowClone();
+        handler = fileOperation::fileHandler(handler);
+        auto oldComm = UPstream::commWorld(fileHandler().comm());
+
+        fld.write();
+
+        // Restore
+        (void)UPstream::commWorld(oldComm);
+        (void)fileOperation::fileHandler(handler);
+    }
+    else if (isWriteProc_)
+    {
+        // Writing with bool control (uses current fileHandler)
+        fld.write();
+    }
+}
+
+
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
@@ -55,93 +81,116 @@ Foam::faMeshDistributor::distributeField
     }
 
     // Create internalField by remote mapping
-
     const distributedFieldMapper mapper
     (
         labelUList::null(),
         distMap_.cellMap()  // area: faceMap (volume: cellMap)
     );
 
-    DimensionedField<Type, areaMesh> internalField
-    (
-        IOobject
-        (
-            fld.name(),
-            tgtMesh_.time().timeName(),
-            fld.local(),
-            tgtMesh_.thisDb(),
-            IOobject::NO_READ,
-            IOobject::NO_WRITE
-        ),
-        tgtMesh_,
-        fld.dimensions(),
-        Field<Type>(fld.internalField(), mapper)
-    );
-
-    internalField.oriented() = fld.oriented();
-
-
-    // Create patchFields by remote mapping
-
-    PtrList<faPatchField<Type>> newPatchFields(tgtMesh_.boundary().size());
-
-    const auto& bfld = fld.boundaryField();
-
-    forAll(bfld, patchi)
+    // Create dummy patches (to satisfy the GeometricField constructor)
+    PtrList<faPatchField<Type>> dummyPatches;
+    // #if (OPENFOAM <= 2601)
     {
-        if (patchEdgeMaps_.test(patchi))
+        dummyPatches.resize(tgtMesh_.boundary().size());
+
+        forAll(dummyPatches, patchi)
         {
-            // Clone local patch field
-
-            const distributedFaPatchFieldMapper mapper
-            (
-                labelUList::null(),
-                patchEdgeMaps_[patchi]
-            );
-
-            // Map into local copy
-            newPatchFields.set
+            dummyPatches.set
             (
                 patchi,
-                faPatchField<Type>::New
+                new faPatchField<Type>
                 (
-                    bfld[patchi],
                     tgtMesh_.boundary()[patchi],
                     faPatchField<Type>::Internal::null(),
-                    mapper
+                    Field<Type>()  // dummy only, no values
                 )
             );
         }
     }
 
-    // Add empty patchFields on remaining patches (this also handles
-    // e.g. processorPatchFields or any other constraint type patches)
-    forAll(newPatchFields, patchi)
+    // The result (without the proper patch fields)
+    auto tresult = tmp<GeometricField<Type, faPatchField, areaMesh>>::New
+    (
+        DimensionedField<Type, areaMesh>
+        (
+            IOobject
+            (
+                fld.name(),
+                tgtMesh_.time().timeName(),
+                fld.local(),
+                tgtMesh_.thisDb(),
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            tgtMesh_,
+            fld.dimensions(),
+            Field<Type>(fld.internalField(), mapper)
+        ),
+        // Future: UPtrList<faPatchField<Type>>()
+        dummyPatches
+    );
+
+    tresult.ref().oriented() = fld.oriented();
+
+
+    // Now do the boundaries
+    const auto& oldPatchFields = fld.boundaryField();
+    const auto nOldPatches = oldPatchFields.size();
+
+    const auto& tgtInternal = tresult.ref().internalField();
+    auto& boundaries = tresult.ref().boundaryFieldRef();
+
+    boundaries.resize_null(tgtMesh_.boundary().size());
+
+    forAll(boundaries, patchi)
     {
-        if (!newPatchFields.set(patchi))
+        const auto& tgtPatch = tgtMesh_.boundary()[patchi];
+
+        if
+        (
+            const auto* patchMap = patchEdgeMaps_.get(patchi);
+            (patchMap && patchi < nOldPatches)
+        )
         {
-            newPatchFields.set
+            // Construct by mapping
+            const distributedFaPatchFieldMapper mapper
+            (
+                labelUList::null(),
+               *patchMap
+            );
+
+            boundaries.set
+            (
+                patchi,
+                faPatchField<Type>::New
+                (
+                    oldPatchFields[patchi],
+                    tgtPatch,
+                    tgtInternal,
+                    mapper
+                )
+            );
+        }
+        else
+        {
+            // Add non-mapped patchFields as "empty", but this will also
+            // internally handle processor fields and any other constraint
+            // type patches
+
+            boundaries.set
             (
                 patchi,
                 faPatchField<Type>::New
                 (
                     faPatchFieldBase::emptyType(),
-                    tgtMesh_.boundary()[patchi],
-                    faPatchField<Type>::Internal::null()
+                    tgtPatch,
+                    tgtInternal
                 )
             );
         }
     }
 
-
-    auto tresult = tmp<GeometricField<Type, faPatchField, areaMesh>>::New
-    (
-        std::move(internalField),
-        newPatchFields
-    );
-    auto& result = tresult.ref();
-
-    result.boundaryFieldRef().template evaluateCoupled<processorFaPatch>();
+    boundaries.template evaluateCoupled<processorFaPatch>();
 
     return tresult;
 }
@@ -154,97 +203,162 @@ Foam::faMeshDistributor::distributeField
     const GeometricField<Type, faePatchField, edgeMesh>& fld
 ) const
 {
-    if (!internalEdgeMapPtr_)
-    {
-        createInternalEdgeMap();
-    }
-
-
     // Create internalField by remote mapping
-
     const distributedFieldMapper mapper
     (
         labelUList::null(),
-        *(internalEdgeMapPtr_)
+        distMap_.faceMap()  // area: edgeMap (volume: faceMap)
     );
 
-    DimensionedField<Type, edgeMesh> internalField
-    (
-        IOobject
-        (
-            fld.name(),
-            tgtMesh_.time().timeName(),
-            fld.local(),
-            tgtMesh_.thisDb(),
-            IOobject::NO_READ,
-            IOobject::NO_WRITE
-        ),
-        tgtMesh_,
-        fld.dimensions(),
-        Field<Type>(fld.internalField(), mapper)
-    );
+    const auto internalSize = tgtMesh_.nInternalEdges();
 
-    internalField.oriented() = fld.oriented();
-
-
-    // Create patchFields by remote mapping
-
-    PtrList<faePatchField<Type>> newPatchFields(tgtMesh_.boundary().size());
-
-    const auto& bfld = fld.boundaryField();
-
-    forAll(bfld, patchi)
+    Field<Type> primitiveField;
+    Field<Type> flatBoundary;
     {
-        if (patchEdgeMaps_.test(patchi))
+        // Create flat field of internalField + all patch fields
+        Field<Type> fullField(fld.mesh().nEdges(), Foam::zero{});
+
+        // Internal field
+        fullField.slice(0, fld.primitiveField().size()) = fld.primitiveField();
+
+        // Boundary fields
+        for (const auto& pfld : fld.boundaryField())
         {
-            // Clone local patch field
+            fullField.slice(pfld.patch().start(), pfld.size()) = pfld;
+        }
 
-            const distributedFaPatchFieldMapper mapper
-            (
-                labelUList::null(),
-                patchEdgeMaps_[patchi]
-            );
+        // Map all edges
+        primitiveField = Field<Type>(fullField, mapper, fld.is_oriented());
 
-            // Map into local copy
-            newPatchFields.set
+        // Extract boundary values, trim internal to the correct size
+        if (internalSize < primitiveField.size())
+        {
+            // Boundary values
+            flatBoundary = primitiveField.slice(internalSize);
+
+            // Internal values
+            primitiveField.resize(internalSize);
+        }
+    }
+
+    // Create dummy patches (to satisfy the GeometricField constructor)
+    PtrList<faePatchField<Type>> dummyPatches;
+    // #if (OPENFOAM <= 2601)
+    {
+        dummyPatches.resize(tgtMesh_.boundary().size());
+
+        forAll(dummyPatches, patchi)
+        {
+            dummyPatches.set
             (
                 patchi,
-                faePatchField<Type>::New
+                new faePatchField<Type>
                 (
-                    bfld[patchi],
                     tgtMesh_.boundary()[patchi],
                     faePatchField<Type>::Internal::null(),
-                    mapper
+                    Field<Type>()  // dummy only, no values
                 )
             );
         }
     }
 
-    // Add empty patchFields on remaining patches (this also handles
-    // e.g. processorPatchFields or any other constraint type patches)
-    forAll(newPatchFields, patchi)
+    // The result (without the proper patch fields)
+    auto tresult = tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
+    (
+        DimensionedField<Type, edgeMesh>
+        (
+            IOobject
+            (
+                fld.name(),
+                tgtMesh_.time().timeName(),
+                fld.local(),
+                tgtMesh_.thisDb(),
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            tgtMesh_,
+            fld.dimensions(),
+            std::move(primitiveField)
+        ),
+        // Future: UPtrList<faePatchField<Type>>()
+        dummyPatches
+    );
+
+    tresult.ref().oriented() = fld.oriented();
+
+
+    // Now do the boundaries
+    const auto& oldPatchFields = fld.boundaryField();
+    const auto nOldPatches = oldPatchFields.size();
+
+    const auto& tgtInternal = tresult().internalField();
+    auto& boundaries = tresult.ref().boundaryFieldRef();
+
+    boundaries.resize_null(tgtMesh_.boundary().size());
+
+    label boundaryStart = 0;
+
+    forAll(boundaries, patchi)
     {
-        if (!newPatchFields.set(patchi))
+        const auto& tgtPatch = tgtMesh_.boundary()[patchi];
+        const auto count = tgtPatch.nEdges();
+
+        if
+        (
+            const auto* patchMap = patchEdgeMaps_.get(patchi);
+            (patchMap && patchi < nOldPatches)
+        )
         {
-            newPatchFields.set
+            // Construct by mapping
+            const distributedFaPatchFieldMapper mapper
+            (
+                labelUList::null(),
+                *patchMap
+            );
+
+            boundaries.set
+            (
+                patchi,
+                faePatchField<Type>::New
+                (
+                    oldPatchFields[patchi],
+                    tgtPatch,
+                    tgtInternal,
+                    mapper
+                )
+            );
+        }
+        else
+        {
+            // Add non-mapped patchFields as "empty", but this will also
+            // internally handle processor fields and any other constraint
+            // type patches
+
+            boundaries.set
             (
                 patchi,
                 faePatchField<Type>::New
                 (
                     faePatchFieldBase::emptyType(),
-                    tgtMesh_.boundary()[patchi],
-                    faePatchField<Type>::Internal::null()
+                    tgtPatch,
+                    tgtInternal
                 )
             );
         }
+
+        auto& pfld = boundaries[patchi];
+
+        // Slight hack - copy the mapped internalField values to the
+        // processor patches. These are otherwise not initialized.
+
+        if (const auto* ppp = isA<processorFaPatch>(tgtPatch))
+        {
+            pfld = flatBoundary.slice(boundaryStart, pfld.size());
+        }
+        boundaryStart += count;
     }
 
-
-    return tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
-    (
-        std::move(internalField),
-        newPatchFields
-    );
+    return tresult;
 }
 
 
@@ -311,7 +425,7 @@ Foam::label Foam::faMeshDistributor::distributeAreaFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -320,23 +434,7 @@ Foam::label Foam::faMeshDistributor::distributeAreaFields
 
         tmp<fieldType> tfld(distributeAreaField<Type>(io));
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;
@@ -369,7 +467,7 @@ Foam::label Foam::faMeshDistributor::distributeEdgeFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -377,23 +475,8 @@ Foam::label Foam::faMeshDistributor::distributeEdgeFields
         ++nFields;
 
         tmp<fieldType> tfld(distributeEdgeField<Type>(io));
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
 
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;
@@ -401,38 +484,19 @@ Foam::label Foam::faMeshDistributor::distributeEdgeFields
 }
 
 
-
-#if 0
 template<class Type>
 void Foam::faMeshDistributor::redistributeAndWrite
 (
-    PtrList<GeometricField<Type, faPatchField, areaMesh>>& flds
+    UPtrList<GeometricField<Type, faPatchField, areaMesh>>& flds
 ) const
 {
+    using GeoField = GeometricField<Type, faPatchField, areaMesh>;
+
     for (auto& fld : flds)
     {
-        Pout<< "process: " << fld.name() << endl;
+        tmp<GeoField> tfld(this->distributeField(fld));
 
-        tmp<GeometricField<Type, faPatchField, areaMesh>> tfld =
-            this->distributeField(fld);
-
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 }
 
@@ -440,34 +504,18 @@ void Foam::faMeshDistributor::redistributeAndWrite
 template<class Type>
 void Foam::faMeshDistributor::redistributeAndWrite
 (
-    PtrList<GeometricField<Type, faePatchField, edgeMesh>>& flds
+    UPtrList<GeometricField<Type, faePatchField, edgeMesh>>& flds
 ) const
 {
+    using GeoField = GeometricField<Type, faePatchField, edgeMesh>;
+
     for (auto& fld : flds)
     {
-        tmp<GeometricField<Type, faePatchField, edgeMesh>> tfld =
-            this->distributeField(fld);
+        tmp<GeoField> tfld(this->distributeField(fld));
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 }
-#endif
 
 
 // ************************************************************************* //

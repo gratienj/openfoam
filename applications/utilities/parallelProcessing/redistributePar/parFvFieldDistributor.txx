@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2016-2024 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,6 +39,32 @@ License
 #include "distributedFieldMapper.H"
 #include "distributedFvPatchFieldMapper.H"
 
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+template<class FieldType>
+void Foam::parFvFieldDistributor::writeField(const FieldType& fld) const
+{
+    if (writeHandler_)
+    {
+        // Writing control via handler
+        auto handler = writeHandler_.shallowClone();
+        handler = fileOperation::fileHandler(handler);
+        auto oldComm = UPstream::commWorld(fileHandler().comm());
+
+        fld.write();
+
+        // Restore
+        (void)UPstream::commWorld(oldComm);
+        (void)fileOperation::fileHandler(handler);
+    }
+    else if (isWriteProc_)
+    {
+        // Writing with bool control (uses current fileHandler)
+        fld.write();
+    }
+}
+
+
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
@@ -49,8 +75,7 @@ Foam::parFvFieldDistributor::distributeField
 ) const
 {
     // Create internalField by remote mapping
-
-    distributedFieldMapper mapper
+    const distributedFieldMapper mapper
     (
         labelUList::null(),
         distMap_.cellMap()
@@ -86,7 +111,7 @@ Foam::parFvFieldDistributor::distributeField
 ) const
 {
     // Create internalField by remote mapping
-    distributedFieldMapper mapper
+    const distributedFieldMapper mapper
     (
         labelUList::null(),
         distMap_.cellMap()
@@ -148,9 +173,9 @@ Foam::parFvFieldDistributor::distributeField
 
     forAll(oldPatchFields, patchi)
     {
-        if (oldPatchFields.set(patchi))
+        if (auto pfldPtr = oldPatchFields.release(patchi); pfldPtr)
         {
-            const auto& pfld = oldPatchFields[patchi];
+            const auto& pfld = pfldPtr();
 
             labelList dummyMap(identity(pfld.size()));
             directFvPatchFieldMapper dummyMapper(dummyMap);
@@ -207,37 +232,41 @@ Foam::parFvFieldDistributor::distributeField
 ) const
 {
     // Create internalField by remote mapping
-    distributedFieldMapper mapper
+    const distributedFieldMapper mapper
     (
         labelUList::null(),
         distMap_.faceMap()
     );
 
 
+    const auto internalSize = tgtMesh_.nInternalFaces();
+
     Field<Type> primitiveField;
+    //Field<Type> flatBoundary;
     {
         // Create flat field of internalField + all patch fields
-        Field<Type> flatFld(fld.mesh().nFaces(), Type(Zero));
-        SubList<Type>(flatFld, fld.internalField().size())
-            = fld.internalField();
+        Field<Type> fullField(fld.mesh().nFaces(), Foam::zero{});
 
-        for (const fvsPatchField<Type>& fvp : fld.boundaryField())
+        // Internal field
+        fullField.slice(0, fld.internalField().size()) = fld.internalField();
+
+        for (const auto& pfld : fld.boundaryField())
         {
-            SubList<Type>(flatFld, fvp.size(), fvp.patch().start()) = fvp;
+            fullField.slice(pfld.patch().start(), pfld.size()) = pfld;
         }
 
         // Map all faces
-        primitiveField = Field<Type>(flatFld, mapper, fld.is_oriented());
+        primitiveField = Field<Type>(fullField, mapper, fld.is_oriented());
 
         // Trim to internal faces (note: could also have special mapper)
-        primitiveField.resize
-        (
-            min
-            (
-                primitiveField.size(),
-                tgtMesh_.nInternalFaces()
-            )
-        );
+        if (internalSize < primitiveField.size())
+        {
+            // // Save boundary values
+            // flatBoundary = primitiveField.slice(internalSize);
+
+            // Internal values
+            primitiveField.resize(internalSize);
+        }
     }
 
 
@@ -296,9 +325,9 @@ Foam::parFvFieldDistributor::distributeField
     // the reference to the patch, size and content stay the same.
     forAll(oldPatchFields, patchi)
     {
-        if (oldPatchFields.set(patchi))
+        if (auto pfldPtr = oldPatchFields.release(patchi); pfldPtr)
         {
-            const fvsPatchField<Type>& pfld = oldPatchFields[patchi];
+            const auto& pfld = pfldPtr();
 
             labelList dummyMap(identity(pfld.size()));
             directFvPatchFieldMapper dummyMapper(dummyMap);
@@ -432,7 +461,7 @@ Foam::label Foam::parFvFieldDistributor::distributeInternalFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -444,23 +473,7 @@ Foam::label Foam::parFvFieldDistributor::distributeInternalFields
             distributeInternalField<Type>(io)
         );
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;
@@ -497,7 +510,7 @@ Foam::label Foam::parFvFieldDistributor::distributeVolumeFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -509,23 +522,7 @@ Foam::label Foam::parFvFieldDistributor::distributeVolumeFields
             distributeVolumeField<Type>(io)
         );
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;
@@ -557,7 +554,7 @@ Foam::label Foam::parFvFieldDistributor::distributeSurfaceFields
         {
             if (!nFields)
             {
-                Info<< "    Reconstructing "
+                Info<< "    Distributing "
                     << fieldType::typeName << "s\n" << nl;
             }
             Info<< "        " << io.name() << nl;
@@ -569,23 +566,7 @@ Foam::label Foam::parFvFieldDistributor::distributeSurfaceFields
             distributeSurfaceField<Type>(io)
         );
 
-        if (isWriteProc_.good())
-        {
-            if (isWriteProc_)
-            {
-                tfld().write();
-            }
-        }
-        else if (writeHandler_ && writeHandler_->good())
-        {
-            auto oldHandler = fileOperation::fileHandler(writeHandler_);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
-
-            tfld().write();
-
-            writeHandler_ = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
-        }
+        writeField(tfld());
     }
 
     if (nFields && verbose_) Info<< endl;

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,6 +42,7 @@ Foam::faFieldDecomposer::patchFieldDecomposer::patchFieldDecomposer
 {
     forAll(directAddressing_, i)
     {
+// if constexpr (withTurningIndex_)
         // Subtract one to align addressing.
         // directAddressing_[i] -= addressingOffset + 1;
         // ZT, 12/Nov/2010
@@ -67,6 +68,7 @@ processorAreaPatchFieldDecomposer
     {
         // Subtract one to align addressing.
         label ai = addressingSlice[i];
+// if constexpr (withTurningIndex_)
 //         label ai = mag(addressingSlice[i]) - 1;
 
         if (ai < neigh.size())
@@ -75,15 +77,17 @@ processorAreaPatchFieldDecomposer
             // of the original mesh and now it has become a edge
             // on the parallel boundary
 
-            if (flip[i])
-            {
-                // We are the neighbour side so use the owner value
-                directAddressing_[i] = owner[ai];
-            }
-            else
+// if constexpr (withTurningIndex_)
+            // if (addressingSlice[i] >= 0)
+            if (!flip.test(i))
             {
                 // We are the owner side so use the neighbour value
                 directAddressing_[i] = neigh[ai];
+            }
+            else
+            {
+                // We are the neighbour side so use the owner value
+                directAddressing_[i] = owner[ai];
             }
         }
         else
@@ -116,8 +120,12 @@ processorEdgePatchFieldDecomposer
         addressing_[i].resize(1);
         weights_[i].resize(1);
 
-        addressing_[i][0] = mag(addressingSlice[i]) - 1;
-        weights_[i][0] = sign(addressingSlice[i]);
+// if constexpr (withTurningIndex_)
+//      addressing_[i][0] = mag(addressingSlice[i]) - 1;
+//      weights_[i][0] = sign(addressingSlice[i]);
+
+        addressing_[i][0] = mag(addressingSlice[i]);
+        weights_[i][0] = 1;
     }
 }
 
@@ -192,15 +200,16 @@ Foam::faFieldDecomposer::faFieldDecomposer
 
 bool Foam::faFieldDecomposer::empty() const noexcept
 {
-    return patchFieldDecomposerPtrs_.empty();
+    return patchFieldDecomposers_.empty();
 }
 
 
 void Foam::faFieldDecomposer::clear()
 {
-    patchFieldDecomposerPtrs_.clear();
-    processorAreaPatchFieldDecomposerPtrs_.clear();
-    processorEdgePatchFieldDecomposerPtrs_.clear();
+    patchFieldDecomposers_.clear();
+    processorAreaPatchFieldDecomposers_.clear();
+    processorEdgePatchFieldDecomposers_.clear();
+    edgeSigns_.clear();
 }
 
 
@@ -214,9 +223,12 @@ void Foam::faFieldDecomposer::reset
 {
     const label nMappers = procMesh_.boundary().size();
 
-    patchFieldDecomposerPtrs_.resize_null(nMappers);
-    processorAreaPatchFieldDecomposerPtrs_.resize_null(nMappers);
-    processorEdgePatchFieldDecomposerPtrs_.resize_null(nMappers);
+    patchFieldDecomposers_.resize_null(nMappers);
+    processorAreaPatchFieldDecomposers_.resize_null(nMappers);
+    processorEdgePatchFieldDecomposers_.resize_null(nMappers);
+    edgeSigns_.resize_null(nMappers);
+
+    bitSet flipMap;
 
     forAll(boundaryAddressing_, patchi)
     {
@@ -226,7 +238,7 @@ void Foam::faFieldDecomposer::reset
 
         if (oldPatchi >= 0)
         {
-            patchFieldDecomposerPtrs_.set
+            patchFieldDecomposers_.set
             (
                 patchi,
                 new patchFieldDecomposer
@@ -242,14 +254,16 @@ void Foam::faFieldDecomposer::reset
             // No oldPatch - is processor patch. edgeAddressing_ does
             // not have 'flip' sign so use the face map to see which side
             // we've got.
-            bitSet flipMap(localPatchSlice.size());
-            forAll(flipMap, i)
+            flipMap.clear();
+            flipMap.resize(localPatchSlice.size());
+
+            forAll(localPatchSlice, i)
             {
                 const label ownFacei = faceAddressing_[fap.edgeFaces()[i]];
-                flipMap[i] = (edgeOwner[localPatchSlice[i]] != ownFacei);
+                flipMap.set(i, (edgeOwner[localPatchSlice[i]] != ownFacei));
             }
 
-            processorAreaPatchFieldDecomposerPtrs_.set
+            processorAreaPatchFieldDecomposers_.set
             (
                 patchi,
                 new processorAreaPatchFieldDecomposer
@@ -262,7 +276,7 @@ void Foam::faFieldDecomposer::reset
                 )
             );
 
-            processorEdgePatchFieldDecomposerPtrs_.set
+            processorEdgePatchFieldDecomposers_.set
             (
                 patchi,
                 new processorEdgePatchFieldDecomposer
@@ -271,6 +285,12 @@ void Foam::faFieldDecomposer::reset
                     localPatchSlice
                 )
             );
+
+            auto& s = edgeSigns_.emplace_set(patchi, localPatchSlice.size());
+            forAll(localPatchSlice, i)
+            {
+                s[i] = (flipMap.test(i) ? -1 : 1);
+            }
         }
     }
 }
@@ -280,9 +300,10 @@ void Foam::faFieldDecomposer::reset(const faMesh& completeMesh)
 {
     const label nMappers = procMesh_.boundary().size();
 
-    patchFieldDecomposerPtrs_.resize_null(nMappers);
-    processorAreaPatchFieldDecomposerPtrs_.resize_null(nMappers);
-    processorEdgePatchFieldDecomposerPtrs_.resize_null(nMappers);
+    patchFieldDecomposers_.resize_null(nMappers);
+    processorAreaPatchFieldDecomposers_.resize_null(nMappers);
+    processorEdgePatchFieldDecomposers_.resize_null(nMappers);
+    edgeSigns_.resize_null(nMappers);
 
     // Create weightings now - needed for proper parallel synchronization
     //// (void)completeMesh.weights();
@@ -295,6 +316,11 @@ void Foam::faFieldDecomposer::reset(const faMesh& completeMesh)
         completeMesh.boundary().patchStarts()
     );
 
+    const auto& edgeOwner = completeMesh.edgeOwner();
+    const auto& edgeNeighbour = completeMesh.edgeNeighbour();
+
+    bitSet flipMap;
+
     forAll(boundaryAddressing_, patchi)
     {
         const label oldPatchi = boundaryAddressing_[patchi];
@@ -303,7 +329,7 @@ void Foam::faFieldDecomposer::reset(const faMesh& completeMesh)
 
         if (oldPatchi >= 0)
         {
-            patchFieldDecomposerPtrs_.set
+            patchFieldDecomposers_.set
             (
                 patchi,
                 new patchFieldDecomposer
@@ -316,20 +342,19 @@ void Foam::faFieldDecomposer::reset(const faMesh& completeMesh)
         }
         else
         {
-            const auto& edgeOwner = completeMesh.edgeOwner();
-            const auto& edgeNeighbour = completeMesh.edgeNeighbour();
-
             // No oldPatch - is processor patch. edgeAddressing_ does
             // not have 'flip' sign so use the face map to see which side
             // we've got.
-            bitSet flipMap(localPatchSlice.size());
-            forAll(flipMap, i)
+            flipMap.clear();
+            flipMap.resize(localPatchSlice.size());
+
+            forAll(localPatchSlice, i)
             {
                 const label ownFacei = faceAddressing_[fap.edgeFaces()[i]];
-                flipMap[i] = (edgeOwner[localPatchSlice[i]] != ownFacei);
+                flipMap.set(i, (edgeOwner[localPatchSlice[i]] != ownFacei));
             }
 
-            processorAreaPatchFieldDecomposerPtrs_.set
+            processorAreaPatchFieldDecomposers_.set
             (
                 patchi,
                 new processorAreaPatchFieldDecomposer
@@ -342,7 +367,7 @@ void Foam::faFieldDecomposer::reset(const faMesh& completeMesh)
                 )
             );
 
-            processorEdgePatchFieldDecomposerPtrs_.set
+            processorEdgePatchFieldDecomposers_.set
             (
                 patchi,
                 new processorEdgePatchFieldDecomposer
@@ -351,6 +376,12 @@ void Foam::faFieldDecomposer::reset(const faMesh& completeMesh)
                     localPatchSlice
                 )
             );
+
+            auto& s = edgeSigns_.emplace_set(patchi, localPatchSlice.size());
+            forAll(localPatchSlice, i)
+            {
+                s[i] = (flipMap.test(i) ? -1 : 1);
+            }
         }
     }
 }

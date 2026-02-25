@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,7 +37,7 @@ Author
 SourceFiles
     faFieldDecomposer.cxx
     faFieldDecomposer.txx
-    fvFieldDecomposerCache.cxx
+    faFieldDecomposerCache.cxx
 
 \*---------------------------------------------------------------------------*/
 
@@ -241,13 +241,18 @@ private:
         const labelUList& boundaryAddressing_;
 
         //- List of patch field decomposers
-        PtrList<patchFieldDecomposer> patchFieldDecomposerPtrs_;
+        PtrList<patchFieldDecomposer> patchFieldDecomposers_;
 
+        //- Processor-patch field decomposers (area fields)
         PtrList<processorAreaPatchFieldDecomposer>
-            processorAreaPatchFieldDecomposerPtrs_;
+            processorAreaPatchFieldDecomposers_;
 
+        //- Processor-patch field decomposers (edge fields)
         PtrList<processorEdgePatchFieldDecomposer>
-            processorEdgePatchFieldDecomposerPtrs_;
+            processorEdgePatchFieldDecomposers_;
+
+        //- Processor-patch edge field flipping (as -1/+1 multipliers)
+        PtrList<scalarField> edgeSigns_;
 
 
     // Private Member Functions
@@ -348,7 +353,7 @@ public:
         ) const;
 
         template<class GeoField>
-        void decomposeFields(const PtrList<GeoField>& fields) const;
+        void decomposeFields(const UPtrList<GeoField>& fields) const;
 
 
     // Reading helpers

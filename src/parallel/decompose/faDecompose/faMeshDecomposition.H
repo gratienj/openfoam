@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2021,2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,9 @@ Class
     Foam::faMeshDecomposition
 
 Description
-    Automatic faMesh decomposition class
+    Automatic faMesh decomposition class. The decomposition of finite-area
+    follows the faceProcAddressing, pointProcAddressing from an existing
+    finite-volume decomposition.
 
 Author
     Zeljko Tukovic, FSB Zagreb
@@ -66,16 +68,19 @@ class faMeshDecomposition
         //- Is the decomposition data to be distributed for each processor
         bool distributed_;
 
-        //- Are globalFaceZones being used
+        //- Are globalFaceZones being used (specific to foam-extend)
         bool hasGlobalFaceZones_;
 
-        //- Processor label for each cell
+        //- Are there cyclic-parallel edges (not really used...)
+        bool cyclicParallel_;
+
+        //- Processor label for each face
         labelList faceToProc_;
 
         //- Face labels for each processor mesh
         labelListList procFaceLabels_;
 
-        //-
+        //- Mapping of serial edgeId to processor local edgeLabe
         List<Map<label>> procMeshEdgesMap_;
 
         //- Number of internal edges for each processor mesh
@@ -119,13 +124,15 @@ class faMeshDecomposition
         //- List of globally shared point labels
         labelList globallySharedPoints_;
 
-        //- Are there cyclic-parallel faces
-        bool cyclicParallel_;
-
 
     // Private Member Functions
 
+        //- Calculate distribution of the finite-area faces.
+        //  Uses faMesh::faceLabels() and the finite-volume faceProcAddressing.
         void distributeFaces();
+
+
+public:
 
         //- No copy construct
         faMeshDecomposition(const faMeshDecomposition&) = delete;
@@ -133,7 +140,6 @@ class faMeshDecomposition
         //- No copy assignment
         void operator=(const faMeshDecomposition&) = delete;
 
-public:
 
     // Constructors
 

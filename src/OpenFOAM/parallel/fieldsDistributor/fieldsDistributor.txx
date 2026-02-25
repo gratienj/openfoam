@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -101,7 +101,7 @@ void Foam::fieldsDistributor::readFields
 template<class BoolListType, class GeoField, class MeshSubsetter>
 void Foam::fieldsDistributor::readFieldsImpl
 (
-    refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
+    const refPtr<fileOperation>* readHandlerPtr,  // Can be nullptr
     const BoolListType& haveMeshOnProc,
     const MeshSubsetter* subsetter,
     const typename GeoField::Mesh& mesh,
@@ -143,7 +143,7 @@ void Foam::fieldsDistributor::readFieldsImpl
 
         bitSet localValues(haveMeshOnProc);
         bitSet masterValues(localValues);
-        Pstream::broadcast(masterValues);
+        masterValues.broadcast();
 
         localValues ^= masterValues;
 
@@ -201,42 +201,44 @@ void Foam::fieldsDistributor::readFieldsImpl
     Pstream::broadcast(decompose);
 
 
-    if (decompose && UPstream::master())
+    if (decompose)
     {
-        const bool oldParRun = UPstream::parRun(false);
-
-        forAll(masterNames, i)
+        if (UPstream::master())
         {
-            const word& name = masterNames[i];
-            IOobject& io = *objects[name];
-            io.writeOpt(IOobjectOption::AUTO_WRITE);
+            const bool oldParRun = UPstream::parRun(false);
 
-            // Load field (but not oldTime)
-            readField(io, mesh, i, fields);
+            forAll(masterNames, i)
+            {
+                const word& name = masterNames[i];
+                IOobject& io = *objects[name];
+                io.writeOpt(IOobjectOption::AUTO_WRITE);
+
+                // Load field (but not oldTime)
+                readField(io, mesh, i, fields);
+            }
+
+            UPstream::parRun(oldParRun);
         }
-
-        UPstream::parRun(oldParRun);
     }
     else if
     (
-        !decompose
-     &&
         // Has read-handler : use it to decide if reading is possible
         // No  read-handler : decide based on the presence of a mesh
         (
             readHandlerPtr
-          ? readHandlerPtr->good()
+          ? bool(*readHandlerPtr)
           : haveMeshOnProc.test(UPstream::myProcNo())
         )
     )
     {
         const label oldWorldComm = UPstream::worldComm;
-        refPtr<fileOperation> oldHandler;
+        refPtr<fileOperation> handler;
 
-        if (readHandlerPtr)
+        if (readHandlerPtr && *readHandlerPtr)
         {
-            // Swap read fileHandler for read fields
-            oldHandler = fileOperation::fileHandler(*readHandlerPtr);
+            // Reading control via handler
+            handler = readHandlerPtr->shallowClone();
+            handler = fileOperation::fileHandler(handler);
             UPstream::commWorld(fileHandler().comm());
         }
 
@@ -250,11 +252,11 @@ void Foam::fieldsDistributor::readFieldsImpl
             readField(io, mesh, i, fields);
         }
 
-        if (readHandlerPtr)
+        if (readHandlerPtr && *readHandlerPtr)
         {
-            // Restore fileHandler
-            *readHandlerPtr = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldWorldComm);
+            // Restore
+            (void)UPstream::commWorld(oldWorldComm);
+            (void)fileOperation::fileHandler(handler);
         }
     }
 
@@ -466,7 +468,7 @@ template<class GeoField, class MeshSubsetter>
 void Foam::fieldsDistributor::readFields
 (
     const bitSet& haveMeshOnProc,
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const typename GeoField::Mesh& mesh,
     const autoPtr<MeshSubsetter>& subsetter,
     IOobjectList& allObjects,
@@ -492,7 +494,7 @@ template<class GeoField, class MeshSubsetter>
 void Foam::fieldsDistributor::readFields
 (
     const boolUList& haveMeshOnProc,
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const typename GeoField::Mesh& mesh,
     const autoPtr<MeshSubsetter>& subsetter,
     IOobjectList& allObjects,

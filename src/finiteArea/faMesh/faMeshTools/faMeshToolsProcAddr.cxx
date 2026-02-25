@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -53,10 +53,15 @@ static mapDistributePolyMesh createReconstructMap
     const label nOldFaces = mesh.nFaces();
     const label nOldEdges = mesh.nEdges();
 
-    ///Pout<< "old sizes"
-    ///    << " points:" << nOldPoints
-    ///    << " faces:" << nOldFaces
-    ///    << " edges:" << nOldEdges << nl;
+    const label numProc = UPstream::nProcs();
+    const label myProci = UPstream::myProcNo();
+
+    #if 0
+    Perr<< "old sizes"
+        << " points:" << nOldPoints
+        << " faces:" << nOldFaces
+        << " edges:" << nOldEdges << nl;
+    #endif
 
     const faBoundaryMesh& oldBndMesh = mesh.boundary();
     labelList oldPatchStarts(oldBndMesh.patchStarts());
@@ -72,34 +77,34 @@ static mapDistributePolyMesh createReconstructMap
     );
 
 
-    labelListList faceSubMap(Pstream::nProcs());
-    faceSubMap[Pstream::masterNo()] = identity(nOldFaces);
+    labelListList faceSubMap(numProc);
+    faceSubMap[UPstream::masterNo()] = identity(nOldFaces);
 
-    labelListList edgeSubMap(Pstream::nProcs());
-    edgeSubMap[Pstream::masterNo()] = identity(nOldEdges);
+    labelListList edgeSubMap(numProc);
+    edgeSubMap[UPstream::masterNo()] = identity(nOldEdges);
 
-    labelListList pointSubMap(Pstream::nProcs());
-    pointSubMap[Pstream::masterNo()] = identity(nOldPoints);
+    labelListList pointSubMap(numProc);
+    pointSubMap[UPstream::masterNo()] = identity(nOldPoints);
 
-    labelListList patchSubMap(Pstream::nProcs());
-    patchSubMap[Pstream::masterNo()] = patchProcAddr;
+    labelListList patchSubMap(numProc);
+    patchSubMap[UPstream::masterNo()] = patchProcAddr;
 
 
     // Gather addressing on the master
-    labelListList faceAddressing(Pstream::nProcs());
-    faceAddressing[Pstream::myProcNo()] = faceProcAddr;
+    labelListList faceAddressing(numProc);
+    faceAddressing[myProci] = faceProcAddr;
     Pstream::gatherList(faceAddressing);
 
-    labelListList edgeAddressing(Pstream::nProcs());
-    edgeAddressing[Pstream::myProcNo()] = edgeProcAddr;
+    labelListList edgeAddressing(numProc);
+    edgeAddressing[myProci] = edgeProcAddr;
     Pstream::gatherList(edgeAddressing);
 
-    labelListList pointAddressing(Pstream::nProcs());
-    pointAddressing[Pstream::myProcNo()] = pointProcAddr;
+    labelListList pointAddressing(numProc);
+    pointAddressing[myProci] = pointProcAddr;
     Pstream::gatherList(pointAddressing);
 
-    labelListList patchAddressing(Pstream::nProcs());
-    patchAddressing[Pstream::myProcNo()] = patchProcAddr;
+    labelListList patchAddressing(numProc);
+    patchAddressing[myProci] = patchProcAddr;
     Pstream::gatherList(patchAddressing);
 
 
@@ -113,10 +118,12 @@ static mapDistributePolyMesh createReconstructMap
         const label nNewEdges = baseMesh.nEdges();
         const label nNewPatches = baseMesh.boundary().size();
 
-        /// Pout<< "new sizes"
-        ///     << " points:" << nNewPoints
-        ///     << " faces:" << nNewFaces
-        ///     << " edges:" << nNewEdges << nl;
+        #if 0
+        Perr<< "new sizes"
+            << " points:" << nNewPoints
+            << " faces:" << nNewFaces
+            << " edges:" << nNewEdges << nl;
+        #endif
 
         mapDistribute faFaceMap
         (
@@ -172,7 +179,7 @@ static mapDistributePolyMesh createReconstructMap
         (
             0,  // nNewFaces
             std::move(faceSubMap),
-            labelListList(Pstream::nProcs()),   // constructMap
+            labelListList(numProc),     // constructMap
             false,  // subHasFlip
             false   // constructHasFlip
         );
@@ -181,7 +188,7 @@ static mapDistributePolyMesh createReconstructMap
         (
             0,  // nNewEdges
             std::move(edgeSubMap),
-            labelListList(Pstream::nProcs()),   // constructMap
+            labelListList(numProc),     // constructMap
             false,  // subHasFlip
             false   // constructHasFlip
         );
@@ -190,14 +197,14 @@ static mapDistributePolyMesh createReconstructMap
         (
             0,  // nNewPoints
             std::move(pointSubMap),
-            labelListList(Pstream::nProcs())    // constructMap
+            labelListList(numProc)      // constructMap
         );
 
         mapDistribute faPatchMap
         (
             0,  // nNewPatches
             std::move(patchSubMap),
-            labelListList(Pstream::nProcs())    // constructMap
+            labelListList(numProc)      // constructMap
         );
 
         return mapDistributePolyMesh
@@ -230,6 +237,7 @@ Foam::faMeshTools::readProcAddressing
     const faMesh* baseMeshPtr
 )
 {
+    // Processor-local reading
     IOobject ioAddr
     (
         "procAddressing",
@@ -245,26 +253,27 @@ Foam::faMeshTools::readProcAddressing
     //{
     //    Pout<< "Reading addressing from " << io.name() << " at "
     //        << mesh.facesInstance() << nl << endl;
-    //    distMap.reset(new IOmapDistributePolyMesh(io));
+    //    mapDistributePolyMesh distMap = IOmapDistributePolyMesh(ioAddr);
+    //    return distMap;
     //}
     //else
 
     {
-        Info<< "Reading (face|edge|face|point|boundary)ProcAddressing from "
+        Info<< "Reading (face|edge|point|boundary)ProcAddressing from "
             << mesh.facesInstance().c_str() << '/'
-            << faMesh::meshSubDir << nl << endl;
+            << mesh.meshDir().c_str() << nl << endl;
 
-        ioAddr.rename("faceProcAddressing");
-        labelIOList faceProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("faceProcAddressing");
+        labelIOList faceProcAddressing(ioAddr);
 
-        ioAddr.rename("edgeProcAddressing");
-        labelIOList edgeProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("edgeProcAddressing");
+        labelIOList edgeProcAddressing(ioAddr);
 
-        ioAddr.rename("pointProcAddressing");
-        labelIOList pointProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("pointProcAddressing");
+        labelIOList pointProcAddressing(ioAddr);
 
-        ioAddr.rename("boundaryProcAddressing");
-        labelIOList boundaryProcAddressing(ioAddr, Zero);
+        ioAddr.resetHeader("boundaryProcAddressing");
+        labelIOList boundaryProcAddressing(ioAddr);
 
         if
         (
@@ -309,7 +318,7 @@ void Foam::faMeshTools::writeProcAddressing
     const faMesh& mesh,
     const mapDistributePolyMesh& map,
     const bool decompose,
-    refPtr<fileOperation>& writeHandler,
+    const refPtr<fileOperation>& writeHandler,
     const faMesh* procMesh
 )
 {
@@ -317,7 +326,7 @@ void Foam::faMeshTools::writeProcAddressing
         << (decompose ? "decompose" : "reconstruct")
         << ") procAddressing files to "
         << mesh.facesInstance().c_str() << '/'
-        << faMesh::meshSubDir << endl;
+        << mesh.meshDir().c_str() << endl;
 
     IOobject ioAddr
     (
@@ -333,19 +342,19 @@ void Foam::faMeshTools::writeProcAddressing
 
     // faceProcAddressing (faMesh)
     ioAddr.rename("faceProcAddressing");
-    labelIOList faceMap(ioAddr, Zero);
+    labelIOList faceMap(ioAddr);
 
     // edgeProcAddressing (faMesh)
     ioAddr.rename("edgeProcAddressing");
-    labelIOList edgeMap(ioAddr, Zero);
+    labelIOList edgeMap(ioAddr);
 
     // pointProcAddressing (faMesh)
     ioAddr.rename("pointProcAddressing");
-    labelIOList pointMap(ioAddr, Zero);
+    labelIOList pointMap(ioAddr);
 
     // boundaryProcAddressing (faMesh)
     ioAddr.rename("boundaryProcAddressing");
-    labelIOList patchMap(ioAddr, Zero);
+    labelIOList patchMap(ioAddr);
 
     if (decompose)
     {
@@ -399,7 +408,8 @@ void Foam::faMeshTools::writeProcAddressing
     }
 
 
-    auto oldHandler = fileOperation::fileHandler(writeHandler);
+    auto handler = writeHandler.shallowClone();
+    handler = fileOperation::fileHandler(handler);
 
     // If we want procAddressing, need to manually write it ourselves
     // since it was not registered anywhere
@@ -432,7 +442,7 @@ void Foam::faMeshTools::writeProcAddressing
 
         if (UPstream::master())
         {
-            const bool oldParRun = UPstream::parRun(false);
+            const auto oldParRun = UPstream::parRun(false);
             procAddrMap.write();
             UPstream::parRun(oldParRun);
         }
@@ -445,7 +455,7 @@ void Foam::faMeshTools::writeProcAddressing
     const bool patchOk = patchMap.write();
 
     // Restore the handler
-    writeHandler = fileOperation::fileHandler(oldHandler);
+    (void)fileOperation::fileHandler(handler);
 
     if (!edgeOk || !faceOk || !pointOk || !patchOk)
     {

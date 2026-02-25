@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -91,6 +91,7 @@ Usage
 #include "loadOrCreateMesh.H"
 #include "processorFvPatchField.H"
 #include "topoSet.H"
+#include "BitOps.H"
 #include "regionProperties.H"
 
 #include "parFvFieldDistributor.H"
@@ -119,18 +120,25 @@ int debug(::Foam::debug::debugSwitch("redistributePar", 0));
 // Allocate a new file handler on valid processors only
 // retaining the original IO ranks if possible
 autoPtr<fileOperation>
-getNewHandler(const boolUList& useProc, const bool verbose = true)
+getNewHandler(const boolUList& useProc, bool verbose = true)
 {
     autoPtr<fileOperation> handler
     (
         fileOperation::New(fileHandler(), useProc, verbose)
     );
 
-    if (::debug && handler)
+    if (::debug)
     {
-        Pout<< "Allocated " << handler().info()
-            << " myProcNo:" << UPstream::myProcNo(handler().comm())
-            << " ptr:" << Foam::name(handler.get()) << endl;
+        if (const auto* ptr = handler.get(); ptr)
+        {
+            Pout<< "Allocated " << ptr->info()
+                << " local-rank:" << UPstream::myProcNo(ptr->comm())
+                << " ptr:" << Foam::name(ptr) << endl;
+        }
+        else
+        {
+            Pout<< "Allocated <fileHandler::none>" << endl;
+        }
     }
 
     return handler;
@@ -155,7 +163,7 @@ void createTimeDirs(const fileName& path)
     instantList localTimeDirs(Time::findTimes(path, "constant"));
 
     instantList masterTimeDirs;
-    if (Pstream::master())
+    if (UPstream::master())
     {
         masterTimeDirs = localTimeDirs;
     }
@@ -185,8 +193,10 @@ void createTimeDirs(const fileName& path)
 
 void copyUniform
 (
-    refPtr<fileOperation>& readHandler,
-    refPtr<fileOperation>& writeHandler,
+    //! Alternative read handler (or use global handler if unset)
+    const refPtr<fileOperation>& readHandler,
+    //! Alternative write handler (or use global handler if unset)
+    const refPtr<fileOperation>& writeHandler,
 
     const bool reconstruct,
     const bool decompose,
@@ -212,22 +222,32 @@ void copyUniform
     // - read using readDb + readHandler
     // - write using writeDb + writeHandler
 
+    // This rank participates in IO if it has a override fileHandler,
+    // or when no ranks use an override fileHandler (ie, they use the default)
+
+    const bool isWriteProc
+    (
+        bool(writeHandler) == returnReduceOr(bool(writeHandler))
+    );
+
     fileName readPath;
 
+    // Reading, with specified read handler
     if (readHandler)
     {
-        const label oldComm = UPstream::commWorld(readHandler().comm());
+        auto& readTime = const_cast<Time&>(readDb.time());
 
-        Time& readTime = const_cast<Time&>(readDb.time());
-        bool oldProcCase = readTime.processorCase();
-        string oldCaseName;
+        const auto oldComm = UPstream::commWorld(readHandler().comm());
+        const auto oldProcCase = readTime.processorCase();
+
+        fileName oldCaseName;
         if (decompose)
         {
             //Pout<< "***Setting caseName to " << readCaseName
             //    << " to read undecomposed uniform" << endl;
             oldCaseName = readTime.caseName();
             readTime.caseName() = readCaseName;
-            oldProcCase = readTime.processorCase(false);
+            readTime.processorCase(false);
         }
 
         // Detect uniform/ at original database + time
@@ -239,6 +259,7 @@ void copyUniform
         );
 
 
+        // Restore
         UPstream::commWorld(oldComm);
 
         if (decompose)
@@ -255,7 +276,7 @@ void copyUniform
     {
         InfoOrPout
             << "Detected additional non-decomposed files in "
-            << readPath << endl;
+            << readDb.time().relativePath(readPath) << endl;
 
         // readPath: searching is the same for all file handlers. Typical:
         //  <case>/0.1/uniform   (parent dir, decompose mode)
@@ -275,18 +296,19 @@ void copyUniform
             writeDb
         );
 
-        // Switch to writeHandler
-        if (writeHandler)
+        // Writing, possibly with alternative write handler
+        if (isWriteProc)
         {
-            auto oldHandler = fileOperation::fileHandler(writeHandler);
+            auto oldHandler = writeHandler.shallowClone();
+            oldHandler = fileOperation::fileHandler(oldHandler);
 
             // Check: fileHandler.comm() is size 1 for uncollated
-            const label writeComm = fileHandler().comm();
+            const auto writeComm = fileHandler().comm();
 
             if (reconstruct)
             {
-                const bool oldParRun = UPstream::parRun(false);
-                const label oldNumProcs(fileHandler().nProcs());
+                const auto oldParRun = UPstream::parRun(false);
+                const auto oldNumProcs = fileHandler().nProcs();
                 const fileName writePath
                 (
                     fileHandler().objectPath
@@ -296,7 +318,7 @@ void copyUniform
                     )
                 );
                 fileHandler().cp(readPath, writePath);
-                const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+                fileHandler().constCast().nProcs(oldNumProcs);
                 UPstream::parRun(oldParRun);
             }
             else
@@ -324,7 +346,9 @@ void copyUniform
                     writePath
                 );
             }
-            writeHandler = fileOperation::fileHandler(oldHandler);
+
+            // Restore
+            (void)fileOperation::fileHandler(oldHandler);
         }
     }
 }
@@ -334,28 +358,45 @@ void printMeshData(const polyMesh& mesh)
 {
     // Collect all data on master
 
-    labelListList patchNeiProcNo(Pstream::nProcs());
-    labelListList patchSize(Pstream::nProcs());
-    const labelList& pPatches = mesh.globalData().processorPatches();
-    patchNeiProcNo[Pstream::myProcNo()].setSize(pPatches.size());
-    patchSize[Pstream::myProcNo()].setSize(pPatches.size());
+    const auto numProc = UPstream::nProcs();
+    const auto myProci = UPstream::myProcNo();
+
+    const auto& pPatches = mesh.globalData().processorPatches();
+    labelListList patchNeiProcNo(numProc);
+    labelListList patchSize(numProc);
+    patchNeiProcNo[myProci].resize(pPatches.size());
+    patchSize[myProci].resize(pPatches.size());
     forAll(pPatches, i)
     {
-        const processorPolyPatch& ppp = refCast<const processorPolyPatch>
+        const auto& ppp = refCast<const processorPolyPatch>
         (
             mesh.boundaryMesh()[pPatches[i]]
         );
-        patchNeiProcNo[Pstream::myProcNo()][i] = ppp.neighbProcNo();
-        patchSize[Pstream::myProcNo()][i] = ppp.size();
+        patchNeiProcNo[myProci][i] = ppp.neighbProcNo();
+        patchSize[myProci][i] = ppp.size();
     }
     Pstream::gatherList(patchNeiProcNo);
     Pstream::gatherList(patchSize);
 
+    const globalIndex globalCells
+    (
+        globalIndex::gatherOnly{},
+        mesh.nCells()
+    );
+    const globalIndex globalBoundaryFaces
+    (
+        globalIndex::gatherOnly{},
+        mesh.nBoundaryFaces()
+    );
 
-    // Print stats
+    // Print stats.
+    // Only master has complete information, other ranks are incomplete
 
-    const globalIndex globalCells(mesh.nCells());
-    const globalIndex globalBoundaryFaces(mesh.nBoundaryFaces());
+    if (!UPstream::master())
+    {
+        // Incomplete information on sub-ranks
+        return;
+    }
 
     label maxProcCells = 0;
     label maxProcFaces = 0;
@@ -363,31 +404,31 @@ void printMeshData(const polyMesh& mesh)
     label maxProcPatches = 0;
     label totProcPatches = 0;
 
-    for (const int proci : Pstream::allProcs())
+    for (const int proci : UPstream::allProcs())
     {
         const label nLocalCells = globalCells.localSize(proci);
         const label nBndFaces = globalBoundaryFaces.localSize(proci);
 
-        InfoOrPout<< nl
+        Info<< nl
             << "Processor " << proci;
 
         if (!nLocalCells)
         {
-            InfoOrPout<< " (empty)" << endl;
+            Info<< " (empty)" << endl;
             continue;
         }
         else
         {
-            InfoOrPout<< nl
+            Info<< nl
                 << "    Number of cells = " << nLocalCells << endl;
         }
 
         label nProcFaces = 0;
-        const labelList& nei = patchNeiProcNo[proci];
+        const label nProcPatches = patchNeiProcNo[proci].size();
 
         forAll(patchNeiProcNo[proci], i)
         {
-            InfoOrPout
+            Info
                 << "    Number of faces shared with processor "
                 << patchNeiProcNo[proci][i] << " = "
                 << patchSize[proci][i] << nl;
@@ -396,8 +437,8 @@ void printMeshData(const polyMesh& mesh)
         }
 
         {
-            InfoOrPout
-                << "    Number of processor patches = " << nei.size() << nl
+            Info
+                << "    Number of processor patches = " << nProcPatches << nl
                 << "    Number of processor faces = " << nProcFaces << nl
                 << "    Number of boundary faces = "
                 << nBndFaces-nProcFaces << endl;
@@ -405,49 +446,49 @@ void printMeshData(const polyMesh& mesh)
 
         maxProcCells = Foam::max(maxProcCells, nLocalCells);
         totProcFaces += nProcFaces;
-        totProcPatches += nei.size();
+        totProcPatches += nProcPatches;
         maxProcFaces = Foam::max(maxProcFaces, nProcFaces);
-        maxProcPatches = Foam::max(maxProcPatches, nei.size());
+        maxProcPatches = Foam::max(maxProcPatches, nProcPatches);
     }
 
     // Summary stats
 
-    InfoOrPout
+    Info
         << nl
         << "Number of processor faces = " << (totProcFaces/2) << nl
         << "Max number of cells = " << maxProcCells;
 
     if (maxProcCells != globalCells.totalSize())
     {
-        scalar avgValue = scalar(globalCells.totalSize())/Pstream::nProcs();
+        scalar avgValue = scalar(globalCells.totalSize())/numProc;
 
-        InfoOrPout
+        Info
             << " (" << 100.0*(maxProcCells-avgValue)/avgValue
             << "% above average " << avgValue << ')';
     }
-    InfoOrPout<< nl;
+    Info<< nl;
 
-    InfoOrPout<< "Max number of processor patches = " << maxProcPatches;
+    Info<< "Max number of processor patches = " << maxProcPatches;
     if (totProcPatches)
     {
-        scalar avgValue = scalar(totProcPatches)/Pstream::nProcs();
+        scalar avgValue = scalar(totProcPatches)/numProc;
 
-        InfoOrPout
+        Info
             << " (" << 100.0*(maxProcPatches-avgValue)/avgValue
             << "% above average " << avgValue << ')';
     }
-    InfoOrPout<< nl;
+    Info<< nl;
 
-    InfoOrPout<< "Max number of faces between processors = " << maxProcFaces;
+    Info<< "Max number of faces between processors = " << maxProcFaces;
     if (totProcFaces)
     {
-        scalar avgValue = scalar(totProcFaces)/Pstream::nProcs();
+        scalar avgValue = scalar(totProcFaces)/numProc;
 
-        InfoOrPout
+        Info
             << " (" << 100.0*(maxProcFaces-avgValue)/avgValue
             << "% above average " << avgValue << ')';
     }
-    InfoOrPout<< nl << endl;
+    Info<< nl << endl;
 }
 
 
@@ -484,14 +525,17 @@ void writeDecomposition
             IOobjectOption::NO_REGISTER
         ),
         mesh,
-        dimensionedScalar("", dimless, -1),
+        scalar(-1),
+        dimless,
         fvPatchFieldBase::zeroGradientType()
     );
 
-    forAll(procCells, celli)
-    {
-        procCells[celli] = decomp[celli];
-    }
+    std::copy
+    (
+        decomp.begin(),
+        decomp.end(),
+        procCells.primitiveFieldRef().begin()
+    );
 
     procCells.correctBoundaryConditions();
     procCells.write();
@@ -500,7 +544,7 @@ void writeDecomposition
 
 void determineDecomposition
 (
-    refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& readHandler,
     const Time& baseRunTime,
     const fileName& decompDictFile, // optional location for decomposeParDict
     const bool decompose,       // decompose, i.e. read from undecomposed case
@@ -514,14 +558,11 @@ void determineDecomposition
 {
     // Switch to readHandler since decomposition method might do IO
     // (e.g. read decomposeParDict)
-    auto oldHandler = fileOperation::fileHandler(readHandler);
+    auto oldHandler = readHandler.shallowClone();
+    oldHandler = fileOperation::fileHandler(oldHandler);
 
     // Read decomposeParDict (on all processors)
-    const decompositionModel& method = decompositionModel::New
-    (
-        mesh,
-        decompDictFile
-    );
+    const auto& method = decompositionModel::New(mesh, decompDictFile);
 
     decompositionMethod& decomposer = method.decomposer();
 
@@ -536,9 +577,9 @@ void determineDecomposition
                " that is aware of this. Continuing...." << endl;
     }
 
-    Time& tm = const_cast<Time&>(mesh.time());
+    auto& tm = const_cast<Time&>(mesh.time());
 
-    const bool oldProcCase = tm.processorCase();
+    const auto oldProcCase = tm.processorCase();
     if (decompose)
     {
         InfoOrPout
@@ -549,15 +590,13 @@ void determineDecomposition
     }
 
     scalarField cellWeights;
-    if (method.found("weightField"))
+    if (word name; method.readIfPresent("weightField", name))
     {
-        word weightName = method.get<word>("weightField");
-
         volScalarField weights
         (
             IOobject
             (
-                weightName,
+                name,
                 tm.timeName(),
                 mesh,
                 IOobjectOption::MUST_READ,
@@ -566,14 +605,14 @@ void determineDecomposition
             ),
             mesh
         );
-        cellWeights = weights.internalField();
+        cellWeights = std::move(weights.primitiveFieldRef(false));
     }
 
     nDestProcs = decomposer.nDomains();
     decomp = decomposer.decompose(mesh, cellWeights);
 
-    readHandler = fileOperation::fileHandler(oldHandler);
-
+    // Restore
+    (void)fileOperation::fileHandler(oldHandler);
 
     if (decompose)
     {
@@ -586,15 +625,14 @@ void determineDecomposition
     // Dump decomposition to volScalarField
     if (writeCellDist)
     {
-        const label oldNumProcs =
-            const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs);
+        const auto oldNumProcs = fileHandler().constCast().nProcs(nDestProcs);
 
         // Note: on master make sure to write to processor0
         if (decompose)
         {
             if (UPstream::master())
             {
-                const bool oldParRun = UPstream::parRun(false);
+                const auto oldParRun = UPstream::parRun(false);
 
                 InfoOrPout
                     << "Setting caseName to " << baseRunTime.caseName()
@@ -615,7 +653,7 @@ void determineDecomposition
             writeDecomposition("cellDist", mesh, decomp);
         }
 
-        const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+        fileHandler().constCast().nProcs(oldNumProcs);
     }
 }
 
@@ -635,8 +673,8 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
 // Inplace redistribute mesh and any fields
 autoPtr<mapDistributePolyMesh> redistributeAndWrite
 (
-    refPtr<fileOperation>& readHandler,
-    refPtr<fileOperation>& writeHandler,
+    const refPtr<fileOperation>& readHandler,
+    const refPtr<fileOperation>& writeHandler,
     const Time& baseRunTime,
     const fileName& proc0CaseName,
 
@@ -656,12 +694,24 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     fvMesh& mesh
 )
 {
-    Time& runTime = const_cast<Time&>(mesh.time());
-    const bool oldProcCase = runTime.processorCase();
+    auto& runTime = const_cast<Time&>(mesh.time());
+    const auto oldProcCase = runTime.processorCase();
 
     //// Print some statistics
     //Pout<< "Before distribution:" << endl;
     //printMeshData(mesh);
+
+    // This rank participates in IO if it has a override fileHandler,
+    // or when no ranks use an override fileHandler (ie, they use the default)
+
+    const bool isReadProc
+    (
+        bool(readHandler) == returnReduceOr(bool(readHandler))
+    );
+    const bool isWriteProc
+    (
+        bool(writeHandler) == returnReduceOr(bool(writeHandler))
+    );
 
 
     // Storage of fields
@@ -696,36 +746,32 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     // Track how many (if any) pointFields are read/mapped
     label nPointFields = 0;
 
-    refPtr<fileOperation> noWriteHandler;
-
     parPointFieldDistributor pointDistributor
     (
         oldPointMesh,   // source mesh
-        false,          // savePoints=false (ie, delay until later)
-        //false           // Do not write
-        noWriteHandler    // Do not write
+        false           // Do not write
     );
-
 
     if (doReadFields)
     {
         // Create 0 sized mesh to do all the generation of zero sized
         // fields on processors that have zero sized meshes. Note that this is
         // only necessary on master but since polyMesh construction with
-        // Pstream::parRun does parallel comms we have to do it on all
+        // UPstream::parRun does parallel comms we have to do it on all
         // processors
         autoPtr<fvMeshSubset> subsetterPtr;
 
         // Missing a volume mesh somewhere?
-        if (volMeshOnProc.found(false))
+        if (!volMeshOnProc.all())
         {
             // A zero-sized mesh with boundaries.
             // This is used to create zero-sized fields.
-            subsetterPtr.reset(new fvMeshSubset(mesh, zero{}));
-            subsetterPtr().subMesh().init(true);
-            subsetterPtr().subMesh().globalData();
-            subsetterPtr().subMesh().tetBasePtIs();
-            subsetterPtr().subMesh().geometricD();
+            subsetterPtr.reset(new fvMeshSubset(mesh, Foam::zero{}));
+            auto& subMesh = subsetterPtr().subMesh();
+            subMesh.init(true);
+            subMesh.globalData();
+            subMesh.tetBasePtIs();
+            subMesh.geometricD();
         }
 
 
@@ -739,17 +785,19 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
             runTime.processorCase(false);
         }
 
-        //IOobjectList objects(mesh, runTime.timeName());
-        // Swap to reading fileHandler and read IOobjects
+        // Reading, with alternative read handler
         IOobjectList objects;
         if (readHandler)
         {
-            auto oldHandler = fileOperation::fileHandler(readHandler);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
+            auto handler = readHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
+            auto oldComm = UPstream::commWorld(fileHandler().comm());
 
             objects = IOobjectList(mesh, runTime.timeName());
-            readHandler = fileOperation::fileHandler(oldHandler);
-            UPstream::commWorld(oldComm);
+
+            // Restore
+            (void)UPstream::commWorld(oldComm);
+            (void)fileOperation::fileHandler(handler);
         }
 
         if (decompose)
@@ -870,14 +918,16 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
 
         if (readHandler)
         {
-            auto oldHandler = fileOperation::fileHandler(readHandler);
-            const label oldComm = UPstream::commWorld(fileHandler().comm());
+            auto handler = readHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
+            auto oldComm = UPstream::commWorld(fileHandler().comm());
 
             // Read
             refDataPtr.reset(new hexRef8Data(io));
 
-            UPstream::commWorld(oldComm);
-            readHandler = fileOperation::fileHandler(oldHandler);
+            // Restore
+            (void)UPstream::commWorld(oldComm);
+            (void)fileOperation::fileHandler(handler);
         }
         else
         {
@@ -993,20 +1043,23 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
 
     if (reconstruct)
     {
-        auto oldHandler = fileOperation::fileHandler(writeHandler);
+        auto handler = writeHandler.shallowClone();
+        handler = fileOperation::fileHandler(handler);
 
         if (UPstream::master())
         {
             InfoOrPout
                 << "Setting caseName to " << baseRunTime.caseName()
                 << " to write reconstructed mesh (and fields)." << endl;
+
             runTime.caseName() = baseRunTime.caseName();
-            const bool oldProcCase(runTime.processorCase(false));
-            const label oldNumProcs
+
+            const auto oldProcCase = runTime.processorCase(false);
+            const auto oldNumProcs
             (
-                const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs)
+                fileHandler().constCast().nProcs(nDestProcs)
             );
-            const bool oldParRun = UPstream::parRun(false);
+            const auto oldParRun = UPstream::parRun(false);
 
             mesh.write();
             topoSet::removeFiles(mesh);
@@ -1014,25 +1067,32 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
             // Now we've written all. Reset caseName on master
             InfoOrPout<< "Restoring caseName" << endl;
             UPstream::parRun(oldParRun);
-            const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+            fileHandler().constCast().nProcs(oldNumProcs);
             runTime.caseName() = proc0CaseName;
             runTime.processorCase(oldProcCase);
         }
 
-        writeHandler = fileOperation::fileHandler(oldHandler);
+        // Restore
+        (void)fileOperation::fileHandler(handler);
     }
     else
     {
-        auto oldHandler = fileOperation::fileHandler(writeHandler);
+        if (isWriteProc)
+        {
+            auto handler = writeHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
 
-        const label oldNumProcs
-        (
-            const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs)
-        );
-        mesh.write();
-        const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+            const auto oldNumProcs
+            (
+                fileHandler().constCast().nProcs(nDestProcs)
+            );
 
-        writeHandler = fileOperation::fileHandler(oldHandler);
+            mesh.write();
+
+            // Restore
+            (void)fileHandler().constCast().nProcs(oldNumProcs);
+            (void)fileOperation::fileHandler(handler);
+        }
 
         topoSet::removeFiles(mesh);
     }
@@ -1045,14 +1105,17 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     {
         // Decompose (1 -> N)
         // so {boundary,cell,face,point}ProcAddressing have meaning
-        fvMeshTools::writeProcAddressing
-        (
-            mesh,
-            distMap(),
-            decompose,
-            mesh.facesInstance(),    //oldFacesInstance,
-            writeHandler             // to write *ProcAddressing
-        );
+        if (isWriteProc)
+        {
+            fvMeshTools::writeProcAddressing
+            (
+                mesh,
+                distMap(),
+                decompose,
+                mesh.facesInstance(),    //oldFacesInstance,
+                writeHandler             // to write *ProcAddressing
+            );
+        }
     }
     else if (reconstruct)
     {
@@ -1060,14 +1123,18 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
         // so {boundary,cell,face,point}ProcAddressing have meaning. Make sure
         // to write these to meshes containing the source meshes (i.e. using
         // the read handler)
-        fvMeshTools::writeProcAddressing
-        (
-            mesh,
-            distMap(),
-            decompose,
-            volMeshInstance,    //oldFacesInstance,
-            readHandler //writeHandler
-        );
+
+        if (isReadProc)
+        {
+            fvMeshTools::writeProcAddressing
+            (
+                mesh,
+                distMap(),
+                decompose,
+                volMeshInstance,    //oldFacesInstance,
+                readHandler         // (sic) readHandler is used for writing
+            );
+        }
     }
     else
     {
@@ -1100,24 +1167,23 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
         // Distribute
         refData.distribute(distMap());
 
-
-        auto oldHandler = fileOperation::fileHandler(writeHandler);
-
+        // Writing, possibly with alternative handler
         if (reconstruct)
         {
+            auto handler = writeHandler.shallowClone();
+            handler = fileOperation::fileHandler(handler);
+
             if (UPstream::master())
             {
-                const bool oldParRun = UPstream::parRun(false);
-                const label oldNumProcs
-                (
-                    const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs)
-                );
+                auto oldParRun = UPstream::parRun(false);
+                auto oldNumProcs = fileHandler().constCast().nProcs(nDestProcs);
 
                 InfoOrPout
                     << "Setting caseName to " << baseRunTime.caseName()
                     << " to write reconstructed refinement data." << endl;
+
                 runTime.caseName() = baseRunTime.caseName();
-                const bool oldProcCase(runTime.processorCase(false));
+                auto oldProcCase = runTime.processorCase(false);
 
                 refData.write();
 
@@ -1126,21 +1192,29 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
                 runTime.caseName() = proc0CaseName;
                 runTime.processorCase(oldProcCase);
 
-                const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
+                fileHandler().constCast().nProcs(oldNumProcs);
                 UPstream::parRun(oldParRun);
             }
+
+            // Restore
+            (void)fileOperation::fileHandler(handler);
         }
         else
         {
-            const label oldNumProcs
-            (
-                const_cast<fileOperation&>(fileHandler()).nProcs(nDestProcs)
-            );
-            refData.write();
-            const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
-        }
+            if (isWriteProc)
+            {
+                auto handler = writeHandler.shallowClone();
+                handler = fileOperation::fileHandler(handler);
 
-        writeHandler = fileOperation::fileHandler(oldHandler);
+                auto oldNumProcs = fileHandler().constCast().nProcs(nDestProcs);
+
+                refData.write();
+
+                // Restore
+                fileHandler().constCast().nProcs(oldNumProcs);
+                (void)fileOperation::fileHandler(handler);
+            }
+        }
     }
 
     //// Sets. Disabled for now.
@@ -1162,9 +1236,9 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     //        runTime.processorCase(oldProcCase);
     //    }
     //
-    //    forAll(cellSets, i)
+    //    for (auto& cset : cellSets)
     //    {
-    //        cellSets[i].distribute(distMap());
+    //        cset.distribute(distMap());
     //    }
     //
     //    if (reconstruct)
@@ -1174,7 +1248,7 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     //            Pout<< "Setting caseName to " << baseRunTime.caseName()
     //                << " to write reconstructed refinement data." << endl;
     //            runTime.caseName() = baseRunTime.caseName();
-    //            const bool oldProcCase(runTime.processorCase(false));
+    //            const auto oldProcCase = runTime.processorCase(false);
     //
     //            forAll(cellSets, i)
     //            {
@@ -1189,13 +1263,12 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     //    }
     //    else
     //    {
-    //        forAll(cellSets, i)
+    //        for (auto& cset : cellSets)
     //        {
-    //            cellSets[i].distribute(distMap());
+    //            cset.distribute(distMap());
     //        }
     //    }
     //}
-
 
     return distMap;
 }
@@ -1221,6 +1294,7 @@ int main(int argc, char *argv[])
     timeSelector::addOptions(true, true);
 
     #include "addAllRegionOptions.H"
+    #include "addAllFaRegionOptions.H"
 
     #include "addOverwriteOption.H"
     argList::addBoolOption("decompose", "Decompose case");
@@ -1260,8 +1334,8 @@ int main(int argc, char *argv[])
     // Prevent volume BCs from triggering finite-area
     regionModels::allowFaModels(false);
 
-    //- Disable caching of times/processor dirs etc. Cause massive parallel
-    //  problems when e.g decomposing.
+    //- Disable caching of times/processor dirs etc.
+    //  Avoids massive parallel problems when e.g decomposing.
     fileOperation::cacheLevel(0);
 
 
@@ -1356,8 +1430,8 @@ int main(int argc, char *argv[])
     // Read handler on processors with a volMesh
     refPtr<fileOperation> volMeshReadHandler;
 
-    // Read handler on processors with an areaMesh
-    refPtr<fileOperation> areaMeshReadHandler;
+    // Read handlers on processors with finite-area
+    List<refPtr<fileOperation>> areaMeshReadHandlers;
 
     // Handler for master-only operation (read/writing from/to undecomposed)
     // - only the 'real' master, not io-rank masters
@@ -1365,7 +1439,7 @@ int main(int argc, char *argv[])
 
     if (UPstream::master(UPstream::worldComm))
     {
-        const bool oldParRun = UPstream::parRun(false);
+        const auto oldParRun = UPstream::parRun(false);
 
         masterOnlyHandler = fileOperation::NewUncollated();
 
@@ -1439,8 +1513,12 @@ int main(int argc, char *argv[])
     // use fileHandler().dirPath here but we don't have runTime yet and
     // want to delay constructing runTime until we've synced all time
     // directories...
-    const fileName procDir(fileHandler().filePath(args.path()));
-    if (Foam::isDir(procDir))
+
+    if
+    (
+        const fileName procDir(fileHandler().filePath(args.path()));
+        Foam::isDir(procDir)
+    )
     {
         if (decompose)
         {
@@ -1516,7 +1594,7 @@ int main(int argc, char *argv[])
 
     // Save local processor0 casename
     const fileName proc0CaseName = runTime.caseName();
-    const bool oldProcCase = runTime.processorCase();
+    const auto oldProcCase = runTime.processorCase();
 
 
     // Construct undecomposed Time
@@ -1565,8 +1643,19 @@ int main(int argc, char *argv[])
     const fileName decompDictFile =
         args.getOrDefault<fileName>("decomposeParDict", "");
 
-    // Get region names
+    // Handle -allRegions, -regions, -region
     #include "getAllRegionOptions.H"
+
+    // Handle -allAreas, -area-regions, -area-region
+    #include "getAllFaRegionOptions.H"
+
+    if (!doFiniteArea)
+    {
+        areaRegionNames.clear();  // For consistency
+    }
+
+    // Read handlers for finite-area
+    areaMeshReadHandlers.resize(areaRegionNames.size());
 
     if (regionNames.size() == 1 && regionNames[0] != polyMesh::defaultRegion)
     {
@@ -1600,18 +1689,11 @@ int main(int argc, char *argv[])
             << nl
             << "Reconstructing mesh and addressing" << nl << endl;
 
-        forAll(regionNames, regioni)
+        for (const word& regionName : regionNames)
         {
-            const word& regionName = regionNames[regioni];
-
             const fileName volMeshSubDir
             (
                 polyMesh::meshDir(regionName)
-            );
-            const fileName areaMeshSubDir
-            (
-                // Assume single-region area mesh
-                faMesh::meshDir(regionName, word::null)
             );
 
             InfoOrPout
@@ -1619,20 +1701,22 @@ int main(int argc, char *argv[])
                 << "Reconstructing mesh:"
                 << polyMesh::regionName(regionName) << nl << endl;
 
-            bool areaMeshDetected = false;
+            // Which area regions (if any) have proc meshes
+            boolList areaMeshDetected(areaRegionNames.size(), false);
 
             // Loop over all times
-            forAll(timeDirs, timeI)
+            forAll(timeDirs, timei)
             {
                 // Set time for global database
-                runTime.setTime(timeDirs[timeI], timeI);
-                baseRunTime.setTime(timeDirs[timeI], timeI);
+                runTime.setTime(timeDirs[timei], timei);
+                baseRunTime.setTime(timeDirs[timei], timei);
 
                 InfoOrPout<< "Time = " << runTime.timeName() << endl << endl;
 
-                // Where meshes are
+                // Where meshes are:
+                // missing == "constant", but will be rechecked anyhow
                 fileName volMeshInstance;
-                fileName areaMeshInstance;
+                fileNameList areaMeshInstances(areaRegionNames.size());
 
                 volMeshInstance = runTime.findInstance
                 (
@@ -1641,11 +1725,15 @@ int main(int argc, char *argv[])
                     IOobjectOption::READ_IF_PRESENT
                 );
 
-                if (doFiniteArea)
+                // -> if (doFiniteArea)
+                forAll(areaRegionNames, areai)
                 {
-                    areaMeshInstance = runTime.findInstance
+                    const word& areaName = areaRegionNames[areai];
+                    auto& areaInstance = areaMeshInstances[areai];
+
+                    areaInstance = runTime.findInstance
                     (
-                        areaMeshSubDir,
+                        faMesh::meshDir(regionName, areaName),
                         "faceLabels",
                         IOobjectOption::READ_IF_PRESENT
                     );
@@ -1655,7 +1743,7 @@ int main(int argc, char *argv[])
                 (
                     UPstream::worldComm,
                     volMeshInstance,
-                    areaMeshInstance
+                    areaMeshInstances
                 );
 
 
@@ -1663,39 +1751,51 @@ int main(int argc, char *argv[])
                 // - check for 'faces' file (polyMesh)
                 // - check for 'faceLabels' file (faMesh)
                 boolList volMeshOnProc;
-                boolList areaMeshOnProc(UPstream::nProcs(), false);
 
                 volMeshOnProc = haveMeshFile
                 (
-                    runTime,
-                    volMeshInstance/volMeshSubDir,
-                    "faces"
+                    "faces",
+                    volMeshInstance,
+                    volMeshSubDir,
+                    runTime
                 );
 
                 // Create handler for reading
                 newHandler(volMeshOnProc, volMeshReadHandler);
 
-                if (doFiniteArea)
-                {
-                    areaMeshOnProc = haveMeshFile
-                    (
-                        runTime,
-                        areaMeshInstance/areaMeshSubDir,
-                        "faceLabels"
-                    );
-                    areaMeshDetected = areaMeshOnProc.found(true);
+                List<boolList> areaMeshesOnProc(areaRegionNames.size());
 
-                    if (areaMeshOnProc == volMeshOnProc)
+                // -> if (doFiniteArea)
+                forAll(areaRegionNames, areai)
+                {
+                    const word& areaName = areaRegionNames[areai];
+
+                    auto& meshOnProc = areaMeshesOnProc[areai];
+                    const auto& areaInstance = areaMeshInstances[areai];
+                    auto& areaReadHandler = areaMeshReadHandlers[areai];
+
+                    meshOnProc = haveMeshFile
+                    (
+                        "faceLabels",
+                        areaInstance,
+                        faMesh::meshDir(regionName, areaName),
+                        runTime
+                    );
+
+                    areaMeshDetected[areai] = meshOnProc.contains(true);
+
+                    if (meshOnProc == volMeshOnProc)
                     {
                         if (volMeshReadHandler)
                         {
                             // Use same reader for faMesh as for fvMesh
-                            areaMeshReadHandler.ref(volMeshReadHandler.ref());
+                            areaReadHandler.ref(volMeshReadHandler.ref());
                         }
                     }
                     else
                     {
-                        newHandler(areaMeshOnProc, areaMeshReadHandler);
+                        // Create handler for reading
+                        newHandler(meshOnProc, areaReadHandler);
                     }
                 }
 
@@ -1708,86 +1808,83 @@ int main(int argc, char *argv[])
                 // Note: filePath searches up on processors that don't have
                 //       processor if instance = constant so explicitly check
                 //       found filename.
-                bool haveVolAddressing = false;
-                if (volMeshOnProc[Pstream::myProcNo()])
+
+                bool haveVolAddressing(true);
+                if (volMeshOnProc[UPstream::myProcNo()])
                 {
-                    // Read faces (just to know their size)
-                    faceCompactIOList faces
+                    IOobject io
                     (
-                        IOobject
-                        (
-                            "faces",
-                            volMeshInstance,
-                            volMeshSubDir,
-                            runTime,
-                            IOobjectOption::MUST_READ
-                        )
+                        "faces",
+                        volMeshInstance,
+                        volMeshSubDir,
+                        runTime,
+                        IOobjectOption::MUST_READ
                     );
 
+                    // How many mesh faces?
+                    label nFaces = faceCompactIOList::readContentsSize(io);
+
                     // Check faceProcAddressing
-                    labelIOList faceProcAddressing
-                    (
-                        IOobject
-                        (
-                            "faceProcAddressing",
-                            volMeshInstance,
-                            volMeshSubDir,
-                            runTime,
-                            IOobjectOption::READ_IF_PRESENT
-                        )
-                    );
+                    io.resetHeader("faceProcAddressing");
+                    io.readOpt(IOobjectOption::READ_IF_PRESENT);
+
+                    label nProcAddr = labelIOList::readContentsSize(io);
 
                     haveVolAddressing =
                     (
-                        faceProcAddressing.headerOk()
-                     && faceProcAddressing.size() == faces.size()
+                        nProcAddr >= 0 && nProcAddr == nFaces
                     );
                 }
                 else
                 {
-                    // Have no mesh. Don't need addressing
+                    // Don't care about addressing if there is no mesh
                     haveVolAddressing = true;
                 }
 
-                bool haveAreaAddressing = false;
-                if (areaMeshOnProc[Pstream::myProcNo()])
+
+                // For each area region
+                boolList haveAreaAddressing(areaRegionNames.size(), true);
+
+                // -> if (doFiniteArea)
+                forAll(areaRegionNames, areai)
                 {
-                    // Read faces (just to know their size)
-                    labelIOList faceLabels
-                    (
-                        IOobject
+                    const word& areaName = areaRegionNames[areai];
+
+                    const auto& meshOnProc = areaMeshesOnProc[areai];
+                    const auto& areaInstance = areaMeshInstances[areai];
+
+                    auto& haveAddressing = haveAreaAddressing[areai];
+
+                    if (meshOnProc[UPstream::myProcNo()])
+                    {
+                        IOobject io
                         (
                             "faceLabels",
-                            areaMeshInstance,
-                            areaMeshSubDir,
+                            areaInstance,
+                            faMesh::meshDir(regionName, areaName),
                             runTime,
                             IOobjectOption::MUST_READ
-                        )
-                    );
+                        );
 
-                    // Check faceProcAddressing
-                    labelIOList faceProcAddressing
-                    (
-                        IOobject
+                        // How many mesh faces (faceLabels)?
+                        label nFaces = labelIOList::readContentsSize(io);
+
+                        // Check faceProcAddressing
+                        io.resetHeader("faceProcAddressing");
+                        io.readOpt(IOobjectOption::READ_IF_PRESENT);
+
+                        label nProcAddr = labelIOList::readContentsSize(io);
+
+                        haveAddressing =
                         (
-                            "faceProcAddressing",
-                            areaMeshInstance,
-                            areaMeshSubDir,
-                            runTime,
-                            IOobjectOption::READ_IF_PRESENT
-                        )
-                    );
-
-                    haveAreaAddressing =
-                    (
-                        faceProcAddressing.headerOk()
-                     && faceProcAddressing.size() == faceLabels.size()
-                    );
-                }
-                else if (areaMeshDetected)
-                {
-                    // Have no mesh. Don't need addressing
-                    haveAreaAddressing = true;
+                            nProcAddr >= 0 && nProcAddr == nFaces
+                        );
+                    }
+                    else if (areaMeshDetected[areai])
+                    {
+                        // Don't care about addressing if there is no proc mesh
+                        haveAddressing = true;
+                    }
                 }
 
 
@@ -1796,21 +1893,25 @@ int main(int argc, char *argv[])
                 // as cellProcAddressing
 
                 bool volMeshHaveUndecomposed = false;
-                bool areaMeshHaveUndecomposed = false;
+                boolList areaMeshesHaveUndecomposed
+                (
+                    areaRegionNames.size(),
+                    false
+                );
 
-                if (Pstream::master())
+                if (UPstream::master())
                 {
                     InfoOrPout
                         << "Checking " << baseRunTime.caseName()
                         << " for undecomposed volume and area meshes..."
                         << endl;
 
-                    const bool oldParRun = Pstream::parRun(false);
-                    const label oldNumProcs(fileHandler().nProcs());
+                    const auto oldParRun = UPstream::parRun(false);
+                    const auto oldNumProcs = fileHandler().nProcs();
 
                     // Volume
                     {
-                        faceCompactIOList facesIO
+                        faceCompactIOList io
                         (
                             IOobject
                             (
@@ -1818,42 +1919,46 @@ int main(int argc, char *argv[])
                                 volMeshInstance,
                                 volMeshSubDir,
                                 baseRunTime,
-                                IOobjectOption::NO_READ
-                            ),
-                            label(0)
+                                IOobjectOption::NO_READ,
+                                IOobjectOption::NO_WRITE,
+                                IOobjectOption::NO_REGISTER
+                            )
                         );
-                        volMeshHaveUndecomposed = facesIO.headerOk();
+                        volMeshHaveUndecomposed = io.headerOk();
                     }
 
                     // Area
-                    if (doFiniteArea)
+                    // -> if (doFiniteArea)
+                    forAll(areaRegionNames, areai)
                     {
-                        labelIOList labelsIO
+                        const word& areaName = areaRegionNames[areai];
+                        const auto& areaInstance = areaMeshInstances[areai];
+
+                        labelIOList io
                         (
                             IOobject
                             (
                                 "faceLabels",
-                                areaMeshInstance,
-                                areaMeshSubDir,
+                                areaInstance,
+                                faMesh::meshDir(regionName, areaName),
                                 baseRunTime,
-                                IOobjectOption::NO_READ
+                                IOobjectOption::NO_READ,
+                                IOobjectOption::NO_WRITE,
+                                IOobjectOption::NO_REGISTER
                             )
                         );
-                        areaMeshHaveUndecomposed = labelsIO.headerOk();
+                        areaMeshesHaveUndecomposed[areai] = io.headerOk();
                     }
 
-                    const_cast<fileOperation&>
-                    (
-                        fileHandler()
-                    ).nProcs(oldNumProcs);
-                    Pstream::parRun(oldParRun);  // Restore parallel state
+                    fileHandler().constCast().nProcs(oldNumProcs);
+                    UPstream::parRun(oldParRun);  // Restore parallel state
                 }
 
                 Pstream::broadcasts
                 (
                     UPstream::worldComm,
                     volMeshHaveUndecomposed,
-                    areaMeshHaveUndecomposed
+                    areaMeshesHaveUndecomposed
                 );
 
                 // Report
@@ -1861,13 +1966,19 @@ int main(int argc, char *argv[])
                     InfoOrPout
                         << "    volume mesh ["
                         << volMeshHaveUndecomposed << "] : "
-                        << volMeshInstance << nl
-                        << "    area   mesh ["
-                        << areaMeshHaveUndecomposed << "] : "
-                        << areaMeshInstance << nl
-                        << endl;
-                }
+                        << volMeshInstance << nl;
 
+                    forAll(areaRegionNames, areai)
+                    {
+                        InfoOrPout
+                            << "    area   mesh ["
+                            << areaMeshesHaveUndecomposed[areai] << "] : "
+                            << areaMeshInstances[areai]
+                            << " (" << areaRegionNames[areai] << ')' << nl;
+                    }
+
+                    InfoOrPout << endl;
+                }
 
                 if
                 (
@@ -1879,11 +1990,21 @@ int main(int argc, char *argv[])
                         << "No undecomposed mesh. Creating from: "
                         << volMeshInstance << endl;
 
-                    if (areaMeshHaveUndecomposed)
+                    bool warnUndecomposedArea(false);
+
+                    for (auto& areaUndecomposed : areaMeshesHaveUndecomposed)
                     {
-                        areaMeshHaveUndecomposed = false;
+                        if (areaUndecomposed)
+                        {
+                            areaUndecomposed = false;
+                            warnUndecomposedArea = true;
+                        }
+                    }
+
+                    if (warnUndecomposedArea)
+                    {
                         InfoOrPout
-                            << "Also ignore any undecomposed area mesh"
+                            << "Also ignoring any undecomposed area meshes"
                             << endl;
                     }
 
@@ -1936,136 +2057,159 @@ int main(int argc, char *argv[])
                 // Similarly for finiteArea
                 // - may or may not have undecomposed mesh
                 // - may or may not have decomposed meshes
-
-                if
-                (
-                    areaMeshOnProc.found(true)  // ie, areaMeshDetected
-                 &&
-                    (
-                        !areaMeshHaveUndecomposed
-                     || !returnReduceAnd(haveAreaAddressing)
-                    )
-                )
                 {
-                    InfoOrPout
-                        << "Loading area mesh from "
-                        << areaMeshInstance << endl;
+                    autoPtr<fvMesh> baseMeshPtr;
+                    autoPtr<fvMesh> volMeshPtr;
+                    mapDistributePolyMesh distMap;
 
-                    InfoOrPout<< "    getting volume mesh support" << endl;
-
-                    autoPtr<fvMesh> baseMeshPtr = fvMeshTools::newMesh
-                    (
-                        IOobject
-                        (
-                            regionName,
-                            baseRunTime.timeName(),
-                            baseRunTime,
-                            IOobjectOption::MUST_READ
-                        ),
-                        true            // read on master only
-                    );
-                    fvMeshTools::setBasicGeometry(baseMeshPtr());
-
-                    autoPtr<fvMesh> volMeshPtr = fvMeshTools::loadOrCreateMesh
-                    (
-                        IOobject
-                        (
-                            regionName,
-                            baseMeshPtr().facesInstance(),
-                            runTime,
-                            IOobjectOption::MUST_READ
-                        ),
-                        volMeshReadHandler
-                    );
-                    fvMesh& mesh = volMeshPtr();
-
-                    // Read volume proc addressing back to base mesh
-                    autoPtr<mapDistributePolyMesh> distMap
-                    (
-                        fvMeshTools::readProcAddressing(mesh, baseMeshPtr)
-                    );
-
-
-                    //autoPtr<faMesh> areaMeshPtr =
-                    // faMeshTools::loadOrCreateMesh
-                    //(
-                    //    IOobject
-                    //    (
-                    //        regionName,
-                    //        areaMeshInstance,
-                    //        runTime,
-                    //        IOobjectOption::MUST_READ
-                    //    ),
-                    //    mesh,  // <- The referenced polyMesh (from above)
-                    //    decompose
-                    //);
-                    autoPtr<faMesh> areaMeshPtr = faMeshTools::loadOrCreateMesh
-                    (
-                        IOobject
-                        (
-                            regionName,
-                            areaMeshInstance,
-                            runTime,
-                            IOobjectOption::MUST_READ
-                        ),
-                        mesh,  // <- The referenced polyMesh (from above)
-                        areaMeshReadHandler
-                    );
-                    faMesh& areaMesh = areaMeshPtr();
-
-                    faMeshTools::forceDemandDriven(areaMesh);
-                    faMeshTools::unregisterMesh(areaMesh);
-
-                    autoPtr<faMesh> areaBaseMeshPtr;
-
-                    // Reconstruct using polyMesh distribute map
-                    mapDistributePolyMesh faDistMap
-                    (
-                        faMeshDistributor::distribute
-                        (
-                            areaMesh,
-                            distMap(),      // The polyMesh distMap
-                            baseMeshPtr(),  // Target polyMesh
-                            areaBaseMeshPtr
-                        )
-                    );
-
-                    faMeshTools::forceDemandDriven(areaBaseMeshPtr());
-                    faMeshTools::unregisterMesh(areaBaseMeshPtr());
-
-
-                    if (Pstream::master())
+                    forAll(areaRegionNames, areai)
                     {
-                        InfoOrPout
-                            << "Setting caseName to " << baseRunTime.caseName()
-                            << " to write reconstructed area mesh." << endl;
-                        runTime.caseName() = baseRunTime.caseName();
-                        const bool oldProcCase(runTime.processorCase(false));
-                        const bool oldParRun(Pstream::parRun(false));
-                        const label oldNumProcs(fileHandler().nProcs());
+                        const word& areaName = areaRegionNames[areai];
 
-                        areaBaseMeshPtr().write();
+                        const auto& meshOnProc = areaMeshesOnProc[areai];
+                        const auto& areaInstance = areaMeshInstances[areai];
 
-                        // Now we've written all. Reset caseName on master
-                        InfoOrPout<< "Restoring caseName" << endl;
-                        const_cast<fileOperation&>
+                        const auto& areaUndecomposed =
+                            areaMeshesHaveUndecomposed[areai];
+
+                        const auto& haveAddressing =
+                            haveAreaAddressing[areai];
+
+                        auto& areaReadHandler = areaMeshReadHandlers[areai];
+
+                        if
                         (
-                            fileHandler()
-                        ).nProcs(oldNumProcs);
-                        Pstream::parRun(oldParRun);
-                        runTime.caseName() = proc0CaseName;
-                        runTime.processorCase(oldProcCase);
-                    }
+                            // Has any proc meshes?
+                            // ie, areaMeshDetected[areai]
+                            meshOnProc.contains(true)
+                         &&
+                            (
+                                !areaUndecomposed
+                             || !returnReduceAnd(haveAddressing)
+                            )
+                        )
+                        {
+                            // Reconstruct this area mesh
+                        }
+                        else
+                        {
+                            // Nothing to reconstruct
+                            continue;
+                        }
 
-                    // Update for the reconstructed procAddressing
-                    faMeshTools::writeProcAddressing
-                    (
-                        areaBaseMeshPtr(),  // Reconstruct location
-                        faDistMap,
-                        false,              // decompose=false
-                        writeHandler,       //writeHandler,
-                        areaMeshPtr.get()   // procMesh
-                    );
+                        if (!baseMeshPtr)
+                        {
+                            InfoOrPout
+                                << "Getting volume mesh support"
+                                << " (for finite-area reconstruct)"
+                                << endl;
+
+                            baseMeshPtr = fvMeshTools::newMesh
+                            (
+                                IOobject
+                                (
+                                    regionName,
+                                    baseRunTime.timeName(),
+                                    baseRunTime,
+                                    IOobjectOption::MUST_READ
+                                ),
+                                true   // read on master only
+                            );
+                            fvMeshTools::setBasicGeometry(baseMeshPtr());
+
+                            volMeshPtr = fvMeshTools::loadOrCreateMesh
+                            (
+                                IOobject
+                                (
+                                    regionName,
+                                    baseMeshPtr().facesInstance(),
+                                    runTime,
+                                    IOobjectOption::MUST_READ
+                                ),
+                                volMeshReadHandler
+                            );
+
+                            // Read volume proc addressing back to base mesh
+                            distMap =
+                                fvMeshTools::readProcAddressing
+                                (
+                                    volMeshPtr(),
+                                    baseMeshPtr.get()
+                                );
+                        }
+
+                        autoPtr<faMesh> areaMeshPtr =
+                            faMeshTools::loadOrCreateMesh
+                            (
+                                areaName,
+                                // IOobject for the polyMesh
+                                IOobject
+                                (
+                                    regionName,
+                                    areaInstance,
+                                    runTime,
+                                    IOobjectOption::MUST_READ
+                                ),
+                                // The referenced polyMesh (from above)
+                                volMeshPtr(),
+                                areaReadHandler
+                            );
+                        faMesh& areaMesh = areaMeshPtr();
+
+                        faMeshTools::forceDemandDriven(areaMesh);
+                        faMeshTools::unregisterMesh(areaMesh);
+
+                        autoPtr<faMesh> areaBaseMeshPtr;
+
+                        // Reconstruct using polyMesh distribute map
+                        mapDistributePolyMesh faDistMap
+                        (
+                            faMeshDistributor::distribute
+                            (
+                                areaMesh,
+                                distMap,        // The polyMesh distMap
+                                baseMeshPtr(),  // Target polyMesh
+                                areaBaseMeshPtr
+                            )
+                        );
+
+                        faMeshTools::forceDemandDriven(areaBaseMeshPtr());
+                        faMeshTools::unregisterMesh(areaBaseMeshPtr());
+
+
+                        if (UPstream::master())
+                        {
+                            InfoOrPout
+                                << "Setting caseName to "
+                                << baseRunTime.caseName()
+                                << " to write reconstructed area mesh: "
+                                << areaName << endl;
+
+                            runTime.caseName() = baseRunTime.caseName();
+                            auto oldProcCase = runTime.processorCase(false);
+                            const auto oldParRun = UPstream::parRun(false);
+                            const auto oldNumProcs = fileHandler().nProcs();
+
+                            areaBaseMeshPtr().write();
+
+                            // Now we've written all. Reset caseName on master
+                            InfoOrPout<< "Restoring caseName" << endl;
+                            fileHandler().constCast().nProcs(oldNumProcs);
+                            UPstream::parRun(oldParRun);
+                            runTime.caseName() = proc0CaseName;
+                            runTime.processorCase(oldProcCase);
+                        }
+
+                        // Update for the reconstructed procAddressing
+                        faMeshTools::writeProcAddressing
+                        (
+                            areaBaseMeshPtr(),  // Reconstruct location
+                            faDistMap,
+                            false,              // decompose=false
+                            writeHandler,       //writeHandler,
+                            areaMeshPtr.get()   // procMesh
+                        );
+                    }
                 }
             }
 
@@ -2091,17 +2235,7 @@ int main(int argc, char *argv[])
             // This is a bit of tricky code and hidden inside fvMeshTools for
             // now.
             InfoOrPout<< "Reading undecomposed mesh (on master)" << endl;
-            //autoPtr<fvMesh> baseMeshPtr = fvMeshTools::newMesh
-            //(
-            //    IOobject
-            //    (
-            //        regionName,
-            //        baseRunTime.timeName(),
-            //        baseRunTime,
-            //        IOobjectOption::MUST_READ
-            //    ),
-            //    true            // read on master only
-            //);
+
             fileName facesInstance;
             fileName pointsInstance;
             masterMeshInstance
@@ -2139,7 +2273,7 @@ int main(int argc, char *argv[])
                     << endl;
             }
 
-            InfoOrPout<< "Reading local, decomposed mesh" << endl;
+            InfoOrPout<< "Reading local, decomposed (volume) mesh" << endl;
             autoPtr<fvMesh> volMeshPtr = fvMeshTools::loadOrCreateMesh
             (
                 IOobject
@@ -2155,83 +2289,94 @@ int main(int argc, char *argv[])
 
 
             // Similarly for finiteArea
-            autoPtr<faMesh> areaBaseMeshPtr;
-            autoPtr<faMesh> areaMeshPtr;
-            autoPtr<faMeshDistributor> faDistributor;
-            mapDistributePolyMesh areaDistMap;
 
-            if (areaMeshDetected)
+            PtrList<faMesh> areaBaseMeshPtrs(areaRegionNames.size());
+            PtrList<faMesh> areaMeshPtrs(areaRegionNames.size());
+            PtrList<mapDistributePolyMesh> areaDistMaps(areaRegionNames.size());
+            PtrList<faMeshDistributor> faDistributors(areaRegionNames.size());
+
+            forAll(areaRegionNames, areai)
             {
-                //areaBaseMeshPtr = faMeshTools::newMesh
-                //(
-                //    IOobject
-                //    (
-                //        regionName,
-                //        baseRunTime.timeName(),
-                //        baseRunTime,
-                //        IOobjectOption::MUST_READ
-                //    ),
-                //    baseMeshPtr(),
-                //    true            // read on master only
-                //);
-                areaBaseMeshPtr = faMeshTools::loadOrCreateMesh
-                (
-                    IOobject
-                    (
-                        regionName,
-                        baseMeshPtr().facesInstance(),
-                        baseRunTime,
-                        IOobjectOption::MUST_READ
-                    ),
-                    baseMeshPtr(),
-                    masterOnlyHandler
-                );
+                const word& areaName = areaRegionNames[areai];
 
-                //areaMeshPtr = faMeshTools::loadOrCreateMesh
-                //(
-                //    IOobject
-                //    (
-                //        regionName,
-                //        areaBaseMeshPtr().facesInstance(),
-                //        runTime,
-                //        IOobjectOption::MUST_READ
-                //    ),
-                //    mesh,
-                //    decompose
-                //);
-                areaMeshPtr = faMeshTools::loadOrCreateMesh
-                (
-                    IOobject
-                    (
-                        regionName,
-                        areaBaseMeshPtr().facesInstance(),
-                        runTime,
-                        IOobjectOption::MUST_READ
-                    ),
-                    mesh,
-                    areaMeshReadHandler
-                );
+                auto& areaReadHandler = areaMeshReadHandlers[areai];
 
-                areaDistMap =
+                if (!areaMeshDetected[areai])
+                {
+                    // No proc meshes
+                    InfoOrPout
+                        << "No local decomposed area mesh: "
+                        << areaName << endl;
+                    continue;
+                }
+
+                InfoOrPout
+                    << "Reading base area mesh: "
+                    << areaName << endl;
+
+                areaBaseMeshPtrs.set
+                (
+                    areai,
+                    faMeshTools::loadOrCreateMesh
+                    (
+                        areaName,
+                        IOobject
+                        (
+                            regionName,
+                            baseMeshPtr().facesInstance(),
+                            baseRunTime,
+                            IOobjectOption::MUST_READ
+                        ),
+                        baseMeshPtr(),
+                        masterOnlyHandler
+                    )
+                );
+                auto& areaBaseMesh = areaBaseMeshPtrs[areai];
+
+                areaMeshPtrs.set
+                (
+                    areai,
+                    faMeshTools::loadOrCreateMesh
+                    (
+                        areaName,
+                        IOobject
+                        (
+                            regionName,
+                            areaBaseMesh.facesInstance(),
+                            runTime,
+                            IOobjectOption::MUST_READ
+                        ),
+                        mesh,
+                        areaReadHandler
+                    )
+                );
+                auto& areaProcMesh = areaMeshPtrs[areai];
+
+                areaDistMaps.emplace_set
+                (
+                    areai,
                     faMeshTools::readProcAddressing
                     (
-                        areaMeshPtr(),
-                        areaBaseMeshPtr
-                    );
+                        areaProcMesh,
+                       &areaBaseMesh
+                    )
+                );
 
-                faMeshTools::forceDemandDriven(areaMeshPtr());
+                faMeshTools::forceDemandDriven(areaProcMesh);
 
                 // Create an appropriate field distributor
-                faDistributor.reset
+                faDistributors.set
                 (
+                    areai,
                     new faMeshDistributor
                     (
-                        areaMeshPtr(),      // source
-                        areaBaseMeshPtr(),  // target
-                        areaDistMap,
+                        areaProcMesh,  // source
+                        areaBaseMesh,  // target
+                        areaDistMaps[areai],
                         masterOnlyHandler   // only write on master
                     )
                 );
+
                 // Report some messages. Tbd.
                 faMeshDistributor::verbose_ = 1;
             }
@@ -2239,7 +2384,7 @@ int main(int argc, char *argv[])
 
             // Read addressing back to base mesh
             autoPtr<mapDistributePolyMesh> distMap;
-            distMap = fvMeshTools::readProcAddressing(mesh, baseMeshPtr);
+            distMap = fvMeshTools::readProcAddressing(mesh, baseMeshPtr.get());
 
             // Construct field mapper
             auto fvDistributorPtr =
@@ -2261,8 +2406,6 @@ int main(int argc, char *argv[])
                     procPointMesh,   // source
                     basePointMesh,   // target
                     distMap(),
-                    false,           // delay
-                    //UPstream::master()  // Write reconstructed on master
                     masterOnlyHandler   // Write on master only
                 );
 
@@ -2324,18 +2467,8 @@ int main(int argc, char *argv[])
                         // Cannot do a baseMesh::readUpdate() since not all
                         // processors will have mesh files. So instead just
                         // recreate baseMesh
-                        baseMeshPtr.clear();
-                        //baseMeshPtr = fvMeshTools::newMesh
-                        //(
-                        //    IOobject
-                        //    (
-                        //        regionName,
-                        //        baseRunTime.timeName(),
-                        //        baseRunTime,
-                        //        IOobjectOption::MUST_READ
-                        //    ),
-                        //    true            // read on master only
-                        //);
+
+                        baseMeshPtr.reset(nullptr);
                         baseMeshPtr = fvMeshTools::loadOrCreateMesh
                         (
                             IOobject
@@ -2385,23 +2518,22 @@ int main(int argc, char *argv[])
                             procPointMesh,  // source
                             basePointMesh,  // target
                             distMap(),
-                            false,          // delay until later
                             masterOnlyHandler   // Write on master only
                         )
                     );
 
                     lagrangianDistributorPtr.reset();
 
-                    if (areaMeshPtr)
+                    if (areaBaseMeshPtrs.count_nonnull())
                     {
                         InfoOrPout
                             << "    Discarding finite-area addressing"
                             << " (TODO)" << nl << endl;
 
-                        areaBaseMeshPtr.reset();
-                        areaMeshPtr.reset();
-                        faDistributor.reset();
-                        areaDistMap.clear();
+                        areaBaseMeshPtrs.clear();
+                        areaMeshPtrs.clear();
+                        areaDistMaps.clear();
+                        faDistributors.clear();
                     }
                 }
 
@@ -2430,10 +2562,17 @@ int main(int argc, char *argv[])
                     //masterOnlyHandler
                 );
 
-                if (faDistributor)
+                // The finite-area fields, per active area region
+                for (const auto& faDistrib : faDistributors)
                 {
-                    faDistributor()
-                        .distributeAllFields(objects, selectedFields);
+                    IOobjectList faObjs
+                    (
+                        faDistrib.sourceMesh(),  // proc mesh
+                        runTime.timeName(),
+                        IOobjectOption::NO_REGISTER
+                    );
+
+                    faDistrib.distributeAllFields(faObjs, selectedFields);
                 }
 
 
@@ -2453,6 +2592,7 @@ int main(int argc, char *argv[])
                     mesh,
                     baseMeshPtr()
                 );
+
                 // Non-region specific. Note: should do outside region loop
                 // but would then have to replicate the whole time loop ...
                 copyUniform
@@ -2500,22 +2640,14 @@ int main(int argc, char *argv[])
 
 
 
-
         // Save old time name (since might be incremented)
         const word oldTimeName(runTime.timeName());
 
-        forAll(regionNames, regioni)
+        for (const word& regionName : regionNames)
         {
-            const word& regionName = regionNames[regioni];
-
             const fileName volMeshSubDir
             (
                 polyMesh::meshDir(regionName)
-            );
-            const fileName areaMeshSubDir
-            (
-                // Assume single-region area mesh
-                faMesh::meshDir(regionName, word::null)
             );
 
             InfoOrPout
@@ -2530,14 +2662,19 @@ int main(int argc, char *argv[])
             // processor0. Note the changing of the processor0 casename to
             // enforce it to read/write from the undecomposed case
 
+            // Where meshes are
             fileName volMeshMasterInstance;
-            fileName areaMeshMasterInstance;
+            fileNameList areaMeshMasterInstances(areaRegionNames.size());
 
             // Assume to be true
             bool volMeshHaveUndecomposed = true;
-            bool areaMeshHaveUndecomposed = doFiniteArea;
+            boolList areaMeshesHaveUndecomposed
+            (
+                areaRegionNames.size(),
+                false
+            );
 
-            if (Pstream::master())
+            if (UPstream::master())
             {
                 if (decompose)
                 {
@@ -2548,8 +2685,8 @@ int main(int argc, char *argv[])
                     runTime.processorCase(false);
                 }
 
-                const bool oldParRun = Pstream::parRun(false);
-                const label oldNumProcs(fileHandler().nProcs());
+                const auto oldParRun = UPstream::parRun(false);
+                const auto oldNumProcs = fileHandler().nProcs();
                 volMeshMasterInstance = readRunTime.findInstance
                 (
                     volMeshSubDir,
@@ -2557,51 +2694,53 @@ int main(int argc, char *argv[])
                     IOobjectOption::READ_IF_PRESENT
                 );
 
-                if (doFiniteArea)
+                forAll(areaRegionNames, areai)
                 {
-                    areaMeshMasterInstance = readRunTime.findInstance
+                    const word& areaName = areaRegionNames[areai];
+                    auto& areaInstance = areaMeshMasterInstances[areai];
+
+                    areaInstance = runTime.findInstance
                     (
-                        areaMeshSubDir,
+                        faMesh::meshDir(regionName, areaName),
                         "faceLabels",
-                        IOobjectOption::READ_IF_PRESENT
+                        IOobjectOption::READ_IF_PRESENT,
+                        word::null, // no stop instance
+                        false       // constant fallback = false
                     );
 
-                    // Note: findInstance returns "constant" even if not found,
-                    // so recheck now for a false positive.
-
-                    if ("constant" == areaMeshMasterInstance)
+                    if (areaInstance.empty())
                     {
-                        const boolList areaMeshOnProc
-                        (
-                            haveMeshFile
-                            (
-                                readRunTime,
-                                areaMeshMasterInstance/areaMeshSubDir,
-                                "faceLabels",
-                                false  // verbose=false
-                            )
-                        );
-
-                        if (areaMeshOnProc.empty() || !areaMeshOnProc[0])
-                        {
-                            areaMeshHaveUndecomposed = false;
-                        }
+                        // No undecomposed mesh
+                        areaMeshesHaveUndecomposed[areai] = false;
+                        areaInstance = "constant";  // fallback
+                    }
+                    else
+                    {
+                        // Master has undecomposed mesh
+                        areaMeshesHaveUndecomposed[areai] = true;
                     }
                 }
 
-                const_cast<fileOperation&>(fileHandler()).nProcs(oldNumProcs);
-                Pstream::parRun(oldParRun);  // Restore parallel state
+                fileHandler().constCast().nProcs(oldNumProcs);
+                UPstream::parRun(oldParRun);  // Restore parallel state
 
                 if (decompose)
                 {
                     InfoOrPout
                         << "    volume mesh ["
                         << volMeshHaveUndecomposed << "] : "
-                        << volMeshMasterInstance << nl
-                        << "    area   mesh ["
-                        << areaMeshHaveUndecomposed << "] : "
-                        << areaMeshMasterInstance << nl
-                        << nl << nl;
+                        << volMeshMasterInstance << nl;
+
+                    forAll(areaRegionNames, areai)
+                    {
+                        InfoOrPout
+                            << "    area   mesh ["
+                            << areaMeshesHaveUndecomposed[areai] << "] : "
+                            << areaMeshMasterInstances[areai]
+                            << " (" << areaRegionNames[areai] << ')' << nl;
+                    }
+
+                    InfoOrPout<< nl << nl;
 
                     // Restoring caseName
                     InfoOrPout<< "Restoring caseName" << endl;
@@ -2614,22 +2753,22 @@ int main(int argc, char *argv[])
             (
                 UPstream::worldComm,
                 volMeshHaveUndecomposed,
-                areaMeshHaveUndecomposed,
+                areaMeshesHaveUndecomposed,
                 volMeshMasterInstance,
-                areaMeshMasterInstance
+                areaMeshMasterInstances
             );
 
             // Check processors have meshes
             // - check for 'faces' file (polyMesh)
             // - check for 'faceLabels' file (faMesh)
             boolList volMeshOnProc;
-            boolList areaMeshOnProc;
+            List<boolList> areaMeshesOnProc(areaRegionNames.size());
 
             if (decompose)
             {
                 // Already determined above that master can read 'faces' file.
                 // This avoids doing all the casename setting/restoring again.
-                volMeshOnProc.setSize(UPstream::nProcs(), false);
+                volMeshOnProc.resize(UPstream::nProcs(), false);
                 volMeshOnProc[UPstream::masterNo()] = volMeshHaveUndecomposed;
             }
             else
@@ -2637,9 +2776,10 @@ int main(int argc, char *argv[])
                 // All check if can read 'faces' file
                 volMeshOnProc = haveMeshFile
                 (
-                    runTime,
-                    volMeshMasterInstance/volMeshSubDir,
-                    "faces"
+                    "faces",
+                    volMeshMasterInstance,
+                    volMeshSubDir,
+                    runTime
                 );
             }
 
@@ -2655,42 +2795,48 @@ int main(int argc, char *argv[])
 
             fileOperation::nProcsFilter
             (
-                findIndices(volMeshOnProc, true).size()
+                BitOps::count(volMeshOnProc, true)
             );
 
 
-            if (doFiniteArea)
+            // -> if (doFiniteArea)
+            forAll(areaRegionNames, areai)
             {
+                const auto& areaName = areaRegionNames[areai];
+                auto& meshOnProc = areaMeshesOnProc[areai];
+                auto& areaReadHandler = areaMeshReadHandlers[areai];
+
                 if (decompose)
                 {
                     // Already determined above that master can read
                     // 'faceLabels' file.
-                    areaMeshOnProc.setSize(UPstream::nProcs(), false);
-                    areaMeshOnProc[UPstream::masterNo()] =
-                    areaMeshHaveUndecomposed;
+                    meshOnProc.resize(UPstream::nProcs(), false);
+                    meshOnProc[UPstream::masterNo()] =
+                        areaMeshesHaveUndecomposed[areai];
                 }
                 else
                 {
-                    areaMeshOnProc = haveMeshFile
+                    meshOnProc = haveMeshFile
                     (
-                        runTime,
-                        areaMeshMasterInstance/areaMeshSubDir,
-                        "faceLabels"
+                        "faceLabels",
+                        areaMeshMasterInstances[areai],
+                        faMesh::meshDir(regionName, areaName),
+                        runTime
                     );
                 }
 
                 // Create handler for reading
-                if (areaMeshOnProc == volMeshOnProc)
+                if (meshOnProc == volMeshOnProc)
                 {
                     if (volMeshReadHandler)
                     {
                         // Use same reader for faMesh as for fvMesh
-                        areaMeshReadHandler.ref(volMeshReadHandler.ref());
+                        areaReadHandler.ref(volMeshReadHandler.ref());
                     }
                 }
                 else
                 {
-                    newHandler(areaMeshOnProc, areaMeshReadHandler);
+                    newHandler(meshOnProc, areaReadHandler);
                 }
             }
 
@@ -2698,9 +2844,9 @@ int main(int argc, char *argv[])
             // Prior to loadOrCreateMesh, note which meshes already exist
             // for the current file handler.
             // - where mesh would be written if it didn't exist already.
-            fileNameList volMeshDir(Pstream::nProcs());
+            fileNameList volMeshDir(UPstream::nProcs());
             {
-                volMeshDir[Pstream::myProcNo()] =
+                volMeshDir[UPstream::myProcNo()] =
                 (
                     fileHandler().objectPath
                     (
@@ -2716,12 +2862,12 @@ int main(int argc, char *argv[])
 
                 Pstream::allGatherList(volMeshDir);
 
-                if (optVerbose && Pstream::master())
+                if (optVerbose && UPstream::master())
                 {
                     Info<< "Per processor faces dirs:" << nl
                         << '(' << nl;
 
-                    for (const int proci : Pstream::allProcs())
+                    for (const int proci : UPstream::allProcs())
                     {
                         Info<< "    "
                             << runTime.relativePath(volMeshDir[proci]);
@@ -2736,17 +2882,26 @@ int main(int argc, char *argv[])
                 }
             }
 
-            fileNameList areaMeshDir(Pstream::nProcs());
-            if (doFiniteArea)
+
+            List<fileNameList> areaMeshDirs(areaRegionNames.size());
+            // -> if (doFiniteArea)
+            forAll(areaRegionNames, areai)
             {
-                areaMeshDir[Pstream::myProcNo()] =
+                const auto& areaName = areaRegionNames[areai];
+                const auto& meshOnProc = areaMeshesOnProc[areai];
+                const auto& areaInstance = areaMeshMasterInstances[areai];
+                auto& areaMeshDir = areaMeshDirs[areai];
+
+                areaMeshDir.resize(UPstream::nProcs());
+                areaMeshDir[UPstream::myProcNo()] =
                 (
                     fileHandler().objectPath
                     (
                         IOobject
                         (
                             "faceLabels",
-                            areaMeshMasterInstance/areaMeshSubDir,
+                            areaInstance,
+                            faMesh::meshDir(regionName, areaName),
                             runTime
                         ),
                         word::null
@@ -2755,17 +2910,17 @@ int main(int argc, char *argv[])
 
                 Pstream::allGatherList(areaMeshDir);
 
-                if (optVerbose && Pstream::master())
+                if (optVerbose && UPstream::master())
                 {
                     Info<< "Per processor faceLabels dirs:" << nl
                         << '(' << nl;
 
-                    for (const int proci : Pstream::allProcs())
+                    for (const int proci : UPstream::allProcs())
                     {
                         Info<< "    "
                             << runTime.relativePath(areaMeshDir[proci]);
 
-                        if (!areaMeshOnProc[proci])
+                        if (!meshOnProc[proci])
                         {
                             Info<< " [missing]";
                         }
@@ -2802,40 +2957,48 @@ int main(int argc, char *argv[])
             fvMesh& mesh = volMeshPtr();
 
 
-            // Area mesh
-
-            autoPtr<faMesh> areaMeshPtr;
+            // Area meshes
+            PtrList<faMesh> areaMeshPtrs(areaRegionNames.size());
 
             // Decomposing: must have an undecomposed mesh
             // Redistributing: have any proc mesh
-            if
-            (
-                doFiniteArea
-             &&
+
+            // -> if (doFiniteArea)
+            forAll(areaRegionNames, areai)
+            {
+                const auto& areaName = areaRegionNames[areai];
+                const auto& areaInstance = areaMeshMasterInstances[areai];
+                auto& areaReadHandler = areaMeshReadHandlers[areai];
+
+                if
                 (
                     decompose
-                  ? areaMeshHaveUndecomposed
-                  : areaMeshOnProc.found(true)
+                  ? areaMeshesHaveUndecomposed[areai]
+                  : areaMeshesOnProc[areai].contains(true)
                 )
-            )
-            {
-                areaMeshPtr = faMeshTools::loadOrCreateMesh
-                (
-                    IOobject
-                    (
-                        regionName,
-                        areaMeshMasterInstance,
-                        runTime,
-                        IOobjectOption::MUST_READ
-                    ),
-                    mesh,  // <- The referenced polyMesh (from above)
-                    areaMeshReadHandler
-                );
+                {
+                    autoPtr<faMesh> areaMeshPtr =
+                        faMeshTools::loadOrCreateMesh
+                        (
+                            areaName,
+                            // IOobject for the polyMesh
+                            IOobject
+                            (
+                                regionName,
+                                areaInstance,
+                                runTime,
+                                IOobjectOption::MUST_READ
+                            ),
+                            mesh,  // <- The referenced polyMesh (from above)
+                            areaReadHandler
+                        );
 
-                faMeshTools::forceDemandDriven(*areaMeshPtr);
-                faMeshTools::unregisterMesh(*areaMeshPtr);
+                    faMeshTools::forceDemandDriven(*areaMeshPtr);
+                    faMeshTools::unregisterMesh(*areaMeshPtr);
+
+                    areaMeshPtrs.set(areai, std::move(areaMeshPtr));
+                }
             }
-
 
             if (decompose)
             {
@@ -2883,20 +3046,35 @@ int main(int argc, char *argv[])
             }
 
             // Area fields first. Read and deregister
-            parFaFieldDistributorCache areaFields;
-            if (areaMeshPtr)
-            {
-                areaFields.read
-                (
-                    baseRunTime,
-                    proc0CaseName,
-                    decompose,
 
-                    areaMeshOnProc,
-                    areaMeshReadHandler,
-                    areaMeshMasterInstance,
-                    (*areaMeshPtr)
-                );
+            PtrList<parFaFieldDistributorCache> areaFields
+            (
+                areaRegionNames.size()
+            );
+
+            forAll(areaRegionNames, areai)
+            {
+                const auto& meshOnProc = areaMeshesOnProc[areai];
+                auto& areaReadHandler = areaMeshReadHandlers[areai];
+                const auto& areaMasterInstance =
+                    areaMeshMasterInstances[areai];
+
+                if (auto* areaMeshPtr = areaMeshPtrs.get(areai))
+                {
+                    auto& cache = areaFields.emplace_set(areai);
+
+                    cache.read
+                    (
+                        baseRunTime,
+                        proc0CaseName,
+                        decompose,
+
+                        meshOnProc,
+                        areaReadHandler,
+                        areaMasterInstance,
+                        (*areaMeshPtr)
+                    );
+                }
             }
 
 
@@ -2977,17 +3155,26 @@ int main(int argc, char *argv[])
 
 
             // Redistribute area fields
-
-            mapDistributePolyMesh faDistMap;
-            autoPtr<faMesh> areaProcMeshPtr;
-
-            if (areaMeshPtr)
+            forAll(areaRegionNames, areai)
             {
-                faDistMap = faMeshDistributor::distribute
+                const auto* areaMeshPtr = areaMeshPtrs.get(areai);
+                if (!areaMeshPtr)
+                {
+                    continue;
+                }
+
+                const auto& areaMesh = *areaMeshPtr;
+
+                autoPtr<faMesh> areaProcMeshPtr;
+
+                mapDistributePolyMesh faDistMap
                 (
-                    areaMeshPtr(),
-                    distMap(),
-                    areaProcMeshPtr
+                    faMeshDistributor::distribute
+                    (
+                        areaMesh,
+                        distMap(),  // The polyMesh distMap
+                        areaProcMeshPtr
+                    )
                 );
 
                 // Force recreation of everything that might vaguely
@@ -2995,58 +3182,62 @@ int main(int argc, char *argv[])
 
                 faMeshTools::forceDemandDriven(areaProcMeshPtr());
 
+                const auto& areaProcMesh = areaProcMeshPtr();
 
                 if (reconstruct)
                 {
-                    if (Pstream::master())
+                    if (UPstream::master())
                     {
                         InfoOrPout
                             << "Setting caseName to " << baseRunTime.caseName()
                             << " to write reconstructed mesh (and fields)."
                             << endl;
                         runTime.caseName() = baseRunTime.caseName();
-                        const bool oldProcCase(runTime.processorCase(false));
-                        const bool oldParRun = UPstream::parRun(false);
-                        const label oldNumProcs(fileHandler().nProcs());
+                        const auto oldProcCase = runTime.processorCase(false);
+                        const auto oldParRun = UPstream::parRun(false);
+                        const auto oldNumProcs = fileHandler().nProcs();
 
-                        areaProcMeshPtr->write();
+                        areaProcMesh.write();
 
                         // Now we've written all. Reset caseName on master
                         InfoOrPout<< "Restoring caseName" << endl;
-                        const_cast<fileOperation&>
-                        (
-                            fileHandler()
-                        ).nProcs(oldNumProcs);
+                        fileHandler().constCast().nProcs(oldNumProcs);
                         UPstream::parRun(oldParRun);
                         runTime.caseName() = proc0CaseName;
                         runTime.processorCase(oldProcCase);
                     }
                 }
-                else
+                else if
+                (
+                    // With override fileHandler, or all ranks use default
+                    bool(writeHandler) == returnReduceOr(bool(writeHandler))
+                )
                 {
-                    auto oldHandler = fileOperation::fileHandler(writeHandler);
+                    auto oldHandler = writeHandler.shallowClone();
+                    oldHandler = fileOperation::fileHandler(oldHandler);
 
                     IOmapDistributePolyMesh::writeContents
                     (
                         IOobject
                         (
                             "procAddressing",
-                            areaProcMeshPtr->facesInstance(),
+                            areaProcMesh.facesInstance(),
                             faMesh::meshSubDir,
-                            areaProcMeshPtr->thisDb()
+                            areaProcMesh.thisDb()
                         ),
                         faDistMap
                     );
 
-                    areaProcMeshPtr->write();
+                    areaProcMesh.write();
 
-                    writeHandler = fileOperation::fileHandler(oldHandler);
+                    // Restore
+                    (void)fileOperation::fileHandler(oldHandler);
 
                     if (decompose)
                     {
                         faMeshTools::writeProcAddressing
                         (
-                            areaProcMeshPtr(),
+                            areaProcMesh,
                             faDistMap,
                             decompose,
                             writeHandler
@@ -3054,38 +3245,41 @@ int main(int argc, char *argv[])
                     }
                 }
 
+                // Not so nice. In faMeshDistributor it uses fileHandler
+                // to decide writeOnProc, but when decomposing there will not
+                // be a special write handler - just the regular one.
+                // So reference the write handler or the global handler
+                // for that case...
+
+                auto defltHandler = writeHandler.shallowClone();
+                if (!returnReduceOr(bool(writeHandler)))
+                {
+                    // Use default if no ranks specified an override
+                    defltHandler.cref(Foam::fileHandler());
+                }
+
                 InfoOrPout
                     << "Written redistributed mesh to "
-                    << areaProcMeshPtr->facesInstance() << nl << endl;
+                    << areaProcMesh.facesInstance() << nl << endl;
 
-                faMeshDistributor distributor
-                (
-                    areaMeshPtr(),      // source
-                    areaProcMeshPtr(),  // target
-                    faDistMap,
-                    writeHandler
-                );
+                if (auto* cache = areaFields.get(areai))
+                {
+                    faMeshDistributor distributor
+                    (
+                        areaMesh,       // source
+                        areaProcMesh,   // target
+                        faDistMap,
+                        defltHandler    //<- writeHandler
+                    );
 
-                areaFields.redistributeAndWrite(distributor, true);
+                    cache->redistributeAndWrite(distributor);
+                }
             }
-
-
-            // Get reference to standard write handler
-            refPtr<fileOperation> defaultHandler;
-            if (writeHandler)
-            {
-                defaultHandler.ref(writeHandler.ref());
-            }
-            else
-            {
-                defaultHandler.ref(const_cast<fileOperation&>(fileHandler()));
-            }
-
 
             copyUniform
             (
                 volMeshReadHandler, // read handler
-                defaultHandler,     //TBD: should be all IOranks
+                writeHandler,       // if unspecified, uses global handler
 
                 reconstruct,        // reconstruct
                 decompose,          // decompose
@@ -3097,22 +3291,10 @@ int main(int argc, char *argv[])
             );
         }
 
-
-        // Get reference to standard write handler
-        refPtr<fileOperation> defaultHandler;
-        if (writeHandler)
-        {
-            defaultHandler.ref(writeHandler.ref());
-        }
-        else
-        {
-            defaultHandler.ref(const_cast<fileOperation&>(fileHandler()));
-        }
-
         copyUniform
         (
             volMeshReadHandler, // read handler
-            defaultHandler,     //TBD: should be all IOranks
+            writeHandler,       // if unspecified, uses global handler
 
             reconstruct,        // reconstruct (=false)
             decompose,          // decompose

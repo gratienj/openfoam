@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,6 @@ License
 
 #include "faFieldDecomposer.H"
 #include "GeometricField.H"
-#include "IOobjectList.H"
 #include "processorFaPatchField.H"
 #include "processorFaePatchField.H"
 
@@ -41,66 +40,68 @@ Foam::faFieldDecomposer::decomposeField
     const GeometricField<Type, faPatchField, areaMesh>& field
 ) const
 {
-    // Create and map the internal field values
-    Field<Type> internalField(field.internalField(), faceAddressing_);
+    // Create the field for the processor
+    // - with dummy patch fields
+    auto tresult = GeometricField<Type, faPatchField, areaMesh>::New
+    (
+        field.name(),
+        IOobject::NO_REGISTER,
+        procMesh_,
+        field.dimensions(),
+        // Internal field - mapped values
+        Field<Type>(field.primitiveField(), faceAddressing_),
+        // Future: UPtrList<faPatchField>()
+        faPatchFieldBase::calculatedType()
+    );
+    auto& result = tresult.ref();
+    result.oriented() = field.oriented();
 
-    // Create and map the patch field values
-    PtrList<faPatchField<Type>> patchFields(boundaryAddressing_.size());
+    // Now do the boundaries
+    const auto& origPatchFields = field.boundaryField();
+    //const auto nOldPatches = origPatchFields.size();
 
-    forAll(boundaryAddressing_, patchi)
+    const auto& tgtInternal = result.internalField();
+    auto& boundaries = result.boundaryFieldRef();
+
+    forAll(boundaries, patchi)
     {
-        const label oldPatchi = boundaryAddressing_[patchi];
+        const auto& tgtPatch = procMesh_.boundary()[patchi];
+        const auto oldPatchi = boundaryAddressing_[patchi];
 
-        if (oldPatchi >= 0)
+        if (oldPatchi >= 0 && patchFieldDecomposers_.test(patchi))
         {
-            patchFields.set
+            boundaries.set
             (
                 patchi,
                 faPatchField<Type>::New
                 (
-                    field.boundaryField()[oldPatchi],
-                    procMesh_.boundary()[patchi],
-                    faPatchField<Type>::Internal::null(),
-                    patchFieldDecomposerPtrs_[patchi]
+                    origPatchFields[oldPatchi],
+                    tgtPatch,
+                    tgtInternal,
+                    patchFieldDecomposers_[patchi]
                 )
             );
         }
         else
         {
-            patchFields.set
+            boundaries.set
             (
                 patchi,
                 new processorFaPatchField<Type>
                 (
-                    procMesh_.boundary()[patchi],
-                    faPatchField<Type>::Internal::null(),
+                    tgtPatch,
+                    tgtInternal,
                     Field<Type>
                     (
                         field.internalField(),
-                        processorAreaPatchFieldDecomposerPtrs_[patchi]
+                        processorAreaPatchFieldDecomposers_[patchi]
                     )
                 )
             );
         }
     }
 
-    // Create the field for the processor
-    return
-        tmp<GeometricField<Type, faPatchField, areaMesh>>::New
-        (
-            IOobject
-            (
-                field.name(),
-                procMesh_.thisDb().time().timeName(),
-                procMesh_.thisDb(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            procMesh_,
-            field.dimensions(),
-            internalField,
-            patchFields
-        );
+    return tresult;
 }
 
 
@@ -113,117 +114,124 @@ Foam::faFieldDecomposer::decomposeField
 {
     labelList mapAddr
     (
-        labelList::subList
-        (
-            edgeAddressing_,
-            procMesh_.nInternalEdges()
-        )
+        edgeAddressing_.slice(0, procMesh_.nInternalEdges())
     );
-    forAll(mapAddr, i)
-    {
-        mapAddr[i] -= 1;
-    }
 
-    // Create and map the internal field values
-    Field<Type> internalField
-    (
-        field.internalField(),
-        mapAddr
-    );
+// if constexpr (withTurningIndex_)
+    // forAll(mapAddr, i)
+    // {
+    //     mapAddr[i] -= 1;
+    // }
 
     // Problem with addressing when a processor patch picks up both internal
     // edges and edges from cyclic boundaries. This is a bit of a hack, but
     // I cannot find a better solution without making the internal storage
     // mechanism for edgeFields correspond to the one of edges in polyMesh
     // (i.e. using slices)
-    Field<Type> allEdgeField(field.mesh().nEdges());
 
-    forAll(field.internalField(), i)
+    // Same as faMeshTools::flattenEdgeField()
+    Field<Type> fullField(field.mesh().nEdges());
     {
-        allEdgeField[i] = field.internalField()[i];
-    }
+        // Internal field
+        fullField.slice(0, field.size()) = field.primitiveField();
 
-    forAll(field.boundaryField(), patchi)
-    {
-        const Field<Type>& p = field.boundaryField()[patchi];
-
-        const label patchStart = field.mesh().boundary()[patchi].start();
-
-        forAll(p, i)
+        // Boundary fields
+        fullField.slice(field.mesh().nInternalEdges()) = Foam::zero{};
+        for (const auto& pfld : field.boundaryField())
         {
-            allEdgeField[patchStart + i] = p[i];
+            fullField.slice(pfld.patch().start(), pfld.size()) = pfld;
         }
     }
 
-    // Create and map the patch field values
-    PtrList<faePatchField<Type>> patchFields(boundaryAddressing_.size());
 
-    forAll(boundaryAddressing_, patchi)
+    // Create the field for the processor
+    // - with dummy patch fields
+    auto tresult = GeometricField<Type, faePatchField, edgeMesh>::New
+    (
+        field.name(),
+        IOobject::NO_REGISTER,
+        procMesh_,
+        field.dimensions(),
+        // Internal field - mapped values
+        Field<Type>(field.internalField(), mapAddr),
+        // Future: UPtrList<faePatchField>()
+        faePatchFieldBase::calculatedType()
+    );
+    auto& result = tresult.ref();
+    result.oriented() = field.oriented();
+
+
+    // Now redo the boundaries
+    const auto& origPatchFields = field.boundaryField();
+    //const auto nOldPatches = origPatchFields.size();
+
+    const auto& tgtInternal = result.internalField();
+    auto& boundaries = result.boundaryFieldRef();
+
+    boundaries.resize_null(procMesh_.boundary().size());
+
+    forAll(boundaries, patchi)
     {
-        const label oldPatchi = boundaryAddressing_[patchi];
+        // HACK (2026-02-16) - edge fields are currently not marked
+        // as oriented, but mostly have "phi", which is oriented.
+        bool applyFlips = true;
+        //bool applyFlips = result.is_oriented();
 
-        if (oldPatchi >= 0)
+        const auto& tgtPatch = procMesh_.boundary()[patchi];
+        const auto oldPatchi = boundaryAddressing_[patchi];
+
+        if (oldPatchi >= 0 && patchFieldDecomposers_.test(patchi))
         {
-            patchFields.set
+            applyFlips = false;  // No field flipping (local mapping)
+            boundaries.set
             (
                 patchi,
                 faePatchField<Type>::New
                 (
-                    field.boundaryField()[oldPatchi],
-                    procMesh_.boundary()[patchi],
-                    faePatchField<Type>::Internal::null(),
-                    patchFieldDecomposerPtrs_[patchi]
+                    origPatchFields[oldPatchi],
+                    tgtPatch,
+                    tgtInternal,
+                    patchFieldDecomposers_[patchi]
                 )
             );
         }
         else
         {
-            patchFields.set
+            boundaries.set
             (
                 patchi,
                 new processorFaePatchField<Type>
                 (
-                    procMesh_.boundary()[patchi],
-                    faePatchField<Type>::Internal::null(),
+                    tgtPatch,
+                    tgtInternal,
                     Field<Type>
                     (
-                        allEdgeField,
-                        processorEdgePatchFieldDecomposerPtrs_[patchi]
+                        fullField,
+                        processorEdgePatchFieldDecomposers_[patchi]
                     )
                 )
             );
         }
+
+        if (applyFlips && edgeSigns_.test(patchi))
+        {
+            boundaries[patchi] *= edgeSigns_[patchi];
+        }
     }
 
-    // Create the field for the processor
-    return
-        tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
-        (
-            IOobject
-            (
-                field.name(),
-                procMesh_.thisDb().time().timeName(),
-                procMesh_.thisDb(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            procMesh_,
-            field.dimensions(),
-            internalField,
-            patchFields
-        );
+    return tresult;
 }
 
 
 template<class GeoField>
 void Foam::faFieldDecomposer::decomposeFields
 (
-    const PtrList<GeoField>& fields
+    const UPtrList<GeoField>& fields
 ) const
 {
-    forAll(fields, fieldi)
+    for (const auto& fld : fields)
     {
-        decomposeField(fields[fieldi])().write();
+        decomposeField(fld)().write();
     }
 }
 
