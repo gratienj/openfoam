@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -80,14 +80,8 @@ class faFieldReconstructor
         //- Number of fields reconstructed
         label nReconstructed_;
 
-
-    // Private Member Functions
-
-        //- No copy construct
-        faFieldReconstructor(const faFieldReconstructor&) = delete;
-
-        //- No copy assignment
-        void operator=(const faFieldReconstructor&) = delete;
+        //- Use edgeProcAddressing without turning index (2512 and earlier)
+        bool noEdgeEncoding_;
 
 
 public:
@@ -145,11 +139,21 @@ public:
                 }
         };
 
+    // --------------------------------------------------------------------- //
 
     // Static Data
 
         //- Output verbosity when writing
         static int verbose_;
+
+
+    // Generated Methods
+
+        //- No copy construct
+        faFieldReconstructor(const faFieldReconstructor&) = delete;
+
+        //- No copy assignment
+        void operator=(const faFieldReconstructor&) = delete;
 
 
     // Constructors
