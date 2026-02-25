@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2024 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -72,7 +72,10 @@ class faMeshReconstructor
     // Flags
 
         //- Problems encountered during construction?
-        int errors_;
+        bool errors_;
+
+        //- Emit edgeProcAddressing without turning index (2512 and earlier)
+        bool noEdgeEncoding_;
 
 
     // Addressing
@@ -120,6 +123,13 @@ class faMeshReconstructor
         autoPtr<faMesh> serialAreaMesh_;
 
 
+    // Private Static Data
+
+        //- Disable use of edgeProcAddressing turning index
+        static bool disallowEdgeEncoding_;
+
+
+
     // Private Member Functions
 
         //- Calculate all addressing, using finiteVolume faceProcAddressing
@@ -131,17 +141,38 @@ class faMeshReconstructor
         //- Create the serial geometry
         void createMesh();
 
-        //- No copy construct
-        faMeshReconstructor(const faMeshReconstructor&) = delete;
-
-        //- No copy assignment
-        void operator=(const faMeshReconstructor&) = delete;
-
 
 public:
 
     //- Debug flag
     static int debug;
+
+
+    // Tuning switches
+
+        //- The enable/disable state for allowing encoding of
+        //- edgeProcAddressing edge flips (default: true)
+        static bool allowEdgeEncoding() noexcept
+        {
+            return (!disallowEdgeEncoding_);
+        }
+
+        //- Set enable/disable state for allowing edge flip encoding
+        static bool allowEdgeEncoding(bool on) noexcept
+        {
+            bool old(!disallowEdgeEncoding_);
+            disallowEdgeEncoding_ = (!on);
+            return old;
+        }
+
+
+    // Generated Methods
+
+        //- No copy construct
+        faMeshReconstructor(const faMeshReconstructor&) = delete;
+
+        //- No copy assignment
+        void operator=(const faMeshReconstructor&) = delete;
 
 
     // Constructors
@@ -172,6 +203,17 @@ public:
 
         //- True if no construct errors encountered
         bool good() const noexcept { return !errors_; }
+
+        //- Is edge encoding disabled
+        bool noEdgeEncoding() const noexcept { return noEdgeEncoding_; }
+
+        //- Change the edge encoding flag
+        bool noEdgeEncoding(bool on) noexcept
+        {
+            bool old(noEdgeEncoding_);
+            noEdgeEncoding_ = on;
+            return old;
+        }
 
         //- Processor point addressing
         const labelList& pointProcAddressing() const noexcept
@@ -217,7 +259,9 @@ public:
             const labelUList& faBoundaryProcAddr,
             const labelUList& faFaceProcAddr,
             const labelUList& faPointProcAddr,
-            const labelUList& faEdgeProcAddr
+            const labelUList& faEdgeProcAddr,
+            //! Without edge encoding (legacy)
+            bool withoutEdgeEncoding = false
         );
 
         //- Write proc addressing at the polyMesh faceInstances time

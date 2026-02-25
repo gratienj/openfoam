@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -103,6 +103,14 @@ int main(int argc, char *argv[])
         true  // advanced option (debugging only)
     );
 
+    argList::addBoolOption
+    (
+        "disable-edge-encoding",
+        "Emit edgeProcAddressing without encoding edge flips, "
+        "as per 2512 and earlier [special use]",
+        true  // Advanced option
+    );
+
     #include "addRegionOption.H"
     #include "addAllFaRegionOptions.H"
 
@@ -115,6 +123,13 @@ int main(int argc, char *argv[])
 
     const bool doDecompose = !args.found("no-decompose");
     const bool doDecompFields = !args.found("no-fields");
+
+    // Special use - emit old (2512 and earlier) edgeProcAddressing format
+    // without encoded edge flips.
+    if (args.found("disable-edge-encoding"))
+    {
+        faMeshReconstructor::allowEdgeEncoding(false);
+    }
 
     if (!doDecompose)
     {
