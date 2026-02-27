@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -289,7 +289,7 @@ autoPtr<mapPolyMesh> mergeSharedPoints
 
 boundBox procBounds
 (
-    const PtrList<Time>& databases,
+    const UPtrList<Time>& databases,
     const word& regionName
 )
 {
@@ -553,9 +553,9 @@ void printWarning()
 "Use if the original master mesh has been deleted or the processor meshes\n"
 "have been modified (topology change).\n"
 "This tool will write the resulting mesh to a new time step and construct\n"
-"xxxxProcAddressing files in the processor meshes so reconstructPar can be\n"
-"used to regenerate the fields on the master mesh.\n\n"
-"Not well tested & use at your own risk!\n\n";
+"{cell,face,point}ProcAddressing files in the processor directories so that\n"
+"reconstructPar can be used to reconstruct fields onto the master mesh.\n\n"
+"Reasonably tested, but use at your own risk!\n\n";
 }
 
 
@@ -563,25 +563,31 @@ void printWarning()
 // See faMeshReconstructor::calcAddressing
 void determineFaEdgeMapping
 (
-    const uindirectPrimitivePatch& onePatch,// reconstructed faMesh patch
-    const PtrList<faMesh>& procFaMeshes,    // individual faMeshes
-    const labelListList& pointProcAddressing,   // procPolyMesh to reconstructed
+    // The reconstructed faMesh patch
+    const uindirectPrimitivePatch& onePatch,
+    // The individual processor faMeshes
+    const UPtrList<faMesh>& procFaMeshes,
+    // Mapping of procPolyMesh to reconstructed points
+    const labelListList& pointProcAddressing,
 
+    // [out] the edgeProcAddressing but in primitive-patch order
     labelListList& faEdgeProcAddressing
 )
 {
-    // Determines ordering from faMesh to onePatch (= recsontructed faMesh)
+    // Determines ordering from faMesh to onePatch (= reconstructed faMesh)
 
-    // From two polyMesh points to patch-edge label
-    EdgeMap<label> pointsToOnePatchEdge(onePatch.nEdges());
+    // Hash the edges using the reconstructed polyMesh mesh points
+    // so we can use pointProcAddressing to reach a common basis.
+
+    EdgeMap<label> edgesHash;
+    edgesHash.reserve(onePatch.nEdges());
     {
-        const edgeList& edges = onePatch.edges();
-        const labelList& mp = onePatch.meshPoints();
+        const auto& mp = onePatch.meshPoints();
 
-        forAll(edges, edgei)
+        for (const auto& patchEdge : onePatch.edges())
         {
-            const edge meshE(mp, edges[edgei]);
-            pointsToOnePatchEdge.insert(meshE, edgei);
+            const edge serialMeshEdge(mp, patchEdge);
+            edgesHash.insert(serialMeshEdge, edgesHash.size());
         }
     }
 
@@ -591,26 +597,22 @@ void determineFaEdgeMapping
     faEdgeProcAddressing.resize_nocopy(procFaMeshes.size());
     forAll(procFaMeshes, proci)
     {
-        const auto& procPatch = procFaMeshes[proci].patch();
-        const auto& edges = procPatch.edges();
+        const auto& procMesh = procFaMeshes[proci];
+        const auto& procPatch = procMesh.patch();
         const auto& mp = procPatch.meshPoints();
         const auto& ppAddressing = pointProcAddressing[proci];
 
-        labelList& edgeProcAddr = faEdgeProcAddressing[proci];
-        edgeProcAddr.resize_nocopy(edges.size());
+        auto& edgeProcAddr = faEdgeProcAddressing[proci];
+        edgeProcAddr.resize_nocopy(procPatch.nEdges());
 
         label edgei = 0;
-        for
-        (
-            ;
-            edgei < procPatch.nEdges(); //procPatch.nInternalEdges();
-            edgei++
-        )
+        for (const auto& e : procPatch.edges())
         {
-            const edge meshE(mp, edges[edgei]);
-            const edge onePatchE(ppAddressing, meshE);
+            const edge procMeshEdge(mp, e);
+            const edge serialMeshEdge(ppAddressing, procMeshEdge);
 
-            edgeProcAddr[edgei] = pointsToOnePatchEdge[onePatchE];
+            edgeProcAddr[edgei] = edgesHash[serialMeshEdge];
+            ++edgei;
         }
     }
 }
@@ -618,12 +620,20 @@ void determineFaEdgeMapping
 
 void sortFaEdgeMapping
 (
-    const uindirectPrimitivePatch& onePatch,// reconstructed faMesh patch
-    const PtrList<faMesh>& procFaMeshes,    // individual faMeshes
-    const labelListList& pointProcAddressing,   // procPolyMesh to reconstructed
+    // The reconstructed faMesh patch
+    const uindirectPrimitivePatch& onePatch,
+    // The individual processor faMeshes
+    const UPtrList<faMesh>& procFaMeshes,
+    // Mapping of procPolyMesh to reconstructed points
+    const labelListList& pointProcAddressing,
+    const labelListList& faFaceProcAddressing,
 
-    labelListList& faEdgeProcAddressing,    // per proc the map to the master
-    labelListList& singlePatchEdgeLabels    // per patch the map to the master
+    // [in,out] per proc map of edge to the master.
+    // - on input: primitive patch order.
+    // - on output: sorted by boundary patch
+    labelListList& faEdgeProcAddressing,
+    // [out] per patch the map to the master
+    labelListList& singlePatchEdgeLabels
 )
 {
     // From faMeshReconstructor.C - edge shuffling on patches
@@ -651,8 +661,8 @@ void sortFaEdgeMapping
 
         forAll(procFaMeshes, proci)
         {
-            const faMesh& procMesh = procFaMeshes[proci];
-            const faPatch& fap = procMesh.boundary()[patchi];
+            const auto& procMesh = procFaMeshes[proci];
+            const auto& fap = procMesh.boundary()[patchi];
 
             labelList patchEdgeLabels(fap.edgeLabels());
 
@@ -678,11 +688,28 @@ void sortFaEdgeMapping
     {
         // Use the map to rewrite the local faEdgeProcAddressing
 
-        labelListList newEdgeProcAddr(faEdgeProcAddressing);
+        labelListList newEdgeProcAddressing(faEdgeProcAddressing);
 
         forAll(procFaMeshes, proci)
         {
-            const faMesh& procMesh = procFaMeshes[proci];
+            const auto& procMesh = procFaMeshes[proci];
+            const auto& procPatch = procMesh.patch();
+
+            const auto& procEdgeAddr = faEdgeProcAddressing[proci];
+            const auto& procFaceAddr = faFaceProcAddressing[proci];
+            auto& newEdgeProcAddr = newEdgeProcAddressing[proci];
+
+            // Internal edges are encoded without flipping
+            {
+                auto internalSlice
+                (
+                    newEdgeProcAddr.slice(0, procMesh.nInternalEdges())
+                );
+                for (auto& val : internalSlice)
+                {
+                    ++val;
+                }
+            }
 
             label edgei = procMesh.nInternalEdges();
 
@@ -690,14 +717,24 @@ void sortFaEdgeMapping
             {
                 for (const label patchEdgei : fap.edgeLabels())
                 {
-                    const label globalEdgei =
-                        faEdgeProcAddressing[proci][patchEdgei];
+                    const label globalEdgei = procEdgeAddr[patchEdgei];
 
-                    const auto fnd = remapGlobal.cfind(globalEdgei);
-                    if (fnd.good())
+                    const bool isOwner
+                    (
+                        onePatch.edgeOwner(globalEdgei)
+                     == procFaceAddr[procPatch.edgeOwner(patchEdgei)]
+                    );
+
+                    if (auto fnd = remapGlobal.cfind(globalEdgei); fnd.good())
                     {
-                        newEdgeProcAddr[proci][edgei] = fnd.val();
-                        ++edgei;
+                        if (isOwner)
+                        {
+                            newEdgeProcAddr[edgei] = (fnd.val()+1);
+                        }
+                        else
+                        {
+                            newEdgeProcAddr[edgei] = -(fnd.val()+1);
+                        }
                     }
                     else
                     {
@@ -706,10 +743,11 @@ void sortFaEdgeMapping
                             << " this indicates a programming error" << nl
                             << exit(FatalError);
                     }
+                    ++edgei;
                 }
             }
         }
-        faEdgeProcAddressing = std::move(newEdgeProcAddr);
+        faEdgeProcAddressing = std::move(newEdgeProcAddressing);
     }
 }
 
@@ -762,12 +800,16 @@ int main(int argc, char *argv[])
         true  // Advanced option
     );
 
+    argList::addBoolOption
+    (
+        "disable-edge-encoding",
+        "Emit edgeProcAddressing without encoding edge flips, "
+        "as per 2512 and earlier [special use]",
+        true  // Advanced option
+    );
+
     #include "addAllRegionOptions.H"
     #include "addAllFaRegionOptions.H"
-
-    // Prevent volume fields [with regionFaModels] from incidental
-    // triggering finite-area
-    regionModels::allowFaModels(false);
 
     // Prevent volume BCs from triggering finite-area
     regionModels::allowFaModels(false);
@@ -788,6 +830,11 @@ int main(int argc, char *argv[])
 
     const scalar mergeTol =
         args.getOrDefault<scalar>("mergeTol", defaultMergeTol);
+
+    // Special use - emit old (2512 and earlier) edgeProcAddressing format
+    // without encoded edge flips.
+    const bool disallowEdgeEncoding = args.found("disable-edge-encoding");
+
 
     if (fullMatch)
     {
@@ -1516,15 +1563,19 @@ int main(int argc, char *argv[])
                 labelListList faBoundProcAddressing(nProcs);
 
 
-                // boundProcAddressing
+                // boundProcAddressing and some basic sizing
                 // ~~~~~~~~~~~~~~~~~~~
+
+                label nPatchFaces = 0;
 
                 forAll(procFaMeshes, proci)
                 {
                     const auto& procMesh = procFaMeshes[proci];
                     const auto& bm = procMesh.boundary();
 
-                    faBoundProcAddressing[proci] = identity(bm.size());
+                    nPatchFaces += procMesh.nFaces();
+
+                    faBoundProcAddressing[proci] = Foam::identity(bm.size());
                     // Mark processor patches
                     faBoundProcAddressing[proci].slice(bm.nNonProcessor()) = -1;
                 }
@@ -1533,26 +1584,27 @@ int main(int argc, char *argv[])
                 // faceProcAddressing
                 // ~~~~~~~~~~~~~~~~~~
 
-                DynamicList<label> masterFaceLabels;
-                label nPatchFaces = 0;
+                labelList masterFaceLabels(nPatchFaces);
+                nPatchFaces = 0;
                 forAll(procFaMeshes, proci)
                 {
                     const auto& procMesh = procFaMeshes[proci];
                     const auto& procPolyFaces = procMesh.faceLabels();
+                    const auto nProcFaces = procMesh.nFaces();
                     const auto& fpa = faceProcAddressing[proci];
 
-                    labelList& faceAddr = faFaceProcAddressing[proci];
-                    faceAddr.resize_nocopy(procPolyFaces.size());
+                    // Note: faceProcAddressing (polyMesh) is without
+                    // face flips here. Can use directly to map to
+                    // masterPolyMesh faces
+                    masterFaceLabels.slice(nPatchFaces, nProcFaces) =
+                        UIndirectList<label>(fpa, procPolyFaces);
 
-                    // Map to masterPolyMesh faces
-                    forAll(procPolyFaces, i)
-                    {
-                        const label facei = procPolyFaces[i];
-                        masterFaceLabels.append(fpa[facei]);
-                        faceAddr[i] = nPatchFaces++;
-                    }
+                    // Face addressing is just a concatenation
+                    faFaceProcAddressing[proci] =
+                        Foam::identity(nProcFaces, nPatchFaces);
+
+                    nPatchFaces += nProcFaces;
                 }
-
 
                 // faMesh itself
                 // ~~~~~~~~~~~~~
@@ -1612,10 +1664,13 @@ int main(int argc, char *argv[])
                 // 2. edgeProcAddressing : fix ordering on patches
                 sortFaEdgeMapping
                 (
+                    // [inputs]
                     masterPatch,           // reconstructed faMesh patch
                     procFaMeshes,          // individual faMeshes
                     pointProcAddressing,   // procPolyMesh to reconstructed
+                    faFaceProcAddressing,  // per proc the map to the master
 
+                    // [outputs]
                     faEdgeProcAddressing,  // per proc the map to the master
                     singlePatchEdgeLabels  // per patch the map to the master
                 );
@@ -1691,14 +1746,16 @@ int main(int argc, char *argv[])
                             masterMesh.time().timeName(),
                             faMesh::meshSubDir,
                             procMesh.thisDb(),
-                            IOobject::NO_READ,
-                            IOobject::NO_WRITE,
-                            IOobject::NO_REGISTER
+                            IOobjectOption::NO_READ,
+                            IOobjectOption::NO_WRITE,
+                            IOobjectOption::NO_REGISTER
                         ),
                         faBoundProcAddressing[proci],
                         faFaceProcAddressing[proci],
                         faPointProcAddressing[proci],
-                        faEdgeProcAddressing[proci]
+                        faEdgeProcAddressing[proci],
+                        // Turning index (on/off) for edgeProcAddressing
+                        disallowEdgeEncoding
                     );
                 }
             }
