@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022,2024 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -169,57 +169,24 @@ Usage
 namespace Foam
 {
 
-// Read proc addressing at specific instance.
-// Uses polyMesh/fvMesh meshSubDir by default
-autoPtr<labelIOList> procAddressing
-(
-    const objectRegistry& procRegistry,
-    const word& name,
-    const word& instance,
-    const word& local = polyMesh::meshSubDir
-)
-{
-    return autoPtr<labelIOList>::New
-    (
-        IOobject
-        (
-            name,
-            instance,
-            local,
-            procRegistry,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE,
-            IOobject::NO_REGISTER
-        )
-    );
-}
-
-
-// Read proc addressing at specific instance.
-// Uses the finiteArea meshSubDir
-autoPtr<labelIOList> faProcAddressing
-(
-    const objectRegistry& procRegistry,
-    const word& name,
-    const word& instance,
-    const word& local = faMesh::meshSubDir
-)
-{
-    return procAddressing(procRegistry, name, instance, local);
-}
-
-
-// Return cached or read proc addressing from facesInstance
+// Return cached finite-volume proc addressing,
+// or read from facesInstance
 FOAM_NO_DANGLING_REFERENCE
 const labelIOList& procAddressing
 (
-    const PtrList<fvMesh>& procMeshList,
+    const UPtrList<fvMesh>& procMeshList,
     const label proci,
     const word& name,
     PtrList<labelIOList>& procAddressingList
 )
 {
     const auto& procMesh = procMeshList[proci];
+
+    // Allow lazy initial sizing
+    if (procAddressingList.size() < procMeshList.size())
+    {
+        procAddressingList.resize(procMeshList.size());
+    }
 
     return procAddressingList.try_emplace
     (
@@ -228,13 +195,76 @@ const labelIOList& procAddressing
         (
             name,
             procMesh.facesInstance(),
-            polyMesh::meshSubDir,
+            polyMesh::meshSubDir,  // local
             procMesh,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE,
-            IOobject::NO_REGISTER
+            IOobjectOption::MUST_READ,
+            IOobjectOption::NO_WRITE,
+            IOobjectOption::NO_REGISTER
         )
     );
+}
+
+
+// Return cached finite-area proc addressing,
+// or read from facesInstance (which is normally just "constant")
+FOAM_NO_DANGLING_REFERENCE
+const labelIOList& procAddressing
+(
+    const UPtrList<faMesh>& procMeshList,
+    const label proci,
+    const word& name,
+    PtrList<labelIOList>& procAddressingList
+)
+{
+    const auto& procMesh = procMeshList[proci];
+
+    // Allow lazy initial sizing
+    if (procAddressingList.size() < procMeshList.size())
+    {
+        procAddressingList.resize(procMeshList.size());
+    }
+
+    return procAddressingList.try_emplace
+    (
+        proci,
+        IOobject
+        (
+            name,
+            procMesh.facesInstance(),
+            faMesh::meshSubDir,  // local
+            procMesh,
+            IOobjectOption::MUST_READ,
+            IOobjectOption::NO_WRITE,
+            IOobjectOption::NO_REGISTER
+        )
+    );
+}
+
+
+// Return cached processor Time or create
+Foam::Time& emplaceTime
+(
+    PtrList<Time>& procTimes,
+    const label proci,
+    const argList& args
+)
+{
+    if (!procTimes.test(proci))
+    {
+        procTimes.set
+        (
+            proci,
+            new Time
+            (
+                Time::controlDictName,
+                args.rootPath(),
+                args.caseName()/("processor" + Foam::name(proci)),
+                args.allowFunctionObjects(),
+                args.allowLibs()
+            )
+        );
+    }
+    return procTimes[proci];
 }
 
 
@@ -254,8 +284,7 @@ void decomposeUniform
     if (fileHandler().isDir(runTime.timePath()/uniformDir))
     {
         Info<< "Detected additional non-decomposed files in "
-            << runTime.timePath()/uniformDir
-            << endl;
+            << runTime.relativePath(uniformDir) << endl;
 
         // Bit of trickery to synthesise the correct directory base,
         // e.g. processors4/0.01
@@ -272,7 +301,7 @@ void decomposeUniform
 
         // If no fields have been decomposed the destination
         // directory will not have been created so make sure.
-        mkDir(timePath);
+        Foam::mkDir(timePath);
 
         if (copyUniform || mesh.distributed())
         {
@@ -296,7 +325,7 @@ void decomposeUniform
             }
 
             fileName currentDir(cwd());
-            chDir(timePath);
+            Foam::chDir(timePath);
 
             if (!fileHandler().exists(uniformDir))
             {
@@ -306,7 +335,7 @@ void decomposeUniform
                     uniformDir
                 );
             }
-            chDir(currentDir);
+            Foam::chDir(currentDir);
         }
     }
 }
@@ -368,6 +397,14 @@ int main(int argc, char *argv[])
     (
         "no-lagrangian",
         "Suppress lagrangian (cloud) decomposition",
+        true  // Advanced option
+    );
+
+    argList::addBoolOption
+    (
+        "disable-edge-encoding",
+        "Emit edgeProcAddressing without encoding edge flips, "
+        "as per 2512 and earlier [special use]",
         true  // Advanced option
     );
 
@@ -442,6 +479,13 @@ int main(int argc, char *argv[])
 
     bool decomposeFieldsOnly = args.found("fields");
     bool forceOverwrite      = args.found("force");
+
+    // Special use - emit old (2512 and earlier) edgeProcAddressing format
+    // without encoded edge flips.
+    if (args.found("disable-edge-encoding"))
+    {
+        faMeshDecomposition::allowEdgeEncoding(false);
+    }
 
     // Set time from database
     #include "createTime.H"
@@ -693,7 +737,7 @@ int main(int argc, char *argv[])
 
             if (writeCellDist)
             {
-                const labelList& procIds = mesh.cellToProc();
+                const labelUList& procIds = mesh.cellToProc();
 
                 // Write decomposition for visualization
                 mesh.writeVolField("cellDist");
@@ -701,27 +745,88 @@ int main(int argc, char *argv[])
 
                 // Write decomposition as labelList for use with 'manual'
                 // decomposition method.
-                labelIOList cellDecomposition
+
+                IOobject io
                 (
-                    IOobject
-                    (
-                        "cellDecomposition",
-                        mesh.facesInstance(),
-                        mesh,
-                        IOobject::NO_READ,
-                        IOobject::NO_WRITE,
-                        IOobject::NO_REGISTER
-                    ),
-                    procIds
+                    "cellDecomposition",
+                    mesh.facesInstance(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE,
+                    IOobject::NO_REGISTER
                 );
-                cellDecomposition.write();
+
+                labelIOList::writeContents(io, procIds);
 
                 Info<< nl << "Wrote decomposition to "
-                    << cellDecomposition.objectRelPath()
+                    << io.objectRelPath()
                     << " for use in manual decomposition." << endl;
             }
 
             fileHandler().flush();
+        }
+
+        // Finite area handling
+        // - all area regions use the same volume decomposition
+        HashPtrTable<faMeshDecomposition> faMeshes;
+        HashTable<bool> faMeshEdgeEncoding;
+
+        if (doFiniteArea && !areaRegionNames.empty())
+        {
+            const word boundaryInst =
+                mesh.time().findInstance(mesh.meshDir(), "boundary");
+
+            for (const word& areaName : areaRegionNames)
+            {
+                autoPtr<faMeshDecomposition> faDecompPtr;
+
+                IOobject io
+                (
+                    "faBoundary",
+                    boundaryInst,
+                    faMesh::meshDir(mesh, areaName),
+                    mesh.time(),
+                    IOobject::READ_IF_PRESENT,
+                    IOobject::NO_WRITE,
+                    IOobject::NO_REGISTER
+                );
+
+                if (io.typeHeaderOk<faBoundaryMesh>(true))
+                {
+                    // Always based on the volume decomposition!
+                    faDecompPtr = autoPtr<faMeshDecomposition>::New
+                    (
+                        areaName,
+                        mesh,
+                        mesh.nProcs(),
+                        mesh.model()
+                    );
+                }
+
+                if (faDecompPtr)
+                {
+                    if (!decomposeFieldsOnly)
+                    {
+                        // Decompose the finite-area mesh
+                        auto& aMesh = faDecompPtr();
+                        Info<< "\nFinite area mesh decomposition: "
+                            << areaName << endl;
+
+                        aMesh.decomposeMesh();
+                        aMesh.writeDecomposition();
+
+                        // Remember edge encoding used
+                        faMeshEdgeEncoding.set
+                        (
+                            areaName,
+                            faMeshDecomposition::allowEdgeEncoding()
+                        );
+                    }
+
+                    // Cache for subsequent field decomposition
+                    faMeshes.set(areaName, std::move(faDecompPtr));
+                }
+            }
         }
 
 
@@ -794,22 +899,115 @@ int main(int argc, char *argv[])
         else
         {
             // Decompose field files, lagrangian, finite-area
+            const auto numProcs = mesh.nProcs();
 
-            // Cached processor meshes and maps. These are only preserved if
-            // running with multiple times.
-            PtrList<Time> processorDbList(mesh.nProcs());
-            PtrList<fvMesh> procMeshList(mesh.nProcs());
-            PtrList<labelIOList> faceProcAddressingList(mesh.nProcs());
-            PtrList<labelIOList> cellProcAddressingList(mesh.nProcs());
-            PtrList<labelIOList> boundaryProcAddressingList(mesh.nProcs());
-            PtrList<labelIOList> pointProcAddressingList(mesh.nProcs());
-            PtrList<labelIOList> pointBoundaryProcAddressingList(mesh.nProcs());
+            // Cached processor meshes and maps.
+            // These are only preserved if running with multiple times.
+            PtrList<Time> processorDbList(numProcs);
+            PtrList<fvMesh> procMeshList(numProcs);
+            PtrList<labelIOList> faceProcAddressingList(numProcs);
+            PtrList<labelIOList> cellProcAddressingList(numProcs);
+            PtrList<labelIOList> boundaryProcAddressingList(numProcs);
+            PtrList<labelIOList> pointProcAddressingList(numProcs);
+            PtrList<labelIOList> pointBoundaryProcAddressingList(numProcs);
 
-            PtrList<fvFieldDecomposer> fieldDecomposerList(mesh.nProcs());
-            PtrList<pointFieldDecomposer> pointFieldDecomposerList
+            PtrList<fvFieldDecomposer> fieldDecomposerList(numProcs);
+            PtrList<pointFieldDecomposer> pointFieldDecomposerList(numProcs);
+
+
+            // Cached processor meshes and maps.
+            // These are only preserved if running with multiple times.
+            HashPtrTable<PtrList<faMesh>> procFaMeshes;
+            HashPtrTable<PtrList<labelIOList>> faFaceProcAddressing;
+            HashPtrTable<PtrList<labelIOList>> faEdgeProcAddressing;
+            HashPtrTable<PtrList<labelIOList>> faBoundProcAddressing;
+            HashPtrTable<PtrList<faFieldDecomposer>> faFieldDecomposers;
+
+            // Slightly wasteful, but with an *existing* finite-area
+            // decomposition must scan edgeProcAddressing (from disk)
+            // to know if it uses flip encoding or not.
+
+            if
             (
-                mesh.nProcs()
-            );
+                doDecompFields
+             && !faMeshes.empty() && faMeshEdgeEncoding.empty()
+            )
+            {
+                for (label proci = numProcs-1; proci >= 0; --proci)
+                {
+                    auto& procTime = emplaceTime(processorDbList, proci, args);
+
+                    forAllConstIters(faMeshes, iter)
+                    {
+                        const word& areaName = iter.key();
+
+                        if (faMeshEdgeEncoding.contains(areaName))
+                        {
+                            // Already found the encoding type
+                            continue;
+                        }
+
+                        IOobject ioAddr
+                        (
+                            "edgeProcAddressing",
+                            procTime.constant(),
+                            faMesh::meshDir(regionName, areaName),
+                            procTime,
+                            IOobject::READ_IF_PRESENT,
+                            IOobject::NO_WRITE,
+                            IOobject::NO_REGISTER
+                        );
+
+                        labelList edgeProcAddr
+                        (
+                            labelIOList::readContents(ioAddr)
+                        );
+
+                        // Look for 0 or -ve values
+                        auto i = ListOps::find_if
+                        (
+                            edgeProcAddr,
+                            labelRange::le0()
+                        );
+
+                        if (i >= 0)
+                        {
+                            // A -ve value : definitely uses edge encoding.
+                            // A '0' value : only occurs without encoding.
+                            faMeshEdgeEncoding.set
+                            (
+                                areaName,
+                                (edgeProcAddr[i] < 0)
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Report edge-encoding (if disabled)
+            if (!faMeshEdgeEncoding.empty())
+            {
+                bool header = false;
+                forAllConstIters(faMeshEdgeEncoding, iter)
+                {
+                    const auto& areaName = iter.key();
+                    const bool encoding = iter.val();
+
+                    if (!encoding)
+                    {
+                        if (!header)
+                        {
+                            header = true;
+                            Info<< "Area region without edge encoding:" << nl;
+                        }
+                        Info<< "    " << areaName;
+                    }
+                }
+                if (header)
+                {
+                    Info<< endl;
+                }
+            }
 
 
             // Loop over all times
@@ -817,13 +1015,10 @@ int main(int argc, char *argv[])
             {
                 runTime.setTime(times[timei], timei);
 
-                Info<< "Time = " << runTime.timeName() << endl;
+                Info<< nl << "Time = " << runTime.timeName() << endl;
 
                 // Field objects at this time
                 IOobjectList objects;
-
-                // faMesh fields - can have multiple finite-area per volume
-                HashTable<IOobjectList> faObjects;
 
                 if (doDecompFields)
                 {
@@ -833,11 +1028,20 @@ int main(int argc, char *argv[])
                     // Ignore generated fields: (cellDist)
                     objects.remove("cellDist");
 
-                    // Lists of finite-area fields
-                    faObjects.reserve(areaRegionNames.size());
+                }
 
-                    for (const word& areaName : areaRegionNames)
+                // The finite-area fields (single or multiple per volume)
+                HashTable<IOobjectList> faObjects;
+
+                if (doDecompFields && doFiniteArea && faMeshes.size())
+                {
+                    // Lists of finite-area fields
+                    faObjects.reserve(faMeshes.size());
+
+                    forAllConstIters(faMeshes, iter)
                     {
+                        const word& areaName = iter.key();
+
                         // The finite-area objects for this area region
                         IOobjectList objs
                         (
@@ -854,52 +1058,10 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                // Finite area handling
-                // - all area regions use the same volume decomposition
-
-                HashPtrTable<faMeshDecomposition> faMeshDecompHashes;
-                if (doFiniteArea)
-                {
-                    const word boundaryInst =
-                        mesh.time().findInstance(mesh.meshDir(), "boundary");
-
-                    for (const word& areaName : areaRegionNames)
-                    {
-                        IOobject io
-                        (
-                            "faBoundary",
-                            boundaryInst,
-                            faMesh::meshDir(mesh, areaName),
-                            mesh.time(),
-                            IOobject::READ_IF_PRESENT,
-                            IOobject::NO_WRITE,
-                            IOobject::NO_REGISTER
-                        );
-
-                        if (io.typeHeaderOk<faBoundaryMesh>(true))
-                        {
-                            // Always based on the volume decomposition!
-                            faMeshDecompHashes.set
-                            (
-                                areaName,
-                                autoPtr<faMeshDecomposition>::New
-                                (
-                                    areaName,
-                                    mesh,
-                                    mesh.nProcs(),
-                                    mesh.model()
-                                )
-                            );
-                        }
-                    }
-                }
-
-
                 // Volume/surface/internal fields
                 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
                 fvFieldDecomposer::fieldsCache volumeFieldCache;
-
                 if (doDecompFields)
                 {
                     volumeFieldCache.readAllFields(mesh, objects);
@@ -914,7 +1076,6 @@ int main(int argc, char *argv[])
                     pointMesh::New(mesh, IOobject::READ_IF_PRESENT);
 
                 pointFieldDecomposer::fieldsCache pointFieldCache;
-
                 if (doDecompFields)
                 {
                     pointFieldCache.readAllFields(pMesh, objects);
@@ -925,7 +1086,6 @@ int main(int argc, char *argv[])
                 // ~~~~~~~~~~~~~~~~~
 
                 fileNameList cloudDirs;
-
                 if (doDecompFields && doLagrangian)
                 {
                     cloudDirs = fileHandler().readDir
@@ -1060,60 +1220,62 @@ int main(int argc, char *argv[])
                 cellParticles.resize(cloudI);
                 lagrangianFieldCache.resize(cloudI);
 
+
+                // Finite-area (area/edge) fields
+                // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                HashPtrTable<faFieldDecomposer::fieldsCache> areaFieldCaches;
+
+                if (doDecompFields && doFiniteArea)
+                {
+                    forAllConstIters(faObjects, iter)
+                    {
+                        const word& areaName = iter.key();
+                        const auto& objs = iter.val();
+
+                        if
+                        (
+                            const auto meshIter = faMeshes.cfind(areaName);
+                            (meshIter.good() && !objs.empty())
+                        )
+                        {
+                            const faMesh& aMesh = *(meshIter.val());
+                            auto& cache = areaFieldCaches.emplace_set(areaName);
+
+                            cache.readAllFields(aMesh, objs);
+                        }
+                    }
+                }
+
                 Info<< endl;
 
-                // split the fields over processors
+                // Split the fields over processors
                 for
                 (
                     label proci = 0;
-                    doDecompFields && proci < mesh.nProcs();
+                    doDecompFields && proci < numProcs;
                     ++proci
                 )
                 {
                     Info<< "Processor " << proci << ": field transfer" << endl;
 
-                    // open the database
-                    if (!processorDbList.set(proci))
-                    {
-                        processorDbList.set
-                        (
-                            proci,
-                            new Time
-                            (
-                                Time::controlDictName,
-                                args.rootPath(),
-                                args.caseName()
-                              / ("processor" + Foam::name(proci)),
-                                args.allowFunctionObjects(),
-                                args.allowLibs()
-                            )
-                        );
-                    }
-                    Time& processorDb = processorDbList[proci];
-
-
+                    auto& processorDb =
+                        emplaceTime(processorDbList, proci, args);
                     processorDb.setTime(runTime);
 
                     // Read the mesh
-                    if (!procMeshList.set(proci))
-                    {
-                        procMeshList.set
+                    const auto& procMesh = procMeshList.try_emplace
+                    (
+                        proci,
+                        IOobject
                         (
-                            proci,
-                            new fvMesh
-                            (
-                                IOobject
-                                (
-                                    regionName,
-                                    processorDb.timeName(),
-                                    processorDb
-                                )
-                            )
-                        );
-                    }
-                    const fvMesh& procMesh = procMeshList[proci];
+                            regionName,
+                            processorDb.timeName(),
+                            processorDb
+                        )
+                    );
 
-                    const labelIOList& faceProcAddressing = procAddressing
+                    const auto& faceProcAddressing = procAddressing
                     (
                         procMeshList,
                         proci,
@@ -1121,7 +1283,7 @@ int main(int argc, char *argv[])
                         faceProcAddressingList
                     );
 
-                    const labelIOList& cellProcAddressing = procAddressing
+                    const auto& cellProcAddressing = procAddressing
                     (
                         procMeshList,
                         proci,
@@ -1129,7 +1291,7 @@ int main(int argc, char *argv[])
                         cellProcAddressingList
                     );
 
-                    const labelIOList& boundaryProcAddressing = procAddressing
+                    const auto& boundaryProcAddressing = procAddressing
                     (
                         procMeshList,
                         proci,
@@ -1140,7 +1302,7 @@ int main(int argc, char *argv[])
 
                     // FV fields: volume, surface, internal
                     {
-                        if (!fieldDecomposerList.set(proci))
+                        if (!fieldDecomposerList.test(proci))
                         {
                             fieldDecomposerList.set
                             (
@@ -1172,7 +1334,7 @@ int main(int argc, char *argv[])
                     // Point fields
                     if (!pointFieldCache.empty())
                     {
-                        const labelIOList& pointProcAddressing = procAddressing
+                        const auto& pointProcAddressing = procAddressing
                         (
                             procMeshList,
                             proci,
@@ -1183,7 +1345,7 @@ int main(int argc, char *argv[])
                         const pointMesh& procPMesh =
                             pointMesh::New(procMesh, IOobject::READ_IF_PRESENT);
 
-                        if (!pointBoundaryProcAddressingList.set(proci))
+                        if (!pointBoundaryProcAddressingList.test(proci))
                         {
                             pointBoundaryProcAddressingList.set
                             (
@@ -1209,7 +1371,7 @@ int main(int argc, char *argv[])
                             pointBoundaryProcAddressingList[proci];
 
 
-                        if (!pointFieldDecomposerList.set(proci))
+                        if (!pointFieldDecomposerList.test(proci))
                         {
                             pointFieldDecomposerList.set
                             (
@@ -1286,152 +1448,115 @@ int main(int argc, char *argv[])
                         }
                     }
 
+                    if (times.size() == 1)
+                    {
+                        // Early deletion
+                        boundaryProcAddressingList.set(proci, nullptr);
+                        cellProcAddressingList.set(proci, nullptr);
+                        faceProcAddressingList.set(proci, nullptr);
+                    }
+
+                    // Finite-area fields
+                    for (const auto& iter : areaFieldCaches.csorted())
+                    {
+                        const word& areaName = iter.key();
+                        const auto& areaCache = *(iter.val());
+
+                        // Serial mesh:
+                        const faMesh& aMesh = *(faMeshes[areaName]);
+
+                        // List of proc meshes:
+                        auto& faProcMeshList =
+                            procFaMeshes.try_emplace(areaName, numProcs);
+
+                        auto& procFaMesh =
+                            faProcMeshList
+                            .try_emplace(proci, areaName, procMesh);
+
+                        const auto& faFaceProcAddr =
+                            procAddressing
+                            (
+                                faProcMeshList,
+                                proci,
+                                "faceProcAddressing",
+                                faFaceProcAddressing.try_emplace(areaName)
+                            );
+
+                        const auto& faBoundProcAddr =
+                            procAddressing
+                            (
+                                faProcMeshList,
+                                proci,
+                                "boundaryProcAddressing",
+                                faBoundProcAddressing.try_emplace(areaName)
+                            );
+
+                        const auto& faEdgeProcAddr =
+                            procAddressing
+                            (
+                                faProcMeshList,
+                                proci,
+                                "edgeProcAddressing",
+                                faEdgeProcAddressing.try_emplace(areaName)
+                            );
+
+
+                        auto& faFieldDecomposerList =
+                            faFieldDecomposers.try_emplace(areaName, numProcs);
+
+                        if (!faFieldDecomposerList.test(proci))
+                        {
+                            faFieldDecomposerList.emplace
+                            (
+                                proci,
+                                //
+                                aMesh,
+                                procFaMesh,
+                                faEdgeProcAddr,
+                                faFaceProcAddr,
+                                faBoundProcAddr,
+                                // noEdgeEncoding
+                                (!faMeshEdgeEncoding.lookup(areaName, true))
+                            );
+                        }
+
+                        auto& fieldDecomposer = faFieldDecomposerList[proci];
+
+                        areaCache.decomposeAllFields
+                        (
+                            fieldDecomposer,
+                            args.verbose()  // report
+                        );
+                    }
 
                     // We have cached all the constant mesh data for the current
                     // processor. This is only important if running with
                     // multiple times, otherwise it is just extra storage.
                     if (times.size() == 1)
                     {
-                        boundaryProcAddressingList.set(proci, nullptr);
-                        cellProcAddressingList.set(proci, nullptr);
-                        faceProcAddressingList.set(proci, nullptr);
+                        forAllIters(faFieldDecomposers, iter)
+                        {
+                            iter.val()->set(proci, nullptr);
+                        }
+                        forAllIters(faEdgeProcAddressing, iter)
+                        {
+                            iter.val()->set(proci, nullptr);
+                        }
+                        forAllIters(faFaceProcAddressing, iter)
+                        {
+                            iter.val()->set(proci, nullptr);
+                        }
+                        forAllIters(faBoundProcAddressing, iter)
+                        {
+                            iter.val()->set(proci, nullptr);
+                        }
+                        forAllIters(procFaMeshes, iter)
+                        {
+                            iter.val()->set(proci, nullptr);
+                        }
+
                         procMeshList.set(proci, nullptr);
                         processorDbList.set(proci, nullptr);
-                    }
-                }
-
-
-                // Finite-area mesh and field decomposition
-                for (auto& iter : faMeshDecompHashes.sorted())
-                {
-                    const word& areaName = iter.key();
-
-                    faMeshDecomposition& aMesh = *(iter.val());
-
-                    Info<< "\nFinite area mesh decomposition: "
-                        << areaName << endl;
-
-                    aMesh.decomposeMesh();
-                    aMesh.writeDecomposition();
-
-
-                    // Area/edge fields
-                    // ~~~~~~~~~~~~~~~~
-
-                    faFieldDecomposer::fieldsCache areaFieldCache;
-
-                    if
-                    (
-                        const auto objs = faObjects.cfind(areaName);
-                        doDecompFields && objs.good()
-                    )
-                    {
-                        areaFieldCache.readAllFields(aMesh, objs.val());
-                    }
-
-                    const label nAreaFields = areaFieldCache.size();
-
-                    Info<< endl;
-                    Info<< "Finite area field transfer: "
-                        << nAreaFields << " fields" << endl;
-
-                    // Split the fields over processors
-                    for
-                    (
-                        label proci = 0;
-                        nAreaFields && proci < mesh.nProcs();
-                        ++proci
-                    )
-                    {
-                        Info<< "    Processor " << proci << endl;
-
-                        // open the database
-                        Time processorDb
-                        (
-                            Time::controlDictName,
-                            args.rootPath(),
-                            args.caseName()/("processor" + Foam::name(proci)),
-                            false,  // No function objects
-                            false   // No extra controlDict libs
-                        );
-
-                        processorDb.setTime(runTime);
-
-                        // Read the volume mesh
-                        fvMesh procFvMesh
-                        (
-                            IOobject
-                            (
-                                regionName,
-                                processorDb.timeName(),
-                                processorDb
-                            )
-                        );
-
-                        faMesh procMesh(areaName, procFvMesh);
-
-                        // // Does not work.  HJ, 15/Aug/2017
-                        // const labelIOList& faceProcAddressing =
-                        //     procAddressing
-                        //     (
-                        //         procMeshList,
-                        //         proci,
-                        //         "faceProcAddressing",
-                        //         faceProcAddressingList
-                        //     );
-
-                        // const labelIOList& boundaryProcAddressing =
-                        //     procAddressing
-                        //     (
-                        //         procMeshList,
-                        //         proci,
-                        //         "boundaryProcAddressing",
-                        //         boundaryProcAddressingList
-                        //     );
-
-                        // Addressing from faMesh (not polyMesh) meshSubDir
-
-                        autoPtr<labelIOList> tfaceProcAddr =
-                            faProcAddressing
-                            (
-                                procMesh,
-                                "faceProcAddressing",
-                                runTime.constant()
-                            );
-                        auto& faceProcAddressing = *tfaceProcAddr;
-
-                        autoPtr<labelIOList> tboundaryProcAddr =
-                            faProcAddressing
-                            (
-                                procMesh,
-                                "boundaryProcAddressing",
-                                runTime.constant()
-                            );
-                        auto& boundaryProcAddressing = *tboundaryProcAddr;
-
-                        autoPtr<labelIOList> tedgeProcAddr =
-                            faProcAddressing
-                            (
-                                procMesh,
-                                "edgeProcAddressing",
-                                runTime.constant()
-                            );
-                        const auto& edgeProcAddressing = *tedgeProcAddr;
-
-                        faFieldDecomposer fieldDecomposer
-                        (
-                            aMesh,
-                            procMesh,
-                            edgeProcAddressing,
-                            faceProcAddressing,
-                            boundaryProcAddressing
-                        );
-
-                        areaFieldCache.decomposeAllFields
-                        (
-                            fieldDecomposer,
-                            args.verbose()  // report
-                        );
                     }
                 }
             }
