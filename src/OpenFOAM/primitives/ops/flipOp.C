@@ -39,7 +39,8 @@ License
     }
 
 
-defineNegateOp(Foam::scalar);
+defineNegateOp(float);
+defineNegateOp(double);
 defineNegateOp(Foam::vector);
 defineNegateOp(Foam::sphericalTensor);
 defineNegateOp(Foam::symmTensor);

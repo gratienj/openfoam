@@ -174,6 +174,12 @@ public:
             return mesh_;
         }
 
+        //- Return the edges for the entire boundary
+        const edgeList::subList edges() const;
+
+        //- Return edge owner for the entire boundary
+        const labelList::subList edgeOwner() const;
+
         //- Return a list of edgeLabels for each patch
         UPtrList<const labelUList> edgeLabels() const;
 
@@ -199,24 +205,28 @@ public:
         //- Return a list of patch types
         wordList types() const;
 
-        //- Return a list of patch start indices
+        //- Return a list of patch start indices,
+        //- based on the mesh nInternalEdges and the number of edges
+        //- in each patch (ie, not affected by \em empty type).
         labelList patchStarts() const;
 
-        //- Return a list of patch sizes (number of edges in each patch)
+        //- Return a list of patch sizes, based on the number of edges
+        //- in each patch (ie, not affected by \em empty type).
         labelList patchSizes() const;
 
-        //- Return a list of patch ranges
+        //- Return a list of patch ranges, based on the number of edges
+        //- in each patch (ie, not affected by \em empty type).
         List<labelRange> patchRanges() const;
 
         //- A list of the group names (if any)
         wordList groupNames() const;
 
         //- The start label of the edges in the faMesh edges list
-        //  Same as mesh.nInternalEdges()
+        //  Same as faMesh::nInternalEdges()
         label start() const;
 
         //- The number of boundary edges for the underlying mesh
-        //  Same as mesh.nBoundaryEdges()
+        //  Same as faMesh::nBoundaryEdges()
         label nEdges() const;
 
         //- The edge range for all boundary edges

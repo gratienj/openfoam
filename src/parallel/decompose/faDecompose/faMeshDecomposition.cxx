@@ -548,15 +548,12 @@ void Foam::faMeshDecomposition::decomposeMesh()
                 // Normal patch. Add edges to processor where the face
                 // next to the edge lives
 
-                // These edgeFaces are patch edges (ie, edgeLabels)
-                const labelListList& eF = patch().edgeFaces();
-
                 const labelUList& patchEdgeLabels = fap.edgeLabels();
 
                 forAll(patchEdgeLabels, patchEdgei)
                 {
                     const label edgeLabel = patchEdgeLabels[patchEdgei];
-                    const label facei = eF[edgeLabel][0];
+                    const label facei = patch().edgeOwner(edgeLabel);
                     const label curProc = faceToProc_[facei];
 
                     // Add to the list of edges

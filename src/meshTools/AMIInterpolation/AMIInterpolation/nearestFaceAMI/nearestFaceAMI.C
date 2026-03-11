@@ -199,8 +199,8 @@ Foam::autoPtr<Foam::mapDistribute> Foam::nearestFaceAMI::calcDistributed
     const nearestAndDist nearestZero(pointIndexHit(), -GREAT);
     mapDistributeBase::distribute
     (
-        Pstream::commsTypes::nonBlocking,
-        List<labelPair>::null(),
+        UPstream::commsTypes::nonBlocking,
+        UList<labelPair>::null(),
         src.size(),
         map.constructMap(),
         map.constructHasFlip(),

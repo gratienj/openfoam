@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -54,7 +54,7 @@ void Foam::mapDistributePolyMesh::readDict(const dictionary& dict)
 {
     // Cell information
     {
-        const dictionary& subdict = dict.subDict("cellMap");
+        const auto& subdict = dict.subDict("cellMap");
 
         subdict.readEntry("oldSize", nOldCells_);
         cellMap_.readDict(subdict);
@@ -62,7 +62,7 @@ void Foam::mapDistributePolyMesh::readDict(const dictionary& dict)
 
     // Face information
     {
-        const dictionary& subdict = dict.subDict("faceMap");
+        const auto& subdict = dict.subDict("faceMap");
 
         subdict.readEntry("oldSize", nOldFaces_);
         faceMap_.readDict(subdict);
@@ -70,7 +70,7 @@ void Foam::mapDistributePolyMesh::readDict(const dictionary& dict)
 
     // Point information
     {
-        const dictionary& subdict = dict.subDict("pointMap");
+        const auto& subdict = dict.subDict("pointMap");
 
         subdict.readEntry("oldSize", nOldPoints_);
         pointMap_.readDict(subdict);
@@ -78,7 +78,7 @@ void Foam::mapDistributePolyMesh::readDict(const dictionary& dict)
 
     // Patch information
     {
-        const dictionary& subdict = dict.subDict("patchMap");
+        const auto& subdict = dict.subDict("patchMap");
 
         subdict.readEntry("oldSizes", oldPatchSizes_);
         subdict.readEntry("oldStarts", oldPatchStarts_);
@@ -128,15 +128,9 @@ void Foam::mapDistributePolyMesh::writePatchMapEntries(Ostream& os) const
 
 void Foam::mapDistributePolyMesh::writeEntries(Ostream& os) const
 {
-    writeCellMapEntries(os);
-
-    os << nl;
-    writeFaceMapEntries(os);
-
-    os << nl;
-    writePointMapEntries(os);
-
-    os << nl;
+    writeCellMapEntries(os); os << nl;
+    writeFaceMapEntries(os); os << nl;
+    writePointMapEntries(os); os << nl;
     writePatchMapEntries(os);
 }
 
@@ -166,18 +160,18 @@ Foam::Istream& Foam::operator>>(Istream& is, mapDistributePolyMesh& map)
 
 Foam::Ostream& Foam::operator<<(Ostream& os, const mapDistributePolyMesh& map)
 {
-    os  << map.nOldPoints_ << token::SPACE
-        << map.nOldFaces_ << token::SPACE
-        << map.nOldCells_ << token::NL
+    os  << map.nOldPoints() << ' '
+        << map.nOldFaces() << ' '
+        << map.nOldCells() << nl;
 
-        << map.oldPatchSizes_ << token::NL
-        << map.oldPatchStarts_ << token::NL
-        << map.oldPatchNMeshPoints_ << token::NL
+    map.oldPatchSizes().writeList(os) << nl;
+    map.oldPatchStarts().writeList(os) << nl;
+    map.oldPatchNMeshPoints().writeList(os) << nl;
 
-        << map.pointMap_ << token::NL
-        << map.faceMap_ << token::NL
-        << map.cellMap_ << token::NL
-        << map.patchMap_;
+    os  << nl << map.pointMap() << nl
+        << nl << map.faceMap() << nl
+        << nl << map.cellMap() << nl
+        << nl << map.patchMap();
 
     return os;
 }

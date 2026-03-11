@@ -355,22 +355,23 @@ void Foam::fvMeshTools::writeProcAddressing
         cellMap = identity(map.nOldCells());
         map.distributeCellData(cellMap);
 
-        faceMap = identity(map.nOldFaces());
+        // faceMap
+        if (map.faceMap().hasAnyFlip())
         {
-            const mapDistribute& faceDistMap = map.faceMap();
+            // Offset by 1
+            faceMap = identity(map.nOldFaces(), 1);
 
-            if (faceDistMap.subHasFlip() || faceDistMap.constructHasFlip())
-            {
-                // Offset by 1
-                faceMap = faceMap + 1;
-            }
-
-            faceDistMap.mapDistributeBase::distribute
+            map.faceMap().mapDistributeBase::distribute
             (
-                Pstream::commsTypes::nonBlocking,
+                UPstream::commsTypes::nonBlocking,
                 faceMap,
-                flipLabelOp()   // Apply face flips
+                flipLabelOp()   // Apply flips
             );
+        }
+        else
+        {
+            faceMap = identity(map.nOldFaces());
+            map.faceMap().distribute(faceMap);
         }
 
         pointMap = identity(map.nOldPoints());
@@ -379,7 +380,7 @@ void Foam::fvMeshTools::writeProcAddressing
         patchMap = identity(map.oldPatchSizes().size());
         map.patchMap().mapDistributeBase::distribute
         (
-            Pstream::commsTypes::nonBlocking,
+            UPstream::commsTypes::nonBlocking,
             label(-1),  // nullValue for new patches...
             patchMap,
             flipOp()    // negate op
@@ -393,23 +394,24 @@ void Foam::fvMeshTools::writeProcAddressing
         cellMap = identity(mesh.nCells());
         map.cellMap().reverseDistribute(map.nOldCells(), cellMap);
 
-        faceMap = identity(mesh.nFaces());
+        // faceMap
+        if (map.faceMap().hasAnyFlip())
         {
-            const mapDistribute& faceDistMap = map.faceMap();
+            // Offset by 1
+            faceMap = identity(mesh.nFaces(), 1);
 
-            if (faceDistMap.subHasFlip() || faceDistMap.constructHasFlip())
-            {
-                // Offset by 1
-                faceMap = faceMap + 1;
-            }
-
-            faceDistMap.mapDistributeBase::reverseDistribute
+            map.faceMap().mapDistributeBase::reverseDistribute
             (
-                Pstream::commsTypes::nonBlocking,
+                UPstream::commsTypes::nonBlocking,
                 map.nOldFaces(),
                 faceMap,
-                flipLabelOp()   // Apply face flips
+                flipLabelOp()   // Apply flips
             );
+        }
+        else
+        {
+            faceMap = identity(mesh.nFaces());
+            map.faceMap().reverseDistribute(map.nOldFaces(), faceMap);
         }
 
         pointMap = identity(mesh.nPoints());
@@ -418,7 +420,7 @@ void Foam::fvMeshTools::writeProcAddressing
         patchMap = identity(mesh.boundaryMesh().size());
         map.patchMap().mapDistributeBase::reverseDistribute
         (
-            Pstream::commsTypes::nonBlocking,
+            UPstream::commsTypes::nonBlocking,
             map.oldPatchSizes().size(),
             label(-1),  // nullValue for unmapped patches...
             patchMap

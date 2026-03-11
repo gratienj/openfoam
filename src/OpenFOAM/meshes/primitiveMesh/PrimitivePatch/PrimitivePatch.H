@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2023 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -345,9 +345,21 @@ public:
             label nBoundaryEdges() const;
 
             //- Is internal edge?
-            bool isInternalEdge(const label edgei) const
+            bool isInternalEdge(label edgei) const
             {
                 return edgei < nInternalEdges();
+            }
+
+            //- The edge owner face
+            label edgeOwner(label edgei) const
+            {
+                return edgeFaces()[edgei][0];
+            }
+
+            //- The edge neighbour face. For boundary edges: -1.
+            label edgeNeighbour(label edgei) const
+            {
+                return edgei < nInternalEdges() ? edgeFaces()[edgei][1] : -1;
             }
 
             //- Return list of boundary points, address into LOCAL point list

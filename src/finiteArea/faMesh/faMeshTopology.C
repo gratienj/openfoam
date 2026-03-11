@@ -157,7 +157,7 @@ Foam::faMesh::getBoundaryEdgeConnections() const
             );
 
             // The attached patch face. Should only be one!
-            const labelList& edgeFaces = patch().edgeFaces()[patchEdgei];
+            const auto& edgeFaces = patch().edgeFaces()[patchEdgei];
 
             if (edgeFaces.size() != 1)
             {
@@ -258,7 +258,7 @@ Foam::faMesh::getBoundaryEdgeConnections() const
                     if (pairing.insert(patchi))
                     {
                         // The attached patch face. Should only be one!
-                        const labelList& edgeFaces = pp.edgeFaces()[patchEdgei];
+                        const auto& edgeFaces = pp.edgeFaces()[patchEdgei];
 
                         if (edgeFaces.size() != 1)
                         {
@@ -499,7 +499,7 @@ Foam::faMesh::getBoundaryEdgeConnections() const
                 // A known connection
 
                 // The attached patch face. Should only be one!
-                const labelList& edgeFaces = pp.edgeFaces()[patchEdgei];
+                const auto& edgeFaces = pp.edgeFaces()[patchEdgei];
 
                 if (edgeFaces.size() != 1)
                 {

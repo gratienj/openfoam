@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -294,16 +294,15 @@ private:
         //  \param allowedRemoteElems  Permissible remote mapped elements
         //     (true/false). Can be longer/shorter than actual number
         //     of mapped elements.
-        //  \param[out] sendMasks  Mask of local elements sent to procs.
-        //  \param[out] recvMasks  Mask of remote elements received
-        //      from procs
-        //  \param tag  The message tag
         void calcCompactDataRequirements
         (
             const bitSet& allowedLocalElems,
             const bitSet& allowedRemoteElems,
+            //! [out] Mask of local elements sent to procs
             List<bitSet>& sendMasks,     // [out]
-            List<bitSet>& recvMasks,     // [out]
+            //! [out] Mask of remote elements received from procs
+            List<bitSet>& recvMasks,
+            //! The message tag
             const int tag
         );
 
@@ -313,15 +312,14 @@ private:
         //  \param allowedLocalElems  Permissible local mapped elements
         //     (true/false). Can be longer/shorter than actual number
         //     of mapped elements.
-        //  \param[out] sendMasks  Mask of local elements sent to procs.
-        //  \param[out] recvMasks  Mask of remote elements received by proc.
-        //      from procs
-        //  \param tag  The message tag
         void calcCompactLocalDataRequirements
         (
             const bitSet& allowedLocalElems,
-            List<bitSet>& sendMasks,    // [out]
-            List<bitSet>& recvMasks,    // [out]
+            //! [out] Mask of local elements sent to procs
+            List<bitSet>& sendMasks,
+            //! [out] Mask of remote elements received from procs
+            List<bitSet>& recvMasks,
+            //! The message tag
             const int tag
         );
 
@@ -331,14 +329,14 @@ private:
         //  \param allowedRemoteElems  Permissible remote mapped elements
         //     (true/false). Can be longer/shorter than actual number
         //     of mapped elements.
-        //  \param[out] sendMasks  Mask of local elements sent to procs.
-        //  \param[out] recvMasks  Mask of remote elements received by proc.
-        //  \param tag  The message tag
         void calcCompactRemoteDataRequirements
         (
             const bitSet& allowedRemoteElems,
-            List<bitSet>& sendMasks,    // [out]
-            List<bitSet>& recvMasks,    // [out]
+            //! [out] Mask of local elements sent to procs
+            List<bitSet>& sendMasks,
+            //! [out] Mask of remote elements received from procs
+            List<bitSet>& recvMasks,
+            //! The message tag
             const int tag
         );
 
@@ -370,16 +368,15 @@ private:
         //- Helper for renumbering compacted map elements and updating the
         //- supplied old-to-new mapping to account for the visit order of
         //- the original elements
-        //
-        //  \param origElements  The original elements visited (eg, meshPoints)
-        //  \param[in,out] oldToNew The old-to-new mapping
-        //  \param[in,out] mapElements  The map to be renumbered
-        //  \param hasFlip  True if map has flip addressing
         static void renumberVisitOrder
         (
+            //! The original elements visited (eg, meshPoints)
             const labelUList& origElements,
+            //! [in,out] The old-to-new mapping
             labelList& oldToNew,
+            //! [in,out] The map to be renumbered
             labelListList& maps,
+            //! True if map has flip addressing
             const bool hasFlip
         );
 
@@ -552,7 +549,7 @@ public:
             return constructSize_;
         }
 
-        //- Constructed data size
+        //- Write access to constructed data size
         label& constructSize() noexcept
         {
             return constructSize_;
@@ -582,13 +579,19 @@ public:
             return constructMap_;
         }
 
+        //- Do subMap or constructMap include a sign
+        bool hasAnyFlip() const noexcept
+        {
+            return (subHasFlip_ || constructHasFlip_);
+        }
+
         //- Does subMap include a sign
         bool subHasFlip() const noexcept
         {
             return subHasFlip_;
         }
 
-        //- Does subMap include a sign
+        //- Write access to subMap flip
         bool& subHasFlip() noexcept
         {
             return subHasFlip_;
@@ -600,7 +603,7 @@ public:
             return constructHasFlip_;
         }
 
-        //- Does constructMap include a sign
+        //- Write access to constructMap flip
         bool& constructHasFlip() noexcept
         {
             return constructHasFlip_;
@@ -675,15 +678,51 @@ public:
         //- using the supplied old-to-new mapping.
         //  Only compacts the maps, does not change the local layout.
         //
-        //  \param[in,out] mapElements  The map to be renumbered
-        //  \param oldToNew The old-to-new mapping
-        //  \param hasFlip  True if map has flip addressing
+        //  \return max-size needed for new addressing (eg, constructSize)
+        static label renumberMap
+        (
+            //! [in,out] The map to be renumbered
+            labelUList& map,
+            //! The old-to-new mapping. Negative indices == ignore.
+            const labelUList& oldToNew,
+            //! True if map has flip addressing
+            const bool hasFlip
+        );
+
+        //- Helper for a list of maps. Calls above renumberMap for all elements
+        static label renumberMap
+        (
+            //! [in,out] The maps to be renumbered
+            labelListList& mapElements,
+            //! The old-to-new mapping. Negative indices == ignore.
+            const labelUList& oldToNew,
+            //! True if map has flip addressing
+            const bool hasFlip
+        );
+
+        //- Helper for renumbering the (compacted) map elements
+        //- using the supplied old-to-new mapping.
+        //  Only compacts the maps, does not change the local layout.
         //
         //  \return max-size needed for new addressing (eg, constructSize)
         static label renumberMap
         (
+            //! [in,out] The map to be renumbered
+            labelUList& map,
+            //! The old-to-new mapping
+            const Map<label>& oldToNew,
+            //! True if map has flip addressing
+            const bool hasFlip
+        );
+
+        //- Helper for a list of maps. Calls above renumberMap for all elements
+        static label renumberMap
+        (
+            //! [in,out] The maps to be renumbered
             labelListList& mapElements,
-            const labelUList& oldToNew,
+            //! The old-to-new mapping
+            const Map<label>& oldToNew,
+            //! True if map has flip addressing
             const bool hasFlip
         );
 
@@ -691,19 +730,18 @@ public:
         //- are first, followed by any remote. Local elements get offset,
         //- remote elements are mapped.
         //
-        //  \param[in,out] map  The map to be renumbered
-        //  \param localSize    elements < localSize are offset
-        //  \param offset       offset
-        //  \param cMap         map for non-local elements
-        //  \param hasFlip      True if map has flip addressing
-        //
         //  \return max-size needed for new addressing (eg, constructSize)
         static label renumberMap
         (
-            labelList& map,
+            //! [in,out] The map to be renumbered
+            labelUList& map,
+            //! The local-size. All elements \< local-size are \p offset
             const label localSize,
+            //! The offset
             const label offset,
+            //! Map for non-local elements
             const Map<label>& cMap,
+            //! True if map has flip addressing
             const bool hasFlip
         );
 
@@ -1119,7 +1157,7 @@ public:
         // - receive into slices
 
             //- Start all sends and receives (always non-blocking)
-            template<class T, class negateOp>
+            template<class T, class NegateOp>
             static void send
             (
                 const labelListList& subMap,
@@ -1131,7 +1169,7 @@ public:
                 PtrList<List<T>>& sendFields,   //!< The send fields storage
                 labelRange& recvRequests,       //!< The recv requests range
                 PtrList<List<T>>& recvFields,   //!< The recv fields storage
-                const negateOp& negOp,
+                const NegateOp& negOp,
                 const int tag,
                 const label comm
             );
@@ -1149,7 +1187,7 @@ public:
             ) const;
 
             //- Wait for (receive) requests to finish and consume
-            template<class T, class CombineOp, class negateOp>
+            template<class T, class CombineOp, class NegateOp>
             static void receive
             (
                 const label constructSize,
@@ -1159,7 +1197,7 @@ public:
                 const UPtrList<List<T>>& recvFields,
                 List<T>& field,
                 const CombineOp& cop,
-                const negateOp& negOp,
+                const NegateOp& negOp,
                 const int tag,
                 const label comm
             );
@@ -1202,6 +1240,15 @@ public:
 
         //- Read entries from dictionary format
         void readDict(const dictionary& dict);
+
+        //- Write map contents (in slightly compact form)
+        static void writeMap(Ostream& os, const labelListList& mapElements);
+
+        //- Write the constructMap contents (in slightly compact form)
+        void writeConstructMap(Ostream& os) const;
+
+        //- Write the subMap contents (in slightly compact form)
+        void writeSubMap(Ostream& os) const;
 
         //- Write entries in dictionary format
         void writeEntries(Ostream& os) const;

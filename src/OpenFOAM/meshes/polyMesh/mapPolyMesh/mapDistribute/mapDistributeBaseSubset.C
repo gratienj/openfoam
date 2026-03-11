@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -279,7 +279,7 @@ void Foam::mapDistributeBase::unionCombineMasks
 
 Foam::label Foam::mapDistributeBase::renumberMap
 (
-    labelListList& mapElements,
+    labelUList& map,
     const labelUList& oldToNew,
     const bool hasFlip
 )
@@ -289,49 +289,157 @@ Foam::label Foam::mapDistributeBase::renumberMap
     // Transcribe the map
     if (hasFlip)
     {
-        for (labelList& map : mapElements)
+        for (label& val : map)
         {
-            for (label& val : map)
+            label idx = (Foam::mag(val)-1);  // Unfipped index
+
+            // In oldToNew lookup, negative indices == ignore
+            if (label newIdx = oldToNew[idx]; newIdx >= 0)
             {
-                // Unflip indexed value
-                const label index = oldToNew[mag(val)-1];
-
-                if (index >= 0)   // Not certain this check is needed
+                if (maxIndex < newIdx)
                 {
-                    maxIndex = max(maxIndex, index);
+                    maxIndex = newIdx;
+                }
 
-                    // Retain flip information from original
-                    val = (val < 0 ? (-index-1) : (index+1));
+                // Retain flip information from original
+                val = (val < 0 ? (-newIdx-1) : (newIdx+1));
+            }
+            else
+            {
+                if (maxIndex < idx)
+                {
+                    maxIndex = idx;
                 }
             }
         }
     }
     else
     {
-        for (labelList& map : mapElements)
+        for (label& val : map)
         {
-            for (label& val : map)
+            // In oldToNew lookup, negative indices == ignore
+            if (label newIdx = oldToNew[val]; newIdx >= 0)
             {
-                // Get indexed value (no flipping)
+                val = newIdx;
+            }
 
-                const label index = oldToNew[val];
-
-                if (index >= 0)   // Not certain this check is needed
-                {
-                    maxIndex = max(maxIndex, index);
-                    val = index;
-                }
+            if (maxIndex < val)
+            {
+                maxIndex = val;
             }
         }
     }
-
     return (maxIndex+1);
 }
 
 
 Foam::label Foam::mapDistributeBase::renumberMap
 (
-    labelList& map,
+    labelUList& map,
+    const Map<label>& oldToNew,
+    const bool hasFlip
+)
+{
+    label maxIndex = -1;
+
+    // Transcribe the map
+    if (hasFlip)
+    {
+        for (label& val : map)
+        {
+            label idx = (Foam::mag(val)-1);  // Unfipped index
+
+            if (auto fnd = oldToNew.cfind(idx); fnd.good())
+            {
+                label newIdx = fnd.val();
+
+                if (maxIndex < newIdx)
+                {
+                    maxIndex = newIdx;
+                }
+
+                // Retain flip information from original
+                val = (val < 0 ? (-newIdx-1) : (newIdx+1));
+            }
+            else
+            {
+                if (maxIndex < idx)
+                {
+                    maxIndex = idx;
+                }
+            }
+        }
+    }
+    else
+    {
+        for (label& val : map)
+        {
+            if (auto fnd = oldToNew.cfind(val); fnd.good())
+            {
+                val = fnd.val();
+            }
+
+            if (maxIndex < val)
+            {
+                maxIndex = val;
+            }
+        }
+    }
+    return (maxIndex+1);
+}
+
+
+Foam::label Foam::mapDistributeBase::renumberMap
+(
+    labelListList& mapElements,
+    const labelUList& oldToNew,
+    const bool hasFlip
+)
+{
+    // Note: init outer loop with 0 (not -1).
+    // The inner loop already returns size
+    label maxSize = 0;
+
+    // Transcribe the maps
+    for (auto& map : mapElements)
+    {
+        auto maxLocal = renumberMap(map, oldToNew, hasFlip);
+        if (maxSize < maxLocal)
+        {
+            maxSize = maxLocal;
+        }
+    }
+    return maxSize;
+}
+
+
+Foam::label Foam::mapDistributeBase::renumberMap
+(
+    labelListList& mapElements,
+    const Map<label>& oldToNew,
+    const bool hasFlip
+)
+{
+    // Note: init outer loop with 0 (not -1).
+    // The inner loop already returns size
+    label maxSize = 0;
+
+    // Transcribe the maps
+    for (auto& map : mapElements)
+    {
+        auto maxLocal = renumberMap(map, oldToNew, hasFlip);
+        if (maxSize < maxLocal)
+        {
+            maxSize = maxLocal;
+        }
+    }
+    return maxSize;
+}
+
+
+Foam::label Foam::mapDistributeBase::renumberMap
+(
+    labelUList& map,
     const label localSize,
     const label offset,
     const Map<label>& cMap,
@@ -345,9 +453,9 @@ Foam::label Foam::mapDistributeBase::renumberMap
     {
         for (label& val : map)
         {
-            // Unflip indexed value
-            const label index = mag(val)-1;
-            if (index < localSize)
+            label idx = (Foam::mag(val)-1);  // Unfipped index
+
+            if (idx < localSize)
             {
                 // Local element
                 if (val < 0)
@@ -362,16 +470,15 @@ Foam::label Foam::mapDistributeBase::renumberMap
             else
             {
                 // Remote element
-                if (val < 0)
-                {
-                    val = -cMap[index]-1;
-                }
-                else
-                {
-                    val = cMap[index]+1;
-                }
+
+                // Retain flip information from original
+                val = (val < 0 ? (-cMap[idx]-1) : (cMap[idx]+1));
             }
-            maxIndex = max(maxIndex, mag(val)-1);
+
+            if (idx = (Foam::mag(val)-1); maxIndex < idx)
+            {
+                maxIndex = idx;
+            }
         }
     }
     else
@@ -387,7 +494,10 @@ Foam::label Foam::mapDistributeBase::renumberMap
             {
                 val = cMap[val];
             }
-            maxIndex = max(maxIndex, val);
+            if (maxIndex < val)
+            {
+                maxIndex = val;
+            }
         }
     }
 
@@ -404,26 +514,20 @@ Foam::label Foam::mapDistributeBase::renumberMap
     const bool hasFlip
 )
 {
-    label maxIndex = -1;
+    // Note: init outer loop with 0 (not -1).
+    // The inner loop already returns size
+    label maxSize = 0;
 
-    // Transcribe the map
-    for (labelList& map : mapElements)
+    // Transcribe the maps
+    for (auto& map : mapElements)
     {
-        maxIndex = max
-        (
-            maxIndex,
-            renumberMap
-            (
-                map,
-                localSize,
-                offset,
-                cMap,
-                hasFlip
-            )
-        );
+        auto maxLocal = renumberMap(map, localSize, offset, cMap, hasFlip);
+        if (maxSize < maxLocal)
+        {
+            maxSize = maxLocal;
+        }
     }
-
-    return (maxIndex+1);
+    return maxSize;
 }
 
 

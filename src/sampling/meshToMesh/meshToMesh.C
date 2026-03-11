@@ -551,8 +551,8 @@ void Foam::meshToMesh::calculate(const word& methodName, const bool normalise)
         // Set up as a reverse distribute
         mapDistributeBase::distribute
         (
-            Pstream::commsTypes::nonBlocking,
-            List<labelPair>::null(),
+            UPstream::commsTypes::nonBlocking,
+            UList<labelPair>::null(),
             tgtRegion_.nCells(),
             map.constructMap(),
             false,
@@ -569,8 +569,8 @@ void Foam::meshToMesh::calculate(const word& methodName, const bool normalise)
         // Set up as a reverse distribute
         mapDistributeBase::distribute
         (
-            Pstream::commsTypes::nonBlocking,
-            List<labelPair>::null(),
+            UPstream::commsTypes::nonBlocking,
+            UList<labelPair>::null(),
             tgtRegion_.nCells(),
             map.constructMap(),
             false,

@@ -973,7 +973,7 @@ public:
             }
 
             //- True if given edge label is internal to the mesh
-            bool isInternalEdge(const label edgeIndex) const noexcept
+            bool isInternalEdge(label edgeIndex) const noexcept
             {
                 return (edgeIndex < nInternalEdges_);
             }

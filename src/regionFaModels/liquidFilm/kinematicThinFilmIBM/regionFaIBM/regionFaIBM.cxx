@@ -357,7 +357,7 @@ void regionFaIBM::setStencilAddressing
     mapDistributeBase::distribute
     (
         UPstream::commsTypes::nonBlocking,
-        List<labelPair>::null(),
+        UList<labelPair>::null(),
         aMesh_.nFaces(),
         rmap.constructMap(),
         false, // subHasFlip
@@ -366,7 +366,7 @@ void regionFaIBM::setStencilAddressing
         stencil_,
         labelList(),
         ListOps::appendEqOp<label>(),
-        noOp()
+        identityOp()       // No flipping
     );
 
     label stencilMin = labelMax;

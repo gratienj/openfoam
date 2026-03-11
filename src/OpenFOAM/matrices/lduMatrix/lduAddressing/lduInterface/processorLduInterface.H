@@ -139,6 +139,30 @@ public:
                 const label size
             ) const;
 
+            //- Raw send function, non-blocking mode
+            template<class Type>
+            void nonblocking_send(const UList<Type>& fld) const
+            {
+                this->send(UPstream::commsTypes::nonBlocking, fld);
+            }
+
+            //- Raw receive function, non-blocking mode
+            template<class Type>
+            void nonblocking_receive(UList<Type>& fld) const
+            {
+                this->receive(UPstream::commsTypes::nonBlocking, fld);
+            }
+
+            //- Raw receive function returning field, non-blocking mode
+            template<class Type>
+            tmp<Field<Type>> nonblocking_receive(const label size) const
+            {
+                return this->receive<Type>
+                (
+                    UPstream::commsTypes::nonBlocking,
+                    size
+                );
+            }
 
             //- Raw send function with data compression
             template<class Type>

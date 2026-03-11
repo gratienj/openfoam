@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2020-2025 OpenCFD Ltd.
+    Copyright (C) 2020-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1058,17 +1058,7 @@ const Foam::word& Foam::faMesh::regionName() const
 
 Foam::labelList Foam::faMesh::faceCells() const
 {
-    const labelList& faceOwner = this->mesh().faceOwner();
-
-    labelList list(faceLabels_);
-
-    for (label& val : list)
-    {
-        // Transcribe from faceId to cellId (owner)
-        val = faceOwner[val];
-    }
-
-    return list;
+    return UIndirectList<label>(this->mesh().faceOwner(), faceLabels_).list();
 }
 
 

@@ -714,7 +714,7 @@ void Foam::cellCellStencils::inverseDistance::markDonors
 //    FaceCellWave<minData> deltaCalc
 //    (
 //        mesh,
-//        List<labelPair>(),
+//        UList<labelPair>::null(),
 //        false,  // disable walking through cyclicAMI for backwards
 //                // compatibility
 //        seedFaces,
@@ -1238,8 +1238,8 @@ void Foam::cellCellStencils::inverseDistance::holeExtrapolationStencil
 
         mapDistributeBase::distribute<bool, orEqOp<bool>, flipOp>
         (
-            Pstream::commsTypes::nonBlocking,
-            List<labelPair>(),
+            UPstream::commsTypes::nonBlocking,
+            UList<labelPair>(),
             mesh_.nCells(),
             cellInterpolationMap().constructMap(),
             false,
@@ -1591,7 +1591,7 @@ void Foam::cellCellStencils::inverseDistance::createStencil
         mapDistributeBase::distribute<point, minMagSqrEqOp<point>, flipOp>
         (
             Pstream::commsTypes::nonBlocking,
-            List<labelPair>::null(),
+            UList<labelPair>::null(),
             mesh_.nCells(),
             cellInterpolationMap().constructMap(),
             false,

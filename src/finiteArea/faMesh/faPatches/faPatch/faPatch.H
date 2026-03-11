@@ -46,6 +46,7 @@ SourceFiles
 #define Foam_faPatch_H
 
 #include "patchIdentifier.H"
+#include "edgeList.H"
 #include "labelList.H"
 #include "pointField.H"
 #include "typeInfo.H"
@@ -85,7 +86,7 @@ class faPatch
         //- Reference to boundary mesh
         const faBoundaryMesh& boundaryMesh_;
 
-        //- Demand-driven: edge-face addressing
+        //- Demand-driven: edge-face (edgeOwner) addressing
         mutable std::unique_ptr<labelList::subList> edgeFacesPtr_;
 
         //- Demand-driven: local points labels
@@ -96,12 +97,6 @@ class faPatch
 
 
     // Private Member Functions
-
-        //- No copy construct
-        faPatch(const faPatch&) = delete;
-
-        //- No copy assignment
-        void operator=(const faPatch&) = delete;
 
         //- Clear out topological patch data
         void clearOut();
@@ -169,6 +164,15 @@ public:
             ),
             (name, dict, index, bm, patchType)
         );
+
+
+    // Generated Methods
+
+        //- No copy construct
+        faPatch(const faPatch&) = delete;
+
+        //- No copy assignment
+        void operator=(const faPatch&) = delete;
 
 
     // Constructors
@@ -379,6 +383,9 @@ public:
 
             //- Return edge-face addressing
             const labelUList& edgeFaces() const;
+
+            //- The edge owner face (same as edgeFaces)
+            const labelUList& edgeOwner() const { return edgeFaces(); }
 
             //- Return edge centres
             const vectorField& edgeCentres() const;

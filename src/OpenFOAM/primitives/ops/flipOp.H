@@ -52,20 +52,14 @@ namespace Foam
 \*---------------------------------------------------------------------------*/
 
 //- Same as Foam::identityOp. Should \em never be specialized.
-struct noOp
-{
-    template<class T>
-    const T& operator()(const T& val) const noexcept
-    {
-        return val;
-    }
-};
+struct noOp : Foam::identityOp {};
 
 
 /*---------------------------------------------------------------------------*\
                            Class flipOp Declaration
 \*---------------------------------------------------------------------------*/
 
+//- Negation for scalar/vectorspace/etc, otherwise pass through
 struct flipOp
 {
     template<class T>
@@ -79,25 +73,27 @@ struct flipOp
 //- Invert boolean value
 struct flipBoolOp
 {
-    bool operator()(const bool val) const noexcept
+    bool operator()(bool val) const noexcept
     {
         return !val;
     }
 };
 
 
-//- Negate integer values
+//- Negate integer value
 struct flipLabelOp
 {
-    label operator()(const label val) const
+    template<class T>
+    T operator()(T val) const noexcept
     {
         return -val;
     }
 };
 
 
-// Template specialisation for primitives that support negation
-template<> scalar flipOp::operator()(const scalar&) const;
+// Template specialisation for types that support negation
+template<> float flipOp::operator()(const float&) const;
+template<> double flipOp::operator()(const double&) const;
 template<> vector flipOp::operator()(const vector&) const;
 template<> sphericalTensor flipOp::operator()(const sphericalTensor&) const;
 template<> symmTensor flipOp::operator()(const symmTensor&) const;

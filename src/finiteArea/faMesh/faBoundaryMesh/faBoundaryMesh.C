@@ -336,6 +336,30 @@ void Foam::faBoundaryMesh::calcGeometry()
 }
 
 
+const Foam::edgeList::subList
+Foam::faBoundaryMesh::edges() const
+{
+    return edgeList::subList
+    (
+        mesh_.edges(),
+        mesh_.nBoundaryEdges(),
+        mesh_.nInternalEdges()
+    );
+}
+
+
+const Foam::labelList::subList
+Foam::faBoundaryMesh::edgeOwner() const
+{
+    return labelList::subList
+    (
+        mesh_.edgeOwner(),
+        mesh_.nBoundaryEdges(),
+        mesh_.nInternalEdges()
+    );
+}
+
+
 Foam::UPtrList<const Foam::labelUList>
 Foam::faBoundaryMesh::edgeLabels() const
 {
@@ -376,9 +400,7 @@ Foam::lduInterfacePtrsList Foam::faBoundaryMesh::interfaces() const
 
     forAll(list, patchi)
     {
-        const lduInterface* lduPtr = isA<lduInterface>(patches[patchi]);
-
-        if (lduPtr)
+        if (const auto* lduPtr = isA<lduInterface>(patches[patchi]))
         {
             list.set(patchi, lduPtr);
         }

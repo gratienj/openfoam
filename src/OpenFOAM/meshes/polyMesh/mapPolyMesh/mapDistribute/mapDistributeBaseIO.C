@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,45 +35,102 @@ namespace Foam
 
 // The maps (labelListList) are not human-modifiable but if we need to
 // inspect them in ASCII, it is much more convenient if each sub-list
-// is flattened on a single line.
+// is flattened on a single line. Also reduce some extraneous newlines
+// for binary output.
 static Ostream& printMaps(Ostream& os, const labelListList& maps)
 {
-    if (os.format() == IOstreamOption::BINARY || maps.empty())
+    if (maps.empty())
     {
-        os  << maps;
+        os << maps;
     }
     else
     {
-        os  << nl << maps.size() << nl
-            << token::BEGIN_LIST << nl;
+        // Leading space (newline) handled by the caller
+        os << maps.size() << nl << token::BEGIN_LIST << nl;
 
-        // Compact single-line output for each labelList
-        for (const labelList& map : maps)
+        // Compact single-line output for each labelList (ascii)
+        // or with less whitespace (binary) - labelList is contiguous
+
+        for (const auto& list : maps)
         {
-            map.writeList(os) << nl;
+            if (os.format() == IOstreamOption::BINARY)
+            {
+                const label len = list.size();
+
+                os << len;
+                if (len)
+                {
+                    // write(...) includes surrounding start/end delimiters
+                    os.write(list.cdata_bytes(), list.size_bytes());
+                }
+                os << nl;
+            }
+            else
+            {
+                list.writeList(os) << nl;
+            }
         }
-        os  << token::END_LIST;
+        os << token::END_LIST;
     }
 
     return os;
 }
 
 
-static void writeMaps(Ostream& os, const word& key, const labelListList& maps)
+// Read from sub-dictionary
+static void readMapEntries
+(
+    const dictionary& dict,
+    const word& mapName,
+    bool& hasFlip,
+    labelListList& maps
+)
 {
-    if (os.format() == IOstreamOption::BINARY || maps.empty())
+    const auto& subdict = dict.subDict(mapName);
+
+    subdict.readEntry("flip", hasFlip);
+    subdict.readEntry("maps", maps);
+}
+
+
+// Write as sub-dictionary content
+static void writeMapEntries
+(
+    Ostream& os,
+    const word& mapName,
+    const bool hasFlip,
+    const labelListList& maps
+)
+{
+    os << nl;
+    os.beginBlock(mapName);
+    os.writeEntry("flip", hasFlip);
+    if (maps.empty())
     {
-        os.writeEntry(key, maps);
+        os.writeEntry("maps", maps);
     }
     else
     {
-        os  << indent << key;
+        os << indent << "maps" << nl;
         printMaps(os, maps);
         os.endEntry();
     }
+    os.endBlock();
 }
 
 } // End namespace Foam
+
+
+// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+
+void Foam::mapDistributeBase::writeMap
+(
+    Ostream& os,
+    const labelListList& mapElements
+)
+{
+    printMaps(os, mapElements) << nl;
+}
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -100,41 +157,30 @@ Foam::mapDistributeBase::mapDistributeBase(Istream& is)
 
 void Foam::mapDistributeBase::readDict(const dictionary& dict)
 {
-    constructSize_ = dict.get<label>("constructSize");
+    dict.readEntry("constructSize", constructSize_);
+    readMapEntries(dict, "subMap", subHasFlip_, subMap_);
+    readMapEntries(dict, "constructMap", constructHasFlip_, constructMap_);
+}
 
-    // The subMap
-    {
-        const dictionary& subdict = dict.subDict("subMap");
 
-        subdict.readEntry("flip", subHasFlip_);
-        subdict.readEntry("maps", subMap_);
-    }
+void Foam::mapDistributeBase::writeConstructMap(Ostream& os) const
+{
+    writeMap(os, constructMap_);
+}
 
-    // The constructMap
-    {
-        const dictionary& subdict = dict.subDict("constructMap");
 
-        subdict.readEntry("flip", constructHasFlip_);
-        subdict.readEntry("maps", constructMap_);
-    }
+void Foam::mapDistributeBase::writeSubMap(Ostream& os) const
+{
+    writeMap(os, subMap_);
 }
 
 
 void Foam::mapDistributeBase::writeEntries(Ostream& os) const
 {
     os.writeEntry("constructSize", constructSize_);
-
-    os << nl;
-    os.beginBlock("subMap");
-    os.writeEntry("flip", subHasFlip_);
-    writeMaps(os, "maps", subMap_);
-    os.endBlock();
-
-    os << nl;
-    os.beginBlock("constructMap");
-    os.writeEntry("flip", constructHasFlip_);
-    writeMaps(os, "maps", constructMap_);
-    os.endBlock();
+    //os.writeEntry("communicator", comm_);
+    writeMapEntries(os, "subMap", subHasFlip_, subMap_);
+    writeMapEntries(os, "constructMap", constructHasFlip_, constructMap_);
 }
 
 
@@ -155,14 +201,15 @@ Foam::Istream& Foam::operator>>(Istream& is, mapDistributeBase& map)
 
 Foam::Ostream& Foam::operator<<(Ostream& os, const mapDistributeBase& map)
 {
-    os  << map.constructSize_ << token::NL;
+    os  << map.constructSize() << nl;
 
-    printMaps(os, map.subMap_) << token::NL;
-    printMaps(os, map.constructMap_) << token::NL;
+    map.writeSubMap(os);
+    map.writeConstructMap(os);
 
-    os  << map.subHasFlip_ << token::SPACE
-        << map.constructHasFlip_ << token::SPACE
-        << map.comm_ << token::NL;
+    // Flips as y/n instead of 1/0 (readability)
+    os  << (map.subHasFlip() ? 'y' : 'n') << token::SPACE
+        << (map.constructHasFlip() ? 'y' : 'n') << token::SPACE
+        << map.comm() << nl;
 
     return os;
 }
@@ -181,11 +228,11 @@ Foam::Ostream& Foam::operator<<
 
     os.writeEntry("constructSize", map.constructSize());
 
-    os  << indent << "local  { flip " << map.subHasFlip()
+    os  << indent << "local  { flip " << (map.subHasFlip() ? 'y' : 'n')
         << "; sizes ";
     map.subMapSizes().writeList(os) << "; }" << nl;
 
-    os  << indent << "remote { flip " << map.constructHasFlip()
+    os  << indent << "remote { flip " << (map.constructHasFlip() ? 'y' : 'n')
         << "; sizes ";
     map.constructMapSizes().writeList(os) << "; }" << nl;
 

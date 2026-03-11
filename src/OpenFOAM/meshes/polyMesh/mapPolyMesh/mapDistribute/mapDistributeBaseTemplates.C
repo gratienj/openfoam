@@ -146,7 +146,7 @@ Foam::List<T> Foam::mapDistributeBase::accessAndFlip
 }
 
 
-template<class T, class negateOp>
+template<class T, class NegateOp>
 void Foam::mapDistributeBase::send
 (
     const labelListList& subMap,
@@ -161,7 +161,7 @@ void Foam::mapDistributeBase::send
     labelRange& recvRequests,
     PtrList<List<T>>& recvFields,
 
-    const negateOp& negOp,
+    const NegateOp& negOp,
     const int tag,
     const label comm
 )
@@ -305,7 +305,7 @@ void Foam::mapDistributeBase::send
 }
 
 
-template<class T, class CombineOp, class negateOp>
+template<class T, class CombineOp, class NegateOp>
 void Foam::mapDistributeBase::receive
 (
     const label constructSize,
@@ -315,7 +315,7 @@ void Foam::mapDistributeBase::receive
     const UPtrList<List<T>>& recvFields,
     List<T>& field,
     const CombineOp& cop,
-    const negateOp& negOp,
+    const NegateOp& negOp,
     const int tag,
     const label comm
 )
