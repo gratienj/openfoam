@@ -69,11 +69,15 @@ void Foam::AMIInterpolation::addToCache(const point& refPt)
 }
 
 
-bool Foam::AMIInterpolation::restoreCache(const point& refPt)
+bool Foam::AMIInterpolation::restoreCache
+(
+    const point& refPt,
+    const Time& runTime
+)
 {
     DebugInfo<< "-- restoreCache" << endl;
 
-    upToDate_ = cache_.restoreCache(refPt);
+    upToDate_ = cache_.restoreCache(refPt, runTime);
 
     return upToDate_;
 }

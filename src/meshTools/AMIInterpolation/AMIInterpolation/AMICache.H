@@ -83,8 +83,11 @@ private:
         label nThetaStencilMax_;
 
         //- Flag that values should always be cached if the bin is empty
-        //  even if a valid stencil an be created
+        //- even if a valid stencil an be created
         bool forceCache_;
+
+        //- Time value at which cache should be cleared; default = GREAT
+        scalar restartTime_;
 
         //- Flag to indicate that the cache is complete
         bool complete_;
@@ -280,8 +283,8 @@ public:
             return toSource_;
         }
 
-        //- Restore AMI weights and addressing from the cache
-        bool restoreCache(const point& globalPoint);
+        //- Clear the cache; preserves the size
+        void clearCache();
 
         //- Add AMI weights and addressing to the cache
         void addToCache
@@ -289,6 +292,9 @@ public:
             const AMIInterpolation& ami,
             const point& globalPoint
         );
+
+        //- Restore AMI weights and addressing from the cache
+        bool restoreCache(const point& globalPoint, const Time& runTime);
 
         //- Check cache index is within bounds
         void checkBounds(const label index) const

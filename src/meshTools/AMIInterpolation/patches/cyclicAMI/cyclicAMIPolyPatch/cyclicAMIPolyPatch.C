@@ -443,7 +443,7 @@ void Foam::cyclicAMIPolyPatch::resetAMI(const UList<point>& points) const
         }
 
         // Sets cache indices to use and time interpolation weight
-        restoredFromCache = AMIPtr_->restoreCache(refPt);
+        restoredFromCache = AMIPtr_->restoreCache(refPt, mesh.time());
 
         if (returnReduceOr(restoredFromCache, comm))
         {

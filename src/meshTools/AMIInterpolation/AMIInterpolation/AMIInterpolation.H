@@ -701,7 +701,7 @@ public:
             const;
 
             //- Restore AMI weights and addressing from the cache
-            bool restoreCache(const point& refPt);
+            bool restoreCache(const point& refPt, const Time& runTime);
 
             //- Add AMI weights and addressing to the cache
             void addToCache(const point& refPt);
