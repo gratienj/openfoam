@@ -688,12 +688,38 @@ Foam::vtk::vtuCells::polyFaceOffsets
         (output_ == contentType::HDF)
     );
 
-    const auto& offsets = polyFaceOffset_;
+    //const auto& offsets = polyFaceOffset_;
 
     if (syncPar && UPstream::parRun() && uses_beginEnd_style)
     {
         auto tresult = refPtr<labelList>::New();
         auto& result = tresult.ref();
+
+        // Can assume that we enter this branch when the outside caller
+        // has determined that polyhedrons are involved. So we can avoid
+        // any additional reduction here.
+        //
+        // For VTKHDF format, need to have PolyhedronOffsets defined
+        // everywhere as soon as *any* partition has polyhedrons.
+
+        // Slightly wasteful with the extra allocations here,
+        // but needed for the logic when concatenating the offsets.
+
+        labelList dummyOffsets;
+
+        if
+        (
+            (output_ == contentType::HDF)
+         && (polyFaceOffset_.empty() && nCells() > 0)
+        )
+        {
+            dummyOffsets.resize(nCells()+1, 0);
+        }
+
+        const auto& offsets =
+        (
+            dummyOffsets.empty() ? polyFaceOffset_ : dummyOffsets
+        );
 
         result = parCoordinatedOffsets(offsets, UPstream::worldComm);
 
@@ -719,6 +745,8 @@ Foam::vtk::vtuCells::polyFaceOffsets
     }
     else
     {
+        const auto& offsets = polyFaceOffset_;
+
         if (beginOffset <= 0)
         {
             return refPtr<labelList>(offsets);
