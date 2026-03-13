@@ -87,28 +87,7 @@ Foam::faMeshDistributor::distributeField
         distMap_.cellMap()  // area: faceMap (volume: cellMap)
     );
 
-    // Create dummy patches (to satisfy the GeometricField constructor)
-    PtrList<faPatchField<Type>> dummyPatches;
-    // #if (OPENFOAM <= 2601)
-    {
-        dummyPatches.resize(tgtMesh_.boundary().size());
-
-        forAll(dummyPatches, patchi)
-        {
-            dummyPatches.set
-            (
-                patchi,
-                new faPatchField<Type>
-                (
-                    tgtMesh_.boundary()[patchi],
-                    faPatchField<Type>::Internal::null(),
-                    Field<Type>()  // dummy only, no values
-                )
-            );
-        }
-    }
-
-    // The result (without the proper patch fields)
+    // The result (with placeholder patch fields)
     auto tresult = tmp<GeometricField<Type, faPatchField, areaMesh>>::New
     (
         DimensionedField<Type, areaMesh>
@@ -126,8 +105,7 @@ Foam::faMeshDistributor::distributeField
             fld.dimensions(),
             Field<Type>(fld.internalField(), mapper)
         ),
-        // Future: UPtrList<faPatchField<Type>>()
-        dummyPatches
+        UPtrList<faPatchField<Type>>()
     );
 
     tresult.ref().oriented() = fld.oriented();
@@ -241,28 +219,7 @@ Foam::faMeshDistributor::distributeField
         }
     }
 
-    // Create dummy patches (to satisfy the GeometricField constructor)
-    PtrList<faePatchField<Type>> dummyPatches;
-    // #if (OPENFOAM <= 2601)
-    {
-        dummyPatches.resize(tgtMesh_.boundary().size());
-
-        forAll(dummyPatches, patchi)
-        {
-            dummyPatches.set
-            (
-                patchi,
-                new faePatchField<Type>
-                (
-                    tgtMesh_.boundary()[patchi],
-                    faePatchField<Type>::Internal::null(),
-                    Field<Type>()  // dummy only, no values
-                )
-            );
-        }
-    }
-
-    // The result (without the proper patch fields)
+    // The result (with placeholder patch fields)
     auto tresult = tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
     (
         DimensionedField<Type, edgeMesh>
@@ -280,8 +237,7 @@ Foam::faMeshDistributor::distributeField
             fld.dimensions(),
             std::move(primitiveField)
         ),
-        // Future: UPtrList<faePatchField<Type>>()
-        dummyPatches
+        UPtrList<faePatchField<Type>>()
     );
 
     tresult.ref().oriented() = fld.oriented();

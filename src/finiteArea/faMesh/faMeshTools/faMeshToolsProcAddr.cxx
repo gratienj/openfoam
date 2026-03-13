@@ -89,6 +89,19 @@ static mapDistributePolyMesh createReconstructMap
     labelListList patchSubMap(numProc);
     patchSubMap[UPstream::masterNo()] = patchProcAddr;
 
+    bool edgeMapHasFlip = true;
+
+    // A '0' value : only occurs without encoding.
+    // Check for 0 or -ve values (faster) and then decide
+    if
+    (
+        auto i = ListOps::find_if(edgeProcAddr, labelRange::le0());
+        (i >= 0 && !edgeProcAddr[i])
+    )
+    {
+        edgeMapHasFlip = false;
+    }
+    UPstream::reduceAnd(edgeMapHasFlip);
 
     // Gather addressing on the master
     labelListList faceAddressing(numProc);
@@ -122,16 +135,15 @@ static mapDistributePolyMesh createReconstructMap
         Perr<< "new sizes"
             << " points:" << nNewPoints
             << " faces:" << nNewFaces
-            << " edges:" << nNewEdges << nl;
+            << " edges:" << nNewEdges
+            << " (flip:" << edgeMapHasFlip << ')' << nl;
         #endif
 
         mapDistribute faFaceMap
         (
             nNewFaces,
             std::move(faceSubMap),
-            std::move(faceAddressing),
-            false,  // subHasFlip
-            false   // constructHasFlip
+            std::move(faceAddressing)
         );
 
         mapDistribute faEdgeMap
@@ -140,7 +152,7 @@ static mapDistributePolyMesh createReconstructMap
             std::move(edgeSubMap),
             std::move(edgeAddressing),
             false,  // subHasFlip
-            false   // constructHasFlip
+            edgeMapHasFlip  // constructHasFlip
         );
 
         mapDistribute faPointMap
@@ -179,9 +191,7 @@ static mapDistributePolyMesh createReconstructMap
         (
             0,  // nNewFaces
             std::move(faceSubMap),
-            labelListList(numProc),     // constructMap
-            false,  // subHasFlip
-            false   // constructHasFlip
+            labelListList(numProc)      // constructMap
         );
 
         mapDistribute faEdgeMap
@@ -190,7 +200,7 @@ static mapDistributePolyMesh createReconstructMap
             std::move(edgeSubMap),
             labelListList(numProc),     // constructMap
             false,  // subHasFlip
-            false   // constructHasFlip
+            edgeMapHasFlip  // constructHasFlip
         );
 
         mapDistribute faPointMap
@@ -244,9 +254,9 @@ Foam::faMeshTools::readProcAddressing
         mesh.facesInstance(),
         faMesh::meshSubDir,
         mesh.thisDb(),
-        IOobject::READ_IF_PRESENT,
-        IOobject::NO_WRITE,
-        IOobject::NO_REGISTER
+        IOobjectOption::READ_IF_PRESENT,
+        IOobjectOption::NO_WRITE,
+        IOobjectOption::NO_REGISTER
     );
 
     //if (ioAddr.typeHeaderOk<labelIOList>(true))
@@ -330,13 +340,13 @@ void Foam::faMeshTools::writeProcAddressing
 
     IOobject ioAddr
     (
-        "procAddressing",
+        "proc-addressing",
         mesh.facesInstance(),
         faMesh::meshSubDir,
         (procMesh && !decompose ? procMesh->thisDb() : mesh.thisDb()),
-        IOobject::NO_READ,
-        IOobject::NO_WRITE,
-        IOobject::NO_REGISTER
+        IOobjectOption::NO_READ,
+        IOobjectOption::NO_WRITE,
+        IOobjectOption::NO_REGISTER
     );
 
 
@@ -366,8 +376,31 @@ void Foam::faMeshTools::writeProcAddressing
         map.cellMap().distribute(faceMap);
 
         // area:edges (volume:faces)
-        edgeMap = identity(map.nOldFaces());
-        map.faceMap().distribute(edgeMap);
+        {
+            const auto srcLen = map.nOldFaces();
+
+            const mapDistribute& distMap = map.faceMap();
+
+            if (distMap.hasAnyFlip())
+            {
+                // Offset by 1
+                edgeMap = Foam::identity(srcLen, 1);
+
+                distMap.mapDistributeBase::distribute
+                (
+                    UPstream::commsTypes::nonBlocking,
+                    edgeMap,
+                    flipLabelOp()   // Apply flips
+                );
+            }
+            else
+            {
+                // No edge encoding
+                edgeMap = Foam::identity(srcLen);
+
+                distMap.distribute(edgeMap);
+            }
+        }
 
         pointMap = identity(map.nOldPoints());
         map.distributePointData(pointMap);
@@ -375,7 +408,7 @@ void Foam::faMeshTools::writeProcAddressing
         patchMap = identity(map.patchMap().constructSize());
         map.patchMap().mapDistributeBase::distribute
         (
-            Pstream::commsTypes::nonBlocking,
+            UPstream::commsTypes::nonBlocking,
             label(-1),  // nullValue for new patches...
             patchMap,
             flipOp()    // negate op
@@ -391,8 +424,31 @@ void Foam::faMeshTools::writeProcAddressing
         map.cellMap().reverseDistribute(map.nOldCells(), faceMap);
 
         // area:edges (volume:faces)
-        edgeMap = identity(mesh.patch().nEdges());
-        map.faceMap().reverseDistribute(map.nOldFaces(), edgeMap);
+        {
+            const auto oldLen = map.nOldFaces();
+            const auto tgtLen = mesh.patch().nEdges();
+
+            const mapDistribute& distMap = map.faceMap();
+
+            if (distMap.hasAnyFlip())
+            {
+                // Offset by 1
+                edgeMap = Foam::identity(tgtLen, 1);
+
+                distMap.mapDistributeBase::reverseDistribute
+                (
+                    UPstream::commsTypes::nonBlocking,
+                    oldLen,
+                    edgeMap,
+                    flipLabelOp()   // Apply flips
+                );
+            }
+            else
+            {
+                edgeMap = Foam::identity(tgtLen);
+                distMap.reverseDistribute(oldLen, edgeMap);
+            }
+        }
 
         pointMap = identity(mesh.nPoints());
         map.pointMap().reverseDistribute(map.nOldPoints(), pointMap);
@@ -400,7 +456,7 @@ void Foam::faMeshTools::writeProcAddressing
         patchMap = identity(mesh.boundary().size());
         map.patchMap().mapDistributeBase::reverseDistribute
         (
-            Pstream::commsTypes::nonBlocking,
+            UPstream::commsTypes::nonBlocking,
             map.oldPatchSizes().size(),
             label(-1),  // nullValue for unmapped patches...
             patchMap
