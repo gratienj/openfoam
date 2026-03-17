@@ -27,6 +27,7 @@ License
 
 // OpenFOAM includes
 #include "error.H"
+#undef Log  // Avoid potential conflict with vtkLog...
 
 // VTK includes
 #include "vtkFloatArray.h"

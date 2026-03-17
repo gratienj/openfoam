@@ -51,6 +51,7 @@ SourceFiles
 #include "symmTensor.H"
 #include "MinMax.H"
 #include "foamVtkCore.H"
+#undef Log  // Avoid potential conflict with vtkLog...
 
 // VTK includes
 #include "vtkCellArray.h"

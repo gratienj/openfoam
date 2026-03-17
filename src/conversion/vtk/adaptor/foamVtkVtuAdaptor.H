@@ -51,6 +51,7 @@ SourceFiles
 #include "foamVtkTools.H"
 #include "foamVtkMeshMaps.H"
 #include "foamVtuSizing.H"
+#undef Log  // Avoid potential conflict with vtkLog...
 
 #include "vtkUnstructuredGrid.h"
 #include "vtkMultiBlockDataSet.h"
