@@ -70,12 +70,13 @@ protected:
     // Protected Member Functions
 
         //- Search for an object.
-        //    checkGlobal : also check undecomposed case
-        //    isFile      : true:check for file  false:check for directory
         fileName filePathInfo
         (
+            //! Also check undecomposed system/constant locations
+            //! (only for \c regular layout and Time::processorCase()).
             const bool checkGlobal,
-            const bool isFile,
+            //! True (check for file), False (check for directory)
+            const bool checkIsFile,
             const IOobject& io,
             const bool search
         ) const;
@@ -246,7 +247,8 @@ public:
             //- Search for an object
             virtual fileName filePath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject& io,
                 const word& typeName,  //!< currently unused
@@ -256,7 +258,8 @@ public:
             //- Search for a directory
             virtual fileName dirPath
             (
-                //! also check undecomposed case
+                //! Also check undecomposed system/constant locations
+                //! (only for \c regular layout and Time::processorCase()).
                 const bool checkGlobal,
                 const IOobject& io,
                 const bool search

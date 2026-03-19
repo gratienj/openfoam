@@ -51,7 +51,7 @@ Foam::IOstreamOption Foam::IOobject::parseHeader(const dictionary& headerDict)
     headerClassName_ = headerDict.get<word>("class");
 
     // The "object" entry is mandatory, but not actually used here
-    const word headerObject(headerDict.get<word>("object"));
+    (void)headerDict.get<word>("object");
 
     // The "note" entry is optional
     headerDict.readIfPresent("note", note_);
@@ -191,6 +191,10 @@ bool Foam::IOobject::readAndCheckHeader
     // Mark as not yet read. cf, IOobject::readHeader()
     headerClassName_.clear();
 
+    bool ok = false;        // Local status
+    bool mismatch = false;  // Matching expected vs read type?
+    fileName fName;         // The resolved file name
+
     // Everyone check or just master
     const bool masterOnly
     (
@@ -200,37 +204,27 @@ bool Foam::IOobject::readAndCheckHeader
 
     const auto& handler = Foam::fileHandler();
 
-    // Determine local status
-    bool ok = false;
-
     if (masterOnly)
     {
         if (UPstream::master())
         {
             // Force master-only header reading
-            const bool oldParRun = UPstream::parRun(false);
-            const fileName fName
-            (
-                handler.filePath(isGlobal, *this, typeName, search)
-            );
+            const auto oldParRun = UPstream::parRun(false);
+
+            fName = handler.filePath(isGlobal, *this, typeName, search);
             ok = handler.readHeader(*this, fName, typeName);
+
             UPstream::parRun(oldParRun);
 
-            if (ok && checkType && !isHeaderClass(typeName))
+            mismatch = (ok && checkType && !isHeaderClass(typeName));
+            if (mismatch)
             {
                 ok = false;
-                if (verbose)
-                {
-                    WarningInFunction
-                        << "Unexpected class name \"" << headerClassName()
-                        << "\" expected \"" << typeName
-                        << "\" when reading " << fName << endl;
-                }
             }
         }
 
-        // If masterOnly make sure all processors know about the read
-        // information. Note: should ideally be inside fileHandler...
+        // Make sure all processors know about the read information.
+        // Note: should ideally be inside fileHandler...
         Pstream::broadcasts
         (
             UPstream::worldComm,
@@ -242,23 +236,24 @@ bool Foam::IOobject::readAndCheckHeader
     else
     {
         // All read header
-        const fileName fName
-        (
-            handler.filePath(isGlobal, *this, typeName, search)
-        );
+        fName = handler.filePath(isGlobal, *this, typeName, search);
         ok = handler.readHeader(*this, fName, typeName);
 
-        if (ok && checkType && !isHeaderClass(typeName))
+        mismatch = (ok && checkType && !isHeaderClass(typeName));
+        if (mismatch)
         {
             ok = false;
-            if (verbose)
-            {
-                WarningInFunction
-                    << "Unexpected class name \"" << headerClassName()
-                    << "\" expected \"" << typeName
-                    << "\" when reading " << fName << endl;
-            }
         }
+    }
+
+    // Warn if the header class does not match the expected input.
+    // For master-only reading, only reports on the master.
+    if (mismatch && verbose)
+    {
+        WarningInFunction
+            << "Unexpected class name \"" << headerClassName()
+            << "\" expected \"" << typeName
+            << "\" when reading " << fName << endl;
     }
 
     return ok;
