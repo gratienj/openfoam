@@ -750,6 +750,11 @@ int main(int argc, char *argv[])
         "writeObj",
         "Write obj files showing the cyclic matching process"
     );
+    argList::addBoolOption
+    (
+        "fields",
+        "Read, map and write fields after repatching"
+    );
 
     argList::noFunctionObjects();  // Never use function objects
 
@@ -760,6 +765,9 @@ int main(int argc, char *argv[])
     const bool overwrite = args.found("overwrite");
 
     #include "createNamedMeshes.H"
+
+    // Read/write fields even in the absence of the "patchFields" entry
+    const bool writeFields = args.found("fields");
 
     const bool writeObj = args.found("writeObj");
 
@@ -910,7 +918,7 @@ int main(int argc, char *argv[])
         {
             const fvMesh& mesh = meshes[meshi];
 
-            bool noFields = true;
+            bool noFields = !writeFields;
             for (const auto& d : patchInfoDicts[meshi])
             {
                 if (d.found("patchFields"))
@@ -1509,6 +1517,28 @@ int main(int argc, char *argv[])
                 const dictionary& pfd = patchDict.subDict("patchFields");
                 fvMeshTools::setPatchFields(mesh, patchID, pfd);
             }
+        }
+
+        if (writeFields)
+        {
+            const word& fieldInst = runTime.timeName();
+            auto setInstance = [&fieldInst](auto& flds)
+            {
+                for (auto& fld : flds) { fld.instance() = fieldInst; }
+            };
+            // Volume fields.
+            setInstance(vsFlds[meshi]);
+            setInstance(vvFlds[meshi]);
+            setInstance(vstFlds[meshi]);
+            setInstance(vsymtFlds[meshi]);
+            setInstance(vtFlds[meshi]);
+
+            // Surface fields.
+            setInstance(ssFlds[meshi]);
+            setInstance(svFlds[meshi]);
+            setInstance(sstFlds[meshi]);
+            setInstance(ssymtFlds[meshi]);
+            setInstance(stFlds[meshi]);
         }
 
         Info<< "\n\nWriting repatched mesh " << mesh.name()
