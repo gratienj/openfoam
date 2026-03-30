@@ -90,8 +90,14 @@ public:
         //- Copy construct
         Vector(const Vector&) = default;
 
+        //- Move construct
+        Vector(Vector&&) = default;
+
         //- Copy assignment
         Vector& operator=(const Vector&) = default;
+
+        //- Move assignment
+        Vector& operator=(Vector&&) = default;
 
 
     // Constructors

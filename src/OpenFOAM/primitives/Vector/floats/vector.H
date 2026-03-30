@@ -32,7 +32,7 @@ Description
     where scalar is float/double depending on the compilation flags.
 
 SourceFiles
-    floatVectors.C
+    floatVectors.cxx
 
 \*---------------------------------------------------------------------------*/
 

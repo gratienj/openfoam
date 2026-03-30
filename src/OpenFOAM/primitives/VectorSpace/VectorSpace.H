@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,6 +32,11 @@ Description
 
     Template arguments are the Form the vector space will be used to create,
     the type of the elements and the number of elements.
+
+    The VectorSpace will normally contain trivial component types,
+    but since there are certain places that use/misuse Vector to store
+    a tuple of other things, we cannot categorically assert that the
+    components are "trivially copyable".
 
 SourceFiles
     VectorSpaceI.H
@@ -157,14 +162,17 @@ public:
         //- Default construct
         VectorSpace() = default;
 
+        //- Copy construct
+        VectorSpace(const VectorSpace&) = default;
+
+        //- Move construct
+        VectorSpace(VectorSpace&&) = default;
+
 
     // Constructors
 
         //- Construct initialized to zero
         inline VectorSpace(Foam::zero);
-
-        //- Copy construct
-        inline VectorSpace(const VectorSpace<Form, Cmpt, Ncmpts>& vs);
 
         //- Copy construct of a VectorSpace with the same size
         template<class Form2, class Cmpt2>
@@ -206,7 +214,12 @@ public:
         inline const Cmpt& operator[](const direction) const;
         inline Cmpt& operator[](const direction);
 
-        inline void operator=(const VectorSpace<Form, Cmpt, Ncmpts>&);
+        //- Copy assignment
+        VectorSpace& operator=(const VectorSpace&) = default;
+
+        //- Move assignment
+        VectorSpace& operator=(VectorSpace&&) = default;
+
         inline void operator+=(const VectorSpace<Form, Cmpt, Ncmpts>&);
         inline void operator-=(const VectorSpace<Form, Cmpt, Ncmpts>&);
 

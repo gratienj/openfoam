@@ -54,6 +54,12 @@ int main(int argc, char *argv[])
         << "complex(scalar) : " << complex(3.14519) << nl
         << nl;
 
+    static_assert(std::is_trivially_copyable_v<std::complex<double>>);
+    static_assert(std::is_trivially_copyable_v<Foam::complex>);
+    static_assert(std::is_trivially_copyable_v<Foam::vector>);
+    static_assert(std::is_trivially_copyable_v<Foam::tensor>);
+    static_assert(std::is_trivially_move_constructible_v<Foam::vector>);
+
     std::complex<scalar> c1(10, -3);
     Info<< "std::complex : " << c1 << nl;
     Info<< "sin: " << std::sin(c1) << nl;
