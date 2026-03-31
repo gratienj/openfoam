@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2023 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -100,6 +100,7 @@ Description
         legacy      | Legacy VTK output                     | no  | false
         precision   | Write precision in ascii         | no | same as IOstream
         directory   | The output directory name     | no | postProcessing/NAME
+        baseName    | The base name for output files     | no | <case>
         width       | Padding width for file name           | no  | 8
         decompose   | Decompose polyhedral cells            | no  | false
         writeIds    | Write cell,patch,proc id fields       | no  | false
@@ -165,6 +166,9 @@ class vtkWrite
 
         //- The output directory
         fileName outputDir_;
+
+        //- The base/stem for output files (default: <case>)
+        word outputBaseName_;
 
         //- The printf format for zero-padding names
         string printf_;

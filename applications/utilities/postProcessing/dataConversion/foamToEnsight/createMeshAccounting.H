@@ -43,7 +43,7 @@ List<PtrDynList<ensightFaMesh>> ensightMeshesFa(regionNames.size());
         const word& regionDir = polyMesh::regionName(regionName);
 
         fileName ensCasePath(outputDir);
-        word ensCaseName(args.globalCaseName());
+        word ensCaseName(outputBaseName);
 
         if (!regionDir.empty())
         {

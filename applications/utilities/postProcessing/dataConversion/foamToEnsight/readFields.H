@@ -31,7 +31,7 @@ Description
     for foamToEnsight
 
 SourceFiles
-    readFields.C
+    readFields.cxx
 
 \*---------------------------------------------------------------------------*/
 

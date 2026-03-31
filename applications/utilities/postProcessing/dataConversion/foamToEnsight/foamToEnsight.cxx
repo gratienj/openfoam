@@ -192,8 +192,14 @@ int main(int argc, char *argv[])
     (
         "name",
         "dir",
-        "Directory name for Ensight output (default: 'EnSight'),"
+        "Directory name for output (default: 'EnSight'),"
         " relative to case dir, or an absolute path."
+    );
+    argList::addOption
+    (
+        "base-name",
+        "name",
+        "The base/stem for output files (default: <case>)"
     );
     argList::addBoolOption
     (
@@ -469,6 +475,18 @@ int main(int argc, char *argv[])
             outputDir = args.globalPath()/dir;
         }
         outputDir.clean();  // Remove unneeded ".."
+    }
+
+    // The base name for naming output files - without directory!
+    word outputBaseName;
+    if (fileName fn; args.readIfPresent("base-name", fn) && !fn.empty())
+    {
+        fn.expand();
+        outputBaseName = fn.name();
+    }
+    else
+    {
+        outputBaseName = args.globalCaseName().name();
     }
 
     // ------------------------------------------------------------------------

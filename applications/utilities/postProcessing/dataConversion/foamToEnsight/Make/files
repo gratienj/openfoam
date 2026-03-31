@@ -1,4 +1,4 @@
-readFields.C
-foamToEnsight.C
+readFields.cxx
+foamToEnsight.cxx
 
 EXE = $(FOAM_APPBIN)/foamToEnsight

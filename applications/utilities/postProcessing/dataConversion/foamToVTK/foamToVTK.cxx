@@ -488,8 +488,14 @@ int main(int argc, char *argv[])
     (
         "name",
         "dir",
-        "Directory name for VTK output (default: 'VTK'),"
+        "Directory name for output (default: 'VTK'),"
         " relative to case dir, or an absolute path."
+    );
+    argList::addOption
+    (
+        "base-name",
+        "name",
+        "The base/stem for output files (default: <case>)"
     );
 
     // Prevent volume BCs from triggering finite-area
@@ -661,13 +667,23 @@ int main(int argc, char *argv[])
 
     fvMeshSubsetProxy::subsetType cellSubsetType = fvMeshSubsetProxy::NONE;
 
-    string vtkName = args.globalCaseName();
+    // The base name for naming output files - without directory!
+    word outputBaseName;
+    if (fileName fn; args.readIfPresent("base-name", fn) && !fn.empty())
+    {
+        fn.expand();
+        outputBaseName = fn.name();
+    }
+    else
+    {
+        outputBaseName = args.globalCaseName().name();
+    }
 
     if (regionNames.size() == 1)
     {
         if (args.readIfPresent("cellSet", cellSelectionName))
         {
-            vtkName = cellSelectionName;
+            outputBaseName = cellSelectionName;
             cellSubsetType = fvMeshSubsetProxy::SET;
 
             Info<< "Converting cellSet " << cellSelectionName
@@ -676,7 +692,7 @@ int main(int argc, char *argv[])
         }
         else if (args.readIfPresent("cellZone", cellSelectionName))
         {
-            vtkName = cellSelectionName;
+            outputBaseName = cellSelectionName;
             cellSubsetType = fvMeshSubsetProxy::ZONE;
 
             Info<< "Converting cellZone " << cellSelectionName
@@ -771,7 +787,7 @@ int main(int argc, char *argv[])
         // Accumulate information for multi-region VTM
         vtk::vtmWriter vtmMultiRegion;
 
-        // vtmMultiRegion.set(vtkDir/vtkName + timeDesc)
+        // vtmMultiRegion.set(dir/stem + timeDesc)
 
         forAll(regionNames, regioni)
         {
@@ -786,12 +802,9 @@ int main(int argc, char *argv[])
             auto& meshProxy = meshProxies[regioni];
             auto& vtuMeshCells = vtuMappings[regioni];
 
-            // polyMesh::readUpdateState meshState = mesh.readUpdate();
-
             // Check for new polyMesh/ and update mesh, fvMeshSubset
             // and cell decomposition.
-            polyMesh::readUpdateState meshState =
-                meshProxy.readUpdate();
+            polyMesh::readUpdateState meshState = meshProxy.readUpdate();
 
             const fvMesh& mesh = meshProxy.mesh();
 
@@ -904,7 +917,7 @@ int main(int argc, char *argv[])
         {
             fileName outputName
             (
-                outputDir/vtkName + "-regions" + timeDesc + ".vtm"
+                outputDir/outputBaseName + "-regions" + timeDesc + ".vtm"
             );
 
             vtmMultiRegion.setTime(timeValue);

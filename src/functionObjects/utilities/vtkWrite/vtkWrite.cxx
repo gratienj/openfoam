@@ -252,6 +252,21 @@ bool Foam::functionObjects::vtkWrite::read(const dictionary& dict)
     }
     outputDir_.clean();  // Remove unneeded ".."
 
+    // The base name for naming output files - without directory!
+    if (fileName fn; dict.readIfPresent("baseName", fn) && !fn.empty())
+    {
+        fn.expand();
+        outputBaseName_ = fn.name();
+    }
+    else
+    {
+        outputBaseName_.clear();
+    }
+    if (outputBaseName_.empty())
+    {
+        outputBaseName_ = time_.globalCaseName().name();
+    }
+
     return true;
 }
 
@@ -284,9 +299,6 @@ bool Foam::functionObjects::vtkWrite::write()
         return true;
     }
 
-
-    // The base for naming output files
-    const fileName vtkName = time_.globalCaseName();
 
     vtk::vtmWriter vtmMultiRegion;
 
@@ -355,7 +367,7 @@ bool Foam::functionObjects::vtkWrite::write()
 
         fileName vtmOutputBase
         (
-            outputDir_/regionDir/vtkName + timeDesc
+            outputDir_/regionDir/outputBaseName_ + timeDesc
         );
 
         // Combined internal + boundary in a vtm file
@@ -694,7 +706,7 @@ bool Foam::functionObjects::vtkWrite::write()
 
         // Collective output
 
-        if (Pstream::master())
+        if (UPstream::master())
         {
             // Naming for vtm, file series etc.
             fileName outputName(vtmOutputBase);
@@ -770,11 +782,11 @@ bool Foam::functionObjects::vtkWrite::write()
 
 
     // Emit multi-region vtm
-    if (Pstream::master() && meshes_.size() > 1)
+    if (UPstream::master() && meshes_.size() > 1)
     {
         fileName outputName
         (
-            outputDir_/vtkName + "-regions" + timeDesc + ".vtm"
+            outputDir_/outputBaseName_ + "-regions" + timeDesc + ".vtm"
         );
 
         vtmMultiRegion.setTime(timeValue);

@@ -58,7 +58,7 @@ Description
 
     fileName vtmOutputBase
     (
-        outputDir/regionDir/vtkName + timeDesc
+        outputDir/regionDir/outputBaseName + timeDesc
     );
 
     // Combined internal + boundary in a vtm file

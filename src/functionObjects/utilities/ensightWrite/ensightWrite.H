@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2023 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -101,6 +101,7 @@ Description
         format      | ascii or binary format                | no  | binary
         width       | Mask width for \c data/XXXX           | no  | 8
         directory   | The output directory name     | no | postProcessing/NAME
+        baseName    | The base name for output files | no | <case>
         overwrite   | Remove existing directory             | no  | false
         consecutive | Consecutive output numbering          | no  | false
         timeFormat  | Time format (ensight case)            | no  | scientific
@@ -179,6 +180,9 @@ class ensightWrite
 
         //- The output directory
         fileName outputDir_;
+
+        //- The base/stem for output files (default: <case>)
+        word outputBaseName_;
 
         //- Consecutive output numbering
         bool consecutive_;

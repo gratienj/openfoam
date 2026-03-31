@@ -52,6 +52,9 @@ subset
     //- These patches are uninteresting
     excludePatches ( inlet outlet frontAndBack );
 
+    //- Alternative output (stem) name
+    baseName    focus;
+
     // Region of interest
     selection
     {

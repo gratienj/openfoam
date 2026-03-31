@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -31,7 +31,7 @@ Description
 
     fileName vtmOutputBase
     (
-        outputDir/regionDir/vtkName + timeDesc
+        outputDir/regionDir/outputBaseName + timeDesc
     );
 
     // Naming

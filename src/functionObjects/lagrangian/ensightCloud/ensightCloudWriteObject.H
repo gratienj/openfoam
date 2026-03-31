@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2024 OpenCFD Ltd.
+    Copyright (C) 2024-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -94,6 +94,7 @@ Description
         format       | Format as ascii or binary        | no  | binary
         width        | Mask width for \c data/XXXX      | no  | 8
         directory    | The output directory name    | no | postProcessing/NAME
+        baseName     | The base name for output files   | no | <case>
         overwrite    | Remove existing directory        | no  | false
         consecutive  | Consecutive output numbering     | no  | false
         width        | Padding width for file name      | no  | 8
@@ -172,6 +173,9 @@ class ensightCloudWriteObject
         //- Output directory
         fileName outputDir_;
 
+        //- The base/stem for output files (default: <case>)
+        word outputBaseName_;
+
         //- Consecutive output numbering
         bool consecutive_;
 
@@ -213,13 +217,6 @@ class ensightCloudWriteObject
         );
 
 
-        //- No copy construct
-        ensightCloudWriteObject(const ensightCloudWriteObject&) = delete;
-
-        //- No copy assignment
-        void operator=(const ensightCloudWriteObject&) = delete;
-
-
 public:
 
     //- Runtime type information
@@ -235,6 +232,12 @@ public:
             const Time& runTime,
             const dictionary& dict
         );
+
+        //- No copy construct
+        ensightCloudWriteObject(const ensightCloudWriteObject&) = delete;
+
+        //- No copy assignment
+        void operator=(const ensightCloudWriteObject&) = delete;
 
 
     //- Destructor

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -196,6 +196,21 @@ bool Foam::functionObjects::ensightWrite::read(const dictionary& dict)
     }
     outputDir_.clean();  // Remove unneeded ".."
 
+    // The base name for naming output files - without directory!
+    if (fileName fn; dict.readIfPresent("baseName", fn) && !fn.empty())
+    {
+        fn.expand();
+        outputBaseName_ = fn.name();
+    }
+    else
+    {
+        outputBaseName_.clear();
+    }
+    if (outputBaseName_.empty())
+    {
+        outputBaseName_ = time_.globalCaseName().name();
+    }
+
     return true;
 }
 
@@ -212,7 +227,7 @@ bool Foam::functionObjects::ensightWrite::write()
     {
         ensCase_.reset
         (
-            new ensightCase(outputDir_, time_.globalCaseName(), caseOpts_)
+            new ensightCase(outputDir_, outputBaseName_, caseOpts_)
         );
     }
 
