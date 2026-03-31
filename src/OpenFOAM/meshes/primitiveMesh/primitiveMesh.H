@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2018-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -740,6 +741,11 @@ public:
             //- Check mesh geometry (& implicitly topology) for correctness.
             //  Returns false for no error.
             virtual bool checkGeometry(const bool report = false) const;
+
+            //- Check boundary patches (e.g. empty and wedge) for correct
+            //  functionality. Returns false for no error.
+            //  No-op at primitiveMesh level (no boundary patch knowledge).
+            virtual bool checkBoundary(const bool report = false) const;
 
             //- Check mesh for correctness. Returns false for no error.
             virtual bool checkMesh(const bool report = false) const;

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017, 2020 OpenFOAM Foundation
     Copyright (C) 2018-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -755,6 +756,13 @@ public:
                 const bool report = false,
                 const bool detailedReport = false
             ) const;
+
+            //- Check boundary patches (empty and wedge) for correct
+            //  functionality. Warns if 2D (empty) or wedge patches are
+            //  no longer geometrically consistent, e.g. after solid-body
+            //  motion in the thickness direction.
+            //  Returns false for no error.
+            virtual bool checkBoundary(const bool report = false) const;
 
             //- Check for face weights
             virtual bool checkFaceWeight

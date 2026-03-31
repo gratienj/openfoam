@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1821,11 +1822,21 @@ bool Foam::primitiveMesh::checkGeometry(const bool report) const
 }
 
 
+bool Foam::primitiveMesh::checkBoundary(const bool report) const
+{
+    // No boundary patch knowledge at primitiveMesh level - no-op
+    return false;
+}
+
+
 bool Foam::primitiveMesh::checkMesh(const bool report) const
 {
     DebugInFunction << "Checking primitiveMesh" << endl;
 
-    label nFailedChecks = checkTopology(report) + checkGeometry(report);
+    label nFailedChecks =
+        checkTopology(report)
+      + checkGeometry(report)
+      + checkBoundary(report);
 
     if (nFailedChecks)
     {

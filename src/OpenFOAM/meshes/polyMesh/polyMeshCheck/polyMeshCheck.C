@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
     Copyright (C) 2019-2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,6 +31,8 @@ License
 #include "polyMeshTools.H"
 #include "unitConversion.H"
 #include "syncTools.H"
+#include "emptyPolyPatch.H"
+#include "wedgePolyPatch.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -869,6 +872,105 @@ bool Foam::polyMesh::checkMeshMotion
     }
 
     return error;
+}
+
+
+bool Foam::polyMesh::checkBoundary(const bool report) const
+{
+    DebugInFunction << "Checking boundary patches" << endl;
+
+    label nFailedChecks = 0;
+
+    const polyBoundaryMesh& bm = boundaryMesh();
+
+    for (const polyPatch& pp : bm)
+    {
+        if (isA<emptyPolyPatch>(pp) && returnReduceOr(pp.size()))
+        {
+            // For 2D (empty) patches: all face normals must point in the
+            // same direction. A deviation indicates the mesh has been moved
+            // in the empty (thickness) direction, e.g. by solidBodyMotion.
+            const vectorField& fn = pp.faceNormals();
+
+            if (fn.size())
+            {
+                const vector refNormal(fn[0]);
+
+                for (const auto& fni : fn)
+                {
+                    if (mag(refNormal & fni) < (1 - SMALL))
+                    {
+                        ++nFailedChecks;
+
+                        if (debug || report)
+                        {
+                            WarningInFunction
+                                << "Empty patch '" << pp.name()
+                                << "' is not planar." << nl
+                                << "    This may be caused by solid body"
+                                   " motion in the 2D empty (thickness)"
+                                   " direction."
+                                << endl;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        else if (isA<wedgePolyPatch>(pp) && returnReduceOr(pp.size()))
+        {
+            // For wedge patches: all face normals must remain consistent
+            // with the wedge plane. Deviation indicates motion has broken
+            // the axisymmetric constraint.
+            const wedgePolyPatch& wpp = refCast<const wedgePolyPatch>(pp);
+            const vectorField& fn = wpp.faceNormals();
+
+            if (fn.size())
+            {
+                const vector avgNormal(gAverage(fn));
+
+                for (const auto& fni : fn)
+                {
+                    if (magSqr(fni - avgNormal) > SMALL)
+                    {
+                        ++nFailedChecks;
+
+                        if (debug || report)
+                        {
+                            WarningInFunction
+                                << "Wedge patch '" << pp.name()
+                                << "' is not planar." << nl
+                                << "    This may be caused by solid body"
+                                   " motion violating the wedge (axisymmetric)"
+                                   " constraint."
+                                << endl;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    reduce(nFailedChecks, sumOp<label>());
+
+    if (nFailedChecks)
+    {
+        if (debug || report)
+        {
+            Info<< "    Failed " << nFailedChecks
+                << " boundary patch checks." << endl;
+        }
+
+        return true;
+    }
+
+    if (debug || report)
+    {
+        Info<< "    Boundary patches OK." << endl;
+    }
+
+    return false;
 }
 
 
