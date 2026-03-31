@@ -312,18 +312,27 @@ void Foam::cyclicAMIPolyPatch::setAMIFaces()
     autoPtr<mapDistribute> srcToTgtMap1;
     autoPtr<mapDistribute> tgtToSrcMap1;
 
-    if (AMIPtr_->distributed() && AMIPtr_().comm() != -1)
+    if
+    (
+        const auto amiComm = AMIPtr_->comm();
+        (AMIPtr_->distributed() && amiComm != -1)
+    )
     {
        // Parallel running
 
         // Global index based on old patch sizes (when AMI was computed)
-        globalIndex globalSrcFaces0(srcToTgtAddr0.size(), AMIPtr_().comm());
-        globalIndex globalTgtFaces0(tgtToSrcAddr0.size(), AMIPtr_().comm());
+        const globalIndex globalSrcFaces0(srcToTgtAddr0.size(), amiComm);
+        const globalIndex globalTgtFaces0(tgtToSrcAddr0.size(), amiComm);
 
         // Global index based on new patch sizes
-        globalIndex globalSrcFaces1(size(), AMIPtr_().comm());
-        globalIndex globalTgtFaces1(nbr.size(), AMIPtr_().comm());
+        const globalIndex globalSrcFaces1(size(), amiComm);
+        const globalIndex globalTgtFaces1(nbr.size(), amiComm);
 
+        // Note: must use AMI sub-comm rank (not worldComm rank) because the
+        // globalIndex objects above were built from the AMI sub-communicator.
+        // inplaceToGlobal(labels) defaults to myProcNo(worldComm) which is
+        // WRONG when a processor's world rank != its AMI sub-comm rank.
+        const int amiRank = UPstream::myProcNo(amiComm);
 
         // Gather source side info
         // =======================
@@ -331,16 +340,18 @@ void Foam::cyclicAMIPolyPatch::setAMIFaces()
         // Note: using new global index for addressing, and distributed using
         // the old AMI map
         labelListList newTgtGlobalFaces(tgtFaceIDs_);
-        forAll(newTgtGlobalFaces, tgtFacei)
+        for (auto& tgtFaces : newTgtGlobalFaces)
         {
-            globalTgtFaces1.inplaceToGlobal(newTgtGlobalFaces[tgtFacei]);
+            globalTgtFaces1.inplaceToGlobal(amiRank, tgtFaces);
         }
         AMIPtr_->tgtMap().distribute(newTgtGlobalFaces);
 
         // Now have new tgt face indices for each src face
 
-        labelList globalSrcFaceIDs(identity(srcToTgtAddr0.size()));
-        globalSrcFaces0.inplaceToGlobal(globalSrcFaceIDs);
+        labelList globalSrcFaceIDs
+        (
+            Foam::identity(globalSrcFaces0.range(amiRank))
+        );
         AMIPtr_->srcMap().distribute(globalSrcFaceIDs);
         // globalSrcFaceIDs now has remote data for each srcFacei0 known to the
         // tgt patch
@@ -348,8 +359,10 @@ void Foam::cyclicAMIPolyPatch::setAMIFaces()
         List<List<point>> globalSrcCtrs0(srcCtr0);
         AMIPtr_->srcMap().distribute(globalSrcCtrs0);
 
-        labelList globalTgtFaceIDs(identity(tgtToSrcAddr0.size()));
-        globalTgtFaces0.inplaceToGlobal(globalTgtFaceIDs);
+        labelList globalTgtFaceIDs
+        (
+            Foam::identity(globalTgtFaces0.range(amiRank))
+        );
         AMIPtr_->tgtMap().distribute(globalTgtFaceIDs);
         // globalTgtFaceIDs now has remote data for each tgtFacei0 known to the
         // src patch
@@ -442,9 +455,9 @@ void Foam::cyclicAMIPolyPatch::setAMIFaces()
         // =======================
 
         labelListList newSrcGlobalFaces(srcFaceIDs_);
-        forAll(newSrcGlobalFaces, srcFacei)
+        for (auto& srcFaces : newSrcGlobalFaces)
         {
-            globalSrcFaces1.inplaceToGlobal(newSrcGlobalFaces[srcFacei]);
+            globalSrcFaces1.inplaceToGlobal(amiRank, srcFaces);
         }
 
         AMIPtr_->srcMap().distribute(newSrcGlobalFaces);
@@ -498,18 +511,32 @@ void Foam::cyclicAMIPolyPatch::setAMIFaces()
         }
 
         // Update the maps
+        // Note: must pass amiComm to mapDistribute so that the
+        // communicator matches the one used to build globalSrcFaces1 /
+        // globalTgtFaces1.  Without this, mapDistribute defaults to
+        // worldComm and calcCompactAddressing calls isLocal/whichProcID
+        // with a world-rank that exceeds the local-AMI globalIndex size,
+        // causing an out-of-range abort when localAMIComm is active.
         {
             List<Map<label>> cMap;
+            const int msgTag = UPstream::msgType();
             srcToTgtMap1.reset
             (
-                new mapDistribute(globalSrcFaces1, tgtToSrcAddr1, cMap)
+                new mapDistribute
+                (
+                    globalSrcFaces1, tgtToSrcAddr1, cMap, msgTag, amiComm
+                )
             );
         }
         {
             List<Map<label>> cMap;
+            const int msgTag = UPstream::msgType();
             tgtToSrcMap1.reset
             (
-                new mapDistribute(globalTgtFaces1, srcToTgtAddr1, cMap)
+                new mapDistribute
+                (
+                    globalTgtFaces1, srcToTgtAddr1, cMap, msgTag, amiComm
+                )
             );
         }
 
