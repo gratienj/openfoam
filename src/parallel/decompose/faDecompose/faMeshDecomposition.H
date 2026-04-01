@@ -74,55 +74,59 @@ class faMeshDecomposition
         //- Are there cyclic-parallel edges (not really used...)
         bool cyclicParallel_;
 
-        //- Processor label for each face
+        //- Emit edgeProcAddressing without turning index (2512 and earlier)
+        bool noEdgeEncoding_;
+
+        //- The target processor for each face
         labelList faceToProc_;
 
-        //- Face labels for each processor mesh
+        //- (per-processor) The mesh faceLabels
         labelListList procFaceLabels_;
 
-        //- Mapping of serial edgeId to processor local edgeLabe
+        //- (per-processor) Mapping of serial edgeId to local edgeLabel
         List<Map<label>> procMeshEdgesMap_;
 
-        //- Number of internal edges for each processor mesh
+        //- (per-processor) The number of internal edges
         labelList procNInternalEdges_;
 
-        //- Edge labels for patches of processor meshes
+        //- (per-processor) The edgeLabels for the boundary patches
         List<labelListList> procPatchEdgeLabels_;
 
+        //- (per-processor) Lookup of edgeLabel to serial edgeId
+        labelListList procPatchEdgeLookup_;
+
         //- Labels of points for each processor
-        labelListList procPatchPointAddressing_;
+        labelListList procPointAddressing_;
 
-        //- Labels of edges for each processor
-        labelListList procPatchEdgeAddressing_;
-
-        //- Labels of edges for each processor
+        //- Labels of edges for each processor. Includes directional
+        //- encoding: (-edge-1) = flipped; (edge+1) = not flipped.
         labelListList procEdgeAddressing_;
 
-        //- Labels of faces for each processor
+        //- Labels of faces for each processor.
+        //- No directional encoding
         labelListList procFaceAddressing_;
 
-        //- Original patch index for every processor patch
+        //- Original patch index for every processor patch.
+        //- An identity map for global boudaries, -1 otherwise.
         labelListList procBoundaryAddressing_;
 
-        //- Sizes for processor mesh patches
-        // Excludes inter-processor boundaries
-        labelListList procPatchSize_;
+        //- (per-processor) start/size for regular boundaries
+        List<List<labelRange>> procPatchRange_;
 
-        //- Start indices for processor patches
-        // Excludes inter-processor boundaries
-        labelListList procPatchStartIndex_;
+        //- (per-processor) start/size for processor boundaries
+        List<List<labelRange>> procProcessorPatchRange_;
 
-        //- Neighbour processor ID for inter-processor boundaries
+        //- (per-processor) the neighbProcNo for processor boundaries
         labelListList procNeighbourProcessors_;
-
-        //- Sizes for inter-processor patches
-        labelListList procProcessorPatchSize_;
-
-        //- Start indices for inter-processor patches
-        labelListList procProcessorPatchStartIndex_;
 
         //- List of globally shared point labels
         labelList globallySharedPoints_;
+
+
+    // Private Static Data
+
+        //- Disable use of edgeProcAddressing turning index
+        static bool disallowEdgeEncoding_;
 
 
     // Private Member Functions
@@ -131,8 +135,39 @@ class faMeshDecomposition
         //  Uses faMesh::faceLabels() and the finite-volume faceProcAddressing.
         void distributeFaces();
 
+        //- Write the addressing information
+        static void writeProcAddressing
+        (
+            const faMesh& procMesh,
+            const labelUList& faceProcAddr,
+            const labelUList& edgeProcAddr,
+            const labelUList& pointProcAddr,
+            const labelUList& boundaryProcAddr,
+            bool withoutEdgeEncoding
+        );
+
 
 public:
+
+    // Tuning switches
+
+        //- The enable/disable state for allowing encoding of
+        //- edgeProcAddressing edge flips (default: true)
+        static bool allowEdgeEncoding() noexcept
+        {
+            return (!disallowEdgeEncoding_);
+        }
+
+        //- Set enable/disable state for allowing edge flip encoding
+        static bool allowEdgeEncoding(bool on) noexcept
+        {
+            bool old(!disallowEdgeEncoding_);
+            disallowEdgeEncoding_ = (!on);
+            return old;
+        }
+
+
+    // Generated Methods
 
         //- No copy construct
         faMeshDecomposition(const faMeshDecomposition&) = delete;
@@ -195,6 +230,17 @@ public:
             return old;
         }
 
+        //- Is edge encoding disabled
+        bool noEdgeEncoding() const noexcept { return noEdgeEncoding_; }
+
+        //- Change the edge encoding flag
+        bool noEdgeEncoding(bool on) noexcept
+        {
+            bool old(noEdgeEncoding_);
+            noEdgeEncoding_ = on;
+            return old;
+        }
+
         //- Are global face zones used
         bool useGlobalFaceZones() const noexcept
         {
@@ -217,7 +263,7 @@ public:
     // Mappings
 
         //- Face-processor decomposition labels
-        const labelList& faceToProc() const noexcept
+        const labelUList& faceToProc() const noexcept
         {
             return faceToProc_;
         }

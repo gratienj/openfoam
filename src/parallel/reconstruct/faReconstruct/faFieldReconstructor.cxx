@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +29,7 @@ License
 #include "faFieldReconstructor.H"
 #include "areaFields.H"
 #include "edgeFields.H"
+#include "ListOps.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -51,8 +52,31 @@ Foam::faFieldReconstructor::faFieldReconstructor
     edgeProcAddressing_(edgeProcAddressing),
     faceProcAddressing_(faceProcAddressing),
     boundaryProcAddressing_(boundaryProcAddressing),
-    nReconstructed_(0)
-{}
+    nReconstructed_(0),
+    noEdgeEncoding_(false)
+{
+    // Does edgeProcAddressing use turning index?
+    // For 2512 and earlier: without a turning index.
+    // Detection as follows:
+    //  - none : +ve addresses only and a '0' address (2512 and earlier)
+    //  - with : -ve/+ve addresses but no '0' address
+    //  .
+    forAllReverse(edgeProcAddressing_, proci)
+    {
+        const auto& addr = edgeProcAddressing_[proci];
+
+        if (auto i = ListOps::find_if(addr, labelRange::le0()); i >= 0)
+        {
+            if (addr[i] == 0)
+            {
+                // The value '0' only occurs without edge encoding
+                noEdgeEncoding_ = true;
+            }
+            // else: -ve value - so definitely has edge encoding
+            break;
+        }
+    }
+}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

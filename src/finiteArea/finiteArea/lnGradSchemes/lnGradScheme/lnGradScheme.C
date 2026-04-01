@@ -106,23 +106,21 @@ lnGradScheme<Type>::lnGrad
     const faMesh& mesh = vf.mesh();
 
     // construct GeometricField<Type, faePatchField, edgeMesh>
-    tmp<GeometricField<Type, faePatchField, edgeMesh>> tssf
+    auto tssf = tmp<GeometricField<Type, faePatchField, edgeMesh>>::New
     (
-        new GeometricField<Type, faePatchField, edgeMesh>
+        IOobject
         (
-            IOobject
-            (
-                lnGradName + "("+vf.name()+')',
-                vf.instance(),
-                vf.db(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            vf.dimensions()*tdeltaCoeffs().dimensions()
-        )
+            lnGradName + "("+vf.name()+')',
+            vf.instance(),
+            vf.db(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh,
+        vf.dimensions()*tdeltaCoeffs().dimensions()
     );
-    GeometricField<Type, faePatchField, edgeMesh>& ssf = tssf.ref();
+    auto& ssf = tssf.ref();
+    ssf.setOriented();
 
     // set reference to difference factors array
     const scalarField& deltaCoeffs = tdeltaCoeffs().internalField();

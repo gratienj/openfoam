@@ -90,7 +90,7 @@ public:
 
 
     //- Destructor
-    virtual ~correctedLnGrad();
+    virtual ~correctedLnGrad() = default;
 
 
     // Member Functions

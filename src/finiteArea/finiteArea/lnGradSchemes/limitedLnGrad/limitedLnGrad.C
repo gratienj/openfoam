@@ -41,13 +41,6 @@ namespace Foam
 namespace fa
 {
 
-// * * * * * * * * * * * * * *< * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class Type>
-limitedLnGrad<Type>::~limitedLnGrad()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>

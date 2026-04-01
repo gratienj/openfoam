@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -98,7 +98,7 @@ const Foam::edgeVectorField& Foam::edgeInterpolation::correctionVectors() const
 {
     if (orthogonal())
     {
-        return tmp<edgeVectorField>::New
+        auto tfield = tmp<edgeVectorField>::New
         (
             IOobject
             (
@@ -107,8 +107,11 @@ const Foam::edgeVectorField& Foam::edgeInterpolation::correctionVectors() const
                 mesh().thisDb()
             ),
             mesh(),
-            dimensionedVector(dimless, Zero)
+            Foam::zero{},
+            dimless
         );
+        tfield.ref().setOriented();
+        return tfield;
     }
 
     return (*correctionVectorsPtr_);
@@ -131,7 +134,7 @@ Foam::edgeInterpolation::skewCorrectionVectors() const
 {
     if (!skew())
     {
-        return tmp<edgeVectorField>::New
+        auto tfield = tmp<edgeVectorField>::New
         (
             IOobject
             (
@@ -140,8 +143,11 @@ Foam::edgeInterpolation::skewCorrectionVectors() const
                 mesh().thisDb()
             ),
             mesh(),
-            dimensionedVector(dimless, Zero)
+            Foam::zero{},
+            dimless
         );
+        tfield.ref().setOriented();
+        return tfield;
     }
 
     return (*skewCorrectionVectorsPtr_);
@@ -204,7 +210,9 @@ void Foam::edgeInterpolation::makeLPN() const
         mesh(),
         dimLength
     );
-    edgeScalarField& lPN = *lPNptr_;
+    auto& lPN = *lPNptr_;
+    lPN.setOriented();
+
 
     // Set local references to mesh data
     const edgeVectorField& edgeCentres = mesh().edgeCentres();
@@ -247,12 +255,13 @@ void Foam::edgeInterpolation::makeLPN() const
     }
 
 
-    forAll(lPN.boundaryField(), patchI)
+    auto& bfieldRef = lPN.boundaryFieldRef();
+
+    forAll(bfieldRef, patchi)
     {
-        mesh().boundary()[patchI].makeLPN
-        (
-            lPN.boundaryFieldRef()[patchI]
-        );
+        const auto& p = mesh().boundary()[patchi];
+
+        p.makeLPN(bfieldRef[patchi]);
     }
 
 
@@ -273,7 +282,7 @@ void Foam::edgeInterpolation::makeWeights() const
     (
         IOobject
         (
-            "weightingFactors",
+            "weights",
             mesh().pointsInstance(),
             mesh().thisDb(),
             IOobject::NO_READ,
@@ -283,7 +292,8 @@ void Foam::edgeInterpolation::makeWeights() const
         mesh(),
         dimensionedScalar(dimless, 1)
     );
-    edgeScalarField& weightingFactors = *weightingFactorsPtr_;
+    auto& weightingFactors = *weightingFactorsPtr_;
+    weightingFactors.setOriented();
 
 
     // Set local references to mesh data
@@ -326,12 +336,13 @@ void Foam::edgeInterpolation::makeWeights() const
         }
     }
 
-    forAll(mesh().boundary(), patchI)
+    auto& bfieldRef = weightingFactors.boundaryFieldRef();
+
+    forAll(bfieldRef, patchi)
     {
-        mesh().boundary()[patchI].makeWeights
-        (
-            weightingFactors.boundaryFieldRef()[patchI]
-        );
+        const auto& p = mesh().boundary()[patchi];
+
+        p.makeWeights(bfieldRef[patchi]);
     }
 
     DebugInFunction
@@ -348,13 +359,13 @@ void Foam::edgeInterpolation::makeDeltaCoeffs() const
 
     // Force the construction of the weighting factors
     // needed to make sure deltaCoeffs are calculated for parallel runs.
-    weights();
+    (void)weights();
 
     differenceFactorsPtr_ = std::make_unique<edgeScalarField>
     (
         IOobject
         (
-            "differenceFactors",
+            "deltaCoeffs",
             mesh().pointsInstance(),
             mesh().thisDb(),
             IOobject::NO_READ,
@@ -364,7 +375,9 @@ void Foam::edgeInterpolation::makeDeltaCoeffs() const
         mesh(),
         dimensionedScalar(dimless/dimLength, SMALL)
     );
-    edgeScalarField& DeltaCoeffs = *differenceFactorsPtr_;
+    auto& DeltaCoeffs = *differenceFactorsPtr_;
+    DeltaCoeffs.setOriented();
+
     scalarField& dc = DeltaCoeffs.primitiveFieldRef();
 
     // Set local references to mesh data
@@ -427,13 +440,13 @@ void Foam::edgeInterpolation::makeDeltaCoeffs() const
         }
     }
 
+    auto& bfieldRef = DeltaCoeffs.boundaryFieldRef();
 
-    forAll(DeltaCoeffs.boundaryField(), patchI)
+    forAll(bfieldRef, patchi)
     {
-        mesh().boundary()[patchI].makeDeltaCoeffs
-        (
-            DeltaCoeffs.boundaryFieldRef()[patchI]
-        );
+        const auto& p = mesh().boundary()[patchi];
+
+        p.makeDeltaCoeffs(bfieldRef[patchi]);
     }
 }
 
@@ -458,7 +471,8 @@ void Foam::edgeInterpolation::makeCorrectionVectors() const
         mesh(),
         dimless
     );
-    edgeVectorField& CorrVecs = *correctionVectorsPtr_;
+    auto& CorrVecs = *correctionVectorsPtr_;
+    CorrVecs.setOriented();
 
     // Set local references to mesh data
     const areaVectorField& faceCentres = mesh().areaCentres();
@@ -506,11 +520,13 @@ void Foam::edgeInterpolation::makeCorrectionVectors() const
     }
 
 
-    edgeVectorField::Boundary& CorrVecsbf = CorrVecs.boundaryFieldRef();
+    auto& bfieldRef = CorrVecs.boundaryFieldRef();
 
-    forAll(CorrVecs.boundaryField(), patchI)
+    forAll(bfieldRef, patchi)
     {
-        mesh().boundary()[patchI].makeCorrectionVectors(CorrVecsbf[patchI]);
+        const auto& p = mesh().boundary()[patchi];
+
+        p.makeCorrectionVectors(bfieldRef[patchi]);
     }
 
 
@@ -540,7 +556,8 @@ void Foam::edgeInterpolation::makeSkewCorrectionVectors() const
         mesh(),
         dimensionedVector(dimless, Zero)
     );
-    edgeVectorField& SkewCorrVecs = *skewCorrectionVectorsPtr_;
+    auto& SkewCorrVecs = *skewCorrectionVectorsPtr_;
+    SkewCorrVecs.setOriented();
 
     // Set local references to mesh data
     const areaVectorField& C = mesh().areaCentres();
@@ -579,12 +596,11 @@ void Foam::edgeInterpolation::makeSkewCorrectionVectors() const
     }
 
 
-    edgeVectorField::Boundary& bSkewCorrVecs =
-        SkewCorrVecs.boundaryFieldRef();
+    auto& bfieldRef = SkewCorrVecs.boundaryFieldRef();
 
-    forAll(SkewCorrVecs.boundaryField(), patchI)
+    forAll(bfieldRef, patchI)
     {
-        faePatchVectorField& patchSkewCorrVecs = bSkewCorrVecs[patchI];
+        auto& patchSkewCorrVecs = bfieldRef[patchI];
 
         if (patchSkewCorrVecs.coupled())
         {

@@ -86,7 +86,9 @@ public:
                 (
                     const label sizeBeforeMapping,
                     const labelUList& addressingSlice,
-                    const label addressingOffset
+                    const label addressingOffset,
+                    //! Edge addressing without turning index (2512 and earlier)
+                    const bool noEdgeEncoding = false
                 );
 
 
@@ -138,7 +140,9 @@ public:
                 const labelUList& edgeOwner,
                 const labelUList& edgeNeigbour,
                 const labelUList& addressingSlice,
-                const bitSet& flip
+                const bitSet& flip,
+                //! Edge addressing without turning index (2512 and earlier)
+                const bool noEdgeEncoding = false
             );
 
 
@@ -186,7 +190,9 @@ public:
             processorEdgePatchFieldDecomposer
             (
                 label sizeBeforeMapping,
-                const labelUList& addressingSlice
+                const labelUList& addressingSlice,
+                //! Edge addressing without turning index (2512 and earlier)
+                const bool noEdgeEncoding = false
             );
 
 
@@ -254,20 +260,22 @@ private:
         //- Processor-patch edge field flipping (as -1/+1 multipliers)
         PtrList<scalarField> edgeSigns_;
 
-
-    // Private Member Functions
-
-        //- No copy construct
-        faFieldDecomposer(const faFieldDecomposer&) = delete;
-
-        //- No copy assignment
-        void operator=(const faFieldDecomposer&) = delete;
+        //- Has edgeProcAddressing without turning index (2512 and earlier)
+        bool noEdgeEncoding_;
 
 
 public:
 
     // Public Classes
     class fieldsCache;
+
+    // Generated Methods
+
+        //- No copy construct
+        faFieldDecomposer(const faFieldDecomposer&) = delete;
+
+        //- No copy assignment
+        void operator=(const faFieldDecomposer&) = delete;
 
 
     // Constructors
@@ -279,7 +287,9 @@ public:
             const faMesh& procMesh,             // Target mesh
             const labelUList& edgeAddressing,
             const labelUList& faceAddressing,
-            const labelUList& boundaryAddressing
+            const labelUList& boundaryAddressing,
+            //! Disable edge encoding (legacy)
+            const bool disableEdgeEncoding = false
         );
 
         //- Construct from components using information from the complete mesh
@@ -289,7 +299,9 @@ public:
             const faMesh& procMesh,             // Target mesh
             const labelUList& edgeAddressing,
             const labelUList& faceAddressing,
-            const labelUList& boundaryAddressing
+            const labelUList& boundaryAddressing,
+            //! Disable edge encoding (legacy)
+            const bool disableEdgeEncoding = false
         );
 
         //- Construct from components without the complete mesh
@@ -305,7 +317,9 @@ public:
             const faMesh& procMesh,             // Target mesh
             const labelUList& edgeAddressing,
             const labelUList& faceAddressing,
-            const labelUList& boundaryAddressing
+            const labelUList& boundaryAddressing,
+            //! Disable edge encoding (legacy)
+            const bool disableEdgeEncoding = false
         );
 
 
@@ -333,6 +347,16 @@ public:
             const labelUList& edgeNeigbour
         );
 
+        //- Is edge encoding disabled
+        bool noEdgeEncoding() const noexcept { return noEdgeEncoding_; }
+
+        //- Change the edge encoding flag
+        bool noEdgeEncoding(bool on) noexcept
+        {
+            bool old(noEdgeEncoding_);
+            noEdgeEncoding_ = on;
+            return old;
+        }
 
     // Mapping
 

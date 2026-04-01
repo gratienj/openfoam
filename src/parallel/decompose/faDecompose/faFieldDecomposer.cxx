@@ -34,7 +34,8 @@ Foam::faFieldDecomposer::patchFieldDecomposer::patchFieldDecomposer
 (
     const label sizeBeforeMapping,
     const labelUList& addressingSlice,
-    const label addressingOffset
+    const label addressingOffset,
+    const bool noEdgeEncoding
 )
 :
     sizeBeforeMapping_(sizeBeforeMapping),
@@ -42,11 +43,15 @@ Foam::faFieldDecomposer::patchFieldDecomposer::patchFieldDecomposer
 {
     forAll(directAddressing_, i)
     {
-// if constexpr (withTurningIndex_)
-        // Subtract one to align addressing.
-        // directAddressing_[i] -= addressingOffset + 1;
-        // ZT, 12/Nov/2010
-        directAddressing_[i] -= addressingOffset;
+        if (noEdgeEncoding)
+        {
+            directAddressing_[i] -= addressingOffset;
+        }
+        else
+        {
+            // Subtract one to align addressing.
+            directAddressing_[i] -= addressingOffset + 1;
+        }
     }
 }
 
@@ -58,7 +63,8 @@ processorAreaPatchFieldDecomposer
     const labelUList& owner,  // == mesh.edgeOwner()
     const labelUList& neigh,  // == mesh.edgeNeighbour()
     const labelUList& addressingSlice,
-    const bitSet& flip
+    const bitSet& flip,
+    const bool noEdgeEncoding
 )
 :
     sizeBeforeMapping_(nTotalFaces),
@@ -67,9 +73,12 @@ processorAreaPatchFieldDecomposer
     forAll(directAddressing_, i)
     {
         // Subtract one to align addressing.
-        label ai = addressingSlice[i];
-// if constexpr (withTurningIndex_)
-//         label ai = mag(addressingSlice[i]) - 1;
+        label ai = Foam::mag(addressingSlice[i]) - 1;
+        if (noEdgeEncoding)
+        {
+            // Compat: actually using addressing without a turning index
+            ai = addressingSlice[i];
+        }
 
         if (ai < neigh.size())
         {
@@ -77,8 +86,13 @@ processorAreaPatchFieldDecomposer
             // of the original mesh and now it has become a edge
             // on the parallel boundary
 
-// if constexpr (withTurningIndex_)
-            // if (addressingSlice[i] >= 0)
+            // With a turning index we can use
+            //     'if (addressingSlice[i] >= 0)'
+            // to decide the edge is not flipped. But we already have the
+            // flip information as a bitSet as well (for the noEdgeEncoding
+            // case). So resolve the redundancy in favour of just using the
+            // flip map.
+
             if (!flip.test(i))
             {
                 // We are the owner side so use the neighbour value
@@ -108,7 +122,8 @@ Foam::faFieldDecomposer::processorEdgePatchFieldDecomposer::
 processorEdgePatchFieldDecomposer
 (
     label sizeBeforeMapping,
-    const labelUList& addressingSlice
+    const labelUList& addressingSlice,
+    const bool noEdgeEncoding
 )
 :
     sizeBeforeMapping_(sizeBeforeMapping),
@@ -120,11 +135,14 @@ processorEdgePatchFieldDecomposer
         addressing_[i].resize(1);
         weights_[i].resize(1);
 
-// if constexpr (withTurningIndex_)
-//      addressing_[i][0] = mag(addressingSlice[i]) - 1;
-//      weights_[i][0] = sign(addressingSlice[i]);
-
-        addressing_[i][0] = mag(addressingSlice[i]);
+        if (noEdgeEncoding)
+        {
+            addressing_[i][0] = Foam::mag(addressingSlice[i]);
+        }
+        else
+        {
+            addressing_[i][0] = Foam::mag(addressingSlice[i]) - 1;
+        }
         weights_[i][0] = 1;
     }
 }
@@ -138,13 +156,15 @@ Foam::faFieldDecomposer::faFieldDecomposer
     const faMesh& procMesh,
     const labelUList& edgeAddressing,
     const labelUList& faceAddressing,
-    const labelUList& boundaryAddressing
+    const labelUList& boundaryAddressing,
+    const bool disableEdgeEncoding
 )
 :
     procMesh_(procMesh),
     edgeAddressing_(edgeAddressing),
     faceAddressing_(faceAddressing),
-    boundaryAddressing_(boundaryAddressing)
+    boundaryAddressing_(boundaryAddressing),
+    noEdgeEncoding_(disableEdgeEncoding)
 {}
 
 
@@ -154,7 +174,8 @@ Foam::faFieldDecomposer::faFieldDecomposer
     const faMesh& procMesh,
     const labelUList& edgeAddressing,
     const labelUList& faceAddressing,
-    const labelUList& boundaryAddressing
+    const labelUList& boundaryAddressing,
+    const bool disableEdgeEncoding
 )
 :
     faFieldDecomposer
@@ -163,7 +184,8 @@ Foam::faFieldDecomposer::faFieldDecomposer
         procMesh,
         edgeAddressing,
         faceAddressing,
-        boundaryAddressing
+        boundaryAddressing,
+        disableEdgeEncoding
     )
 {
     reset(completeMesh);
@@ -180,7 +202,8 @@ Foam::faFieldDecomposer::faFieldDecomposer
     const faMesh& procMesh,
     const labelUList& edgeAddressing,
     const labelUList& faceAddressing,
-    const labelUList& boundaryAddressing
+    const labelUList& boundaryAddressing,
+    const bool disableEdgeEncoding
 )
 :
     faFieldDecomposer
@@ -189,7 +212,8 @@ Foam::faFieldDecomposer::faFieldDecomposer
         procMesh,
         edgeAddressing,
         faceAddressing,
-        boundaryAddressing
+        boundaryAddressing,
+        disableEdgeEncoding
     )
 {
     reset(nTotalFaces, boundaryRanges, edgeOwner, edgeNeigbour);
@@ -234,7 +258,8 @@ void Foam::faFieldDecomposer::reset
     {
         const label oldPatchi = boundaryAddressing_[patchi];
         const faPatch& fap = procMesh_.boundary()[patchi];
-        const labelSubList localPatchSlice(fap.patchSlice(edgeAddressing_));
+        const auto patchEdgeAddr = fap.patchSlice(edgeAddressing_);
+        const auto patchEdgeOwner = fap.edgeOwner();
 
         if (oldPatchi >= 0)
         {
@@ -244,23 +269,36 @@ void Foam::faFieldDecomposer::reset
                 new patchFieldDecomposer
                 (
                     boundaryRanges[oldPatchi].size(),
-                    localPatchSlice,
-                    boundaryRanges[oldPatchi].start()
+                    patchEdgeAddr,
+                    boundaryRanges[oldPatchi].start(),
+                    noEdgeEncoding_
                 )
             );
         }
         else
         {
-            // No oldPatch - is processor patch. edgeAddressing_ does
-            // not have 'flip' sign so use the face map to see which side
-            // we've got.
-            flipMap.clear();
-            flipMap.resize(localPatchSlice.size());
+            // No oldPatch - is processor patch.
+            // The edgeAddressing_ may not have a 'flip' sign, so use the
+            // face map to see which side we've got.
+            //
+            // If edge is known (from the edgeAddressing_), could just use
+            // that and/or do an extra sanity check.
 
-            forAll(localPatchSlice, i)
+            flipMap.clear();
+            flipMap.resize(patchEdgeAddr.size());
+
+            forAll(patchEdgeAddr, i)
             {
-                const label ownFacei = faceAddressing_[fap.edgeFaces()[i]];
-                flipMap.set(i, (edgeOwner[localPatchSlice[i]] != ownFacei));
+                const label serialEdgei =
+                (
+                    noEdgeEncoding_
+                  ? patchEdgeAddr[i]
+                  : (Foam::mag(patchEdgeAddr[i])-1)
+                );
+
+                // The procMesh face mapped to completeMesh
+                const label ownFacei = faceAddressing_[patchEdgeOwner[i]];
+                flipMap.set(i, (edgeOwner[serialEdgei] != ownFacei));
             }
 
             processorAreaPatchFieldDecomposers_.set
@@ -271,8 +309,9 @@ void Foam::faFieldDecomposer::reset
                     nTotalFaces,
                     edgeOwner,
                     edgeNeigbour,
-                    localPatchSlice,
-                    flipMap
+                    patchEdgeAddr,
+                    flipMap,
+                    noEdgeEncoding_
                 )
             );
 
@@ -282,12 +321,13 @@ void Foam::faFieldDecomposer::reset
                 new processorEdgePatchFieldDecomposer
                 (
                     procMesh_.boundary()[patchi].size(),
-                    localPatchSlice
+                    patchEdgeAddr,
+                    noEdgeEncoding_
                 )
             );
 
-            auto& s = edgeSigns_.emplace_set(patchi, localPatchSlice.size());
-            forAll(localPatchSlice, i)
+            auto& s = edgeSigns_.emplace_set(patchi, patchEdgeAddr.size());
+            forAll(patchEdgeAddr, i)
             {
                 s[i] = (flipMap.test(i) ? -1 : 1);
             }
@@ -298,92 +338,23 @@ void Foam::faFieldDecomposer::reset
 
 void Foam::faFieldDecomposer::reset(const faMesh& completeMesh)
 {
-    const label nMappers = procMesh_.boundary().size();
-
-    patchFieldDecomposers_.resize_null(nMappers);
-    processorAreaPatchFieldDecomposers_.resize_null(nMappers);
-    processorEdgePatchFieldDecomposers_.resize_null(nMappers);
-    edgeSigns_.resize_null(nMappers);
-
     // Create weightings now - needed for proper parallel synchronization
     //// (void)completeMesh.weights();
     // Disabled the above (2022-04-04)
     // Use weights if they already exist, otherwise simply ignore
 
-    // faPatches don't have their own start() - so these are invariant
-    const labelList completePatchStarts
+    const List<labelRange> boundaryRanges
     (
-        completeMesh.boundary().patchStarts()
+        completeMesh.boundary().patchRanges()
     );
 
-    const auto& edgeOwner = completeMesh.edgeOwner();
-    const auto& edgeNeighbour = completeMesh.edgeNeighbour();
-
-    bitSet flipMap;
-
-    forAll(boundaryAddressing_, patchi)
-    {
-        const label oldPatchi = boundaryAddressing_[patchi];
-        const faPatch& fap = procMesh_.boundary()[patchi];
-        const labelSubList localPatchSlice(fap.patchSlice(edgeAddressing_));
-
-        if (oldPatchi >= 0)
-        {
-            patchFieldDecomposers_.set
-            (
-                patchi,
-                new patchFieldDecomposer
-                (
-                    completeMesh.boundary()[oldPatchi].size(),
-                    localPatchSlice,
-                    completePatchStarts[oldPatchi]
-                )
-            );
-        }
-        else
-        {
-            // No oldPatch - is processor patch. edgeAddressing_ does
-            // not have 'flip' sign so use the face map to see which side
-            // we've got.
-            flipMap.clear();
-            flipMap.resize(localPatchSlice.size());
-
-            forAll(localPatchSlice, i)
-            {
-                const label ownFacei = faceAddressing_[fap.edgeFaces()[i]];
-                flipMap.set(i, (edgeOwner[localPatchSlice[i]] != ownFacei));
-            }
-
-            processorAreaPatchFieldDecomposers_.set
-            (
-                patchi,
-                new processorAreaPatchFieldDecomposer
-                (
-                    completeMesh.nFaces(),
-                    edgeOwner,
-                    edgeNeighbour,
-                    localPatchSlice,
-                    flipMap
-                )
-            );
-
-            processorEdgePatchFieldDecomposers_.set
-            (
-                patchi,
-                new processorEdgePatchFieldDecomposer
-                (
-                    procMesh_.boundary()[patchi].size(),
-                    localPatchSlice
-                )
-            );
-
-            auto& s = edgeSigns_.emplace_set(patchi, localPatchSlice.size());
-            forAll(localPatchSlice, i)
-            {
-                s[i] = (flipMap.test(i) ? -1 : 1);
-            }
-        }
-    }
+    reset
+    (
+        completeMesh.nFaces(),  // nTotalFaces
+        boundaryRanges,
+        completeMesh.edgeOwner(),
+        completeMesh.edgeNeighbour()
+    );
 }
 
 

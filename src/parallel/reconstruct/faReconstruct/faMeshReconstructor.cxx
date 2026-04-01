@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,6 +36,8 @@ License
 
 int Foam::faMeshReconstructor::debug = 0;
 
+bool Foam::faMeshReconstructor::disallowEdgeEncoding_ = false;
+
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -53,7 +55,7 @@ void Foam::faMeshReconstructor::calcAddressing
 
     const label nPatches = procMesh_.boundary().size();
 
-    faBoundaryProcAddr_ = identity(nPatches);
+    faBoundaryProcAddr_ = Foam::identity(nPatches);
 
     // Mark processor patches
     faBoundaryProcAddr_.slice(procMesh_.boundary().nNonProcessor()) = -1;
@@ -70,7 +72,7 @@ void Foam::faMeshReconstructor::calcAddressing
     for (label& facei : faFaceProcAddr_)
     {
         // Use finiteVolume info, ignoring face flips
-        facei = mag(fvFaceProcAddr[facei])-1;
+        facei = Foam::mag(fvFaceProcAddr[facei])-1;
     }
 
 
@@ -110,7 +112,7 @@ void Foam::faMeshReconstructor::calcAddressing
 
             labelList procTargets(globalFaceNum.totalSize());
 
-            for (const label proci : UPstream::allProcs())
+            for (auto proci : UPstream::allProcs())
             {
                 labelList::subList
                 (
@@ -131,7 +133,7 @@ void Foam::faMeshReconstructor::calcAddressing
             }
 
             // Send the local portions
-            for (const int proci : UPstream::subProcs())
+            for (auto proci : UPstream::subProcs())
             {
                 SubList<label> localOrder
                 (
@@ -196,7 +198,6 @@ void Foam::faMeshReconstructor::calcAddressing
 
     const uindirectPrimitivePatch& procPatch = procMesh_.patch();
 
-
     {
         faceList singlePatchProcFaces;  // [proc0faces, proc1faces ...]
         labelList uniqueMeshPointLabels;
@@ -214,13 +215,8 @@ void Foam::faMeshReconstructor::calcAddressing
             );
 
         // Gather faces, renumbered for the *merged* points
-        faceList tmpFaces(globalFaceNum.localSize());
-
-        forAll(tmpFaces, facei)
-        {
-            tmpFaces[facei] =
-                face(pointToGlobal, procPatch.localFaces()[facei]);
-        }
+        faceList tmpFaces(procPatch.localFaces());
+        ListListOps::inplaceRenumber(pointToGlobal, tmpFaces);
 
         globalFaceNum.gather
         (
@@ -308,7 +304,8 @@ void Foam::faMeshReconstructor::calcAddressing
     faEdgeProcAddr_.resize(procMesh_.nEdges(), -1);
 
     {
-        EdgeMap<label> globalEdgeMapping(2*onePatch.nEdges());
+        EdgeMap<label> globalEdgeMapping;
+        globalEdgeMapping.reserve(onePatch.nEdges());
 
         // Pass 1: edge-hash lookup with edges in "natural" patch order
 
@@ -326,11 +323,28 @@ void Foam::faMeshReconstructor::calcAddressing
         {
             const edge globalEdge(faPointProcAddr_, procPatch.edges()[edgei]);
 
-            const auto fnd = globalEdgeMapping.cfind(globalEdge);
-
-            if (fnd.good())
+            if (auto iter = globalEdgeMapping.cfind(globalEdge); iter.good())
             {
-                faEdgeProcAddr_[edgei] = fnd.val();
+                auto globalEdgei = iter.val();
+
+                // Check procMesh face correspondence in onePatch to
+                // check if flipping is involved
+                const bool isOwnerEdge
+                (
+                    onePatch.edgeOwner(globalEdgei)
+                 == faFaceProcAddr_[procPatch.edgeOwner(edgei)]
+                );
+
+                if (isOwnerEdge)
+                {
+                    // Owner - no flipping
+                    faEdgeProcAddr_[edgei] = (globalEdgei + 1);
+                }
+                else
+                {
+                    // Neighbour - flipped
+                    faEdgeProcAddr_[edgei] = -(globalEdgei + 1);
+                }
             }
             else
             {
@@ -350,7 +364,8 @@ void Foam::faMeshReconstructor::calcAddressing
     // Gather edge ids for nonProcessor boundaries.
     // These will also be in the serial geometry
 
-    Map<label> remapGlobal(2*onePatch.nEdges());
+    Map<label> remapGlobal;
+    remapGlobal.reserve(onePatch.nEdges());
     for (label edgei = 0; edgei < onePatch.nInternalEdges(); ++edgei)
     {
         remapGlobal.insert(edgei, remapGlobal.size());
@@ -370,17 +385,19 @@ void Foam::faMeshReconstructor::calcAddressing
             continue;
         }
 
-        labelList& patchEdgeLabels = singlePatchEdgeLabels_[patchi];
-        patchEdgeLabels = fap.edgeLabels();
+        DynamicList<label> patchEdgeLabels;
+        patchEdgeLabels.reserve(fap.nEdges());
 
-        // Renumber from local edges to global edges (natural order)
-        for (label& edgeId : patchEdgeLabels)
+        // Transcribe from local edges to global edges (natural order)
+        for (auto patchEdgei : fap.edgeLabels())
         {
-            edgeId = faEdgeProcAddr_[edgeId];
-        }
+            const label globalEdgei =
+            (
+                (Foam::mag(faEdgeProcAddr_[patchEdgei])-1)
+            );
 
-        // OR patchEdgeLabels =
-        // UIndirectList<label>(faEdgeProcAddr_, fap.edgeLabels());
+            patchEdgeLabels.push_back(globalEdgei);
+        }
 
         // Combine from all processors
         Pstream::combineReduce(patchEdgeLabels, ListOps::appendEqOp<label>());
@@ -392,10 +409,13 @@ void Foam::faMeshReconstructor::calcAddressing
         {
             remapGlobal.insert(sortedEdgei, remapGlobal.size());
         }
+
+        singlePatchEdgeLabels_[patchi] = std::move(patchEdgeLabels);
     }
 
     {
-        // Use the map to rewrite the local faEdgeProcAddr_
+        // Use the map to rewrite faEdgeProcAddr_ from natural order
+        // to faMesh edge order
 
         labelList newEdgeProcAddr(faEdgeProcAddr_);
 
@@ -405,13 +425,26 @@ void Foam::faMeshReconstructor::calcAddressing
         {
             for (const label patchEdgei : fap.edgeLabels())
             {
-                const label globalEdgei = faEdgeProcAddr_[patchEdgei];
+                // Preserve flip information.
+                const bool isOwnerEdge(faEdgeProcAddr_[patchEdgei] >= 0);
 
-                const auto fnd = remapGlobal.cfind(globalEdgei);
-                if (fnd.good())
+                const label globalEdgei =
+                    (Foam::mag(faEdgeProcAddr_[patchEdgei])-1);
+
+                if (auto iter = remapGlobal.cfind(globalEdgei); iter.good())
                 {
-                    newEdgeProcAddr[edgei] = fnd.val();
-                    ++edgei;
+                    auto faMeshEdgei = iter.val();
+
+                    if (isOwnerEdge)
+                    {
+                        // Owner side
+                        newEdgeProcAddr[edgei] = (faMeshEdgei+1);
+                    }
+                    else
+                    {
+                        // Neighbour side
+                        newEdgeProcAddr[edgei] = -(faMeshEdgei+1);
+                    }
                 }
                 else
                 {
@@ -420,6 +453,7 @@ void Foam::faMeshReconstructor::calcAddressing
                         << " this indicates a programming error" << nl
                         << exit(FatalError);
                 }
+                ++edgei;
             }
         }
 
@@ -463,9 +497,9 @@ void Foam::faMeshReconstructor::createMesh()
 
                 *serialRunTime_,
 
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
+                IOobjectOption::NO_READ,
+                IOobjectOption::NO_WRITE,
+                IOobjectOption::NO_REGISTER
             ),
             pointField(singlePatchPoints_),  // copy
             faceList(singlePatchFaces_),     // copy
@@ -541,7 +575,8 @@ Foam::faMeshReconstructor::faMeshReconstructor
 )
 :
     procMesh_(procMesh),
-    errors_(0)
+    errors_(false),
+    noEdgeEncoding_(disallowEdgeEncoding_)
 {
     if (!UPstream::parRun())
     {
@@ -568,14 +603,14 @@ Foam::faMeshReconstructor::faMeshReconstructor
         procMesh_.mesh(),    // The polyMesh db
 
         readVolAddressing,   // Read option
-        IOobject::NO_WRITE,
-        IOobject::NO_REGISTER
+        IOobjectOption::NO_WRITE,
+        IOobjectOption::NO_REGISTER
     );
 
     // Require faceProcAddressing from finiteVolume decomposition
     labelIOList fvFaceProcAddr(ioAddr);
 
-    // Check if any/all where read.
+    // Check if any/all were read.
     // Use 'headerClassName' for checking
     bool fileOk
     (
@@ -591,7 +626,7 @@ Foam::faMeshReconstructor::faMeshReconstructor
     }
     else
     {
-        errors_ = 1;
+        errors_ = true;
     }
 }
 
@@ -603,7 +638,8 @@ Foam::faMeshReconstructor::faMeshReconstructor
 )
 :
     procMesh_(procMesh),
-    errors_(0)
+    errors_(false),
+    noEdgeEncoding_(disallowEdgeEncoding_)
 {
     if (!UPstream::parRun())
     {
@@ -677,7 +713,8 @@ void Foam::faMeshReconstructor::writeAddressing
     const labelUList& faBoundaryProcAddr,
     const labelUList& faFaceProcAddr,
     const labelUList& faPointProcAddr,
-    const labelUList& faEdgeProcAddr
+    const labelUList& faEdgeProcAddr,
+    bool withoutEdgeEncoding
 )
 {
     // Write copies
@@ -685,45 +722,62 @@ void Foam::faMeshReconstructor::writeAddressing
     IOobject ioAddr(io);
 
     // boundaryProcAddressing
-    ioAddr.rename("boundaryProcAddressing");
-    IOList<label>::writeContents(ioAddr, faBoundaryProcAddr);
+    ioAddr.resetHeader("boundaryProcAddressing");
+    labelIOList::writeContents(ioAddr, faBoundaryProcAddr);
 
     // faceProcAddressing
-    ioAddr.rename("faceProcAddressing");
-    IOList<label>::writeContents(ioAddr, faFaceProcAddr);
+    ioAddr.resetHeader("faceProcAddressing");
+    labelIOList::writeContents(ioAddr, faFaceProcAddr);
 
     // pointProcAddressing
-    ioAddr.rename("pointProcAddressing");
-    IOList<label>::writeContents(ioAddr, faPointProcAddr);
+    ioAddr.resetHeader("pointProcAddressing");
+    labelIOList::writeContents(ioAddr, faPointProcAddr);
 
     // edgeProcAddressing
-    ioAddr.rename("edgeProcAddressing");
-    IOList<label>::writeContents(ioAddr, faEdgeProcAddr);
+    ioAddr.resetHeader("edgeProcAddressing");
+    if (withoutEdgeEncoding)
+    {
+        ioAddr.note() = "no edge encoding";
+
+        // Compat: remove any direction encoding (2512 and earlier)
+        const auto& input = faEdgeProcAddr;
+        labelList plainAddressing(input.size());
+
+        for (label i = 0; i < input.size(); ++i)
+        {
+            plainAddressing[i] = (Foam::mag(input[i])-1);
+        }
+        labelIOList::writeContents(ioAddr, plainAddressing);
+    }
+    else
+    {
+        labelIOList::writeContents(ioAddr, faEdgeProcAddr);
+    }
 }
 
 
 void Foam::faMeshReconstructor::writeAddressing(const word& timeName) const
 {
     // Write copies
-
     IOobject ioAddr
     (
         "procAddressing",
         timeName,
         faMesh::meshSubDir,
         procMesh_.thisDb(),
-        IOobject::NO_READ,
-        IOobject::NO_WRITE,
-        IOobject::NO_REGISTER
+        IOobjectOption::NO_READ,
+        IOobjectOption::NO_WRITE,
+        IOobjectOption::NO_REGISTER
     );
 
     writeAddressing
     (
         ioAddr,
         faBoundaryProcAddr_,
-        faFaceProcAddr_,
+        faEdgeProcAddr_,
         faPointProcAddr_,
-        faEdgeProcAddr_
+        faEdgeProcAddr_,
+        noEdgeEncoding_  // Disable edge encoding (legacy)
     );
 }
 
@@ -754,7 +808,7 @@ void Foam::faMeshReconstructor::writeMesh
         IOobject io(fullMesh.boundary());
 
         io.rename("faceLabels");
-        IOList<label>::writeContents(io, singlePatchFaceLabels);
+        labelIOList::writeContents(io, singlePatchFaceLabels);
 
         fullMesh.boundary().write();
 
