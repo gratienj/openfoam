@@ -147,10 +147,10 @@ private:
     // Private Static Data
 
         //- Filtering of processorsDDD directories (in parallel):
-        //      - >0 : only accept processorsDDD (default)
-        //      -  0 : accept anything (e.g. when detecting nprocs from
-        //             directory naming)
-        //      - -1 : use nProcs(UPstream::worldComm)
+        //  -  0 : no filtering
+        //  - >0 : accept the specified number of processors
+        //  - -1 : uses \c UPstream::nProcs(UPstream::worldComm) [default]
+        //  .
         static int nProcsFilter_;
 
 
@@ -460,18 +460,22 @@ public:
             return old;
         }
 
-        //- Return collated 'processorsDDD' filtering
+        //- Return current collated 'processorsDDD' filtering value
         static int nProcsFilter() noexcept
         {
             return nProcsFilter_;
         }
 
         //- Set collated 'processorsDDD' filtering (0 = off).
+        //  -  0 : no filtering
+        //  - >0 : accept the specified number of processors
+        //  - -1 : uses \c UPstream::nProcs(UPstream::worldComm) [default]
+        //  .
         //  \return the previous value
-        static int nProcsFilter(int level) noexcept
+        static int nProcsFilter(int value) noexcept
         {
             int old(nProcsFilter_);
-            nProcsFilter_ = level;
+            nProcsFilter_ = value;
             return old;
         }
 
@@ -920,7 +924,7 @@ public:
             virtual void sync();
 
             //- Generate path (like io.path) from root+casename with any
-            //  'processorXXX' replaced by procDir (usually 'processsors')
+            //- 'processorXXX' replaced by procDir (usually 'processors')
             fileName processorsCasePath
             (
                 const IOobject& io,
@@ -928,7 +932,7 @@ public:
             ) const;
 
             //- Generate path (like io.path) with provided instance and any
-            //  'processorXXX' replaced by procDir (usually 'processsors')
+            //- 'processorXXX' replaced by procDir (usually 'processors')
             fileName processorsPath
             (
                 const IOobject& io,
@@ -948,7 +952,8 @@ public:
             //    collated processors equivalence
             static label splitProcessorPath
             (
-                const fileName& objectPath,
+                //! [in] The file/directory name to parse
+                const fileName& objPath,
                 //! [out] the leading part of the path
                 fileName& path,
                 //! [out] the processor directory name
@@ -957,23 +962,29 @@ public:
                 fileName& local,
                 //! [out] any detected collated grouping
                 procRangeType& group,
-                //! [out] detected number of processors, -1 if none detected
+                //! [out] detected number of collated processors,
+                //! -1 if none detected
                 label& nProcs
             );
 
-            //- Detect processor number from '/aa/bb/processorDDD/cc'
-            static label detectProcessorPath(const fileName& objPath);
-
             //- Detect processor number from 'path/processorDDD/abc'
             //- or 'path/processorsNN/abc', 'path/processorsNN_0-10/abc'
+            //  \returns processor number or -1
             static label detectProcessorPath
             (
-                const fileName& objPath,
+                //! [in] The file/directory name to parse
+                const fileName& fName,
                 //! [out] any detected collated grouping
                 procRangeType& group,
-                //! [out] detected number of collated processors, -1 if none
+                //! [out] detected number of collated processors,
+                //! -1 if none detected
                 label* numProcs = nullptr
             );
+
+            //- Detect processor number from '/aa/bb/processorDDD/abc'.
+            //  Forwards to detectProcessorPath with ignored output parameters.
+            //  \returns processor number or -1
+            static label detectProcessorPath(const fileName& fName);
 
 
     // Rank selection/sub-selection

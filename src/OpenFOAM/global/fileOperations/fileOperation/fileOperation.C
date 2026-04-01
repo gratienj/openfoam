@@ -425,17 +425,15 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
     // - distributed() : different processors have different roots
     // - fileModificationChecking : (uncollated only) do IO on master only
     // - nProcsFilter_ : if set to
-    //       0 : accept any directory (e.g. for redistributePar where we don't
-    //           know yet number of read/write procs)
-    //      -1 : accept only processorsDDD where DDD is nProcs(worldComm)
-    //      >0 : accept the exact mentioned number of prcessors
-
+    //   -  0 : no filtering
+    //   - >0 : accept the exact specified number of prcessors
+    //   - -1 : accept only processorsDDD where DDD is nProcs(worldComm)
 
     // Collated : check whether/how to filter processorsXXX directory names
-    const label targetNProcs
+    const int targetNProcs
     (
         (UPstream::parRun() && nProcsFilter_ < 0)
-      ? UPstream::nProcs(UPstream::worldComm)
+      ? static_cast<int>(UPstream::nProcs(UPstream::worldComm))
       : nProcsFilter_
     );
 
@@ -549,7 +547,7 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
                 {
                     // "processorsNN"
 
-                    if (proci < rNum || (nProcsFilter_ == 0))
+                    if (proci < rNum)
                     {
                         // And it is also in range.
                         // Eg for "processors4": 3 is ok, 10 is not
@@ -558,7 +556,7 @@ Foam::fileOperation::lookupAndCacheProcessorsPath
                         pathTypeIdx.second() = proci;
                     }
                 }
-                else if (group.contains(proci) || (nProcsFilter_ == 0))
+                else if (group.contains(proci))
                 {
                     // "processorsNN_min-max"
                     // - save the local proc offset
@@ -1340,12 +1338,11 @@ Foam::label Foam::fileOperation::nProcs
         label maxProc = -1;
         for (const fileName& dirN : dirNames)
         {
-            fileName rp, rd, rl;
-            procRangeType group;
+            // Analyse directory name
             label rNum(-1);
-
-            const label readProci =
-                splitProcessorPath(dirN, rp, rd, rl, group, rNum);
+            procRangeType group;
+            auto readProci =
+                fileOperation::detectProcessorPath(dirN, group, &rNum);
 
             maxProc = Foam::max(maxProc, readProci);
 
@@ -1638,7 +1635,7 @@ Foam::label Foam::fileOperation::splitProcessorPath
 
 Foam::label Foam::fileOperation::detectProcessorPath
 (
-    const fileName& objPath,
+    const fileName& fName,
     procRangeType& group,
     label* numProcs
 )
@@ -1648,7 +1645,7 @@ Foam::label Foam::fileOperation::detectProcessorPath
 
     label proci = fileOperation::splitProcessorPath
     (
-        objPath,
+        fName,
         path,
         procDir,
         local,

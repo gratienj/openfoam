@@ -1308,7 +1308,6 @@ int main(int argc, char *argv[])
         "Test without writing the decomposition. "
         "Changes -cellDist to only write volScalarField."
     );
-    argList::addVerboseOption("Additional verbosity");
     argList::addBoolOption
     (
         "cellDist",
@@ -1319,10 +1318,6 @@ int main(int argc, char *argv[])
     (
         "newTimes",
         "Only reconstruct new times (i.e. that do not exist already)"
-    );
-    argList::addVerboseOption
-    (
-        "Additional verbosity. (Can be used multiple times)"
     );
     argList::addBoolOption
     (
