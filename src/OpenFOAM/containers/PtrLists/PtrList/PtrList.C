@@ -51,9 +51,7 @@ void Foam::PtrList<T>::copyPtrList(const UPtrList<T>& list)
 
     for (label i = 0; i < len; ++i)
     {
-        const T* src = list.get(i);
-
-        if (src)
+        if (const T* src = list.get(i); src)
         {
             if (this->ptrs_[i])
             {
@@ -115,9 +113,7 @@ Foam::PtrList<T> Foam::PtrList<T>::clone(Args&&... args) const
 
     for (label i=0; i<len; ++i)
     {
-        const T* ptr = this->ptrs_[i];
-
-        if (ptr)
+        if (const T* ptr = this->ptrs_[i]; ptr)
         {
             cloned.ptrs_[i] = ptr->clone(std::forward<Args>(args)...).ptr();
         }
@@ -130,13 +126,11 @@ Foam::PtrList<T> Foam::PtrList<T>::clone(Args&&... args) const
 template<class T>
 void Foam::PtrList<T>::resize(const label newLen)
 {
-    const label oldLen = this->size();
-
     if (newLen <= 0)
     {
         clear();
     }
-    else if (newLen != oldLen)
+    else if (const label oldLen = this->size(); newLen != oldLen)
     {
         // Truncation frees old pointers
         for (label i = newLen; i < oldLen; ++i)

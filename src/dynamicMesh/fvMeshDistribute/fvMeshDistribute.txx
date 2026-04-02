@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -137,6 +137,7 @@ void Foam::fvMeshDistribute::saveBoundaryFields
 {
     // Save whole boundary field
 
+    typedef FieldField<fvsPatchField, T> ffType;
     typedef GeometricField<T, fvsPatchField, Mesh> fldType;
 
     const UPtrList<const fldType> flds
@@ -149,8 +150,14 @@ void Foam::fvMeshDistribute::saveBoundaryFields
     label fieldi = 0;
     for (const fldType& fld : flds)
     {
-        bflds.set(fieldi, fld.boundaryField().clone());
-
+        bflds.set
+        (
+            fieldi,
+            static_cast<const ffType&>
+            (
+                fld.boundaryField()
+            ).clone(fld.internalField())
+        );
         ++fieldi;
     }
 }
@@ -168,6 +175,7 @@ void Foam::fvMeshDistribute::mapBoundaryFields
     const labelList& oldPatchStarts = map.oldPatchStarts();
     const labelList& faceMap = map.faceMap();
 
+    // typedef FieldField<fvsPatchField, T> ffType;
     typedef GeometricField<T, fvsPatchField, Mesh> fldType;
 
     UPtrList<fldType> flds
@@ -292,7 +300,7 @@ void Foam::fvMeshDistribute::mapExposedFaces
                 {
                     patchFld[i] = oldInternal[oldFaceI];
 
-                    if (oriented && map.flipFaceFlux().found(faceI))
+                    if (oriented && map.flipFaceFlux().contains(faceI))
                     {
                         patchFld[i] = flipOp()(patchFld[i]);
                     }

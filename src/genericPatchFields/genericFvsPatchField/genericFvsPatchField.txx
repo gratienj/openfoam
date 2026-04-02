@@ -5,8 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2021 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,16 +25,16 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "genericFaPatchField.H"
-#include "faPatchFieldMapper.H"
+#include "genericFvsPatchField.H"
+#include "fvPatchFieldMapper.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::genericFaPatchField<Type>::genericFaPatchField
+Foam::genericFvsPatchField<Type>::genericFvsPatchField
 (
-    const faPatch& p,
-    const DimensionedField<Type, areaMesh>& iF
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF
 )
 :
     parent_bctype(p, iF)
@@ -43,21 +42,21 @@ Foam::genericFaPatchField<Type>::genericFaPatchField
     FatalErrorInFunction
         << "Trying to construct generic patchField on patch "
         << this->patch().name()
-        << " of field " << this->internalField().name() << nl
+        << " of field " << this->internalField().name()
         << abort(FatalError);
 }
 
 
 template<class Type>
-Foam::genericFaPatchField<Type>::genericFaPatchField
+Foam::genericFvsPatchField<Type>::genericFvsPatchField
 (
-    const faPatch& p,
-    const DimensionedField<Type, areaMesh>& iF,
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    parent_bctype(p, iF, dict),
-    genericPatchFieldBase(dict)
+    genericPatchFieldBase(dict),
+    parent_bctype(p, iF, dict)
 {
     const label patchSize = this->size();
     const word& patchName = this->patch().name();
@@ -74,48 +73,49 @@ Foam::genericFaPatchField<Type>::genericFaPatchField
 
 
 template<class Type>
-Foam::genericFaPatchField<Type>::genericFaPatchField
+Foam::genericFvsPatchField<Type>::genericFvsPatchField
 (
-    const genericFaPatchField<Type>& rhs,
-    const faPatch& p,
-    const DimensionedField<Type, areaMesh>& iF,
-    const faPatchFieldMapper& mapper
+    const this_bctype& rhs,
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF,
+    const fvPatchFieldMapper& mapper
 )
 :
-    parent_bctype(rhs, p, iF, mapper),
-    genericPatchFieldBase(zero{}, rhs)
+    genericPatchFieldBase(Foam::zero{}, rhs),
+    parent_bctype(rhs, p, iF, mapper)
 {
     this->mapGeneric(rhs, mapper);
 }
 
 
 template<class Type>
-Foam::genericFaPatchField<Type>::genericFaPatchField
+Foam::genericFvsPatchField<Type>::genericFvsPatchField
 (
-    const genericFaPatchField<Type>& rhs,
-    const DimensionedField<Type, areaMesh>& iF
+    const this_bctype& rhs,
+    const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    parent_bctype(rhs, iF),
-    genericPatchFieldBase(rhs)
+    genericPatchFieldBase(rhs),
+    parent_bctype(rhs, iF)
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+
 template<class Type>
-void Foam::genericFaPatchField<Type>::write(Ostream& os) const
+void Foam::genericFvsPatchField<Type>::write(Ostream& os) const
 {
     // Handle "value" separately
     genericPatchFieldBase::writeGeneric(os, true);
-    faPatchField<Type>::writeValueEntry(os);
+    fvsPatchField<Type>::writeValueEntry(os);
 }
 
 
 template<class Type>
-void Foam::genericFaPatchField<Type>::autoMap
+void Foam::genericFvsPatchField<Type>::autoMap
 (
-    const faPatchFieldMapper& m
+    const fvPatchFieldMapper& m
 )
 {
     parent_bctype::autoMap(m);
@@ -124,16 +124,15 @@ void Foam::genericFaPatchField<Type>::autoMap
 
 
 template<class Type>
-void Foam::genericFaPatchField<Type>::rmap
+void Foam::genericFvsPatchField<Type>::rmap
 (
-    const faPatchField<Type>& rhs,
+    const fvsPatchField<Type>& rhs,
     const labelList& addr
 )
 {
     parent_bctype::rmap(rhs, addr);
 
-    const auto* base = isA<genericPatchFieldBase>(rhs);
-    if (base)
+    if (const auto* base = isA<genericPatchFieldBase>(rhs); base)
     {
         this->rmapGeneric(*base, addr);
     }
@@ -142,7 +141,7 @@ void Foam::genericFaPatchField<Type>::rmap
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::genericFaPatchField<Type>::valueInternalCoeffs
+Foam::genericFvsPatchField<Type>::valueInternalCoeffs
 (
     const tmp<scalarField>&
 ) const
@@ -163,7 +162,7 @@ Foam::genericFaPatchField<Type>::valueInternalCoeffs
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::genericFaPatchField<Type>::valueBoundaryCoeffs
+Foam::genericFvsPatchField<Type>::valueBoundaryCoeffs
 (
     const tmp<scalarField>&
 ) const
@@ -184,7 +183,7 @@ Foam::genericFaPatchField<Type>::valueBoundaryCoeffs
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::genericFaPatchField<Type>::gradientInternalCoeffs() const
+Foam::genericFvsPatchField<Type>::gradientInternalCoeffs() const
 {
     FatalErrorInFunction
         << "Cannot be called for a generic patchField";
@@ -199,10 +198,9 @@ Foam::genericFaPatchField<Type>::gradientInternalCoeffs() const
     return *this;
 }
 
-
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::genericFaPatchField<Type>::gradientBoundaryCoeffs() const
+Foam::genericFvsPatchField<Type>::gradientBoundaryCoeffs() const
 {
     FatalErrorInFunction
         << "Cannot be called for a generic patchField";

@@ -36,8 +36,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef reconstructedDistanceFunction_H
-#define reconstructedDistanceFunction_H
+#ifndef Foam_reconstructedDistanceFunction_H
+#define Foam_reconstructedDistanceFunction_H
 
 #include "fvMesh.H"
 #include "volFields.H"
@@ -105,7 +105,7 @@ public:
         (
             const volScalarField& alpha,
             const volVectorField& U,
-            surfaceVectorField::Boundary& nHatb
+            const surfaceVectorField::Boundary& nHatb
         );
 
         const volScalarField& cellDistLevel() const noexcept

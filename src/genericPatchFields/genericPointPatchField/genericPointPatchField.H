@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2021 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +32,7 @@ Description
     handling unknown patch types.
 
 SourceFiles
-    genericPointPatchField.C
+    genericPointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -54,12 +54,11 @@ namespace Foam
 template<class Type>
 class genericPointPatchField
 :
-    public calculatedPointPatchField<Type>,
-    public genericPatchFieldBase
+    public genericPatchFieldBase,
+    public calculatedPointPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef genericPointPatchField<Type> this_bctype;
     typedef calculatedPointPatchField<Type> parent_bctype;
-
 
 public:
 
@@ -84,32 +83,29 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         genericPointPatchField
         (
-            const genericPointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Default copy construct
-        genericPointPatchField(const genericPointPatchField<Type>&) = default;
-
-        //- Construct as copy setting internal field reference
+        //- Copy construct setting internal field reference
         genericPointPatchField
         (
-            const genericPointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        genericPointPatchField(const this_bctype& pfld)
+        :
+            this_bctype(pfld, pfld.internalField())
+        {}
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -131,11 +127,13 @@ public:
         virtual void autoMap(const pointPatchFieldMapper&);
 
         //- Reverse map the given pointPatchField onto this pointPatchField
-        virtual void rmap
-        (
-            const pointPatchField<Type>&,
-            const labelList&
-        );
+        virtual void rmap(const pointPatchField<Type>&, const labelList&);
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -146,7 +144,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "genericPointPatchField.C"
+    #include "genericPointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

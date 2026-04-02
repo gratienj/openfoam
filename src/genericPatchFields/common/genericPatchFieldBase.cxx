@@ -70,7 +70,7 @@ Foam::genericPatchFieldBase::genericPatchFieldBase
 
 Foam::genericPatchFieldBase::genericPatchFieldBase
 (
-    const Foam::zero,
+    Foam::zero,
     const genericPatchFieldBase& rhs
 )
 :
@@ -347,8 +347,7 @@ void Foam::genericPatchFieldBase::putEntry
         #undef  doLocalCode
         #define doLocalCode(ValueType, Member)                                \
         {                                                                     \
-            const auto iter = this->Member.cfind(key);                        \
-            if (iter.good())                                                  \
+            if (const auto iter = this->Member.cfind(key); iter.good())       \
             {                                                                 \
                 iter.val()->writeEntry(key, os);                              \
                 return;                                                       \
@@ -404,9 +403,7 @@ void Foam::genericPatchFieldBase::rmapGeneric
     #define doLocalCode(ValueType, Member)                                    \
     forAllIters(this->Member, iter)                                           \
     {                                                                         \
-        const auto iter2 = rhs.Member.cfind(iter.key());                      \
-                                                                              \
-        if (iter2.good())                                                     \
+        if (const auto iter2 = rhs.Member.cfind(iter.key()); iter2.good())    \
         {                                                                     \
             iter.val()->rmap(*iter2.val(), addr);                             \
         }                                                                     \

@@ -5,8 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2021 OpenCFD Ltd.
+    Copyright (C) 2023-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,16 +25,16 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "genericPointPatchField.H"
-#include "pointPatchFieldMapper.H"
+#include "genericFaePatchField.H"
+#include "faPatchFieldMapper.H"
 
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::genericPointPatchField<Type>::genericPointPatchField
+Foam::genericFaePatchField<Type>::genericFaePatchField
 (
-    const pointPatch& p,
-    const DimensionedField<Type, pointMesh>& iF
+    const faPatch& p,
+    const DimensionedField<Type, edgeMesh>& iF
 )
 :
     parent_bctype(p, iF)
@@ -43,88 +42,96 @@ Foam::genericPointPatchField<Type>::genericPointPatchField
     FatalErrorInFunction
         << "Trying to construct generic patchField on patch "
         << this->patch().name()
-        << " of field " << this->internalField().name() << nl
+        << " of field " << this->internalField().name()
         << abort(FatalError);
 }
 
 
 template<class Type>
-Foam::genericPointPatchField<Type>::genericPointPatchField
+Foam::genericFaePatchField<Type>::genericFaePatchField
 (
-    const pointPatch& p,
-    const DimensionedField<Type, pointMesh>& iF,
+    const faPatch& p,
+    const DimensionedField<Type, edgeMesh>& iF,
     const dictionary& dict
 )
 :
-    parent_bctype(p, iF, dict),
-    genericPatchFieldBase(dict)
+    genericPatchFieldBase(dict),
+    parent_bctype(p, iF, dict)
 {
     const label patchSize = this->size();
     const word& patchName = this->patch().name();
     const IOobject& io = this->internalField();
 
-    // No separate "value"
-    processGeneric(patchSize, patchName, io, false);
+    if (!dict.findEntry("value", keyType::LITERAL))
+    {
+        reportMissingEntry("value", patchName, io);
+    }
+
+    // Handle "value" separately
+    processGeneric(patchSize, patchName, io, true);
 }
 
 
 template<class Type>
-Foam::genericPointPatchField<Type>::genericPointPatchField
+Foam::genericFaePatchField<Type>::genericFaePatchField
 (
-    const genericPointPatchField<Type>& rhs,
-    const pointPatch& p,
-    const DimensionedField<Type, pointMesh>& iF,
-    const pointPatchFieldMapper& mapper
+    const this_bctype& rhs,
+    const faPatch& p,
+    const DimensionedField<Type, edgeMesh>& iF,
+    const faPatchFieldMapper& mapper
 )
 :
-    parent_bctype(rhs, p, iF, mapper),
-    genericPatchFieldBase(zero{}, rhs)
+    genericPatchFieldBase(Foam::zero{}, rhs),
+    parent_bctype(rhs, p, iF, mapper)
 {
     this->mapGeneric(rhs, mapper);
 }
 
 
 template<class Type>
-Foam::genericPointPatchField<Type>::genericPointPatchField
+Foam::genericFaePatchField<Type>::genericFaePatchField
 (
-    const genericPointPatchField<Type>& rhs,
-    const DimensionedField<Type, pointMesh>& iF
+    const this_bctype& rhs,
+    const DimensionedField<Type, edgeMesh>& iF
 )
 :
-    parent_bctype(rhs, iF),
-    genericPatchFieldBase(rhs)
+    genericPatchFieldBase(rhs),
+    parent_bctype(rhs, iF)
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::genericPointPatchField<Type>::write(Ostream& os) const
+void Foam::genericFaePatchField<Type>::write(Ostream& os) const
 {
-    // No separate treatment for "value"
-    genericPatchFieldBase::writeGeneric(os, false);
+    // Handle "value" separately
+    genericPatchFieldBase::writeGeneric(os, true);
+    faePatchField<Type>::writeValueEntry(os);
 }
 
 
 template<class Type>
-void Foam::genericPointPatchField<Type>::autoMap
+void Foam::genericFaePatchField<Type>::autoMap
 (
-    const pointPatchFieldMapper& m
+    const faPatchFieldMapper& m
 )
 {
+    parent_bctype::autoMap(m);
     this->autoMapGeneric(m);
 }
 
 
 template<class Type>
-void Foam::genericPointPatchField<Type>::rmap
+void Foam::genericFaePatchField<Type>::rmap
 (
-    const pointPatchField<Type>& rhs,
+    const faePatchField<Type>& rhs,
     const labelList& addr
 )
 {
-    const auto* base = isA<genericPatchFieldBase>(rhs);
-    if (base)
+    parent_bctype::rmap(rhs, addr);
+
+    if (const auto* base = isA<genericPatchFieldBase>(rhs); base)
     {
         this->rmapGeneric(*base, addr);
     }

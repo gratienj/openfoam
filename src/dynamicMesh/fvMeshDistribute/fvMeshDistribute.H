@@ -45,7 +45,7 @@ Description
 
 SourceFiles
     fvMeshDistribute.C
-    fvMeshDistributeTemplates.C
+    fvMeshDistribute.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -107,15 +107,15 @@ class fvMeshDistribute
             //- Find patch to put exposed faces into.
             label findNonEmptyPatch() const;
 
-            //- Save boundary fields
-            template<class T, class Mesh>
+            //- Save (surface) boundary fields
+            template<class T, class Mesh = surfaceMesh>
             void saveBoundaryFields
             (
                 PtrList<FieldField<fvsPatchField, T>>& bflds
             ) const;
 
-            //- Map boundary fields
-            template<class T, class Mesh>
+            //- Map (surface) boundary fields
+            template<class T, class Mesh = surfaceMesh>
             void mapBoundaryFields
             (
                 const mapPolyMesh& map,
@@ -351,14 +351,15 @@ class fvMeshDistribute
                 const dictionary& allFieldsDict
             );
 
-            //- No copy construct
-            fvMeshDistribute(const fvMeshDistribute&) = delete;
-
-            //- No copy assignment
-            void operator=(const fvMeshDistribute&) = delete;
-
 public:
 
+    //- No copy construct
+    fvMeshDistribute(const fvMeshDistribute&) = delete;
+
+    //- No copy assignment
+    void operator=(const fvMeshDistribute&) = delete;
+
+    // Declare name of the class and its debug switch
     ClassName("fvMeshDistribute");
 
 
@@ -415,7 +416,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fvMeshDistributeTemplates.C"
+    #include "fvMeshDistribute.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -425,37 +425,35 @@ void Foam::reconstructedDistanceFunction::updateContactAngle
 (
     const volScalarField& alpha,
     const volVectorField& U,
-    surfaceVectorField::Boundary& nHatb
+    const surfaceVectorField::Boundary& nHatb
 )
 {
-    const fvMesh& mesh = alpha.mesh();
-    const volScalarField::Boundary& abf = alpha.boundaryField();
-    volScalarField::Boundary& RDFbf = this->boundaryFieldRef();
+    const auto& abf = alpha.boundaryField();
+    auto& RDFbf = this->boundaryFieldRef();
 
-    const fvBoundaryMesh& boundary = mesh.boundary();
+    const fvBoundaryMesh& boundary = alpha.mesh().boundary();
 
     forAll(boundary, patchi)
     {
-        if (isA<alphaContactAngleTwoPhaseFvPatchScalarField>(abf[patchi]))
+        if
+        (
+            auto* acapPtr
+          = isA_constCast<alphaContactAngleTwoPhaseFvPatchScalarField>
+            (abf[patchi])
+        )
         {
-            alphaContactAngleTwoPhaseFvPatchScalarField& acap =
-                const_cast<alphaContactAngleTwoPhaseFvPatchScalarField&>
-                (
-                    refCast<const alphaContactAngleTwoPhaseFvPatchScalarField>
-                    (
-                        abf[patchi]
-                    )
-                );
+            auto& acap = *acapPtr;
 
-            fvsPatchVectorField& nHatp = nHatb[patchi];
             const scalarField theta
             (
-                degToRad()*acap.theta(U.boundaryField()[patchi], nHatp)
+                degToRad()*acap.theta(U.boundaryField()[patchi], nHatb[patchi])
             );
 
             RDFbf[patchi] =
+            (
                 1/acap.patch().deltaCoeffs()*cos(theta)
-              + RDFbf[patchi].patchInternalField();
+              + RDFbf[patchi].patchInternalField()
+            );
         }
     }
 }

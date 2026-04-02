@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -88,25 +88,29 @@ public:
 
     // Constructors
 
-        //- Construct null
-        //  Used for temporary fields which are initialised after construction
+        //- Default construct.
+        //- Used for temporary fields that are initialised after construction
         constexpr FieldField() noexcept;
 
-        //- Construct given size
-        //  Used for temporary fields which are initialised after construction
-        explicit FieldField(const label size);
+        //- Construct given size.
+        //- Used for temporary fields that are initialised after construction
+        explicit FieldField(label len);
 
         //- Clone construct with new type
-        FieldField(const word& type, const FieldField<Field, Type>& ff);
+        FieldField(const word& type, const FieldField& ff);
 
         //- Copy construct, cloning each element
-        FieldField(const FieldField<Field, Type>& ff);
+        FieldField(const FieldField& ff);
+
+        //- Copy construct, cloning each element with arguments
+        template<class CloneArg, class... CloneArgs>
+        FieldField(const FieldField&, const CloneArg&, CloneArgs&&...);
 
         //- Move construct
-        FieldField(FieldField<Field, Type>&& ff);
+        FieldField(FieldField&& ff);
 
         //- Construct as copy or re-use as specified.
-        FieldField(FieldField<Field, Type>& ff, bool reuse);
+        FieldField(FieldField& ff, bool reuse);
 
         //- Copy construct from PtrList
         FieldField(const PtrList<Field<Type>>& list);
@@ -120,11 +124,12 @@ public:
         //- Construct from Istream
         FieldField(Istream& is);
 
-        //- Clone
-        tmp<FieldField<Field, Type>> clone() const;
+        //- Clone, forwarding optional arguments to clone of each element
+        template<class... Args>
+        tmp<FieldField<Field, Type>> clone(Args&&... args) const;
 
-        //- Return a pointer to a new calculatedFvPatchFieldField created on
-        //  freestore without setting patchField values
+        //- Return a pointer to a new calculated patchField created on
+        //- freestore without setting patchField values
         template<class Type2>
         static tmp<FieldField<Field, Type>> NewCalculatedType
         (

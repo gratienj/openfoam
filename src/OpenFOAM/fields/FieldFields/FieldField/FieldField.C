@@ -112,9 +112,9 @@ constexpr FieldField<Field, Type>::FieldField() noexcept
 
 
 template<template<class> class Field, class Type>
-FieldField<Field, Type>::FieldField(const label size)
+FieldField<Field, Type>::FieldField(label len)
 :
-    PtrList<Field<Type>>(size)
+    PtrList<Field<Type>>(len)
 {}
 
 
@@ -122,7 +122,7 @@ template<template<class> class Field, class Type>
 FieldField<Field, Type>::FieldField
 (
     const word& type,
-    const FieldField<Field, Type>& ff
+    const FieldField& ff
 )
 :
     PtrList<Field<Type>>(ff.size())
@@ -135,21 +135,34 @@ FieldField<Field, Type>::FieldField
 
 
 template<template<class> class Field, class Type>
-FieldField<Field, Type>::FieldField(const FieldField<Field, Type>& ff)
+FieldField<Field, Type>::FieldField(const FieldField& ff)
 :
     PtrList<Field<Type>>(ff)
 {}
 
 
 template<template<class> class Field, class Type>
-FieldField<Field, Type>::FieldField(FieldField<Field, Type>&& ff)
+template<class CloneArg, class... CloneArgs>
+FieldField<Field, Type>::FieldField
+(
+    const FieldField& ff,
+    const CloneArg& arg,
+    CloneArgs&&... args
+)
+:
+    PtrList<Field<Type>>(ff, arg, std::forward<CloneArgs>(args)...)
+{}
+
+
+template<template<class> class Field, class Type>
+FieldField<Field, Type>::FieldField(FieldField&& ff)
 :
     PtrList<Field<Type>>(std::move(ff))
 {}
 
 
 template<template<class> class Field, class Type>
-FieldField<Field, Type>::FieldField(FieldField<Field, Type>& ff, bool reuse)
+FieldField<Field, Type>::FieldField(FieldField& ff, bool reuse)
 :
     PtrList<Field<Type>>(ff, reuse)
 {}
@@ -186,15 +199,22 @@ FieldField<Field, Type>::FieldField(Istream& is)
 
 
 template<template<class> class Field, class Type>
-tmp<FieldField<Field, Type>> FieldField<Field, Type>::clone() const
+template<class... Args>
+tmp<FieldField<Field, Type>>
+FieldField<Field, Type>::clone(Args&&... args) const
 {
-    return tmp<FieldField<Field, Type>>::New(*this);
+    return tmp<FieldField<Field, Type>>::New
+    (
+        *this,
+        std::forward<Args>(args)...
+    );
 }
 
 
 template<template<class> class Field, class Type>
 template<class Type2>
-tmp<FieldField<Field, Type>> FieldField<Field, Type>::NewCalculatedType
+tmp<FieldField<Field, Type>>
+FieldField<Field, Type>::NewCalculatedType
 (
     const FieldField<Field, Type2>& ff
 )

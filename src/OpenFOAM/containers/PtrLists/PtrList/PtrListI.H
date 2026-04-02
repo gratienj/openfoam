@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,7 +40,7 @@ inline constexpr Foam::PtrList<T>::PtrList() noexcept
 
 
 template<class T>
-inline Foam::PtrList<T>::PtrList(const label len)
+inline Foam::PtrList<T>::PtrList(label len)
 :
     UPtrList<T>(len)
 {}
@@ -50,6 +50,19 @@ template<class T>
 inline Foam::PtrList<T>::PtrList(const PtrList<T>& list)
 :
     UPtrList<T>(list.ptrs_.clone())
+{}
+
+
+template<class T>
+template<class CloneArg, class... CloneArgs>
+inline Foam::PtrList<T>::PtrList
+(
+    const PtrList<T>& list,
+    const CloneArg& arg,
+    CloneArgs&&... args
+)
+:
+    UPtrList<T>(list.ptrs_.clone(arg, std::forward<CloneArgs>(args)...))
 {}
 
 
@@ -85,18 +98,6 @@ inline Foam::PtrList<T>::PtrList(UList<T*>& list)
     // Took ownership of the pointers
     list = static_cast<T*>(nullptr);
 }
-
-
-template<class T>
-template<class CloneArg>
-inline Foam::PtrList<T>::PtrList
-(
-    const PtrList<T>& list,
-    const CloneArg& cloneArg
-)
-:
-    UPtrList<T>(list.clone(cloneArg)())
-{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

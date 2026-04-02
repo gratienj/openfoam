@@ -30,8 +30,8 @@ Description
     Generic infrastructure for reading/writing unknown patch types.
 
 SourceFiles
-    genericPatchFieldBase.C
-    genericPatchFieldBaseTemplates.C
+    genericPatchFieldBase.cxx
+    genericPatchFieldBase.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -153,7 +153,7 @@ protected:
     // Constructors
 
         //- Partial copy construct. Only copy type and dictionary
-        genericPatchFieldBase(const Foam::zero, const genericPatchFieldBase&);
+        genericPatchFieldBase(Foam::zero, const genericPatchFieldBase&);
 
 
 public:
@@ -190,7 +190,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "genericPatchFieldBaseTemplates.C"
+    #include "genericPatchFieldBase.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

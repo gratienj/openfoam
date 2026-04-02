@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2021 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,12 +35,12 @@ See also
     Foam::calculatedFvsPatchField
 
 SourceFiles
-    genericFvsPatchField.C
+    genericFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef genericFvsPatchField_H
-#define genericFvsPatchField_H
+#ifndef Foam_genericFvsPatchField_H
+#define Foam_genericFvsPatchField_H
 
 #include "calculatedFvsPatchField.H"
 #include "genericPatchFieldBase.H"
@@ -57,12 +57,11 @@ namespace Foam
 template<class Type>
 class genericFvsPatchField
 :
-    public calculatedFvsPatchField<Type>,
-    public genericPatchFieldBase
+    public genericPatchFieldBase,
+    public calculatedFvsPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef genericFvsPatchField<Type> this_bctype;
     typedef calculatedFvsPatchField<Type> parent_bctype;
-
 
 public:
 
@@ -87,30 +86,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         genericFvsPatchField
         (
-            const genericFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Default copy construct
-        genericFvsPatchField(const genericFvsPatchField<Type>&) = default;
-
-        //- Construct as copy setting internal field reference
+        //- Copy construct setting internal field reference
         genericFvsPatchField
         (
-            const genericFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        genericFvsPatchField(const this_bctype& pfld)
+        :
+            this_bctype(pfld, pfld.internalField())
+        {}
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -133,12 +129,8 @@ public:
         //- Map (and resize as needed) from self given a mapping object
         virtual void autoMap(const fvPatchFieldMapper&);
 
-        //- Reverse map the given faPatchField onto this faPatchField
-        virtual void rmap
-        (
-            const fvsPatchField<Type>&,
-            const labelList&
-        );
+        //- Reverse map the given fvsPatchField onto this fvsPatchField
+        virtual void rmap(const fvsPatchField<Type>&, const labelList&);
 
 
     // Evaluation Functions
@@ -156,6 +148,12 @@ public:
 
         //- Fatal
         tmp<Field<Type>> gradientBoundaryCoeffs() const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -166,7 +164,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "genericFvsPatchField.C"
+    #include "genericFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

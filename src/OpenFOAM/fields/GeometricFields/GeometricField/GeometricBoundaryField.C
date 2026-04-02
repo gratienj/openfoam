@@ -450,26 +450,19 @@ template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::GeometricBoundaryField
 (
     const Internal& iField,
-    const GeometricBoundaryField<Type, PatchField, GeoMesh>& btf
+    const GeometricBoundaryField& btf
 )
 :
-    FieldField<PatchField, Type>(btf.size()),
+    FieldField<PatchField, Type>(btf, iField),
     bmesh_(btf.bmesh_)
-{
-    // DebugInFunction << nl;
-
-    forAll(bmesh_, patchi)
-    {
-        this->set(patchi, btf[patchi].clone(iField));
-    }
-}
+{}
 
 
 template<class Type, template<class> class PatchField, class GeoMesh>
 Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::GeometricBoundaryField
 (
     const Internal& iField,
-    const GeometricBoundaryField<Type, PatchField, GeoMesh>& btf,
+    const GeometricBoundaryField& btf,
     const labelUList& patchIDs,
     const word& patchFieldType
 )
@@ -501,17 +494,6 @@ Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::GeometricBoundaryField
         }
     }
 }
-
-
-template<class Type, template<class> class PatchField, class GeoMesh>
-Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::GeometricBoundaryField
-(
-    const GeometricBoundaryField<Type, PatchField, GeoMesh>& btf
-)
-:
-    FieldField<PatchField, Type>(btf),
-    bmesh_(btf.bmesh_)
-{}
 
 
 template<class Type, template<class> class PatchField, class GeoMesh>

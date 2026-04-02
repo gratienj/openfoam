@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2021 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,8 +56,8 @@ Foam::genericFvPatchField<Type>::genericFvPatchField
     const dictionary& dict
 )
 :
-    parent_bctype(p, iF, dict),
-    genericPatchFieldBase(dict)
+    genericPatchFieldBase(dict),
+    parent_bctype(p, iF, dict)
 {
     const label patchSize = this->size();
     const word& patchName = this->patch().name();
@@ -76,14 +76,14 @@ Foam::genericFvPatchField<Type>::genericFvPatchField
 template<class Type>
 Foam::genericFvPatchField<Type>::genericFvPatchField
 (
-    const genericFvPatchField<Type>& rhs,
+    const this_bctype& rhs,
     const fvPatch& p,
     const DimensionedField<Type, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    parent_bctype(rhs, p, iF, mapper),
-    genericPatchFieldBase(zero{}, rhs)
+    genericPatchFieldBase(Foam::zero{}, rhs),
+    parent_bctype(rhs, p, iF, mapper)
 {
     this->mapGeneric(rhs, mapper);
 }
@@ -92,12 +92,12 @@ Foam::genericFvPatchField<Type>::genericFvPatchField
 template<class Type>
 Foam::genericFvPatchField<Type>::genericFvPatchField
 (
-    const genericFvPatchField<Type>& rhs,
+    const this_bctype& rhs,
     const DimensionedField<Type, volMesh>& iF
 )
 :
-    parent_bctype(rhs, iF),
-    genericPatchFieldBase(rhs)
+    genericPatchFieldBase(rhs),
+    parent_bctype(rhs, iF)
 {}
 
 
@@ -132,8 +132,7 @@ void Foam::genericFvPatchField<Type>::rmap
 {
     parent_bctype::rmap(rhs, addr);
 
-    const auto* base = isA<genericPatchFieldBase>(rhs);
-    if (base)
+    if (const auto* base = isA<genericPatchFieldBase>(rhs); base)
     {
         this->rmapGeneric(*base, addr);
     }

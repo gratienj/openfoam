@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2021 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,12 +36,12 @@ See also
     Foam::calculatedFaPatchField
 
 SourceFiles
-    genericFaPatchField.C
+    genericFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef genericFaPatchField_H
-#define genericFaPatchField_H
+#ifndef Foam_genericFaPatchField_H
+#define Foam_genericFaPatchField_H
 
 #include "calculatedFaPatchField.H"
 #include "genericPatchFieldBase.H"
@@ -58,12 +58,11 @@ namespace Foam
 template<class Type>
 class genericFaPatchField
 :
-    public calculatedFaPatchField<Type>,
-    public genericPatchFieldBase
+    public genericPatchFieldBase,
+    public calculatedFaPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef genericFaPatchField<Type> this_bctype;
     typedef calculatedFaPatchField<Type> parent_bctype;
-
 
 public:
 
@@ -88,30 +87,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         genericFaPatchField
         (
-            const genericFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Default construct
-        genericFaPatchField(const genericFaPatchField<Type>&) = default;
-
-        //- Construct as copy setting internal field reference
+        //- Copy construct setting internal field reference
         genericFaPatchField
         (
-            const genericFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without internal field
+        genericFaPatchField(const this_bctype& pfld)
+        :
+            this_bctype(pfld, pfld.internalField())
+        {}
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -135,11 +131,7 @@ public:
         virtual void autoMap(const faPatchFieldMapper&);
 
         //- Reverse map the given faPatchField onto this faPatchField
-        virtual void rmap
-        (
-            const faPatchField<Type>&,
-            const labelList&
-        );
+        virtual void rmap(const faPatchField<Type>&, const labelList&);
 
 
     // Evaluation Functions
@@ -157,6 +149,12 @@ public:
 
         //- Fatal
         tmp<Field<Type>> gradientBoundaryCoeffs() const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -167,7 +165,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "genericFaPatchField.C"
+    #include "genericFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
