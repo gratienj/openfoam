@@ -64,6 +64,10 @@ Description
 
 #ifdef __APPLE__
     #define EXT_SO  "dylib"
+
+    // Bit of a hack to avoid for compiling under g++ on MacOS
+    #include "dylib_macos.h"
+
     #include <mach-o/dyld.h>
 #else
     #define EXT_SO  "so"

@@ -40,6 +40,11 @@ See
 #include "OSspecific.H"
 
 #include <execinfo.h>
+
+// Bit of a hack to avoid for compiling under g++ on MacOS
+#include "dylib_macos.h"
+
+#include <mach/port.h>
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
 #include <vector>
