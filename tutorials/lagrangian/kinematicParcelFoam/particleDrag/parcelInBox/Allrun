@@ -27,12 +27,12 @@ do
 
     runApplication $APP
 
-    mv log.$APP logs/log.${APP}_t$d
+    mv log.$APP logs/raw.${APP}_t$d
 
-    ./process > logs/log.velocity_t$d
+    ./process > logs/raw.velocity_t$d
 
-    #U=$(tail -5 logs/log.velocity_t$d | awk '{SUM += $2; if (++C == 5) {print SUM/C; exit}}')
-    U=$(tail -1 logs/log.velocity_t$d | awk '{print $2}')
+    #U=$(tail -5 logs/raw.velocity_t$d | awk '{SUM += $2; if (++C == 5) {print SUM/C; exit}}')
+    U=$(tail -1 logs/raw.velocity_t$d | awk '{print $2}')
 
     echo "$d $U" >> $D_VS_U
 done
