@@ -1,6 +1,6 @@
-# Contributors to OpenFOAM
+# Contributors to OpenFOAM&reg;
 
-The following is a list of known contributors to OpenFOAM.
+The following is a list of known contributors to OpenFOAM&reg;.
 It is likely incomplete...
 
 ## Contributors (alphabetical by surname)
@@ -14,6 +14,7 @@ It is likely incomplete...
 - Gabriel Barajas
 - Kutalmis Bercin
 - Julius Bergmann
+- Gerasimos Chourdakis
 - Ivor Clifford
 - Greg Collecutt
 - Jonathan Cranford
@@ -27,7 +28,7 @@ It is likely incomplete...
 - Bernhard Gschaider
 - Andrew Heather
 - David Hill
-- Cristóbal Ibáñez
+- Cristbal Ibez
 - Yoshiaki Inoue
 - Mattijs Janssens
 - Andrew Jackson
@@ -69,5 +70,12 @@ It is likely incomplete...
 - Niklas Wikstrom
 - Guanyang Xue
 - Thorsten Zirwes
+
+## Maintainers
+
+- Andrew Heather
+- Mattijs Janssens
+- Mark Olesen
+- Kutalmis Bercin
 
 <!----------------------------------------------------------------------------->
