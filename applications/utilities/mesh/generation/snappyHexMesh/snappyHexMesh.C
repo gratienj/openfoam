@@ -718,33 +718,38 @@ void writeMesh
     const string& msg,
     const meshRefinement& meshRefiner,
     const meshRefinement::debugType debugLevel,
-    const meshRefinement::writeType writeLevel
+    const meshRefinement::writeType writeLevel,
+    const bool writeData = true
 )
 {
-    // Note: don't want to use time().cpuTimeIncrement since layer addition
-    // somehow resets timer ...
-    cpuTime timer;
-
     const fvMesh& mesh = meshRefiner.mesh();
 
     meshRefiner.printMeshInfo(debugLevel, msg, true);
-    Info<< "Writing mesh to time " << meshRefiner.timeName() << endl;
 
-    processorMeshes::removeFiles(mesh);
-    if (!debugLevel && !(writeLevel&meshRefinement::WRITELAYERSETS))
+    if (writeData)
     {
-        topoSet::removeFiles(mesh);
-    }
-    refinementHistory::removeFiles(mesh);
+        // Note: don't want to use time().cpuTimeIncrement since layer
+        // addition somehow resets timer ...
+        cpuTime timer;
 
-    meshRefiner.write
-    (
-        debugLevel,
-        meshRefinement::writeType(writeLevel | meshRefinement::WRITEMESH),
-        mesh.time().path()/meshRefiner.timeName()
-    );
-    Info<< "Wrote mesh in = "
-        << timer.cpuTimeIncrement() << " s." << endl;
+        Info<< "Writing mesh to time " << meshRefiner.timeName() << endl;
+
+        processorMeshes::removeFiles(mesh);
+        if (!debugLevel && !(writeLevel&meshRefinement::WRITELAYERSETS))
+        {
+            topoSet::removeFiles(mesh);
+        }
+        refinementHistory::removeFiles(mesh);
+
+        meshRefiner.write
+        (
+            debugLevel,
+            meshRefinement::writeType(writeLevel | meshRefinement::WRITEMESH),
+            mesh.time().path()/meshRefiner.timeName()
+        );
+        Info<< "Wrote mesh in = "
+            << timer.cpuTimeIncrement() << " s." << endl;
+    }
 }
 
 
@@ -762,6 +767,12 @@ int main(int argc, char *argv[])
     (
         "checkGeometry",
         "Check all surface geometry for quality"
+    );
+    argList::addBoolOption
+    (
+        "no-intermediate-write",
+        "Do not write intermediate meshes after castellate and snap steps",
+        true  // advanced
     );
     argList::addDryRunOption
     (
@@ -795,6 +806,7 @@ int main(int argc, char *argv[])
     const bool overwrite = args.found("overwrite");
     const bool checkGeometry = args.found("checkGeometry");
     const bool surfaceSimplify = args.found("surfaceSimplify");
+    const bool noIntermediateWrite = args.found("no-intermediate-write");
     const bool dryRun = args.dryRun();
 
     if (dryRun)
@@ -1842,7 +1854,8 @@ int main(int argc, char *argv[])
                 "Refined mesh",
                 meshRefiner,
                 debugLevel,
-                meshRefinement::writeLevel()
+                meshRefinement::writeLevel(),
+                !(noIntermediateWrite && (wantSnap || wantLayers))
             );
         }
 
@@ -1896,7 +1909,8 @@ int main(int argc, char *argv[])
                 "Snapped mesh",
                 meshRefiner,
                 debugLevel,
-                meshRefinement::writeLevel()
+                meshRefinement::writeLevel(),
+                !(noIntermediateWrite && wantLayers)
             );
         }
 
