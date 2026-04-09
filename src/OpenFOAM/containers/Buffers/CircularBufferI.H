@@ -28,9 +28,11 @@ License
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class T>
-inline Foam::label Foam::CircularBuffer<T>::toGlobal(label i) const
+inline Foam::label Foam::CircularBuffer<T>::toGlobal(const label start) const
 {
     const label len = this->size();
+
+    label i = start;
 
     if (!len)
     {

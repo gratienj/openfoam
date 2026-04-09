@@ -5,7 +5,7 @@ For OpenFOAM-v2512:
 
 - https://dl.openfoam.com/source/latest/
 - Source: https://dl.openfoam.com/source/v2512/OpenFOAM-v2512.tgz
-- ThirdParty: https://dl.openfoam.com/source/v2512/ThirdParty-v2512.tgz
+- ThirdParty: https://dl.openfoam.com/source/v2512/ThirdParty-v2512.tar.gz
 
 ## OpenFOAM&reg; Quick Build Guide
 
