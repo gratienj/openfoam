@@ -33,12 +33,12 @@ See also
     Foam::timeVaryingUniformFixedValueFvField
 
 SourceFiles
-    timeVaryingUniformFixedValuePointPatchField.C
+    timeVaryingUniformFixedValuePointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef timeVaryingUniformFixedValuePointPatchField_H
-#define timeVaryingUniformFixedValuePointPatchField_H
+#ifndef Foam_timeVaryingUniformFixedValuePointPatchField_H
+#define Foam_timeVaryingUniformFixedValuePointPatchField_H
 
 #include "fixedValuePointPatchField.H"
 #include "interpolationTable.H"
@@ -57,11 +57,13 @@ class timeVaryingUniformFixedValuePointPatchField
 :
     public fixedValuePointPatchField<Type>
 {
-    // Private data
+    typedef timeVaryingUniformFixedValuePointPatchField<Type> this_bctype;
+    typedef fixedValuePointPatchField<Type> parent_bctype;
+
+    // Private Data
 
         //- The time series being used, including the bounding treatment
         interpolationTable<Type> timeSeries_;
-
 
 public:
 
@@ -86,35 +88,29 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         timeVaryingUniformFixedValuePointPatchField
         (
-            const timeVaryingUniformFixedValuePointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Construct as copy
-        timeVaryingUniformFixedValuePointPatchField
-        (
-            const timeVaryingUniformFixedValuePointPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         timeVaryingUniformFixedValuePointPatchField
         (
-            const timeVaryingUniformFixedValuePointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        timeVaryingUniformFixedValuePointPatchField
+        (
+            const this_bctype&
+        ) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -124,7 +120,7 @@ public:
         }
 
 
-    // Member functions
+    // Member Functions
 
         // Access
 
@@ -143,6 +139,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -153,7 +155,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "timeVaryingUniformFixedValuePointPatchField.C"
+    #include "timeVaryingUniformFixedValuePointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

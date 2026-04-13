@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2023-2025 OpenCFD Ltd.
+    Copyright (C) 2023-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,7 +33,7 @@ Description
     The "value" entry is normally MUST_READ.
 
 SourceFiles
-    fixedValuePointPatchField.C
+    fixedValuePointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -56,7 +56,7 @@ class fixedValuePointPatchField
 :
     public valuePointPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef fixedValuePointPatchField<Type> this_bctype;
     typedef valuePointPatchField<Type> parent_bctype;
 
 public:
@@ -100,17 +100,17 @@ public:
             const bool needValue
         )
         :
-            fixedValuePointPatchField
+            this_bctype
             (
                 p, iF, dict,
                 (needValue? IOobjectOption::MUST_READ : IOobjectOption::NO_READ)
             )
         {}
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         fixedValuePointPatchField
         (
-            const fixedValuePointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
@@ -120,7 +120,7 @@ public:
         //- and specified value
         fixedValuePointPatchField
         (
-            const fixedValuePointPatchField<Type>& pfld,
+            const this_bctype&,
             const pointPatch& p,
             const DimensionedField<Type, pointMesh>& iF,
             const Type& value
@@ -129,24 +129,20 @@ public:
         //- Copy construct with internal field reference
         fixedValuePointPatchField
         (
-            const fixedValuePointPatchField<Type>& pfld,
+            const this_bctype& pfld,
             const DimensionedField<Type, pointMesh>& iF
         );
 
-        //- Copy construct
-        fixedValuePointPatchField(const fixedValuePointPatchField<Type>& pfld)
-        :
-            fixedValuePointPatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        fixedValuePointPatchField(const this_bctype& pfld)
+        #ifdef Foam_pointPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -167,7 +163,9 @@ public:
 
     // Member Operators
 
-        // Disable assignment operators
+        // No assignment operations
+        virtual void operator=(const valuePointPatchField<Type>&) {}
+        virtual void operator=(const pointPatchField<Type>&) {}
         virtual void operator=(const Field<Type>&) {}
         virtual void operator=(const Type&) {}
 };
@@ -180,7 +178,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedValuePointPatchField.C"
+    #include "fixedValuePointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

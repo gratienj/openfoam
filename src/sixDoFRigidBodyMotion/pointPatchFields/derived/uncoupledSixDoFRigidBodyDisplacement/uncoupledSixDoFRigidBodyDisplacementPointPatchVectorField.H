@@ -34,8 +34,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField_H
-#define uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField_H
+#ifndef Foam_uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField_H
+#define Foam_uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField_H
 
 #include "fixedValuePointPatchField.H"
 #include "sixDoFRigidBodyMotion.H"
@@ -53,7 +53,12 @@ class uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
 :
     public fixedValuePointPatchField<vector>
 {
-    // Private data
+    typedef
+        uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField this_bctype;
+    typedef
+        fixedValuePointPatchField<vector> parent_bctype;
+
+    // Private Data
 
         //- Six dof motion object
         sixDoFRigidBodyMotion motion_;
@@ -88,10 +93,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
         (
-            const uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<vector, pointMesh>&,
             const pointPatchFieldMapper&
@@ -100,17 +105,17 @@ public:
         //- Construct as copy setting internal field reference
         uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
         (
-            const uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<vector>> clone() const
-        {
-            return pointPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
@@ -146,6 +151,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

@@ -45,7 +45,7 @@ See also
     Foam::timeVaryingMappedFixedValueFvPatchField
 
 SourceFiles
-    timeVaryingMappedFixedValuePointPatchField.C
+    timeVaryingMappedFixedValuePointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -72,6 +72,9 @@ class timeVaryingMappedFixedValuePointPatchField
 :
     public fixedValuePointPatchField<Type>
 {
+    typedef timeVaryingMappedFixedValuePointPatchField<Type> this_bctype;
+    typedef fixedValuePointPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- If true adjust the mapped field to maintain average value
@@ -146,35 +149,26 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         timeVaryingMappedFixedValuePointPatchField
         (
-            const timeVaryingMappedFixedValuePointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Construct as copy
-        timeVaryingMappedFixedValuePointPatchField
-        (
-            const timeVaryingMappedFixedValuePointPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         timeVaryingMappedFixedValuePointPatchField
         (
-            const timeVaryingMappedFixedValuePointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        timeVaryingMappedFixedValuePointPatchField(const this_bctype&) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -211,6 +205,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -221,7 +221,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "timeVaryingMappedFixedValuePointPatchField.C"
+    #include "timeVaryingMappedFixedValuePointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

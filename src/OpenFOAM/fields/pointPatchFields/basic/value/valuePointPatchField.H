@@ -31,7 +31,7 @@ Description
     Foam::valuePointPatchField
 
 SourceFiles
-    valuePointPatchField.C
+    valuePointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -84,12 +84,6 @@ public:
     TypeName("value");
 
 
-    // Generated Methods
-
-        //- Copy construct
-        valuePointPatchField(const valuePointPatchField&) = default;
-
-
     // Constructors
 
         //- Construct from patch and internal field
@@ -133,7 +127,7 @@ public:
             )
         {}
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         valuePointPatchField
         (
             const valuePointPatchField<Type>&,
@@ -159,14 +153,16 @@ public:
             const DimensionedField<Type, pointMesh>& iF
         );
 
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        valuePointPatchField(const valuePointPatchField& pfld)
+        #ifdef Foam_pointPatchField_copyConstruct
+        : valuePointPatchField(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -275,7 +271,7 @@ tmp<Field<Type>> operator+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "valuePointPatchField.C"
+    #include "valuePointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

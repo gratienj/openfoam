@@ -308,10 +308,10 @@ $(volumeExpr)/volumeExprLemonParser.lyy-m4
 $(volumeExpr)/volumeExprScanner.cc
 
 fieldExpr = $(expr)/fields
-$(fieldExpr)/base/patchExprFieldBase.C
+$(fieldExpr)/base/patchExprFieldBase.cxx
 $(fieldExpr)/fvPatchFields/exprFixedValueFvPatchFields.C
 $(fieldExpr)/fvPatchFields/exprMixedFvPatchFields.C
-$(fieldExpr)/pointPatchFields/exprValuePointPatchFields.C
+$(fieldExpr)/pointPatchFields/exprValuePointPatchFields.cxx
 
 
 fvMatrices/fvMatrices.C

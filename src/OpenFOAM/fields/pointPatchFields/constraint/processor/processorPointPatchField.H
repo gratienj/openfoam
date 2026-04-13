@@ -30,7 +30,7 @@ Description
     Foam::processorPointPatchField
 
 SourceFiles
-    processorPointPatchField.C
+    processorPointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -54,6 +54,9 @@ class processorPointPatchField
 :
     public coupledPointPatchField<Type>
 {
+    typedef processorPointPatchField<Type> this_bctype;
+    typedef coupledPointPatchField<Type> parent_bctype;
+
     // Private data
 
         //- Local reference to processor patch
@@ -82,10 +85,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         processorPointPatchField
         (
-            const processorPointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
@@ -94,17 +97,20 @@ public:
         //- Construct as copy setting internal field reference
         processorPointPatchField
         (
-            const processorPointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        processorPointPatchField(const this_bctype& pfld)
+        #ifdef Foam_pointPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -115,7 +121,7 @@ public:
 
 
     //- Destructor
-    virtual ~processorPointPatchField();
+    virtual ~processorPointPatchField() = default;
 
 
     // Member functions
@@ -165,6 +171,12 @@ public:
                 Field<Type>&
             ) const
             {}
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -175,7 +187,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "processorPointPatchField.C"
+    #include "processorPointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

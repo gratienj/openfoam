@@ -50,12 +50,12 @@ Usage
     automatically works through decomposePar.
 
 SourceFiles
-    uniformInterpolatedDisplacementPointPatchVectorField.C
+    uniformInterpolatedDisplacementPointPatchVectorField.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef uniformInterpolatedDisplacementPointPatchVectorField_H
-#define uniformInterpolatedDisplacementPointPatchVectorField_H
+#ifndef Foam_uniformInterpolatedDisplacementPointPatchVectorField_H
+#define Foam_uniformInterpolatedDisplacementPointPatchVectorField_H
 
 #include "fixedValuePointPatchField.H"
 
@@ -74,7 +74,10 @@ class uniformInterpolatedDisplacementPointPatchVectorField
 :
     public fixedValuePointPatchField<vector>
 {
-    // Private data
+    typedef uniformInterpolatedDisplacementPointPatchVectorField this_bctype;
+    typedef fixedValuePointPatchField<vector> parent_bctype;
+
+    // Private Data
 
         //- Name of displacement field
         const word fieldName_;
@@ -120,10 +123,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         uniformInterpolatedDisplacementPointPatchVectorField
         (
-            const uniformInterpolatedDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<vector, pointMesh>&,
             const pointPatchFieldMapper&
@@ -132,17 +135,17 @@ public:
         //- Construct as copy setting internal field reference
         uniformInterpolatedDisplacementPointPatchVectorField
         (
-            const uniformInterpolatedDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<vector>> clone() const
-        {
-            return pointPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        uniformInterpolatedDisplacementPointPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
@@ -152,7 +155,7 @@ public:
         }
 
 
-    // Member functions
+    // Member Functions
 
         // Evaluation functions
 
@@ -162,6 +165,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

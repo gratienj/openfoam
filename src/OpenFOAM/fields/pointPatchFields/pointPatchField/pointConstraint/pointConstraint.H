@@ -36,8 +36,8 @@ Description
     function.
 
 SourceFiles
+    pointConstraint.cxx
     pointConstraintI.H
-    pointConstraint.C
 
 \*---------------------------------------------------------------------------*/
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2014 OpenFOAM Foundation
-    Copyright (C) 2023-2025 OpenCFD Ltd.
+    Copyright (C) 2023-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +39,7 @@ Description
     \endverbatim
 
 SourceFiles
-    zeroValuePointPatchField.C
+    zeroValuePointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -62,7 +62,7 @@ class zeroValuePointPatchField
 :
     public fixedValuePointPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef zeroValuePointPatchField<Type> this_bctype;
     typedef fixedValuePointPatchField<Type> parent_bctype;
 
 public:
@@ -91,7 +91,7 @@ public:
         //- Copy construct onto a new patch
         zeroValuePointPatchField
         (
-            const zeroValuePointPatchField<Type>& pfld,
+            const this_bctype& pfld,
             const pointPatch& p,
             const DimensionedField<Type, pointMesh>& iF,
             const pointPatchFieldMapper&
@@ -100,24 +100,14 @@ public:
         //- Copy construct with internal field reference
         zeroValuePointPatchField
         (
-            const zeroValuePointPatchField<Type>& pfld,
+            const this_bctype& pfld,
             const DimensionedField<Type, pointMesh>& iF
         );
 
-        //- Copy construct
-        zeroValuePointPatchField(const zeroValuePointPatchField<Type>& pfld)
-        :
-            zeroValuePointPatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        zeroValuePointPatchField(const this_bctype&) = delete;
 
-
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -168,7 +158,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "zeroValuePointPatchField.C"
+    #include "zeroValuePointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

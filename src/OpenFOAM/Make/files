@@ -781,36 +781,36 @@ $(Fields)/fieldTypes.C
 
 
 pointPatchFields = fields/pointPatchFields
-$(pointPatchFields)/pointPatchField/pointPatchFieldBase.C
-$(pointPatchFields)/pointPatchField/pointPatchFields.C
-$(pointPatchFields)/pointPatchField/pointConstraint/pointConstraint.C
+$(pointPatchFields)/pointPatchField/pointPatchFieldBase.cxx
+$(pointPatchFields)/pointPatchField/pointPatchFields.cxx
+$(pointPatchFields)/pointPatchField/pointConstraint/pointConstraint.cxx
 
 basicPointPatchFields = $(pointPatchFields)/basic
-$(basicPointPatchFields)/calculated/calculatedPointPatchFields.C
-$(basicPointPatchFields)/coupled/coupledPointPatchFields.C
-$(basicPointPatchFields)/value/valuePointPatchFields.C
-$(basicPointPatchFields)/fixedValue/fixedValuePointPatchFields.C
-$(basicPointPatchFields)/zeroGradient/zeroGradientPointPatchFields.C
-$(basicPointPatchFields)/zeroValue/zeroValuePointPatchFields.C
+$(basicPointPatchFields)/calculated/calculatedPointPatchFields.cxx
+$(basicPointPatchFields)/coupled/coupledPointPatchFields.cxx
+$(basicPointPatchFields)/value/valuePointPatchFields.cxx
+$(basicPointPatchFields)/fixedValue/fixedValuePointPatchFields.cxx
+$(basicPointPatchFields)/zeroGradient/zeroGradientPointPatchFields.cxx
+$(basicPointPatchFields)/zeroValue/zeroValuePointPatchFields.cxx
 
 constraintPointPatchFields = $(pointPatchFields)/constraint
-$(constraintPointPatchFields)/cyclic/cyclicPointPatchFields.C
-$(constraintPointPatchFields)/cyclicSlip/cyclicSlipPointPatchFields.C
-$(constraintPointPatchFields)/empty/emptyPointPatchFields.C
-$(constraintPointPatchFields)/nonuniformTransformCyclic/nonuniformTransformCyclicPointPatchFields.C
-$(constraintPointPatchFields)/processor/processorPointPatchFields.C
-$(constraintPointPatchFields)/processorCyclic/processorCyclicPointPatchFields.C
-$(constraintPointPatchFields)/symmetryPlane/symmetryPlanePointPatchFields.C
-$(constraintPointPatchFields)/symmetry/symmetryPointPatchFields.C
-$(constraintPointPatchFields)/wedge/wedgePointPatchFields.C
+$(constraintPointPatchFields)/cyclic/cyclicPointPatchFields.cxx
+$(constraintPointPatchFields)/cyclicSlip/cyclicSlipPointPatchFields.cxx
+$(constraintPointPatchFields)/empty/emptyPointPatchFields.cxx
+$(constraintPointPatchFields)/nonuniformTransformCyclic/nonuniformTransformCyclicPointPatchFields.cxx
+$(constraintPointPatchFields)/processor/processorPointPatchFields.cxx
+$(constraintPointPatchFields)/processorCyclic/processorCyclicPointPatchFields.cxx
+$(constraintPointPatchFields)/symmetryPlane/symmetryPlanePointPatchFields.cxx
+$(constraintPointPatchFields)/symmetry/symmetryPointPatchFields.cxx
+$(constraintPointPatchFields)/wedge/wedgePointPatchFields.cxx
 
 derivedPointPatchFields = $(pointPatchFields)/derived
-$(derivedPointPatchFields)/slip/slipPointPatchFields.C
-$(derivedPointPatchFields)/fixedNormalSlip/fixedNormalSlipPointPatchFields.C
-$(derivedPointPatchFields)/timeVaryingUniformFixedValue/timeVaryingUniformFixedValuePointPatchFields.C
-$(derivedPointPatchFields)/codedFixedValue/codedFixedValuePointPatchFields.C
+$(derivedPointPatchFields)/slip/slipPointPatchFields.cxx
+$(derivedPointPatchFields)/fixedNormalSlip/fixedNormalSlipPointPatchFields.cxx
+$(derivedPointPatchFields)/timeVaryingUniformFixedValue/timeVaryingUniformFixedValuePointPatchFields.cxx
+$(derivedPointPatchFields)/codedFixedValue/codedFixedValuePointPatchFields.cxx
 
-fields/GeometricFields/pointFields/pointFields.C
+fields/GeometricFields/pointFields/pointFields.cxx
 
 meshes/bandCompression/bandCompression.C
 meshes/preservePatchTypes/preservePatchTypes.C

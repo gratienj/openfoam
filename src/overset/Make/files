@@ -20,7 +20,7 @@ oversetPolyPatch/oversetFvPatch.C
 oversetPolyPatch/oversetFvPatchFields.C
 oversetPolyPatch/oversetFvsPatchFields.C
 oversetPolyPatch/oversetPointPatch.C
-oversetPolyPatch/oversetPointPatchFields.C
+oversetPolyPatch/oversetPointPatchFields.cxx
 
 oversetAdjustPhi/oversetAdjustPhi.C
 

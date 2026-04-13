@@ -99,7 +99,7 @@ See also
     codedFixedValueFvPatchField
 
 SourceFiles
-    codedFixedValuePointPatchField.C
+    codedFixedValuePointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -124,7 +124,7 @@ class codedFixedValuePointPatchField
     public fixedValuePointPatchField<Type>,
     protected codedBase
 {
-    //- The parent boundary condition type
+    typedef codedFixedValuePointPatchField<Type> this_bctype;
     typedef fixedValuePointPatchField<Type> parent_bctype;
 
 
@@ -193,36 +193,26 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given codedFixedValuePointPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         codedFixedValuePointPatchField
         (
-            const codedFixedValuePointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Construct as copy
-        codedFixedValuePointPatchField
-        (
-            const codedFixedValuePointPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         codedFixedValuePointPatchField
         (
-            const codedFixedValuePointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        codedFixedValuePointPatchField(const this_bctype&) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -248,6 +238,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -258,7 +254,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "codedFixedValuePointPatchField.C"
+    #include "codedFixedValuePointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Copyright (C) 2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,7 +31,7 @@ Description
     A calculated boundary condition for pointField
 
 SourceFiles
-    calculatedPointPatchField.C
+    calculatedPointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -53,6 +54,9 @@ class calculatedPointPatchField
 :
     public pointPatchField<Type>
 {
+    typedef calculatedPointPatchField<Type> this_bctype;
+    typedef pointPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -76,10 +80,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         calculatedPointPatchField
         (
-            const calculatedPointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
@@ -88,17 +92,20 @@ public:
         //- Construct as copy setting internal field reference
         calculatedPointPatchField
         (
-            const calculatedPointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        calculatedPointPatchField(const this_bctype& pfld)
+        #ifdef Foam_pointPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -106,6 +113,12 @@ public:
         {
             return pointPatchField<Type>::Clone(*this, iF);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -116,7 +129,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "calculatedPointPatchField.C"
+    #include "calculatedPointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -51,8 +51,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef lumpedPointDisplacementPointPatchVectorField_H
-#define lumpedPointDisplacementPointPatchVectorField_H
+#ifndef Foam_lumpedPointDisplacementPointPatchVectorField_H
+#define Foam_lumpedPointDisplacementPointPatchVectorField_H
 
 #include "fixedValuePointPatchField.H"
 #include "lumpedPointMovement.H"
@@ -76,6 +76,10 @@ class lumpedPointDisplacementPointPatchVectorField
 :
     public fixedValuePointPatchField<vector>
 {
+    typedef lumpedPointDisplacementPointPatchVectorField this_bctype;
+    typedef fixedValuePointPatchField<vector> parent_bctype;
+    // typedef DimensionedField<vector, pointMesh> internal_type;
+
     // Private Data
 
         //- Names of the movement controller(s) in use
@@ -87,12 +91,6 @@ class lumpedPointDisplacementPointPatchVectorField
 
         //- Backup method for getting "points0" without a motion solver
         mutable autoPtr<pointIOField> points0Ptr_;
-
-
-    // Convenience typedefs
-
-        typedef lumpedPointDisplacementPointPatchVectorField patchType;
-        typedef DimensionedField<vector, pointMesh> fieldType;
 
 
 protected:
@@ -129,10 +127,10 @@ public:
             const dictionary& dict
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         lumpedPointDisplacementPointPatchVectorField
         (
-            const lumpedPointDisplacementPointPatchVectorField& rhs,
+            const this_bctype& rhs,
             const pointPatch& p,
             const DimensionedField<vector, pointMesh>& iF,
             const pointPatchFieldMapper& mapper
@@ -141,17 +139,17 @@ public:
         //- Construct as copy setting internal field reference
         lumpedPointDisplacementPointPatchVectorField
         (
-            const lumpedPointDisplacementPointPatchVectorField& rhs,
+            const this_bctype& rhs,
             const DimensionedField<vector, pointMesh>& iF
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<vector>> clone() const
-        {
-            return pointPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        lumpedPointDisplacementPointPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
@@ -195,6 +193,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

@@ -40,12 +40,12 @@ Description
 
 
 SourceFiles
-    pointAttractionDisplacementPointPatchVectorField.C
+    pointAttractionDisplacementPointPatchVectorField.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef pointAttractionDisplacementPointPatchVectorField_H
-#define pointAttractionDisplacementPointPatchVectorField_H
+#ifndef Foam_pointAttractionDisplacementPointPatchVectorField_H
+#define Foam_pointAttractionDisplacementPointPatchVectorField_H
 
 #include "pointPatchFields.H"
 #include "extendedFeatureEdgeMesh.H"
@@ -63,9 +63,10 @@ class pointAttractionDisplacementPointPatchVectorField
 :
     public pointPatchVectorField
 {
-private:
+    typedef pointAttractionDisplacementPointPatchVectorField this_bctype;
+    typedef pointPatchVectorField parent_bctype;
 
-    // Private data
+    // Private Data
 
         //- Maximum velocity
         const vector velocity_;
@@ -84,12 +85,6 @@ private:
 
         //- Calculate displacement (w.r.t. points0()) to project onto surface
         void calcProjection(vectorField& displacement) const;
-
-        //- No copy assignment
-        void operator=
-        (
-            const pointAttractionDisplacementPointPatchVectorField&
-        ) = delete;
 
 
 protected:
@@ -120,55 +115,37 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         pointAttractionDisplacementPointPatchVectorField
         (
-            const pointAttractionDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<vector, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Construct as copy
-        pointAttractionDisplacementPointPatchVectorField
-        (
-            const pointAttractionDisplacementPointPatchVectorField&
-        );
-
-        //- Construct and return a clone
-        virtual autoPtr<pointPatchVectorField> clone() const
-        {
-            return autoPtr<pointPatchVectorField>
-            (
-                new pointAttractionDisplacementPointPatchVectorField
-                (
-                    *this
-                )
-            );
-        }
-
         //- Construct as copy setting internal field reference
         pointAttractionDisplacementPointPatchVectorField
         (
-            const pointAttractionDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, pointMesh>&
         );
 
-        //- Construct and return a clone setting internal field reference
-        virtual autoPtr<pointPatchVectorField> clone
+        //- No copy without an internal field
+        pointAttractionDisplacementPointPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
+
+        //- Clone with an internal field reference
+        virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
         ) const
         {
-            return autoPtr<pointPatchVectorField>
-            (
-                new pointAttractionDisplacementPointPatchVectorField
-                (
-                    *this,
-                    iF
-                )
-            );
+            return pointPatchField<vector>::Clone(*this, iF);
         }
+
 
     // Member Functions
 
@@ -177,6 +154,18 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- No copy assignment
+        void operator=
+        (
+            const pointAttractionDisplacementPointPatchVectorField&
+        ) = delete;
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

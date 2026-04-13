@@ -64,7 +64,7 @@ Foam::label Foam::lumpedPointDisplacementPointPatchVectorField::setPatchControls
     forAll(bf, patchi)
     {
         // Patch of this type
-        const auto* p = isA<patchType>(bf[patchi]);
+        const auto* p = isA<this_bctype>(bf[patchi]);
 
         if (p)
         {
@@ -93,12 +93,12 @@ Foam::label Foam::lumpedPointDisplacementPointPatchVectorField::setInterpolators
 {
     label count = 0;
 
-    const pointVectorField::Boundary& bf = pvf.boundaryField();
+    const auto& bf = pvf.boundaryField();
 
     forAll(bf, patchi)
     {
         // Patch of this type
-        const auto* p = isA<patchType>(bf[patchi]);
+        const auto* p = isA<this_bctype>(bf[patchi]);
 
         if (p)
         {
@@ -124,13 +124,13 @@ Foam::lumpedPointDisplacementPointPatchVectorField::patchIds
     const pointVectorField& pvf
 )
 {
-    const pointVectorField::Boundary& bf = pvf.boundaryField();
+    const auto& bf = pvf.boundaryField();
 
     DynamicList<label> patchLst(bf.size());
     forAll(bf, patchi)
     {
         // Patch of this type
-        if (isA<patchType>(bf[patchi]))
+        if (isA<this_bctype>(bf[patchi]))
         {
             patchLst.append(patchi);
             // or patchLst.append(bf[patchi].patch().index());
@@ -207,7 +207,7 @@ lumpedPointDisplacementPointPatchVectorField
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchField<vector>(p, iF),
+    parent_bctype(p, iF),
     controllers_(),
     dataWritten_(0, 0),
     points0Ptr_(nullptr)
@@ -222,7 +222,7 @@ lumpedPointDisplacementPointPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValuePointPatchField<vector>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     controllers_(),
     dataWritten_(0, 0),
     points0Ptr_(nullptr)
@@ -245,13 +245,13 @@ lumpedPointDisplacementPointPatchVectorField
 Foam::lumpedPointDisplacementPointPatchVectorField::
 lumpedPointDisplacementPointPatchVectorField
 (
-    const lumpedPointDisplacementPointPatchVectorField& rhs,
+    const this_bctype& rhs,
     const pointPatch& p,
     const DimensionedField<vector, pointMesh>& iF,
     const pointPatchFieldMapper& mapper
 )
 :
-    fixedValuePointPatchField<vector>(rhs, p, iF, mapper),
+    parent_bctype(rhs, p, iF, mapper),
     controllers_(rhs.controllers_),
     dataWritten_(rhs.dataWritten_),
     points0Ptr_(nullptr)
@@ -261,11 +261,11 @@ lumpedPointDisplacementPointPatchVectorField
 Foam::lumpedPointDisplacementPointPatchVectorField::
 lumpedPointDisplacementPointPatchVectorField
 (
-    const lumpedPointDisplacementPointPatchVectorField& rhs,
+    const this_bctype& rhs,
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchField<vector>(rhs, iF),
+    parent_bctype(rhs, iF),
     controllers_(rhs.controllers_),
     dataWritten_(rhs.dataWritten_),
     points0Ptr_(nullptr)
@@ -415,8 +415,7 @@ void Foam::lumpedPointDisplacementPointPatchVectorField::updateCoeffs()
 
     this->operator==(tdisp);
 
-
-    fixedValuePointPatchField<vector>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     // Process any abort information sent from slave
     if

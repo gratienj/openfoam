@@ -30,7 +30,7 @@ Description
     Cyclic front and back plane patch field
 
 SourceFiles
-    cyclicPointPatchField.C
+    cyclicPointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -54,7 +54,11 @@ class cyclicPointPatchField
 :
     public coupledPointPatchField<Type>
 {
-    // Private data
+    typedef cyclicPointPatchField<Type> this_bctype;
+    typedef coupledPointPatchField<Type> parent_bctype;
+    //typedef cyclicPointPatch patch_type;
+
+    // Private Data
 
         //- Local reference cast into the cyclic patch
         const cyclicPointPatch& cyclicPatch_;
@@ -83,10 +87,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicPointPatchField
         (
-            const cyclicPointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
@@ -95,17 +99,20 @@ public:
         //- Construct as copy setting internal field reference
         cyclicPointPatchField
         (
-            const cyclicPointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        cyclicPointPatchField(const this_bctype& pfld)
+        #ifdef Foam_pointPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -167,6 +174,12 @@ public:
                 const Pstream::commsTypes commsType,
                 Field<Type>&
             ) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -177,7 +190,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cyclicPointPatchField.C"
+    #include "cyclicPointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

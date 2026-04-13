@@ -62,7 +62,7 @@ meshSearch/meshSearch.C
 meshSearch/meshSearchFACE_CENTRE_TRISMeshObject.C
 meshSearch/meshSearchMeshObject.C
 
-fields/pointPatchFields/uniformFixedValue/uniformFixedValuePointPatchFields.C
+fields/pointPatchFields/uniformFixedValue/uniformFixedValuePointPatchFields.cxx
 fields/volume/polyMeshFields.C
 meshTools/meshTools.C
 
@@ -302,14 +302,14 @@ $(AMICycPatches)/cyclicAMILduInterfaceField/cyclicAMILduInterfaceField.C
 $(AMICycPatches)/cyclicAMIPolyPatch/cyclicAMIPolyPatch.C
 $(AMICycPatches)/cyclicAMIPolyPatch/cyclicAMIPolyPatchTopologyChange.C
 $(AMICycPatches)/cyclicAMIPointPatch/cyclicAMIPointPatch.C
-$(AMICycPatches)/cyclicAMIPointPatchField/cyclicAMIPointPatchFields.C
+$(AMICycPatches)/cyclicAMIPointPatchField/cyclicAMIPointPatchFields.cxx
 
 ACMICycPatches=$(AMI)/patches/cyclicACMI
 $(ACMICycPatches)/cyclicACMILduInterfaceField/cyclicACMILduInterface.C
 $(ACMICycPatches)/cyclicACMILduInterfaceField/cyclicACMILduInterfaceField.C
 $(ACMICycPatches)/cyclicACMIPolyPatch/cyclicACMIPolyPatch.C
 $(ACMICycPatches)/cyclicACMIPointPatch/cyclicACMIPointPatch.C
-$(ACMICycPatches)/cyclicACMIPointPatchField/cyclicACMIPointPatchFields.C
+$(ACMICycPatches)/cyclicACMIPointPatchField/cyclicACMIPointPatchFields.cxx
 
 PeriodicAMICycPatches=$(AMI)/patches/cyclicPeriodicAMI
 $(PeriodicAMICycPatches)/cyclicPeriodicAMIPolyPatch/cyclicPeriodicAMIPolyPatch.C
