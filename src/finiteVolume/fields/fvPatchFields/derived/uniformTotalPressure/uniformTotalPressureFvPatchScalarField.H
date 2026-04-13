@@ -66,8 +66,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef uniformTotalPressureFvPatchScalarField_H
-#define uniformTotalPressureFvPatchScalarField_H
+#ifndef Foam_uniformTotalPressureFvPatchScalarField_H
+#define Foam_uniformTotalPressureFvPatchScalarField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "Function1.H"
@@ -85,7 +85,10 @@ class uniformTotalPressureFvPatchScalarField
 :
     public fixedValueFvPatchScalarField
 {
-    // Private data
+    typedef uniformTotalPressureFvPatchScalarField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
+    // Private Data
 
         //- Name of the velocity field
         word UName_;
@@ -130,33 +133,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         uniformTotalPressureFvPatchScalarField
         (
-            const uniformTotalPressureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        uniformTotalPressureFvPatchScalarField
-        (
-            const uniformTotalPressureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         uniformTotalPressureFvPatchScalarField
         (
-            const uniformTotalPressureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        uniformTotalPressureFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -200,11 +194,11 @@ public:
 
         // Evaluation functions
 
-            //- Inherit updateCoeffs from fixedValueFvPatchScalarField
-            using fixedValueFvPatchScalarField::updateCoeffs;
+            //- Inherit updateCoeffs from parent_bctype
+            using parent_bctype::updateCoeffs;
 
             //- Update the coefficients associated with the patch field
-            //  using the given patch velocity field
+            //- using the given patch velocity field
             virtual void updateCoeffs(const vectorField& Up);
 
             //- Update the coefficients associated with the patch field
@@ -213,6 +207,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

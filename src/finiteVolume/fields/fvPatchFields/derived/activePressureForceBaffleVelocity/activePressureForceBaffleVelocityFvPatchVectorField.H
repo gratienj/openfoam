@@ -97,8 +97,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef activePressureForceBaffleVelocityFvPatchVectorField_H
-#define activePressureForceBaffleVelocityFvPatchVectorField_H
+#ifndef Foam_activePressureForceBaffleVelocityFvPatchVectorField_H
+#define Foam_activePressureForceBaffleVelocityFvPatchVectorField_H
 
 #include "fvPatchFields.H"
 #include "fixedValueFvPatchFields.H"
@@ -116,7 +116,10 @@ class activePressureForceBaffleVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
-    // Private data
+    typedef activePressureForceBaffleVelocityFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Name of the pressure field used to calculate the force
         //- on the active baffle
@@ -185,33 +188,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping
+        //- Construct by mapping onto a new patch
         activePressureForceBaffleVelocityFvPatchVectorField
         (
-            const activePressureForceBaffleVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        activePressureForceBaffleVelocityFvPatchVectorField
-        (
-            const activePressureForceBaffleVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         activePressureForceBaffleVelocityFvPatchVectorField
         (
-            const activePressureForceBaffleVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        activePressureForceBaffleVelocityFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -246,6 +243,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

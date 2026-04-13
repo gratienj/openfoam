@@ -81,8 +81,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef syringePressureFvPatchScalarField_H
-#define syringePressureFvPatchScalarField_H
+#ifndef Foam_syringePressureFvPatchScalarField_H
+#define Foam_syringePressureFvPatchScalarField_H
 
 #include "fixedValueFvPatchFields.H"
 
@@ -99,7 +99,10 @@ class syringePressureFvPatchScalarField
 :
     public fixedValueFvPatchScalarField
 {
-    // Private data
+    typedef syringePressureFvPatchScalarField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
+    // Private Data
 
         //- Syringe piston area
         scalar Ap_;
@@ -170,34 +173,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given syringePressureFvPatchScalarField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         syringePressureFvPatchScalarField
         (
-            const syringePressureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        syringePressureFvPatchScalarField
-        (
-            const syringePressureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         syringePressureFvPatchScalarField
         (
-            const syringePressureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        syringePressureFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -219,6 +212,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

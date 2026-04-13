@@ -80,12 +80,12 @@ See also
     Foam::mixedFvPatchField
 
 SourceFiles
-    mappedMixedFvPatchField.C
+    mappedMixedFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef mappedMixedFvPatchField_H
-#define mappedMixedFvPatchField_H
+#ifndef Foam_mappedMixedFvPatchField_H
+#define Foam_mappedMixedFvPatchField_H
 
 #include "mappedPatchFieldBase.H"
 #include "mixedFvPatchFields.H"
@@ -105,6 +105,10 @@ class mappedMixedFvPatchField
     public mixedFvPatchField<Type>,
     public mappedPatchFieldBase<Type>
 {
+    typedef mappedMixedFvPatchField<Type> this_bctype;
+    typedef mixedFvPatchField<Type> parent_bctype;
+
+    // Private Data
 
         //- Name of weight field to sample
         word weightFieldName_;
@@ -133,35 +137,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  mappedMixedFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         mappedMixedFvPatchField
         (
-            const mappedMixedFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        mappedMixedFvPatchField
-        (
-            const mappedMixedFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         mappedMixedFvPatchField
         (
-            const mappedMixedFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        mappedMixedFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -199,6 +192,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -209,7 +208,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "mappedMixedFvPatchField.C"
+    #include "mappedMixedFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

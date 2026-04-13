@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef directionMixedFvPatchFields_H
-#define directionMixedFvPatchFields_H
+#ifndef Foam_directionMixedFvPatchFields_H
+#define Foam_directionMixedFvPatchFields_H
 
 #include "directionMixedFvPatchField.H"
 #include "fieldTypes.H"

@@ -72,8 +72,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef rotatingTotalPressureFvPatchScalarField_H
-#define rotatingTotalPressureFvPatchScalarField_H
+#ifndef Foam_rotatingTotalPressureFvPatchScalarField_H
+#define Foam_rotatingTotalPressureFvPatchScalarField_H
 
 #include "totalPressureFvPatchScalarField.H"
 #include "Function1.H"
@@ -91,7 +91,10 @@ class rotatingTotalPressureFvPatchScalarField
 :
     public totalPressureFvPatchScalarField
 {
-    // Private data
+    typedef rotatingTotalPressureFvPatchScalarField this_bctype;
+    typedef totalPressureFvPatchScalarField parent_bctype;
+
+    // Private Data
 
         //- Angular velocity of the frame
         autoPtr<Function1<vector>> omega_;
@@ -120,34 +123,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given rotatingTotalPressureFvPatchScalarField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         rotatingTotalPressureFvPatchScalarField
         (
-            const rotatingTotalPressureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        rotatingTotalPressureFvPatchScalarField
-        (
-            const rotatingTotalPressureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         rotatingTotalPressureFvPatchScalarField
         (
-            const rotatingTotalPressureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        rotatingTotalPressureFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -169,6 +162,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

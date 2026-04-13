@@ -59,7 +59,7 @@ atmTurbulentHeatFluxTemperatureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     heatSource_(heatSourceType::POWER),
     alphaEffName_("undefinedAlphaEff"),
     Cp0_(nullptr),
@@ -70,13 +70,13 @@ atmTurbulentHeatFluxTemperatureFvPatchScalarField
 atmTurbulentHeatFluxTemperatureFvPatchScalarField::
 atmTurbulentHeatFluxTemperatureFvPatchScalarField
 (
-    const atmTurbulentHeatFluxTemperatureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedGradientFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     heatSource_(ptf.heatSource_),
     alphaEffName_(ptf.alphaEffName_),
     Cp0_(ptf.Cp0_.clone()),
@@ -92,7 +92,7 @@ atmTurbulentHeatFluxTemperatureFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),  // Bypass dictionary constructor
+    parent_bctype(p, iF),  // Bypass dictionary constructor
     heatSource_
     (
         heatSourceTypeNames.getOrDefault
@@ -117,25 +117,11 @@ atmTurbulentHeatFluxTemperatureFvPatchScalarField
 atmTurbulentHeatFluxTemperatureFvPatchScalarField::
 atmTurbulentHeatFluxTemperatureFvPatchScalarField
 (
-    const atmTurbulentHeatFluxTemperatureFvPatchScalarField& atmpsf
-)
-:
-    fixedGradientFvPatchScalarField(atmpsf),
-    heatSource_(atmpsf.heatSource_),
-    alphaEffName_(atmpsf.alphaEffName_),
-    Cp0_(atmpsf.Cp0_.clone()),
-    q_(atmpsf.q_.clone(this->patch().patch()))
-{}
-
-
-atmTurbulentHeatFluxTemperatureFvPatchScalarField::
-atmTurbulentHeatFluxTemperatureFvPatchScalarField
-(
-    const atmTurbulentHeatFluxTemperatureFvPatchScalarField& atmpsf,
+    const this_bctype& atmpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(atmpsf, iF),
+    parent_bctype(atmpsf, iF),
     heatSource_(atmpsf.heatSource_),
     alphaEffName_(atmpsf.alphaEffName_),
     Cp0_(atmpsf.Cp0_.clone()),
@@ -161,12 +147,14 @@ void atmTurbulentHeatFluxTemperatureFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedGradientFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const atmTurbulentHeatFluxTemperatureFvPatchScalarField& atmptf =
-        refCast<const atmTurbulentHeatFluxTemperatureFvPatchScalarField>(ptf);
+    const auto& atmptf = refCast<const this_bctype>(ptf);
 
-    q_->rmap(atmptf.q_(), addr);
+    if (q_ && atmptf.q_)
+    {
+        q_->rmap(atmptf.q_(), addr);
+    }
 }
 
 
@@ -216,7 +204,7 @@ void atmTurbulentHeatFluxTemperatureFvPatchScalarField::updateCoeffs()
         }
     }
 
-    fixedGradientFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

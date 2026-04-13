@@ -77,6 +77,7 @@ SourceFiles
 namespace Foam
 {
 
+// Forward Declarations
 class turbulenceModel;
 
 /*---------------------------------------------------------------------------*\
@@ -87,6 +88,9 @@ class nutWallFunctionFvPatchScalarField
 :
     public fixedValueFvPatchScalarField
 {
+    typedef nutWallFunctionFvPatchScalarField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
 protected:
 
     // Protected Data
@@ -139,27 +143,22 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- nutWallFunctionFvPatchScalarField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         nutWallFunctionFvPatchScalarField
         (
-            const nutWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        nutWallFunctionFvPatchScalarField
-        (
-            const nutWallFunctionFvPatchScalarField&
-        );
+        //- No copy without an internal field
+        nutWallFunctionFvPatchScalarField(const this_bctype&) = delete;
 
         //- Construct as copy setting internal field reference
         nutWallFunctionFvPatchScalarField
         (
-            const nutWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
@@ -196,6 +195,11 @@ public:
 
             //- Write
             virtual void write(Ostream&) const;
+
+    // Member Operator
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

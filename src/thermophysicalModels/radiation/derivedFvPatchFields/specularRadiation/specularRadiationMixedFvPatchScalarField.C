@@ -290,7 +290,7 @@ specularRadiationMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     n_(),
     rayID_(-1),
     lambdaID_(-1),
@@ -305,13 +305,13 @@ specularRadiationMixedFvPatchScalarField
 specularRadiationMixedFvPatchScalarField::
 specularRadiationMixedFvPatchScalarField
 (
-    const specularRadiationMixedFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     n_(ptf.n_),
     rayID_(ptf.rayID_),
     lambdaID_(ptf.lambdaID_),
@@ -327,7 +327,7 @@ specularRadiationMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     n_(),
     rayID_(-1),
     lambdaID_(-1),
@@ -343,14 +343,14 @@ specularRadiationMixedFvPatchScalarField
     }
 
 
-    if (isA<wedgePolyPatch>(p.patch()))
+    if (const auto* wedgePtr = isA<wedgePolyPatch>(p.patch()))
     {
-        const auto& wp = refCast<const wedgePolyPatch>(p.patch());
+        const auto& wp = *wedgePtr;
         n_ = wp.n();
     }
-    else if (isA<symmetryPlanePolyPatch>(p.patch()))
+    else if (const auto* planePtr = isA<symmetryPlanePolyPatch>(p.patch()))
     {
-        const auto& sp = refCast<const symmetryPlanePolyPatch>(p.patch());
+        const auto& sp = *planePtr;
         n_ = sp.n();
     }
     else
@@ -366,25 +366,11 @@ specularRadiationMixedFvPatchScalarField
 specularRadiationMixedFvPatchScalarField::
 specularRadiationMixedFvPatchScalarField
 (
-    const specularRadiationMixedFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(ptf, iF),
-    n_(ptf.n_),
-    rayID_(ptf.rayID_),
-    lambdaID_(ptf.lambdaID_),
-    interpolate_(ptf.interpolate_)
-{}
-
-
-specularRadiationMixedFvPatchScalarField::
-specularRadiationMixedFvPatchScalarField
-(
-    const specularRadiationMixedFvPatchScalarField& ptf
-)
-:
-    mixedFvPatchScalarField(ptf),
+    parent_bctype(ptf, iF),
     n_(ptf.n_),
     rayID_(ptf.rayID_),
     lambdaID_(ptf.lambdaID_),
@@ -441,13 +427,13 @@ void specularRadiationMixedFvPatchScalarField::updateCoeffs()
         }
     }
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
 void specularRadiationMixedFvPatchScalarField::write(Ostream& os) const
 {
-    mixedFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     os.writeEntryIfDifferent<bool>("interpolate", false, interpolate_);
     this->writeValueEntry(os);
 }

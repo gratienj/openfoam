@@ -50,8 +50,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef pressureInletUniformVelocityFvPatchVectorField_H
-#define pressureInletUniformVelocityFvPatchVectorField_H
+#ifndef Foam_pressureInletUniformVelocityFvPatchVectorField_H
+#define Foam_pressureInletUniformVelocityFvPatchVectorField_H
 
 #include "pressureInletVelocityFvPatchVectorField.H"
 
@@ -68,6 +68,8 @@ class pressureInletUniformVelocityFvPatchVectorField
 :
     public pressureInletVelocityFvPatchVectorField
 {
+    typedef pressureInletUniformVelocityFvPatchVectorField this_bctype;
+    typedef pressureInletVelocityFvPatchVectorField parent_bctype;
 
 public:
 
@@ -92,34 +94,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  pressureInletUniformVelocityFvPatchVectorField onto a new patch
+        //- Construct by mapping onto a new patch
         pressureInletUniformVelocityFvPatchVectorField
         (
-            const pressureInletUniformVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        pressureInletUniformVelocityFvPatchVectorField
-        (
-            const pressureInletUniformVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         pressureInletUniformVelocityFvPatchVectorField
         (
-            const pressureInletUniformVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        pressureInletUniformVelocityFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -141,9 +136,12 @@ public:
         virtual void updateCoeffs();
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const fvPatchField<vector>& pvf);
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

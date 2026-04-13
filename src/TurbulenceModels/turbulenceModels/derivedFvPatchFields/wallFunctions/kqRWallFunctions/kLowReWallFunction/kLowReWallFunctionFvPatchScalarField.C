@@ -54,7 +54,7 @@ Foam::kLowReWallFunctionFvPatchScalarField::kLowReWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     Ceps2_(1.9),
     Ck_(-0.416),
     Bk_(8.366),
@@ -65,13 +65,13 @@ Foam::kLowReWallFunctionFvPatchScalarField::kLowReWallFunctionFvPatchScalarField
 
 Foam::kLowReWallFunctionFvPatchScalarField::kLowReWallFunctionFvPatchScalarField
 (
-    const kLowReWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Ceps2_(ptf.Ceps2_),
     Ck_(ptf.Ck_),
     Bk_(ptf.Bk_),
@@ -87,7 +87,7 @@ Foam::kLowReWallFunctionFvPatchScalarField::kLowReWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     Ceps2_
     (
         dict.getCheckOrDefault<scalar>
@@ -106,25 +106,11 @@ Foam::kLowReWallFunctionFvPatchScalarField::kLowReWallFunctionFvPatchScalarField
 
 Foam::kLowReWallFunctionFvPatchScalarField::kLowReWallFunctionFvPatchScalarField
 (
-    const kLowReWallFunctionFvPatchScalarField& kwfpsf
-)
-:
-    fixedValueFvPatchField<scalar>(kwfpsf),
-    Ceps2_(kwfpsf.Ceps2_),
-    Ck_(kwfpsf.Ck_),
-    Bk_(kwfpsf.Bk_),
-    C_(kwfpsf.C_),
-    wallCoeffs_(kwfpsf.wallCoeffs_)
-{}
-
-
-Foam::kLowReWallFunctionFvPatchScalarField::kLowReWallFunctionFvPatchScalarField
-(
-    const kLowReWallFunctionFvPatchScalarField& kwfpsf,
+    const this_bctype& kwfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(kwfpsf, iF),
+    parent_bctype(kwfpsf, iF),
     Ceps2_(kwfpsf.Ceps2_),
     Ck_(kwfpsf.Ck_),
     Bk_(kwfpsf.Bk_),
@@ -191,7 +177,7 @@ void Foam::kLowReWallFunctionFvPatchScalarField::updateCoeffs()
     // Limit kw to avoid failure of the turbulence model due to division by kw
     kw = max(kw, SMALL);
 
-    fixedValueFvPatchField<scalar>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     // TODO: perform averaging for cells sharing more than one boundary face
 }

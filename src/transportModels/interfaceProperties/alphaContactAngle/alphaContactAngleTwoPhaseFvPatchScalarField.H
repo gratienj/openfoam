@@ -80,6 +80,9 @@ class alphaContactAngleTwoPhaseFvPatchScalarField
 :
     public fixedGradientFvPatchScalarField
 {
+    typedef alphaContactAngleTwoPhaseFvPatchScalarField this_bctype;
+    typedef fixedGradientFvPatchScalarField parent_bctype;
+
 public:
 
     // Abstract class, no runtime information
@@ -116,24 +119,24 @@ public:
         //- Construct by mapping onto a new patch
         alphaContactAngleTwoPhaseFvPatchScalarField
         (
-            const alphaContactAngleTwoPhaseFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        alphaContactAngleTwoPhaseFvPatchScalarField
-        (
-            const alphaContactAngleTwoPhaseFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         alphaContactAngleTwoPhaseFvPatchScalarField
         (
-            const alphaContactAngleTwoPhaseFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
+
+        //- No copy without an internal field
+        alphaContactAngleTwoPhaseFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
 
     // Member Functions

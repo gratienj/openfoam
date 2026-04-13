@@ -134,7 +134,7 @@ atmNutWallFunctionFvPatchScalarField::atmNutWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutkWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     z0Min_(SMALL),
     z0_(nullptr)
 {}
@@ -142,13 +142,13 @@ atmNutWallFunctionFvPatchScalarField::atmNutWallFunctionFvPatchScalarField
 
 atmNutWallFunctionFvPatchScalarField::atmNutWallFunctionFvPatchScalarField
 (
-    const atmNutWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutkWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     z0Min_(ptf.z0Min_),
     z0_(ptf.z0_.clone(p.patch()))
 {}
@@ -161,7 +161,7 @@ atmNutWallFunctionFvPatchScalarField::atmNutWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutkWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     z0Min_
     (
         dict.getCheckOrDefault<scalar>
@@ -177,22 +177,11 @@ atmNutWallFunctionFvPatchScalarField::atmNutWallFunctionFvPatchScalarField
 
 atmNutWallFunctionFvPatchScalarField::atmNutWallFunctionFvPatchScalarField
 (
-    const atmNutWallFunctionFvPatchScalarField& rwfpsf
-)
-:
-    nutkWallFunctionFvPatchScalarField(rwfpsf),
-    z0Min_(rwfpsf.z0Min_),
-    z0_(rwfpsf.z0_.clone(this->patch().patch()))
-{}
-
-
-atmNutWallFunctionFvPatchScalarField::atmNutWallFunctionFvPatchScalarField
-(
-    const atmNutWallFunctionFvPatchScalarField& rwfpsf,
+    const this_bctype& rwfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutkWallFunctionFvPatchScalarField(rwfpsf, iF),
+    parent_bctype(rwfpsf, iF),
     z0Min_(rwfpsf.z0Min_),
     z0_(rwfpsf.z0_.clone(this->patch().patch()))
 {}
@@ -205,7 +194,7 @@ void atmNutWallFunctionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    nutkWallFunctionFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     if (z0_)
     {
@@ -220,12 +209,11 @@ void atmNutWallFunctionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    nutkWallFunctionFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& nrwfpsf =
-        refCast<const atmNutWallFunctionFvPatchScalarField>(ptf);
+    const auto& nrwfpsf = refCast<const this_bctype>(ptf);
 
-    if (z0_)
+    if (z0_ && nrwfpsf.z0_)
     {
         z0_->rmap(nrwfpsf.z0_(), addr);
     }

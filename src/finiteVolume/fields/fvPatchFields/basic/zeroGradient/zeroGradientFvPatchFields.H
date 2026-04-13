@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef zeroGradientFvPatchFields_H
-#define zeroGradientFvPatchFields_H
+#ifndef Foam_zeroGradientFvPatchFields_H
+#define Foam_zeroGradientFvPatchFields_H
 
 #include "zeroGradientFvPatchField.H"
 #include "fieldTypes.H"

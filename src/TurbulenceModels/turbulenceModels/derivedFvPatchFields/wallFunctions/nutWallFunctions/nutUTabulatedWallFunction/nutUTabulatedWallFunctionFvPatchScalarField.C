@@ -104,7 +104,7 @@ nutUTabulatedWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     uPlusTableName_("undefined-uPlusTableName"),
     uPlusTable_
     (
@@ -125,13 +125,13 @@ nutUTabulatedWallFunctionFvPatchScalarField
 Foam::nutUTabulatedWallFunctionFvPatchScalarField::
 nutUTabulatedWallFunctionFvPatchScalarField
 (
-    const nutUTabulatedWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     uPlusTableName_(ptf.uPlusTableName_),
     uPlusTable_(ptf.uPlusTable_)
 {}
@@ -145,7 +145,7 @@ nutUTabulatedWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     uPlusTableName_(dict.get<word>("uPlusTable")),
     uPlusTable_
     (
@@ -166,23 +166,11 @@ nutUTabulatedWallFunctionFvPatchScalarField
 Foam::nutUTabulatedWallFunctionFvPatchScalarField::
 nutUTabulatedWallFunctionFvPatchScalarField
 (
-    const nutUTabulatedWallFunctionFvPatchScalarField& wfpsf
-)
-:
-    nutWallFunctionFvPatchScalarField(wfpsf),
-    uPlusTableName_(wfpsf.uPlusTableName_),
-    uPlusTable_(wfpsf.uPlusTable_)
-{}
-
-
-Foam::nutUTabulatedWallFunctionFvPatchScalarField::
-nutUTabulatedWallFunctionFvPatchScalarField
-(
-    const nutUTabulatedWallFunctionFvPatchScalarField& wfpsf,
+    const this_bctype& wfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(wfpsf, iF),
+    parent_bctype(wfpsf, iF),
     uPlusTableName_(wfpsf.uPlusTableName_),
     uPlusTable_(wfpsf.uPlusTable_)
 {}
@@ -223,7 +211,7 @@ void Foam::nutUTabulatedWallFunctionFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    nutWallFunctionFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     writeLocalEntries(os);
     fvPatchField<scalar>::writeValueEntry(os);
 }

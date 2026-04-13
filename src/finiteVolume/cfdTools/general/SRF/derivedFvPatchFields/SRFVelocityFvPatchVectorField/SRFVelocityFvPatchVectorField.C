@@ -39,7 +39,7 @@ Foam::SRFVelocityFvPatchVectorField::SRFVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     relative_(false),
     inletValue_(p.size(), Zero)
 {}
@@ -47,13 +47,13 @@ Foam::SRFVelocityFvPatchVectorField::SRFVelocityFvPatchVectorField
 
 Foam::SRFVelocityFvPatchVectorField::SRFVelocityFvPatchVectorField
 (
-    const SRFVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     relative_(ptf.relative_),
     inletValue_(ptf.inletValue_, mapper)
 {}
@@ -66,7 +66,7 @@ Foam::SRFVelocityFvPatchVectorField::SRFVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     relative_(dict.get<Switch>("relative")),
     inletValue_("inletValue", dict, p.size())
 {}
@@ -74,24 +74,13 @@ Foam::SRFVelocityFvPatchVectorField::SRFVelocityFvPatchVectorField
 
 Foam::SRFVelocityFvPatchVectorField::SRFVelocityFvPatchVectorField
 (
-    const SRFVelocityFvPatchVectorField& srfvpvf
-)
-:
-    fixedValueFvPatchVectorField(srfvpvf),
-    relative_(srfvpvf.relative_),
-    inletValue_(srfvpvf.inletValue_)
-{}
-
-
-Foam::SRFVelocityFvPatchVectorField::SRFVelocityFvPatchVectorField
-(
-    const SRFVelocityFvPatchVectorField& srfvpvf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(srfvpvf, iF),
-    relative_(srfvpvf.relative_),
-    inletValue_(srfvpvf.inletValue_)
+    parent_bctype(ptf, iF),
+    relative_(ptf.relative_),
+    inletValue_(ptf.inletValue_)
 {}
 
 
@@ -113,10 +102,9 @@ void Foam::SRFVelocityFvPatchVectorField::rmap
     const labelList& addr
 )
 {
-    fixedValueFvPatchVectorField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const SRFVelocityFvPatchVectorField& tiptf =
-        refCast<const SRFVelocityFvPatchVectorField>(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     inletValue_.rmap(tiptf.inletValue_, addr);
 }
@@ -148,7 +136,7 @@ void Foam::SRFVelocityFvPatchVectorField::updateCoeffs()
         operator==(inletValue_);
     }
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

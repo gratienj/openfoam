@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef basicSymmetryFvPatchFields_H
-#define basicSymmetryFvPatchFields_H
+#ifndef Foam_basicSymmetryFvPatchFields_H
+#define Foam_basicSymmetryFvPatchFields_H
 
 #include "basicSymmetryFvPatchField.H"
 #include "fieldTypes.H"

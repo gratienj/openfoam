@@ -34,7 +34,7 @@ Description
     with special dynamicFvMesh type that inserts interpolation into the matrix.
 
 SourceFiles
-    oversetFvPatchField.C
+    oversetFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -60,6 +60,9 @@ class oversetFvPatchField
     public oversetLduInterfaceField,
     public coupledFvPatchField<Type>
 {
+    typedef oversetFvPatchField<Type> this_bctype;
+    typedef coupledFvPatchField<Type> parent_bctype;
+
 protected:
 
     // Protected Data
@@ -120,30 +123,30 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given oversetFvPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         oversetFvPatchField
         (
-            const oversetFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        oversetFvPatchField(const oversetFvPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         oversetFvPatchField
         (
-            const oversetFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        oversetFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -297,6 +300,12 @@ public:
 
             //- Write
             virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -307,7 +316,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "oversetFvPatchField.C"
+    #include "oversetFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

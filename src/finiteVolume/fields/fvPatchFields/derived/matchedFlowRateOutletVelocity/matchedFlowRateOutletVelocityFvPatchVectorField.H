@@ -59,8 +59,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef matchedFlowRateOutletVelocityFvPatchVectorField_H
-#define matchedFlowRateOutletVelocityFvPatchVectorField_H
+#ifndef Foam_matchedFlowRateOutletVelocityFvPatchVectorField_H
+#define Foam_matchedFlowRateOutletVelocityFvPatchVectorField_H
 
 #include "fixedValueFvPatchFields.H"
 
@@ -77,7 +77,10 @@ class matchedFlowRateOutletVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
-    // Private data
+    typedef matchedFlowRateOutletVelocityFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Inlet patch name from which the corresponding flow rate is obtained
         word inletPatchName_;
@@ -124,35 +127,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  matchedFlowRateOutletVelocityFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         matchedFlowRateOutletVelocityFvPatchVectorField
         (
-            const matchedFlowRateOutletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        matchedFlowRateOutletVelocityFvPatchVectorField
-        (
-            const matchedFlowRateOutletVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         matchedFlowRateOutletVelocityFvPatchVectorField
         (
-            const matchedFlowRateOutletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        matchedFlowRateOutletVelocityFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -171,6 +166,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

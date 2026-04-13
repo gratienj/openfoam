@@ -43,7 +43,7 @@ MarshakRadiationFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     TName_("T")
 {
     refValue() = Zero;
@@ -55,13 +55,13 @@ MarshakRadiationFvPatchScalarField
 Foam::radiation::MarshakRadiationFvPatchScalarField::
 MarshakRadiationFvPatchScalarField
 (
-    const MarshakRadiationFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     TName_(ptf.TName_)
 {}
 
@@ -74,7 +74,7 @@ MarshakRadiationFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     TName_(dict.getOrDefault<word>("T", "T"))
 {
     if (!this->readValueEntry(dict))
@@ -92,22 +92,11 @@ MarshakRadiationFvPatchScalarField
 Foam::radiation::MarshakRadiationFvPatchScalarField::
 MarshakRadiationFvPatchScalarField
 (
-    const MarshakRadiationFvPatchScalarField& ptf
-)
-:
-    mixedFvPatchScalarField(ptf),
-    TName_(ptf.TName_)
-{}
-
-
-Foam::radiation::MarshakRadiationFvPatchScalarField::
-MarshakRadiationFvPatchScalarField
-(
-    const MarshakRadiationFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     TName_(ptf.TName_)
 {}
 
@@ -151,7 +140,7 @@ void Foam::radiation::MarshakRadiationFvPatchScalarField::updateCoeffs()
 
     UPstream::msgType(oldTag);  // Restore tag
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

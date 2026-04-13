@@ -64,12 +64,12 @@ See also
     Foam::mappedFixedValueFvPatchField
 
 SourceFiles
-    mappedFixedInternalValueFvPatchField.C
+    mappedFixedInternalValueFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef mappedFixedInternalValueFvPatchField_H
-#define mappedFixedInternalValueFvPatchField_H
+#ifndef Foam_mappedFixedInternalValueFvPatchField_H
+#define Foam_mappedFixedInternalValueFvPatchField_H
 
 #include "mappedFixedValueFvPatchField.H"
 
@@ -87,6 +87,8 @@ class mappedFixedInternalValueFvPatchField
 :
     public mappedFixedValueFvPatchField<Type>
 {
+    typedef mappedFixedInternalValueFvPatchField<Type> this_bctype;
+    typedef mappedFixedValueFvPatchField<Type> parent_bctype;
 
 public:
 
@@ -111,34 +113,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        // mappedFixedInternalValueFvPatchField  onto a new patch
+        //- Construct by mapping onto a new patch
         mappedFixedInternalValueFvPatchField
         (
-            const mappedFixedInternalValueFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        mappedFixedInternalValueFvPatchField
-        (
-            const mappedFixedInternalValueFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         mappedFixedInternalValueFvPatchField
         (
-            const mappedFixedInternalValueFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        mappedFixedInternalValueFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -157,6 +149,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -167,7 +165,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "mappedFixedInternalValueFvPatchField.C"
+    #include "mappedFixedInternalValueFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

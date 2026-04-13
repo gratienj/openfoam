@@ -66,7 +66,7 @@ See also
     Foam::inletOutletFvPatchField
 
 SourceFiles
-    mixedFvPatchField.C
+    mixedFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -89,6 +89,9 @@ class mixedFvPatchField
 :
     public fvPatchField<Type>
 {
+    typedef mixedFvPatchField<Type> this_bctype;
+    typedef fvPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Value field
@@ -134,12 +137,12 @@ public:
         );
 
         //- Construct from patch and internal field,
-        //- initialise as zero-gradient
+        //- initialise as zero-gradient (with zero value and zero fraction)
         mixedFvPatchField
         (
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
-            const Foam::zero
+            Foam::zero
         );
 
         //- Construct from patch, internal field and dictionary
@@ -153,33 +156,30 @@ public:
             IOobjectOption::readOption requireMixed = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given mixedFvPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         mixedFvPatchField
         (
-            const mixedFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        mixedFvPatchField
-        (
-            const mixedFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         mixedFvPatchField
         (
-            const mixedFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        mixedFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -301,7 +301,7 @@ public:
         virtual void write(Ostream&) const;
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const UList<Type>&) {}
 
@@ -332,7 +332,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "mixedFvPatchField.C"
+    #include "mixedFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

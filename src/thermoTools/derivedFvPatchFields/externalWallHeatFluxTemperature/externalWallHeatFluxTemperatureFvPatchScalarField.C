@@ -57,7 +57,7 @@ externalWallHeatFluxTemperatureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch()),  // default method (fluidThermo)
     mode_(fixedHeatFlux),
     Q_(nullptr),
@@ -85,7 +85,7 @@ externalWallHeatFluxTemperatureFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch(), dict),
     mode_(operationModeNames.get("mode", dict)),
     Q_(nullptr),
@@ -167,13 +167,13 @@ externalWallHeatFluxTemperatureFvPatchScalarField
 Foam::externalWallHeatFluxTemperatureFvPatchScalarField::
 externalWallHeatFluxTemperatureFvPatchScalarField
 (
-    const externalWallHeatFluxTemperatureFvPatchScalarField& rhs,
+    const this_bctype& rhs,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(rhs, p, iF, mapper),
+    parent_bctype(rhs, p, iF, mapper),
     temperatureCoupledBase(patch(), rhs),
     mode_(rhs.mode_),
     Q_(rhs.Q_.clone()),
@@ -199,34 +199,11 @@ externalWallHeatFluxTemperatureFvPatchScalarField
 Foam::externalWallHeatFluxTemperatureFvPatchScalarField::
 externalWallHeatFluxTemperatureFvPatchScalarField
 (
-    const externalWallHeatFluxTemperatureFvPatchScalarField& rhs
-)
-:
-    mixedFvPatchScalarField(rhs),
-    temperatureCoupledBase(rhs),
-    mode_(rhs.mode_),
-    Q_(rhs.Q_.clone()),
-    q_(rhs.q_.clone(patch().patch())),
-    h_(rhs.h_.clone(patch().patch())),
-    Ta_(rhs.Ta_.clone()),
-    relaxation_(rhs.relaxation_),
-    emissivity_(rhs.emissivity_),
-    qrPrevious_(rhs.qrPrevious_),
-    qrRelaxation_(rhs.qrRelaxation_),
-    qrName_(rhs.qrName_),
-    thicknessLayers_(rhs.thicknessLayers_),
-    kappaLayers_(rhs.kappaLayers_)
-{}
-
-
-Foam::externalWallHeatFluxTemperatureFvPatchScalarField::
-externalWallHeatFluxTemperatureFvPatchScalarField
-(
-    const externalWallHeatFluxTemperatureFvPatchScalarField& rhs,
+    const this_bctype& rhs,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(rhs, iF),
+    parent_bctype(rhs, iF),
     temperatureCoupledBase(patch(), rhs),
     mode_(rhs.mode_),
     Q_(rhs.Q_.clone()),
@@ -250,7 +227,7 @@ void Foam::externalWallHeatFluxTemperatureFvPatchScalarField::autoMap
     const fvPatchFieldMapper& mapper
 )
 {
-    mixedFvPatchScalarField::autoMap(mapper);
+    this->parent_bctype::autoMap(mapper);
     temperatureCoupledBase::autoMap(mapper);
 
     if (q_)
@@ -275,24 +252,22 @@ void Foam::externalWallHeatFluxTemperatureFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& rhs =
-        refCast<const externalWallHeatFluxTemperatureFvPatchScalarField>(ptf);
+    const auto& rhs = refCast<const this_bctype>(ptf);
 
     temperatureCoupledBase::rmap(rhs, addr);
 
-
-    if (q_)
+    if (q_ && rhs.q_)
     {
         q_->rmap(rhs.q_(), addr);
     }
-    if (h_)
+    if (h_ && rhs.h_)
     {
         h_->rmap(rhs.h_(), addr);
     }
 
-    if (qrName_ != "none")
+    if (qrPrevious_ && rhs.qrPrevious_ && (qrName_ != "none"))
     {
         qrPrevious_.rmap(rhs.qrPrevious_, addr);
     }
@@ -455,7 +430,7 @@ void Foam::externalWallHeatFluxTemperatureFvPatchScalarField::updateCoeffs()
     valueFraction() = lerp(valueFraction0, valueFraction(), relaxation_);
     refValue() = lerp(refValue0, refValue(), relaxation_);
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     DebugInfo
         << patch().boundaryMesh().mesh().name() << ':' << patch().name() << ':'

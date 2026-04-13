@@ -142,7 +142,7 @@ alphatJayatillekeWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Prt_(0.85),
     kappa_(0.41),
     E_(9.8)
@@ -154,13 +154,13 @@ alphatJayatillekeWallFunctionFvPatchScalarField
 alphatJayatillekeWallFunctionFvPatchScalarField::
 alphatJayatillekeWallFunctionFvPatchScalarField
 (
-    const alphatJayatillekeWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Prt_(ptf.Prt_),
     kappa_(ptf.kappa_),
     E_(ptf.E_)
@@ -175,7 +175,7 @@ alphatJayatillekeWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     Prt_(dict.getOrDefault<scalar>("Prt", 0.85)),
     kappa_(dict.getOrDefault<scalar>("kappa", 0.41)),
     E_(dict.getOrDefault<scalar>("E", 9.8))
@@ -187,26 +187,11 @@ alphatJayatillekeWallFunctionFvPatchScalarField
 alphatJayatillekeWallFunctionFvPatchScalarField::
 alphatJayatillekeWallFunctionFvPatchScalarField
 (
-    const alphatJayatillekeWallFunctionFvPatchScalarField& awfpsf
-)
-:
-    fixedValueFvPatchScalarField(awfpsf),
-    Prt_(awfpsf.Prt_),
-    kappa_(awfpsf.kappa_),
-    E_(awfpsf.E_)
-{
-    checkType();
-}
-
-
-alphatJayatillekeWallFunctionFvPatchScalarField::
-alphatJayatillekeWallFunctionFvPatchScalarField
-(
-    const alphatJayatillekeWallFunctionFvPatchScalarField& awfpsf,
+    const this_bctype& awfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(awfpsf, iF),
+    parent_bctype(awfpsf, iF),
     Prt_(awfpsf.Prt_),
     kappa_(awfpsf.kappa_),
     E_(awfpsf.E_)

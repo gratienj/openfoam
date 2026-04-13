@@ -43,7 +43,7 @@ mixedEnergyFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {
     valueFraction() = 0.0;
     refValue() = Zero;
@@ -55,13 +55,13 @@ mixedEnergyFvPatchScalarField
 Foam::mixedEnergyFvPatchScalarField::
 mixedEnergyFvPatchScalarField
 (
-    const mixedEnergyFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -73,28 +73,18 @@ mixedEnergyFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::mixedEnergyFvPatchScalarField::
 mixedEnergyFvPatchScalarField
 (
-    const mixedEnergyFvPatchScalarField& tppsf
-)
-:
-    mixedFvPatchScalarField(tppsf)
-{}
-
-
-Foam::mixedEnergyFvPatchScalarField::
-mixedEnergyFvPatchScalarField
-(
-    const mixedEnergyFvPatchScalarField& tppsf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(tppsf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -110,7 +100,7 @@ void Foam::mixedEnergyFvPatchScalarField::updateCoeffs()
     const label patchi = patch().index();
 
     const scalarField& pw = thermo.p().boundaryField()[patchi];
-    mixedFvPatchScalarField& Tw = refCast<mixedFvPatchScalarField>
+    auto& Tw = refCast<mixedFvPatchScalarField>
     (
         const_cast<fvPatchScalarField&>(thermo.T().boundaryField()[patchi])
     );
@@ -127,7 +117,7 @@ void Foam::mixedEnergyFvPatchScalarField::updateCoeffs()
           - thermo.he(pw, Tw, patch().faceCells())
         );
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
@@ -153,8 +143,11 @@ void Foam::mixedEnergyFvPatchScalarField::manipulateMatrix
         mat
     );
 
-    const mixedFvPatchField<scalar>& fPatch =
-        refCast<const mixedFvPatchField>(thermo.T().boundaryField()[index]);
+    const auto& fPatch =
+        refCast<const mixedFvPatchField<scalar>>
+        (
+            thermo.T().boundaryField()[index]
+        );
 
     const Field<scalar> intCoeffsCmpt
     (

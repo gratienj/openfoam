@@ -62,12 +62,12 @@ See also
     Foam::Function1Types
 
 SourceFiles
-    fixedMeanOutletInletFvPatchField.C
+    fixedMeanOutletInletFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedMeanOutletInletFvPatchField_H
-#define fixedMeanOutletInletFvPatchField_H
+#ifndef Foam_fixedMeanOutletInletFvPatchField_H
+#define Foam_fixedMeanOutletInletFvPatchField_H
 
 #include "outletInletFvPatchFields.H"
 #include "Function1.H"
@@ -86,7 +86,10 @@ class fixedMeanOutletInletFvPatchField
 :
     public outletInletFvPatchField<Type>
 {
-    // Private data
+    typedef fixedMeanOutletInletFvPatchField<Type> this_bctype;
+    typedef outletInletFvPatchField<Type> parent_bctype;
+
+    // Private Data
 
         //- MeanValue value the field is adjusted to maintain
         autoPtr<Function1<Type>> meanValue_;
@@ -115,34 +118,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given fixedMeanOutletInletFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         fixedMeanOutletInletFvPatchField
         (
-            const fixedMeanOutletInletFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedMeanOutletInletFvPatchField
-        (
-            const fixedMeanOutletInletFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fixedMeanOutletInletFvPatchField
         (
-            const fixedMeanOutletInletFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedMeanOutletInletFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -161,6 +154,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -171,7 +170,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedMeanOutletInletFvPatchField.C"
+    #include "fixedMeanOutletInletFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

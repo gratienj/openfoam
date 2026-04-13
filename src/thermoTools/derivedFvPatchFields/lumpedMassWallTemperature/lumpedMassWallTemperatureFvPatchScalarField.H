@@ -81,6 +81,9 @@ class lumpedMassWallTemperatureFvPatchScalarField
     public mixedFvPatchScalarField,
     public temperatureCoupledBase
 {
+    typedef lumpedMassWallTemperatureFvPatchScalarField this_bctype;
+    typedef mixedFvPatchScalarField parent_bctype;
+
 private:
 
     // Private data
@@ -118,35 +121,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        // lumpedMassWallTemperatureFvPatchScalarField
-        // onto a new patch
+        //- Construct by mapping onto a new patch
         lumpedMassWallTemperatureFvPatchScalarField
         (
-            const lumpedMassWallTemperatureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        lumpedMassWallTemperatureFvPatchScalarField
-        (
-            const lumpedMassWallTemperatureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         lumpedMassWallTemperatureFvPatchScalarField
         (
-            const lumpedMassWallTemperatureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        lumpedMassWallTemperatureFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -186,6 +181,12 @@ public:
 
             //- Write
             void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

@@ -39,19 +39,19 @@ Foam::energyJumpAMIFvPatchScalarField::energyJumpAMIFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedJumpAMIFvPatchField<scalar>(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::energyJumpAMIFvPatchScalarField::energyJumpAMIFvPatchScalarField
 (
-    const energyJumpAMIFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedJumpAMIFvPatchField<scalar>(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -62,7 +62,7 @@ Foam::energyJumpAMIFvPatchScalarField::energyJumpAMIFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedJumpAMIFvPatchField<scalar>(p, iF)
+    parent_bctype(p, iF)
 {
     if (!this->readValueEntry(dict))
     {
@@ -73,20 +73,11 @@ Foam::energyJumpAMIFvPatchScalarField::energyJumpAMIFvPatchScalarField
 
 Foam::energyJumpAMIFvPatchScalarField::energyJumpAMIFvPatchScalarField
 (
-    const energyJumpAMIFvPatchScalarField& ptf
-)
-:
-    fixedJumpAMIFvPatchField<scalar>(ptf)
-{}
-
-
-Foam::energyJumpAMIFvPatchScalarField::energyJumpAMIFvPatchScalarField
-(
-    const energyJumpAMIFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedJumpAMIFvPatchField<scalar>(ptf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -105,14 +96,13 @@ void Foam::energyJumpAMIFvPatchScalarField::updateCoeffs()
         label patchID = patch().index();
 
         const scalarField& pp = thermo.p().boundaryField()[patchID];
-        const fixedJumpAMIFvPatchScalarField& TbPatch =
+        const auto& TbPatch =
             refCast<const fixedJumpAMIFvPatchScalarField>
             (
                 thermo.T().boundaryField()[patchID]
             );
 
-        fixedJumpAMIFvPatchScalarField& Tbp =
-            const_cast<fixedJumpAMIFvPatchScalarField&>(TbPatch);
+        auto& Tbp = const_cast<fixedJumpAMIFvPatchScalarField&>(TbPatch);
 
         // force update of jump
         Tbp.evaluate(Pstream::commsTypes::buffered);
@@ -124,13 +114,13 @@ void Foam::energyJumpAMIFvPatchScalarField::updateCoeffs()
           - thermo.he(pp, Tbp, faceCells);
     }
 
-    fixedJumpAMIFvPatchField<scalar>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
 void Foam::energyJumpAMIFvPatchScalarField::write(Ostream& os) const
 {
-    fixedJumpAMIFvPatchField<scalar>::write(os);
+    this->parent_bctype::write(os);
     fvPatchField<scalar>::writeValueEntry(os);
 }
 

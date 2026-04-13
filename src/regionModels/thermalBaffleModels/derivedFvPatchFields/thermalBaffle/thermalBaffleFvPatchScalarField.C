@@ -56,7 +56,7 @@ thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
 
 thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
 (
-    const thermalBaffleFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
@@ -124,7 +124,7 @@ thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
 
 thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
 (
-    const thermalBaffleFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :

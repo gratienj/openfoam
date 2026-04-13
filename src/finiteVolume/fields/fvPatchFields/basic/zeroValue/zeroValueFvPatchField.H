@@ -42,7 +42,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    zeroValueFvPatchField.C
+    zeroValueFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -65,7 +65,7 @@ class zeroValueFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef zeroValueFvPatchField<Type> this_bctype;
     typedef fixedValueFvPatchField<Type> parent_bctype;
 
 public:
@@ -94,7 +94,7 @@ public:
         //- Copy construct onto a new patch (no mapping needed)
         zeroValueFvPatchField
         (
-            const zeroValueFvPatchField<Type>& pfld,
+            const this_bctype& pfld,
             const fvPatch& p,
             const DimensionedField<Type, volMesh>& iF,
             const fvPatchFieldMapper&
@@ -103,36 +103,20 @@ public:
         //- Copy construct with internal field reference
         zeroValueFvPatchField
         (
-            const zeroValueFvPatchField<Type>& pfld,
+            const this_bctype& pfld,
             const DimensionedField<Type, volMesh>& iF
         );
 
-        //- Copy construct
-        zeroValueFvPatchField(const zeroValueFvPatchField<Type>& pfld)
-        :
-            zeroValueFvPatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        zeroValueFvPatchField(const this_bctype&) = delete;
 
-
-        //- Construct and return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return tmp<fvPatchField<Type>>
-            (
-                new zeroValueFvPatchField<Type>(*this)
-            );
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
         (
             const DimensionedField<Type, volMesh>& iF
         ) const
         {
-            return tmp<fvPatchField<Type>>
-            (
-                new zeroValueFvPatchField<Type>(*this, iF)
-            );
+            return fvPatchField<Type>::Clone(*this, iF);
         }
 
 
@@ -216,7 +200,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "zeroValueFvPatchField.C"
+    #include "zeroValueFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

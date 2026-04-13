@@ -50,7 +50,7 @@ JohnsonJacksonParticleSlipFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    partialSlipFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     specularityCoefficient_("specularityCoefficient", dimless, Zero)
 {}
 
@@ -58,13 +58,13 @@ JohnsonJacksonParticleSlipFvPatchVectorField
 Foam::JohnsonJacksonParticleSlipFvPatchVectorField::
 JohnsonJacksonParticleSlipFvPatchVectorField
 (
-    const JohnsonJacksonParticleSlipFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    partialSlipFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     specularityCoefficient_(ptf.specularityCoefficient_)
 {}
 
@@ -77,7 +77,7 @@ JohnsonJacksonParticleSlipFvPatchVectorField
     const dictionary& dict
 )
 :
-    partialSlipFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     specularityCoefficient_("specularityCoefficient", dimless, dict)
 {
     if
@@ -98,22 +98,11 @@ JohnsonJacksonParticleSlipFvPatchVectorField
 Foam::JohnsonJacksonParticleSlipFvPatchVectorField::
 JohnsonJacksonParticleSlipFvPatchVectorField
 (
-    const JohnsonJacksonParticleSlipFvPatchVectorField& ptf
-)
-:
-    partialSlipFvPatchVectorField(ptf),
-    specularityCoefficient_(ptf.specularityCoefficient_)
-{}
-
-
-Foam::JohnsonJacksonParticleSlipFvPatchVectorField::
-JohnsonJacksonParticleSlipFvPatchVectorField
-(
-    const JohnsonJacksonParticleSlipFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    partialSlipFvPatchVectorField(ptf, iF),
+    parent_bctype(ptf, iF),
     specularityCoefficient_(ptf.specularityCoefficient_)
 {}
 
@@ -125,7 +114,7 @@ void Foam::JohnsonJacksonParticleSlipFvPatchVectorField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    partialSlipFvPatchVectorField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 }
 
 
@@ -135,7 +124,7 @@ void Foam::JohnsonJacksonParticleSlipFvPatchVectorField::rmap
     const labelList& addr
 )
 {
-    partialSlipFvPatchVectorField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 }
 
 
@@ -228,7 +217,7 @@ void Foam::JohnsonJacksonParticleSlipFvPatchVectorField::updateCoeffs()
 
     this->valueFraction() = c/(c + patch().deltaCoeffs());
 
-    partialSlipFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

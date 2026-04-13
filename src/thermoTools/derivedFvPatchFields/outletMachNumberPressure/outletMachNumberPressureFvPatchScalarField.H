@@ -147,6 +147,9 @@ class outletMachNumberPressureFvPatchScalarField
 :
     public fixedValueFvPatchScalarField
 {
+    typedef outletMachNumberPressureFvPatchScalarField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
     // Private data
 
         //- Mach number
@@ -200,20 +203,13 @@ public:
             const dictionary& dict
         );
 
-        //- Construct by mapping given
-        //- outletMachNumberPressureFvPatchScalarField onto a new patch
+        //- Construct by mapping onto a new patch
         outletMachNumberPressureFvPatchScalarField
         (
             const outletMachNumberPressureFvPatchScalarField& ptf,
             const fvPatch& p,
             const DimensionedField<scalar, volMesh>& iF,
             const fvPatchFieldMapper& mapper
-        );
-
-        //- Construct as copy
-        outletMachNumberPressureFvPatchScalarField
-        (
-            const outletMachNumberPressureFvPatchScalarField& tppsf
         );
 
         //- Construct as copy setting internal field reference
@@ -223,11 +219,8 @@ public:
             const DimensionedField<scalar, volMesh>& iF
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        outletMachNumberPressureFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -246,6 +239,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

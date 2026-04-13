@@ -82,8 +82,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef pressurePermeableAlphaInletOutletVelocityFvPatchVectorField_H
-#define pressurePermeableAlphaInletOutletVelocityFvPatchVectorField_H
+#ifndef Foam_pressurePermeableAlphaInletOutletVelocityFvPatchVectorField_H
+#define Foam_pressurePermeableAlphaInletOutletVelocityFvPatchVectorField_H
 
 #include "fvPatchFields.H"
 #include "mixedFvPatchFields.H"
@@ -101,6 +101,9 @@ class pressurePermeableAlphaInletOutletVelocityFvPatchVectorField
 :
     public mixedFvPatchVectorField
 {
+    typedef pressurePermeableAlphaInletOutletVelocityFvPatchVectorField this_bctype;
+    typedef mixedFvPatchVectorField parent_bctype;
+
     // Private Data
 
         //- Name of flux field
@@ -139,35 +142,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- pressurePermeableAlphaInletOutletVelocityFvPatchVectorField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         pressurePermeableAlphaInletOutletVelocityFvPatchVectorField
         (
-            const pressurePermeableAlphaInletOutletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        pressurePermeableAlphaInletOutletVelocityFvPatchVectorField
-        (
-            const pressurePermeableAlphaInletOutletVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         pressurePermeableAlphaInletOutletVelocityFvPatchVectorField
         (
-            const pressurePermeableAlphaInletOutletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        pressurePermeableAlphaInletOutletVelocityFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -223,6 +218,9 @@ public:
 
         //- Copy assignment
         virtual void operator=(const fvPatchField<vector>& pvf);
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

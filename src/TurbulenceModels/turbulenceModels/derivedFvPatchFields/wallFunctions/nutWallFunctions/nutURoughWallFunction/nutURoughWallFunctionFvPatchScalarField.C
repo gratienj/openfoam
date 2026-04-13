@@ -238,7 +238,7 @@ nutURoughWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     roughnessHeight_(Zero),
     roughnessConstant_(Zero),
     roughnessFactor_(Zero),
@@ -250,13 +250,13 @@ nutURoughWallFunctionFvPatchScalarField
 Foam::nutURoughWallFunctionFvPatchScalarField::
 nutURoughWallFunctionFvPatchScalarField
 (
-    const nutURoughWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     roughnessHeight_(ptf.roughnessHeight_),
     roughnessConstant_(ptf.roughnessConstant_),
     roughnessFactor_(ptf.roughnessFactor_),
@@ -273,7 +273,7 @@ nutURoughWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     roughnessHeight_(dict.get<scalar>("roughnessHeight")),
     roughnessConstant_(dict.get<scalar>("roughnessConstant")),
     roughnessFactor_(dict.get<scalar>("roughnessFactor")),
@@ -285,26 +285,11 @@ nutURoughWallFunctionFvPatchScalarField
 Foam::nutURoughWallFunctionFvPatchScalarField::
 nutURoughWallFunctionFvPatchScalarField
 (
-    const nutURoughWallFunctionFvPatchScalarField& rwfpsf
-)
-:
-    nutWallFunctionFvPatchScalarField(rwfpsf),
-    roughnessHeight_(rwfpsf.roughnessHeight_),
-    roughnessConstant_(rwfpsf.roughnessConstant_),
-    roughnessFactor_(rwfpsf.roughnessFactor_),
-    maxIter_(rwfpsf.maxIter_),
-    tolerance_(rwfpsf.tolerance_)
-{}
-
-
-Foam::nutURoughWallFunctionFvPatchScalarField::
-nutURoughWallFunctionFvPatchScalarField
-(
-    const nutURoughWallFunctionFvPatchScalarField& rwfpsf,
+    const this_bctype& rwfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(rwfpsf, iF),
+    parent_bctype(rwfpsf, iF),
     roughnessHeight_(rwfpsf.roughnessHeight_),
     roughnessConstant_(rwfpsf.roughnessConstant_),
     roughnessFactor_(rwfpsf.roughnessFactor_),
@@ -341,7 +326,7 @@ void Foam::nutURoughWallFunctionFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    nutWallFunctionFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     writeLocalEntries(os);
     fvPatchField<scalar>::writeValueEntry(os);
 }

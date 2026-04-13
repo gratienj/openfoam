@@ -50,7 +50,7 @@ CONSTRUCT
     const DimensionedField<TYPE, volMesh>& iF
 )
 :
-    PARENT(p, iF),
+    parent_bctype(p, iF),
     scalarData_(0),
     data_(Zero),
     fieldData_(p.size(), Zero),
@@ -74,7 +74,7 @@ CONSTRUCT
     const dictionary& dict
 )
 :
-    PARENT(p, iF),
+    parent_bctype(p, iF),
     scalarData_(dict.get<scalar>("scalarData")),
     data_(dict.get<TYPE>("data")),
     fieldData_("fieldData", dict, p.size()),
@@ -103,13 +103,13 @@ template<class Type>
 Foam::CLASS::
 CONSTRUCT
 (
-    const CLASS& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<TYPE, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    PARENT(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     scalarData_(ptf.scalarData_),
     data_(ptf.data_),
     fieldData_(ptf.fieldData_, mapper),
@@ -124,29 +124,11 @@ template<class Type>
 Foam::CLASS::
 CONSTRUCT
 (
-    const CLASS& ptf
-)
-:
-    PARENT(ptf),
-    scalarData_(ptf.scalarData_),
-    data_(ptf.data_),
-    fieldData_(ptf.fieldData_),
-    timeVsData_(ptf.timeVsData_.clone()),
-    wordData_(ptf.wordData_),
-    labelData_(-1),
-    boolData_(ptf.boolData_)
-{}
-
-
-template<class Type>
-Foam::CLASS::
-CONSTRUCT
-(
-    const CLASS& ptf,
+    const this_bctype& ptf,
     const DimensionedField<TYPE, volMesh>& iF
 )
 :
-    PARENT(ptf, iF),
+    parent_bctype(ptf, iF),
     scalarData_(ptf.scalarData_),
     data_(ptf.data_),
     fieldData_(ptf.fieldData_),
@@ -165,7 +147,7 @@ void Foam::CLASS::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    PARENT::autoMap(m);
+    this->parent_bctype::autoMap(m);
     fieldData_.autoMap(m);
 }
 
@@ -177,10 +159,9 @@ void Foam::CLASS::rmap
     const labelList& addr
 )
 {
-    PARENT::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const CLASS& tiptf =
-        refCast<const CLASS>(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     fieldData_.rmap(tiptf.fieldData_, addr);
 }
@@ -206,7 +187,7 @@ void Foam::CLASS::updateCoeffs()
 
     this->valueFraction() = neg(phip);
 
-    PARENT::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

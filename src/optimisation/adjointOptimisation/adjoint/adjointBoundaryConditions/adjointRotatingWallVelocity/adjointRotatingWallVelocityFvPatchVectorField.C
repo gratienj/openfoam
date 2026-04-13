@@ -38,7 +38,7 @@ adjointRotatingWallVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    adjointWallVelocityFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     origin_(Zero),
     axis_(Zero),
     omega_(nullptr)
@@ -48,13 +48,13 @@ adjointRotatingWallVelocityFvPatchVectorField
 Foam::adjointRotatingWallVelocityFvPatchVectorField::
 adjointRotatingWallVelocityFvPatchVectorField
 (
-    const adjointRotatingWallVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    adjointWallVelocityFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     origin_(ptf.origin_),
     axis_(ptf.axis_),
     omega_(ptf.omega_.clone())
@@ -69,7 +69,7 @@ adjointRotatingWallVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    adjointWallVelocityFvPatchVectorField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     origin_(dict.get<vector>("origin")),
     axis_(dict.get<vector>("axis")),
     omega_(Function1<scalar>::New("omega", dict, &db()))
@@ -79,11 +79,11 @@ adjointRotatingWallVelocityFvPatchVectorField
 Foam::adjointRotatingWallVelocityFvPatchVectorField::
 adjointRotatingWallVelocityFvPatchVectorField
 (
-    const adjointRotatingWallVelocityFvPatchVectorField& pivpvf,
+    const this_bctype& pivpvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    adjointWallVelocityFvPatchVectorField(pivpvf, iF),
+    parent_bctype(pivpvf, iF),
     origin_(pivpvf.origin_),
     axis_(pivpvf.axis_),
     omega_(pivpvf.omega_.clone())
@@ -114,7 +114,7 @@ void Foam::adjointRotatingWallVelocityFvPatchVectorField::write
     Ostream& os
 ) const
 {
-    adjointWallVelocityFvPatchVectorField::write(os);
+    this->parent_bctype::write(os);
     os.writeEntry("origin", origin_);
     os.writeEntry("axis", axis_);
     omega_->writeData(os);

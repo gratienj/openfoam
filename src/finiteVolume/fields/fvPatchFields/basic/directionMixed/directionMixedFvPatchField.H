@@ -33,12 +33,12 @@ Description
     Base class for direction-mixed boundary conditions.
 
 SourceFiles
-    directionMixedFvPatchField.C
+    directionMixedFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef directionMixedFvPatchField_H
-#define directionMixedFvPatchField_H
+#ifndef Foam_directionMixedFvPatchField_H
+#define Foam_directionMixedFvPatchField_H
 
 #include "transformFvPatchField.H"
 
@@ -56,7 +56,10 @@ class directionMixedFvPatchField
 :
     public transformFvPatchField<Type>
 {
-    // Private data
+    typedef directionMixedFvPatchField<Type> this_bctype;
+    typedef transformFvPatchField<Type> parent_bctype;
+
+    // Private Data
 
         //- Value field
         Field<Type> refValue_;
@@ -91,11 +94,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given directionMixedFvPatchField onto
-        //  a new patch
+        //- Construct by mapping onto a new patch
         directionMixedFvPatchField
         (
-            const directionMixedFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
@@ -104,15 +106,12 @@ public:
         //- Construct as copy setting internal field reference
         directionMixedFvPatchField
         (
-            const directionMixedFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        directionMixedFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -133,20 +132,13 @@ public:
         virtual bool assignable() const { return false; }
 
 
-        // Mapping functions
+    // Mapping Functions
 
-            //- Map (and resize as needed) from self given a mapping object
-            virtual void autoMap
-            (
-                const fvPatchFieldMapper&
-            );
+        //- Map (and resize as needed) from self given a mapping object
+        virtual void autoMap(const fvPatchFieldMapper&);
 
-            //- Reverse map the given fvPatchField onto this fvPatchField
-            virtual void rmap
-            (
-                const fvPatchField<Type>&,
-                const labelList&
-            );
+        //- Reverse map the given fvPatchField onto this fvPatchField
+        virtual void rmap(const fvPatchField<Type>&, const labelList&);
 
 
         // Return defining fields
@@ -205,15 +197,16 @@ public:
         virtual void write(Ostream&) const;
 
 
-    // Member operators
+    // Member Operators
+
+        virtual void operator=(const UList<Type>&) {}
 
         virtual void operator=(const fvPatchField<Type>&) {}
         virtual void operator+=(const fvPatchField<Type>&) {}
         virtual void operator-=(const fvPatchField<Type>&) {}
-        virtual void operator*=(const fvPatchField<Type>&) {}
-        virtual void operator/=(const fvPatchField<Type>&) {}
+        virtual void operator*=(const fvPatchField<scalar>&) {}
+        virtual void operator/=(const fvPatchField<scalar>&) {}
 
-        virtual void operator=(const Field<Type>&) {}
         virtual void operator+=(const Field<Type>&) {}
         virtual void operator-=(const Field<Type>&) {}
         virtual void operator*=(const Field<scalar>&) {}
@@ -234,7 +227,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "directionMixedFvPatchField.C"
+    #include "directionMixedFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

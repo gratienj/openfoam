@@ -51,20 +51,20 @@ nutLowReWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::nutLowReWallFunctionFvPatchScalarField::
 nutLowReWallFunctionFvPatchScalarField
 (
-    const nutLowReWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutWallFunctionFvPatchScalarField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -76,28 +76,18 @@ nutLowReWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::nutLowReWallFunctionFvPatchScalarField::
 nutLowReWallFunctionFvPatchScalarField
 (
-    const nutLowReWallFunctionFvPatchScalarField& nlrwfpsf
-)
-:
-    nutWallFunctionFvPatchScalarField(nlrwfpsf)
-{}
-
-
-Foam::nutLowReWallFunctionFvPatchScalarField::
-nutLowReWallFunctionFvPatchScalarField
-(
-    const nutLowReWallFunctionFvPatchScalarField& nlrwfpsf,
+    const this_bctype& nlrwfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(nlrwfpsf, iF)
+    parent_bctype(nlrwfpsf, iF)
 {}
 
 
@@ -136,7 +126,7 @@ void Foam::nutLowReWallFunctionFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    nutWallFunctionFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     fvPatchField<scalar>::writeValueEntry(os);
 }
 

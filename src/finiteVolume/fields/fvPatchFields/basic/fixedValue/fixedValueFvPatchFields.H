@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedValueFvPatchFields_H
-#define fixedValueFvPatchFields_H
+#ifndef Foam_fixedValueFvPatchFields_H
+#define Foam_fixedValueFvPatchFields_H
 
 #include "fixedValueFvPatchField.H"
 #include "fieldTypes.H"

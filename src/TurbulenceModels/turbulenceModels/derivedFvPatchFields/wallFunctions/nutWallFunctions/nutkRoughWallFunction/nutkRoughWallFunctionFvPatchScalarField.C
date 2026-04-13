@@ -146,7 +146,7 @@ nutkRoughWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutkWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Ks_(p.size(), Zero),
     Cs_(p.size(), Zero)
 {}
@@ -155,13 +155,13 @@ nutkRoughWallFunctionFvPatchScalarField
 Foam::nutkRoughWallFunctionFvPatchScalarField::
 nutkRoughWallFunctionFvPatchScalarField
 (
-    const nutkRoughWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutkWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Ks_(ptf.Ks_, mapper),
     Cs_(ptf.Cs_, mapper)
 {}
@@ -175,7 +175,7 @@ nutkRoughWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutkWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     Ks_("Ks", dict, p.size()),
     Cs_("Cs", dict, p.size())
 {}
@@ -184,23 +184,11 @@ nutkRoughWallFunctionFvPatchScalarField
 Foam::nutkRoughWallFunctionFvPatchScalarField::
 nutkRoughWallFunctionFvPatchScalarField
 (
-    const nutkRoughWallFunctionFvPatchScalarField& rwfpsf
-)
-:
-    nutkWallFunctionFvPatchScalarField(rwfpsf),
-    Ks_(rwfpsf.Ks_),
-    Cs_(rwfpsf.Cs_)
-{}
-
-
-Foam::nutkRoughWallFunctionFvPatchScalarField::
-nutkRoughWallFunctionFvPatchScalarField
-(
-    const nutkRoughWallFunctionFvPatchScalarField& rwfpsf,
+    const this_bctype& rwfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutkWallFunctionFvPatchScalarField(rwfpsf, iF),
+    parent_bctype(rwfpsf, iF),
     Ks_(rwfpsf.Ks_),
     Cs_(rwfpsf.Cs_)
 {}
@@ -213,7 +201,7 @@ void Foam::nutkRoughWallFunctionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    nutkWallFunctionFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     Ks_.autoMap(m);
     Cs_.autoMap(m);
 }
@@ -225,10 +213,9 @@ void Foam::nutkRoughWallFunctionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    nutkWallFunctionFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& nrwfpsf =
-        refCast<const nutkRoughWallFunctionFvPatchScalarField>(ptf);
+    const auto& nrwfpsf = refCast<const this_bctype>(ptf);
 
     Ks_.rmap(nrwfpsf.Ks_, addr);
     Cs_.rmap(nrwfpsf.Cs_, addr);

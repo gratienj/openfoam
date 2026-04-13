@@ -75,7 +75,10 @@ class semiPermeableBaffleVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
-    // Private data
+    typedef semiPermeableBaffleVelocityFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Name of the density field
         const word rhoName_;
@@ -110,34 +113,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given fixedValueTypeFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         semiPermeableBaffleVelocityFvPatchVectorField
         (
-            const semiPermeableBaffleVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        semiPermeableBaffleVelocityFvPatchVectorField
-        (
-            const semiPermeableBaffleVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         semiPermeableBaffleVelocityFvPatchVectorField
         (
-            const semiPermeableBaffleVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        semiPermeableBaffleVelocityFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -159,6 +155,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

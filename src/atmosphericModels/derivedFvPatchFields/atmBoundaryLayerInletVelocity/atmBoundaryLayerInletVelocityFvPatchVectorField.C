@@ -46,7 +46,7 @@ atmBoundaryLayerInletVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    inletOutletFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     atmBoundaryLayer(iF.time(), p.patch())
 {}
 
@@ -59,7 +59,7 @@ atmBoundaryLayerInletVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    inletOutletFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     atmBoundaryLayer(iF.time(), p.patch(), dict)
 {
     phiName_ = dict.getOrDefault<word>("phi", "phi");
@@ -83,13 +83,13 @@ atmBoundaryLayerInletVelocityFvPatchVectorField
 atmBoundaryLayerInletVelocityFvPatchVectorField::
 atmBoundaryLayerInletVelocityFvPatchVectorField
 (
-    const atmBoundaryLayerInletVelocityFvPatchVectorField& pvf,
+    const this_bctype& pvf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    inletOutletFvPatchVectorField(pvf, p, iF, mapper),
+    parent_bctype(pvf, p, iF, mapper),
     atmBoundaryLayer(pvf, p, mapper)
 {}
 
@@ -97,11 +97,11 @@ atmBoundaryLayerInletVelocityFvPatchVectorField
 atmBoundaryLayerInletVelocityFvPatchVectorField::
 atmBoundaryLayerInletVelocityFvPatchVectorField
 (
-    const atmBoundaryLayerInletVelocityFvPatchVectorField& pvf,
+    const this_bctype& pvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    inletOutletFvPatchVectorField(pvf, iF),
+    parent_bctype(pvf, iF),
     atmBoundaryLayer(pvf)
 {}
 
@@ -117,7 +117,7 @@ void atmBoundaryLayerInletVelocityFvPatchVectorField::updateCoeffs()
 
     refValue() = U(patch().Cf());
 
-    inletOutletFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
@@ -126,7 +126,7 @@ void atmBoundaryLayerInletVelocityFvPatchVectorField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    inletOutletFvPatchVectorField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     atmBoundaryLayer::autoMap(m);
 }
 
@@ -137,10 +137,9 @@ void atmBoundaryLayerInletVelocityFvPatchVectorField::rmap
     const labelList& addr
 )
 {
-    inletOutletFvPatchVectorField::rmap(pvf, addr);
+    this->parent_bctype::rmap(pvf, addr);
 
-    const atmBoundaryLayerInletVelocityFvPatchVectorField& blpvf =
-        refCast<const atmBoundaryLayerInletVelocityFvPatchVectorField>(pvf);
+    const auto& blpvf = refCast<const this_bctype>(pvf);
 
     atmBoundaryLayer::rmap(blpvf, addr);
 }

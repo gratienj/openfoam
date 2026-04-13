@@ -179,7 +179,7 @@ nutkFilmWallFunctionFvPatchScalarField::nutkFilmWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutkWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     filmRegionName_("surfaceFilmProperties"),
     B_(5.5),
     yPlusCrit_(11.05)
@@ -188,13 +188,13 @@ nutkFilmWallFunctionFvPatchScalarField::nutkFilmWallFunctionFvPatchScalarField
 
 nutkFilmWallFunctionFvPatchScalarField::nutkFilmWallFunctionFvPatchScalarField
 (
-    const nutkFilmWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutkWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     filmRegionName_(ptf.filmRegionName_),
     B_(5.5),
     yPlusCrit_(11.05)
@@ -208,7 +208,7 @@ nutkFilmWallFunctionFvPatchScalarField::nutkFilmWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutkWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     filmRegionName_
     (
         dict.getOrDefault<word>("filmRegion", "surfaceFilmProperties")
@@ -220,23 +220,11 @@ nutkFilmWallFunctionFvPatchScalarField::nutkFilmWallFunctionFvPatchScalarField
 
 nutkFilmWallFunctionFvPatchScalarField::nutkFilmWallFunctionFvPatchScalarField
 (
-    const nutkFilmWallFunctionFvPatchScalarField& wfpsf
-)
-:
-    nutkWallFunctionFvPatchScalarField(wfpsf),
-    filmRegionName_(wfpsf.filmRegionName_),
-    B_(wfpsf.B_),
-    yPlusCrit_(wfpsf.yPlusCrit_)
-{}
-
-
-nutkFilmWallFunctionFvPatchScalarField::nutkFilmWallFunctionFvPatchScalarField
-(
-    const nutkFilmWallFunctionFvPatchScalarField& wfpsf,
+    const this_bctype& wfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutkWallFunctionFvPatchScalarField(wfpsf, iF),
+    parent_bctype(wfpsf, iF),
     filmRegionName_(wfpsf.filmRegionName_),
     B_(wfpsf.B_),
     yPlusCrit_(wfpsf.yPlusCrit_)

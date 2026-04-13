@@ -55,6 +55,8 @@ class gradientUnburntEnthalpyFvPatchScalarField
 :
     public fixedGradientFvPatchScalarField
 {
+    typedef gradientUnburntEnthalpyFvPatchScalarField this_bctype;
+    typedef fixedGradientFvPatchScalarField parent_bctype;
 
 public:
 
@@ -79,34 +81,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given gradientUnburntEnthalpyFvPatchScalarField
-        // onto a new patch
+        //- Construct by mapping onto a new patch
         gradientUnburntEnthalpyFvPatchScalarField
         (
-            const gradientUnburntEnthalpyFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        gradientUnburntEnthalpyFvPatchScalarField
-        (
-            const gradientUnburntEnthalpyFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         gradientUnburntEnthalpyFvPatchScalarField
         (
-            const gradientUnburntEnthalpyFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        gradientUnburntEnthalpyFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -124,6 +119,12 @@ public:
 
             //- Update the coefficients associated with the patch field
             virtual void updateCoeffs();
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

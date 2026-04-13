@@ -91,7 +91,7 @@ atmAlphatkWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Cmu_(0.09),
     kappa_(0.41),
     Pr_(nullptr),
@@ -105,13 +105,13 @@ atmAlphatkWallFunctionFvPatchScalarField
 atmAlphatkWallFunctionFvPatchScalarField::
 atmAlphatkWallFunctionFvPatchScalarField
 (
-    const atmAlphatkWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Cmu_(ptf.Cmu_),
     kappa_(ptf.kappa_),
     Pr_(ptf.Pr_.clone()),
@@ -130,7 +130,7 @@ atmAlphatkWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     Cmu_
     (
         dict.getCheckOrDefault<scalar>
@@ -160,28 +160,11 @@ atmAlphatkWallFunctionFvPatchScalarField
 atmAlphatkWallFunctionFvPatchScalarField::
 atmAlphatkWallFunctionFvPatchScalarField
 (
-    const atmAlphatkWallFunctionFvPatchScalarField& wfpsf
-)
-:
-    fixedValueFvPatchScalarField(wfpsf),
-    Cmu_(wfpsf.Cmu_),
-    kappa_(wfpsf.kappa_),
-    Pr_(wfpsf.Pr_.clone()),
-    Prt_(wfpsf.Prt_.clone(this->patch().patch())),
-    z0_(wfpsf.z0_.clone(this->patch().patch()))
-{
-    checkType();
-}
-
-
-atmAlphatkWallFunctionFvPatchScalarField::
-atmAlphatkWallFunctionFvPatchScalarField
-(
-    const atmAlphatkWallFunctionFvPatchScalarField& wfpsf,
+    const this_bctype& wfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(wfpsf, iF),
+    parent_bctype(wfpsf, iF),
     Cmu_(wfpsf.Cmu_),
     kappa_(wfpsf.kappa_),
     Pr_(wfpsf.Pr_.clone()),
@@ -282,7 +265,7 @@ void atmAlphatkWallFunctionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    fixedValueFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     if (Prt_)
     {
@@ -301,16 +284,15 @@ void atmAlphatkWallFunctionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedValueFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& nrwfpsf =
-        refCast<const atmAlphatkWallFunctionFvPatchScalarField>(ptf);
+    const auto& nrwfpsf = refCast<const this_bctype>(ptf);
 
-    if (Prt_)
+    if (Prt_ && nrwfpsf.Prt_)
     {
         Prt_->rmap(nrwfpsf.Prt_(), addr);
     }
-    if (z0_)
+    if (z0_ && nrwfpsf.z0_)
     {
         z0_->rmap(nrwfpsf.z0_(), addr);
     }

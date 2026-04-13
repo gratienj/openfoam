@@ -98,6 +98,9 @@ class nutURoughWallFunctionFvPatchScalarField
 :
     public nutWallFunctionFvPatchScalarField
 {
+    typedef nutURoughWallFunctionFvPatchScalarField this_bctype;
+    typedef nutWallFunctionFvPatchScalarField parent_bctype;
+
     // Private Data
 
         // Roughness model parameters
@@ -154,35 +157,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- nutURoughWallFunctionFvPatchScalarField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         nutURoughWallFunctionFvPatchScalarField
         (
-            const nutURoughWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        nutURoughWallFunctionFvPatchScalarField
-        (
-            const nutURoughWallFunctionFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         nutURoughWallFunctionFvPatchScalarField
         (
-            const nutURoughWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        nutURoughWallFunctionFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -246,6 +238,12 @@ public:
 
             //- Write
             virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

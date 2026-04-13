@@ -31,9 +31,6 @@ Description
     Is just a slip type since all hard work (projection) is done in the
     pointPatch field.
 
-SourceFiles
-    surfaceSlipDisplacementFvPatchField.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef surfaceSlipDisplacementFvPatchField_H
@@ -47,7 +44,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class surfaceSlipDisplacementFvPatch Declaration
+             Class surfaceSlipDisplacementFvPatchField Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class Type>
@@ -55,6 +52,8 @@ class surfaceSlipDisplacementFvPatchField
 :
     public slipFvPatchField<Type>
 {
+    typedef surfaceSlipDisplacementFvPatchField<Type> this_bctype;
+    typedef slipFvPatchField<Type> parent_bctype;
 
 public:
 
@@ -71,7 +70,7 @@ public:
             const DimensionedField<Type, volMesh>& iF
         )
         :
-            slipFvPatchField<Type>(p, iF)
+            parent_bctype(p, iF)
         {}
 
         //- Construct from patch, internal field and dictionary
@@ -82,47 +81,39 @@ public:
             const dictionary& dict
         )
         :
-            slipFvPatchField<Type>(p, iF, dict)
+            parent_bctype(p, iF, dict)
         {}
 
-        //- Construct by mapping given surfaceSlipDisplacementFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         surfaceSlipDisplacementFvPatchField
         (
-            const surfaceSlipDisplacementFvPatchField<Type>& ptf,
+            const this_bctype& ptf,
             const fvPatch& p,
             const DimensionedField<Type, volMesh>& iF,
             const fvPatchFieldMapper& mapper
         )
         :
-            slipFvPatchField<Type>(ptf, p, iF, mapper)
-        {}
-
-
-        //- Construct as copy
-        surfaceSlipDisplacementFvPatchField
-        (
-            const surfaceSlipDisplacementFvPatchField<Type>& ptf
-        )
-        :
-            slipFvPatchField<Type>(ptf)
+            parent_bctype(ptf, p, iF, mapper)
         {}
 
         //- Construct as copy setting internal field reference
         surfaceSlipDisplacementFvPatchField
         (
-            const surfaceSlipDisplacementFvPatchField<Type>& ptf,
+            const this_bctype& ptf,
             const DimensionedField<Type, volMesh>& iF
         )
         :
-            slipFvPatchField<Type>(ptf, iF)
+            parent_bctype(ptf, iF)
         {}
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        surfaceSlipDisplacementFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -134,12 +125,20 @@ public:
         }
 
 
+    // Member Functions
+
         virtual void write(Ostream& os) const
         {
             slipFvPatchField<Type>::write(os);
             // Only so we can easily postprocess.
             fvPatchField<Type>::writeValueEntry(os);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

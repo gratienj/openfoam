@@ -31,7 +31,7 @@ Class
 Description
 
 SourceFiles
-    adjointOutletFluxFvPatchField.C
+    adjointOutletFluxFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -55,6 +55,9 @@ class adjointOutletFluxFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
+    typedef adjointOutletFluxFvPatchField this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -78,11 +81,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given adjointOutletFluxFvPatchField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         adjointOutletFluxFvPatchField
         (
-            const adjointOutletFluxFvPatchField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
@@ -91,15 +93,15 @@ public:
         //- Construct as copy setting internal field reference
         adjointOutletFluxFvPatchField
         (
-            const adjointOutletFluxFvPatchField&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        adjointOutletFluxFvPatchField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -143,6 +145,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -153,7 +161,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "adjointOutletFluxFvPatchField.C"
+    #include "adjointOutletFluxFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

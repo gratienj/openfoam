@@ -270,7 +270,7 @@ sorptionWallFunctionFvPatchScalarField::sorptionWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     wallFunctionBlenders(),
     laminar_(false),
     kAbsPtr_(nullptr),
@@ -285,13 +285,13 @@ sorptionWallFunctionFvPatchScalarField::sorptionWallFunctionFvPatchScalarField
 
 sorptionWallFunctionFvPatchScalarField::sorptionWallFunctionFvPatchScalarField
 (
-    const sorptionWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedGradientFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     wallFunctionBlenders(ptf),
     laminar_(ptf.laminar_),
     kAbsPtr_(ptf.kAbsPtr_.clone(patch().patch())),
@@ -311,7 +311,7 @@ sorptionWallFunctionFvPatchScalarField::sorptionWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),  // Bypass dictionary constructor
+    parent_bctype(p, iF),  // Bypass dictionary constructor
     wallFunctionBlenders(dict, blenderType::STEPWISE, scalar(2)),
     laminar_(dict.getOrDefault<bool>("laminar", false)),
     kAbsPtr_(PatchFunction1<scalar>::New(p.patch(), "kAbs", dict)),
@@ -350,29 +350,11 @@ sorptionWallFunctionFvPatchScalarField::sorptionWallFunctionFvPatchScalarField
 
 sorptionWallFunctionFvPatchScalarField::sorptionWallFunctionFvPatchScalarField
 (
-    const sorptionWallFunctionFvPatchScalarField& swfpsf
-)
-:
-    fixedGradientFvPatchScalarField(swfpsf),
-    wallFunctionBlenders(swfpsf),
-    laminar_(swfpsf.laminar_),
-    kAbsPtr_(swfpsf.kAbsPtr_.clone(patch().patch())),
-    Sc_(swfpsf.Sc_),
-    Sct_(swfpsf.Sct_),
-    D_(swfpsf.D_),
-    kName_(swfpsf.kName_),
-    nuName_(swfpsf.nuName_),
-    wallCoeffs_(swfpsf.wallCoeffs_)
-{}
-
-
-sorptionWallFunctionFvPatchScalarField::sorptionWallFunctionFvPatchScalarField
-(
-    const sorptionWallFunctionFvPatchScalarField& swfpsf,
+    const this_bctype& swfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(swfpsf, iF),
+    parent_bctype(swfpsf, iF),
     wallFunctionBlenders(swfpsf),
     laminar_(swfpsf.laminar_),
     kAbsPtr_(swfpsf.kAbsPtr_.clone(patch().patch())),
@@ -392,7 +374,7 @@ void sorptionWallFunctionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& mapper
 )
 {
-    fixedGradientFvPatchScalarField::autoMap(mapper);
+    this->parent_bctype::autoMap(mapper);
 
     if (kAbsPtr_)
     {
@@ -407,12 +389,11 @@ void sorptionWallFunctionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedGradientFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& swfptf =
-        refCast<const sorptionWallFunctionFvPatchScalarField>(ptf);
+    const auto& swfptf = refCast<const this_bctype>(ptf);
 
-    if (kAbsPtr_)
+    if (kAbsPtr_ && swfptf.kAbsPtr_)
     {
         kAbsPtr_->rmap(swfptf.kAbsPtr_(), addr);
     }
@@ -428,7 +409,7 @@ void sorptionWallFunctionFvPatchScalarField::updateCoeffs()
 
     gradient() = flux()/patch().deltaCoeffs();
 
-    fixedGradientFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

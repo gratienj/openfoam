@@ -46,9 +46,9 @@ See also
     Foam::processorFvPatchField
 
 SourceFiles
-    processorCyclicFvPatchField.C
+    processorCyclicFvPatchField.txx
     processorCyclicFvPatchFields.H
-    processorCyclicFvPatchFields.C
+    processorCyclicFvPatchFields.cxx
     processorCyclicFvPatchFieldsFwd.H
 
 \*---------------------------------------------------------------------------*/
@@ -73,6 +73,9 @@ class processorCyclicFvPatchField
 :
     public processorFvPatchField<Type>
 {
+    typedef processorCyclicFvPatchField<Type> this_bctype;
+    typedef processorFvPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the processor patch
@@ -109,31 +112,30 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given processorCyclicFvPatchField onto a
-        //  new patch
+        //- Construct by mapping onto a new patch
         processorCyclicFvPatchField
         (
-            const processorCyclicFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        processorCyclicFvPatchField(const processorCyclicFvPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         processorCyclicFvPatchField
         (
-            const processorCyclicFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        processorCyclicFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -166,6 +168,12 @@ public:
         {
             return procPatch_.forwardT();
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -176,7 +184,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "processorCyclicFvPatchField.C"
+    #include "processorCyclicFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

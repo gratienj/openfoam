@@ -40,7 +40,7 @@ inclinedFilmNusseltInletVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     filmRegionName_("surfaceFilmProperties"),
     GammaMean_(),
     a_(),
@@ -51,13 +51,13 @@ inclinedFilmNusseltInletVelocityFvPatchVectorField
 Foam::inclinedFilmNusseltInletVelocityFvPatchVectorField::
 inclinedFilmNusseltInletVelocityFvPatchVectorField
 (
-    const inclinedFilmNusseltInletVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     filmRegionName_(ptf.filmRegionName_),
     GammaMean_(ptf.GammaMean_.clone()),
     a_(ptf.a_.clone()),
@@ -73,7 +73,7 @@ inclinedFilmNusseltInletVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     filmRegionName_
     (
         dict.getOrDefault<word>("filmRegion", "surfaceFilmProperties")
@@ -87,25 +87,11 @@ inclinedFilmNusseltInletVelocityFvPatchVectorField
 Foam::inclinedFilmNusseltInletVelocityFvPatchVectorField::
 inclinedFilmNusseltInletVelocityFvPatchVectorField
 (
-    const inclinedFilmNusseltInletVelocityFvPatchVectorField& fmfrpvf
-)
-:
-    fixedValueFvPatchVectorField(fmfrpvf),
-    filmRegionName_(fmfrpvf.filmRegionName_),
-    GammaMean_(fmfrpvf.GammaMean_.clone()),
-    a_(fmfrpvf.a_.clone()),
-    omega_(fmfrpvf.omega_.clone())
-{}
-
-
-Foam::inclinedFilmNusseltInletVelocityFvPatchVectorField::
-inclinedFilmNusseltInletVelocityFvPatchVectorField
-(
-    const inclinedFilmNusseltInletVelocityFvPatchVectorField& fmfrpvf,
+    const this_bctype& fmfrpvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(fmfrpvf, iF),
+    parent_bctype(fmfrpvf, iF),
     filmRegionName_(fmfrpvf.filmRegionName_),
     GammaMean_(fmfrpvf.GammaMean_.clone()),
     a_(fmfrpvf.a_.clone()),
@@ -184,7 +170,7 @@ void Foam::inclinedFilmNusseltInletVelocityFvPatchVectorField::updateCoeffs()
 
     operator==(n*cbrt(gTan*mup/(3*rhop))*pow(Re, 2.0/3.0));
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

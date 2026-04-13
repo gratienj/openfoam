@@ -40,7 +40,7 @@ adjointWallVelocityLowReFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     adjointVectorBoundaryCondition(p, iF, word::null)
 {}
 
@@ -48,13 +48,13 @@ adjointWallVelocityLowReFvPatchVectorField
 Foam::adjointWallVelocityLowReFvPatchVectorField::
 adjointWallVelocityLowReFvPatchVectorField
 (
-    const adjointWallVelocityLowReFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointVectorBoundaryCondition(p, iF, ptf.adjointSolverName_)
 {}
 
@@ -67,7 +67,7 @@ adjointWallVelocityLowReFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     adjointVectorBoundaryCondition(p, iF, dict.get<word>("solverName"))
 {
     this->readValueEntry(dict, IOobjectOption::MUST_READ);
@@ -77,11 +77,11 @@ adjointWallVelocityLowReFvPatchVectorField
 Foam::adjointWallVelocityLowReFvPatchVectorField::
 adjointWallVelocityLowReFvPatchVectorField
 (
-    const adjointWallVelocityLowReFvPatchVectorField& pivpvf,
+    const this_bctype& pivpvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(pivpvf, iF),
+    parent_bctype(pivpvf, iF),
     adjointVectorBoundaryCondition(pivpvf)
 {}
 
@@ -101,7 +101,7 @@ void Foam::adjointWallVelocityLowReFvPatchVectorField::updateCoeffs()
 
     operator==(-source);
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

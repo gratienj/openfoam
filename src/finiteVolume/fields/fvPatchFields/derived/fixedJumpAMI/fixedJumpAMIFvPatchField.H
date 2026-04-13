@@ -62,12 +62,12 @@ See also
     Foam::jumpCyclicAMIFvPatchField
 
 SourceFiles
-    fixedJumpAMIFvPatchField.C
+    fixedJumpAMIFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedJumpAMIFvPatchField_H
-#define fixedJumpAMIFvPatchField_H
+#ifndef Foam_fixedJumpAMIFvPatchField_H
+#define Foam_fixedJumpAMIFvPatchField_H
 
 #include "jumpCyclicAMIFvPatchField.H"
 
@@ -85,10 +85,12 @@ class fixedJumpAMIFvPatchField
 :
     public jumpCyclicAMIFvPatchField<Type>
 {
+    typedef fixedJumpAMIFvPatchField<Type> this_bctype;
+    typedef jumpCyclicAMIFvPatchField<Type> parent_bctype;
 
 protected:
 
-    // Protected data
+    // Protected Data
 
         //- "jump" field
         Field<Type> jump_;
@@ -117,34 +119,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given fixedJumpAMIFvPatchField onto a
-        //  new patch
+        //- Construct by mapping onto a new patch
         fixedJumpAMIFvPatchField
         (
-            const fixedJumpAMIFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedJumpAMIFvPatchField
-        (
-            const fixedJumpAMIFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fixedJumpAMIFvPatchField
         (
-            const fixedJumpAMIFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedJumpAMIFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -175,6 +167,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -185,7 +183,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedJumpAMIFvPatchField.C"
+    #include "fixedJumpAMIFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

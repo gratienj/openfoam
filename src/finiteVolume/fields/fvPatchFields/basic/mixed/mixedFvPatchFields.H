@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef mixedFvPatchFields_H
-#define mixedFvPatchFields_H
+#ifndef Foam_mixedFvPatchFields_H
+#define Foam_mixedFvPatchFields_H
 
 #include "mixedFvPatchField.H"
 #include "fieldTypes.H"

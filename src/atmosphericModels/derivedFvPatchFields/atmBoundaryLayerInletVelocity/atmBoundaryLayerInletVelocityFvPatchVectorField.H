@@ -118,6 +118,8 @@ class atmBoundaryLayerInletVelocityFvPatchVectorField
     public inletOutletFvPatchVectorField,
     public atmBoundaryLayer
 {
+    typedef atmBoundaryLayerInletVelocityFvPatchVectorField this_bctype;
+    typedef inletOutletFvPatchVectorField parent_bctype;
 
 public:
 
@@ -142,11 +144,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- atmBoundaryLayerInletVelocityFvPatchVectorField onto a new patch
+        //- Construct by mapping onto a new patch
         atmBoundaryLayerInletVelocityFvPatchVectorField
         (
-            const atmBoundaryLayerInletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
@@ -155,15 +156,15 @@ public:
         //- Construct as copy setting internal field reference
         atmBoundaryLayerInletVelocityFvPatchVectorField
         (
-            const atmBoundaryLayerInletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        atmBoundaryLayerInletVelocityFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -199,6 +200,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

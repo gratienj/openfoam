@@ -43,7 +43,7 @@ freeSurfacePressureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     pa_(p.size(), Zero)
 {}
 
@@ -56,7 +56,7 @@ freeSurfacePressureFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict, IOobjectOption::NO_READ),
+    parent_bctype(p, iF, dict, IOobjectOption::NO_READ),
     pa_("pa", dict, p.size())
 {
     if (!this->readValueEntry(dict))
@@ -69,13 +69,13 @@ freeSurfacePressureFvPatchScalarField
 Foam::freeSurfacePressureFvPatchScalarField::
 freeSurfacePressureFvPatchScalarField
 (
-    const freeSurfacePressureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     pa_(ptf.pa_, mapper)
 {}
 
@@ -83,22 +83,11 @@ freeSurfacePressureFvPatchScalarField
 Foam::freeSurfacePressureFvPatchScalarField::
 freeSurfacePressureFvPatchScalarField
 (
-    const freeSurfacePressureFvPatchScalarField& ptf
-)
-:
-    fixedValueFvPatchScalarField(ptf),
-    pa_(ptf.pa_)
-{}
-
-
-Foam::freeSurfacePressureFvPatchScalarField::
-freeSurfacePressureFvPatchScalarField
-(
-    const freeSurfacePressureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     pa_(ptf.pa_)
 {}
 
@@ -110,7 +99,7 @@ void Foam::freeSurfacePressureFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    fixedValueFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     pa_.autoMap(m);
 }
 
@@ -121,10 +110,9 @@ void Foam::freeSurfacePressureFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedValueFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const freeSurfacePressureFvPatchScalarField& tiptf =
-        refCast<const freeSurfacePressureFvPatchScalarField>(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     pa_.rmap(tiptf.pa_, addr);
 }
@@ -156,7 +144,7 @@ void Foam::freeSurfacePressureFvPatchScalarField::updateCoeffs()
         // FatalError
     }
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -39,7 +39,7 @@ adjointFarFieldVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     adjointVectorBoundaryCondition(p, iF, word::null)
 {}
 
@@ -47,13 +47,13 @@ adjointFarFieldVelocityFvPatchVectorField
 Foam::adjointFarFieldVelocityFvPatchVectorField::
 adjointFarFieldVelocityFvPatchVectorField
 (
-    const adjointFarFieldVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointVectorBoundaryCondition(p, iF, ptf.adjointSolverName_)
 {}
 
@@ -66,7 +66,7 @@ adjointFarFieldVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     adjointVectorBoundaryCondition(p, iF, dict.get<word>("solverName"))
 {
     this->readValueEntry(dict, IOobjectOption::MUST_READ);
@@ -76,12 +76,12 @@ adjointFarFieldVelocityFvPatchVectorField
 Foam::adjointFarFieldVelocityFvPatchVectorField::
 adjointFarFieldVelocityFvPatchVectorField
 (
-    const adjointFarFieldVelocityFvPatchVectorField& pivpvf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(pivpvf, iF),
-    adjointVectorBoundaryCondition(pivpvf)
+    parent_bctype(ptf, iF),
+    adjointVectorBoundaryCondition(ptf)
 {}
 
 
@@ -138,7 +138,7 @@ void Foam::adjointFarFieldVelocityFvPatchVectorField::updateCoeffs()
        *((Uac&nf)*nf + (Uac_t*(momentumDiffusion*delta) - sourceVelocity)/denom)
     );
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

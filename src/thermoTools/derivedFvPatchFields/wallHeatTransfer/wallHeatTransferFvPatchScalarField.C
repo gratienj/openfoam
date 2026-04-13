@@ -38,7 +38,7 @@ Foam::wallHeatTransferFvPatchScalarField::wallHeatTransferFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Tinf_(p.size(), Zero),
     alphaWall_(p.size(), Zero)
 {
@@ -50,13 +50,13 @@ Foam::wallHeatTransferFvPatchScalarField::wallHeatTransferFvPatchScalarField
 
 Foam::wallHeatTransferFvPatchScalarField::wallHeatTransferFvPatchScalarField
 (
-    const wallHeatTransferFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Tinf_(ptf.Tinf_, mapper),
     alphaWall_(ptf.alphaWall_, mapper)
 {}
@@ -69,7 +69,7 @@ Foam::wallHeatTransferFvPatchScalarField::wallHeatTransferFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Tinf_("Tinf", dict, p.size()),
     alphaWall_("alphaWall", dict, p.size())
 {
@@ -86,22 +86,11 @@ Foam::wallHeatTransferFvPatchScalarField::wallHeatTransferFvPatchScalarField
 
 Foam::wallHeatTransferFvPatchScalarField::wallHeatTransferFvPatchScalarField
 (
-    const wallHeatTransferFvPatchScalarField& tppsf
-)
-:
-    mixedFvPatchScalarField(tppsf),
-    Tinf_(tppsf.Tinf_),
-    alphaWall_(tppsf.alphaWall_)
-{}
-
-
-Foam::wallHeatTransferFvPatchScalarField::wallHeatTransferFvPatchScalarField
-(
-    const wallHeatTransferFvPatchScalarField& tppsf,
+    const this_bctype& tppsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(tppsf, iF),
+    parent_bctype(tppsf, iF),
     Tinf_(tppsf.Tinf_),
     alphaWall_(tppsf.alphaWall_)
 {}
@@ -126,10 +115,9 @@ void Foam::wallHeatTransferFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const wallHeatTransferFvPatchScalarField& tiptf =
-        refCast<const wallHeatTransferFvPatchScalarField>(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     Tinf_.rmap(tiptf.Tinf_, addr);
     alphaWall_.rmap(tiptf.alphaWall_, addr);
@@ -162,7 +150,7 @@ void Foam::wallHeatTransferFvPatchScalarField::updateCoeffs()
           + turbModel.kappaEff(patchi)*patch().deltaCoeffs()/alphaWall_
         );
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

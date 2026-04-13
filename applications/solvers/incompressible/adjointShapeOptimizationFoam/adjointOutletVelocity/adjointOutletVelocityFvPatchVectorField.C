@@ -40,7 +40,7 @@ adjointOutletVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
@@ -52,31 +52,31 @@ adjointOutletVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::adjointOutletVelocityFvPatchVectorField::
 adjointOutletVelocityFvPatchVectorField
 (
-    const adjointOutletVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
 Foam::adjointOutletVelocityFvPatchVectorField::
 adjointOutletVelocityFvPatchVectorField
 (
-    const adjointOutletVelocityFvPatchVectorField& pivpvf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(pivpvf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -101,7 +101,7 @@ void Foam::adjointOutletVelocityFvPatchVectorField::updateCoeffs()
     vectorField::operator=(phiap*patch().Sf()/sqr(patch().magSf()) + UtHat);
     //vectorField::operator=(Uan + UtHat);
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

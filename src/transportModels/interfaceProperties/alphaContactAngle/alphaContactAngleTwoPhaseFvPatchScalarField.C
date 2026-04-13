@@ -54,7 +54,7 @@ alphaContactAngleTwoPhaseFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     limit_(limitControls::lcZeroGradient)
 {}
 
@@ -67,13 +67,13 @@ alphaContactAngleTwoPhaseFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),  // Bypass dictionary constructor
+    parent_bctype(p, iF),  // Bypass dictionary constructor
     limit_(limitControlNames_.get("limit", dict))
 {
     if (this->readGradientEntry(dict))
     {
-        fixedGradientFvPatchScalarField::updateCoeffs();
-        fixedGradientFvPatchScalarField::evaluate();
+        this->parent_bctype::updateCoeffs();
+        this->parent_bctype::evaluate();
     }
     else
     {
@@ -87,13 +87,13 @@ alphaContactAngleTwoPhaseFvPatchScalarField
 Foam::alphaContactAngleTwoPhaseFvPatchScalarField::
 alphaContactAngleTwoPhaseFvPatchScalarField
 (
-    const alphaContactAngleTwoPhaseFvPatchScalarField& acpsf,
+    const this_bctype& acpsf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedGradientFvPatchScalarField(acpsf, p, iF, mapper),
+    parent_bctype(acpsf, p, iF, mapper),
     limit_(acpsf.limit_)
 {}
 
@@ -101,22 +101,11 @@ alphaContactAngleTwoPhaseFvPatchScalarField
 Foam::alphaContactAngleTwoPhaseFvPatchScalarField::
 alphaContactAngleTwoPhaseFvPatchScalarField
 (
-    const alphaContactAngleTwoPhaseFvPatchScalarField& acpsf
-)
-:
-    fixedGradientFvPatchScalarField(acpsf),
-    limit_(acpsf.limit_)
-{}
-
-
-Foam::alphaContactAngleTwoPhaseFvPatchScalarField::
-alphaContactAngleTwoPhaseFvPatchScalarField
-(
-    const alphaContactAngleTwoPhaseFvPatchScalarField& acpsf,
+    const this_bctype& acpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(acpsf, iF),
+    parent_bctype(acpsf, iF),
     limit_(acpsf.limit_)
 {}
 

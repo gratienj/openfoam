@@ -39,7 +39,7 @@ Foam::fixedRhoFvPatchScalarField::fixedRhoFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     pName_("p"),
     psiName_("thermo:psi")
 {}
@@ -47,13 +47,13 @@ Foam::fixedRhoFvPatchScalarField::fixedRhoFvPatchScalarField
 
 Foam::fixedRhoFvPatchScalarField::fixedRhoFvPatchScalarField
 (
-    const fixedRhoFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     pName_(ptf.pName_),
     psiName_(ptf.psiName_)
 {}
@@ -66,7 +66,7 @@ Foam::fixedRhoFvPatchScalarField::fixedRhoFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     pName_(dict.getOrDefault<word>("p", "p")),
     psiName_(dict.getOrDefault<word>("psi", "thermo:psi"))
 {}
@@ -74,22 +74,11 @@ Foam::fixedRhoFvPatchScalarField::fixedRhoFvPatchScalarField
 
 Foam::fixedRhoFvPatchScalarField::fixedRhoFvPatchScalarField
 (
-    const fixedRhoFvPatchScalarField& frpsf
-)
-:
-    fixedValueFvPatchScalarField(frpsf),
-    pName_(frpsf.pName_),
-    psiName_(frpsf.psiName_)
-{}
-
-
-Foam::fixedRhoFvPatchScalarField::fixedRhoFvPatchScalarField
-(
-    const fixedRhoFvPatchScalarField& frpsf,
+    const this_bctype& frpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(frpsf, iF),
+    parent_bctype(frpsf, iF),
     pName_(frpsf.pName_),
     psiName_(frpsf.psiName_)
 {}
@@ -109,7 +98,7 @@ void Foam::fixedRhoFvPatchScalarField::updateCoeffs()
 
     operator==(psip*pp);
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

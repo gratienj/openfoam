@@ -40,7 +40,7 @@ See also
     Foam::cyclicFvPatchField
 
 SourceFiles
-    jumpCyclicFvPatchField.C
+    jumpCyclicFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -63,6 +63,9 @@ class jumpCyclicFvPatchField
 :
     public cyclicFvPatchField<Type>
 {
+    typedef jumpCyclicFvPatchField<Type> this_bctype;
+    typedef cyclicFvPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -88,30 +91,33 @@ public:
             const bool needValue = true  //!< evaluate
         );
 
-        //- Construct by mapping given jumpCyclicFvPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         jumpCyclicFvPatchField
         (
-            const jumpCyclicFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        jumpCyclicFvPatchField
-        (
-            const jumpCyclicFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         jumpCyclicFvPatchField
         (
-            const jumpCyclicFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        jumpCyclicFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-    // Member functions
+
+    // Member Functions
 
         // Access
 
@@ -157,7 +163,15 @@ public:
                 const scalarField&,
                 const Pstream::commsTypes commsType
             ) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
+
+// Specializations
 
 //- Update result field based on interface functionality
 template<>
@@ -195,7 +209,7 @@ void jumpCyclicFvPatchField<vector>::updateInterfaceMatrix
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "jumpCyclicFvPatchField.C"
+    #include "jumpCyclicFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

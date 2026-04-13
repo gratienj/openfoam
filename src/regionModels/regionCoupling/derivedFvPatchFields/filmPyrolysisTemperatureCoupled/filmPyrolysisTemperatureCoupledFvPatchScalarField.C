@@ -41,7 +41,7 @@ filmPyrolysisTemperatureCoupledFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     filmRegionName_("surfaceFilmProperties"),
     pyrolysisRegionName_("pyrolysisProperties"),
     phiName_("phi"),
@@ -52,13 +52,13 @@ filmPyrolysisTemperatureCoupledFvPatchScalarField
 Foam::filmPyrolysisTemperatureCoupledFvPatchScalarField::
 filmPyrolysisTemperatureCoupledFvPatchScalarField
 (
-    const filmPyrolysisTemperatureCoupledFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     filmRegionName_(ptf.filmRegionName_),
     pyrolysisRegionName_(ptf.pyrolysisRegionName_),
     phiName_(ptf.phiName_),
@@ -74,7 +74,7 @@ filmPyrolysisTemperatureCoupledFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     filmRegionName_
     (
         dict.getOrDefault<word>("filmRegion", "surfaceFilmProperties")
@@ -91,25 +91,11 @@ filmPyrolysisTemperatureCoupledFvPatchScalarField
 Foam::filmPyrolysisTemperatureCoupledFvPatchScalarField::
 filmPyrolysisTemperatureCoupledFvPatchScalarField
 (
-    const filmPyrolysisTemperatureCoupledFvPatchScalarField& fptpsf
-)
-:
-    fixedValueFvPatchScalarField(fptpsf),
-    filmRegionName_(fptpsf.filmRegionName_),
-    pyrolysisRegionName_(fptpsf.pyrolysisRegionName_),
-    phiName_(fptpsf.phiName_),
-    rhoName_(fptpsf.rhoName_)
-{}
-
-
-Foam::filmPyrolysisTemperatureCoupledFvPatchScalarField::
-filmPyrolysisTemperatureCoupledFvPatchScalarField
-(
-    const filmPyrolysisTemperatureCoupledFvPatchScalarField& fptpsf,
+    const this_bctype& fptpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(fptpsf, iF),
+    parent_bctype(fptpsf, iF),
     filmRegionName_(fptpsf.filmRegionName_),
     pyrolysisRegionName_(fptpsf.pyrolysisRegionName_),
     phiName_(fptpsf.phiName_),
@@ -175,7 +161,7 @@ void Foam::filmPyrolysisTemperatureCoupledFvPatchScalarField::updateCoeffs()
 
     UPstream::msgType(oldTag);  // Restore tag
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

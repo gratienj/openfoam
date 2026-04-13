@@ -88,7 +88,7 @@ filmPyrolysisRadiativeCoupledMixedFvPatchScalarField::pyrModel() const
             return mdl;
         }
     }
-    
+
     DynamicList<word> modelNames(models.size());
     for (const ModelType& mdl : models)
     {
@@ -113,7 +113,7 @@ filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch()),  // default method (fluidThermo)
     filmRegionName_("surfaceFilmProperties"),
     pyrolysisRegionName_("pyrolysisProperties"),
@@ -132,13 +132,13 @@ filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
 filmPyrolysisRadiativeCoupledMixedFvPatchScalarField::
 filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
 (
-    const filmPyrolysisRadiativeCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     temperatureCoupledBase(patch(), psf),
     filmRegionName_(psf.filmRegionName_),
     pyrolysisRegionName_(psf.pyrolysisRegionName_),
@@ -158,7 +158,7 @@ filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch(), dict),
     filmRegionName_
     (
@@ -203,11 +203,11 @@ filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
 filmPyrolysisRadiativeCoupledMixedFvPatchScalarField::
 filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
 (
-    const filmPyrolysisRadiativeCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     temperatureCoupledBase(patch(), psf),
     filmRegionName_(psf.filmRegionName_),
     pyrolysisRegionName_(psf.pyrolysisRegionName_),
@@ -226,7 +226,7 @@ void filmPyrolysisRadiativeCoupledMixedFvPatchScalarField::autoMap
     const fvPatchFieldMapper& mapper
 )
 {
-    mixedFvPatchScalarField::autoMap(mapper);
+    this->parent_bctype::autoMap(mapper);
     temperatureCoupledBase::autoMap(mapper);
 }
 
@@ -237,9 +237,9 @@ void filmPyrolysisRadiativeCoupledMixedFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& fpptf = refCast<const myType>(ptf);
+    const auto& fpptf = refCast<const this_bctype>(ptf);
 
     temperatureCoupledBase::rmap(fpptf, addr);
 }
@@ -265,7 +265,7 @@ void filmPyrolysisRadiativeCoupledMixedFvPatchScalarField::updateCoeffs()
     scalarField intFld(patchInternalField());
 
     const auto& nbrField =
-        refCast<const myType>
+        refCast<const this_bctype>
         (
             nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
         );
@@ -398,7 +398,7 @@ void filmPyrolysisRadiativeCoupledMixedFvPatchScalarField::updateCoeffs()
     valueFraction() = alpha/(alpha + (1.0 - ratio)*myKDelta);
     refValue() = ratio*Tfilm + (1.0 - ratio)*(KDeltaNbr*nbrIntFld)/alpha;
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     if (debug)
     {

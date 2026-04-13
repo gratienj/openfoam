@@ -70,7 +70,7 @@ velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
 
 velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
 (
-    const velocityFilmShellFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
@@ -133,7 +133,7 @@ velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
 
 velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
 (
-    const velocityFilmShellFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :

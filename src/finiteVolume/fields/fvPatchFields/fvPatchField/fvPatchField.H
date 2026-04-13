@@ -39,9 +39,9 @@ Description
     fields.
 
 SourceFiles
-    fvPatchField.C
-    fvPatchFieldBase.C
-    fvPatchFieldNew.C
+    fvPatchField.txx
+    fvPatchFieldBase.cxx
+    fvPatchFieldNew.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -52,6 +52,10 @@ SourceFiles
 #include "DimensionedField.H"
 #include "fieldTypes.H"
 #include "scalarField.H"
+
+// Transitional features
+#define Foam_fvPatchField_copyConstruct(TypeName) \
+    TypeName(const TypeName& pfld) : TypeName(pfld, pfld.internalField()) {}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -452,7 +456,7 @@ public:
             )
         {}
 
-        //- Construct by mapping the given fvPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         fvPatchField
         (
             const fvPatchField<Type>&,
@@ -478,20 +482,22 @@ public:
             const DimensionedField<Type, volMesh>& iF
         );
 
-        //- Copy construct
-        fvPatchField(const fvPatchField<Type>& pfld)
-        :
-            fvPatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        fvPatchField(const fvPatchField& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : fvPatchField(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-
-        //- Clone patch field with its own internal field reference
+        //- No clone without an internal field reference.
+        //  \note declared, but only for PtrList compilation requirements.
+        //  The \c tmp should normally contain a pointer in that context.
         virtual tmp<fvPatchField<Type>> clone() const
         {
-            return tmp<fvPatchField<Type>>
-            (
-                new fvPatchField<Type>(*this, this->internalField_)
-            );
+            NotImplemented;
+            return nullptr;
         }
 
         //- Clone patch field with given internal field reference
@@ -500,10 +506,7 @@ public:
             const DimensionedField<Type, volMesh>& iF
         ) const
         {
-            return tmp<fvPatchField<Type>>
-            (
-                new fvPatchField<Type>(*this, iF)
-            );
+            return tmp<fvPatchField<Type>>::New(*this, iF);
         }
 
 
@@ -910,8 +913,8 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fvPatchField.C"
-    #include "fvPatchFieldNew.C"
+    #include "fvPatchField.txx"
+    #include "fvPatchFieldNew.txx"
     #include "calculatedFvPatchField.H"
     #include "zeroGradientFvPatchField.H"
 #endif

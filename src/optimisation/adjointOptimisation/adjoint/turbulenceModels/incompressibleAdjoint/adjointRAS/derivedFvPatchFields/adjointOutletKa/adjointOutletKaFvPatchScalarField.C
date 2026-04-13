@@ -44,20 +44,20 @@ adjointOutletKaFvPatchScalarField::adjointOutletKaFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     adjointScalarBoundaryCondition(p, iF, word::null)
 {}
 
 
 adjointOutletKaFvPatchScalarField::adjointOutletKaFvPatchScalarField
 (
-    const adjointOutletKaFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointScalarBoundaryCondition(p, iF, ptf.adjointSolverName_)
 {}
 
@@ -69,7 +69,7 @@ adjointOutletKaFvPatchScalarField::adjointOutletKaFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     adjointScalarBoundaryCondition(p, iF, dict.get<word>("solverName"))
 {
     this->readValueEntry(dict, IOobjectOption::MUST_READ);
@@ -78,11 +78,11 @@ adjointOutletKaFvPatchScalarField::adjointOutletKaFvPatchScalarField
 
 adjointOutletKaFvPatchScalarField::adjointOutletKaFvPatchScalarField
 (
-    const adjointOutletKaFvPatchScalarField& tppsf,
+    const this_bctype& tppsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(tppsf, iF),
+    parent_bctype(tppsf, iF),
     adjointScalarBoundaryCondition(tppsf)
 {}
 
@@ -116,7 +116,7 @@ void adjointOutletKaFvPatchScalarField::updateCoeffs()
        /((Ub & nf) + nuEff*delta)
     );
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

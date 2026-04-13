@@ -97,8 +97,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef pressurePIDControlInletVelocityFvPatchVectorField_H
-#define pressurePIDControlInletVelocityFvPatchVectorField_H
+#ifndef Foam_pressurePIDControlInletVelocityFvPatchVectorField_H
+#define Foam_pressurePIDControlInletVelocityFvPatchVectorField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "Switch.H"
@@ -115,7 +115,10 @@ class pressurePIDControlInletVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
-    // Private data
+    typedef pressurePIDControlInletVelocityFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Name of the upstream face zone
         const word upstreamName_;
@@ -208,35 +211,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  flowRateInletVelocityFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         pressurePIDControlInletVelocityFvPatchVectorField
         (
-            const pressurePIDControlInletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        pressurePIDControlInletVelocityFvPatchVectorField
-        (
-            const pressurePIDControlInletVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         pressurePIDControlInletVelocityFvPatchVectorField
         (
-            const pressurePIDControlInletVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        pressurePIDControlInletVelocityFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -255,6 +250,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -265,7 +266,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "pressurePIDControlInletVelocityFvPatchVectorFieldTemplates.C"
+    #include "pressurePIDControlInletVelocityFvPatchVectorField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

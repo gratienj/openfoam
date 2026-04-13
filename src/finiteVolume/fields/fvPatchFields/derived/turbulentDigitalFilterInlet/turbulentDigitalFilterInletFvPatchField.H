@@ -170,7 +170,7 @@ See also
   - turbulentDFSEMInletFvPatchVectorField.C
 
 SourceFiles
-    turbulentDigitalFilterInletFvPatchField.C
+    turbulentDigitalFilterInletFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -196,6 +196,9 @@ class turbulentDigitalFilterInletFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
+    typedef turbulentDigitalFilterInletFvPatchField<Type> this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
+
     // Private Typedefs
 
         //- Type of input set of Reynolds stresses
@@ -283,34 +286,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- turbulentDigitalFilterInletFvPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         turbulentDigitalFilterInletFvPatchField
         (
-            const turbulentDigitalFilterInletFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        turbulentDigitalFilterInletFvPatchField
-        (
-            const turbulentDigitalFilterInletFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         turbulentDigitalFilterInletFvPatchField
         (
-            const turbulentDigitalFilterInletFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        turbulentDigitalFilterInletFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -347,6 +340,12 @@ public:
 
         //- Write boundary condition settings
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -356,7 +355,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "turbulentDigitalFilterInletFvPatchField.C"
+    #include "turbulentDigitalFilterInletFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

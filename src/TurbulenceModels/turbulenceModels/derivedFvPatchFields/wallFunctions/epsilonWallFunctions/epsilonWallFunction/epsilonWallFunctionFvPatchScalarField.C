@@ -48,14 +48,14 @@ void Foam::epsilonWallFunctionFvPatchScalarField::setMaster()
     const auto& epsilon =
         static_cast<const volScalarField&>(this->internalField());
 
-    const volScalarField::Boundary& bf = epsilon.boundaryField();
+    const auto& bf = epsilon.boundaryField();
 
     label master = -1;
     forAll(bf, patchi)
     {
-        if (isA<epsilonWallFunctionFvPatchScalarField>(bf[patchi]))
+        if (isA<this_bctype>(bf[patchi]))
         {
-            epsilonWallFunctionFvPatchScalarField& epf = epsilonPatch(patchi);
+            auto& epf = epsilonPatch(patchi);
 
             if (master == -1)
             {
@@ -73,7 +73,7 @@ void Foam::epsilonWallFunctionFvPatchScalarField::createAveragingWeights()
     const auto& epsilon =
         static_cast<const volScalarField&>(this->internalField());
 
-    const volScalarField::Boundary& bf = epsilon.boundaryField();
+    const auto& bf = epsilon.boundaryField();
 
     const fvMesh& mesh = epsilon.mesh();
 
@@ -100,7 +100,7 @@ void Foam::epsilonWallFunctionFvPatchScalarField::createAveragingWeights()
     DynamicList<label> epsilonPatches(bf.size());
     forAll(bf, patchi)
     {
-        if (isA<epsilonWallFunctionFvPatchScalarField>(bf[patchi]))
+        if (isA<this_bctype>(bf[patchi]))
         {
             epsilonPatches.append(patchi);
 
@@ -136,12 +136,7 @@ Foam::epsilonWallFunctionFvPatchScalarField::epsilonPatch
     const auto& epsilon =
         static_cast<const volScalarField&>(this->internalField());
 
-    const volScalarField::Boundary& bf = epsilon.boundaryField();
-
-    const auto& epf =
-        refCast<const epsilonWallFunctionFvPatchScalarField>(bf[patchi]);
-
-    return const_cast<epsilonWallFunctionFvPatchScalarField&>(epf);
+    return refConstCast<this_bctype>(epsilon.boundaryField()[patchi]);
 }
 
 
@@ -157,7 +152,7 @@ void Foam::epsilonWallFunctionFvPatchScalarField::calculateTurbulenceFields
     {
         if (!cornerWeights_[patchi].empty())
         {
-            epsilonWallFunctionFvPatchScalarField& epf = epsilonPatch(patchi);
+            auto& epf = epsilonPatch(patchi);
 
             const List<scalar>& w = cornerWeights_[patchi];
 
@@ -170,7 +165,7 @@ void Foam::epsilonWallFunctionFvPatchScalarField::calculateTurbulenceFields
     {
         if (!cornerWeights_[patchi].empty())
         {
-            epsilonWallFunctionFvPatchScalarField& epf = epsilonPatch(patchi);
+            auto& epf = epsilonPatch(patchi);
 
             epf == scalarField(epsilon0, epf.patch().faceCells());
         }
@@ -368,7 +363,7 @@ epsilonWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     wallFunctionBlenders(),
     lowReCorrection_(false),
     initialised_(false),
@@ -383,13 +378,13 @@ epsilonWallFunctionFvPatchScalarField
 Foam::epsilonWallFunctionFvPatchScalarField::
 epsilonWallFunctionFvPatchScalarField
 (
-    const epsilonWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     wallFunctionBlenders(ptf),
     lowReCorrection_(ptf.lowReCorrection_),
     initialised_(false),
@@ -409,7 +404,7 @@ epsilonWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     wallFunctionBlenders(dict, blenderType::STEPWISE, scalar(2)),
     lowReCorrection_(dict.getOrDefault("lowReCorrection", false)),
     initialised_(false),
@@ -427,29 +422,11 @@ epsilonWallFunctionFvPatchScalarField
 Foam::epsilonWallFunctionFvPatchScalarField::
 epsilonWallFunctionFvPatchScalarField
 (
-    const epsilonWallFunctionFvPatchScalarField& ewfpsf
-)
-:
-    fixedValueFvPatchField<scalar>(ewfpsf),
-    wallFunctionBlenders(ewfpsf),
-    lowReCorrection_(ewfpsf.lowReCorrection_),
-    initialised_(false),
-    master_(-1),
-    wallCoeffs_(ewfpsf.wallCoeffs_),
-    G_(),
-    epsilon_(),
-    cornerWeights_()
-{}
-
-
-Foam::epsilonWallFunctionFvPatchScalarField::
-epsilonWallFunctionFvPatchScalarField
-(
-    const epsilonWallFunctionFvPatchScalarField& ewfpsf,
+    const this_bctype& ewfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(ewfpsf, iF),
+    parent_bctype(ewfpsf, iF),
     wallFunctionBlenders(ewfpsf),
     lowReCorrection_(ewfpsf.lowReCorrection_),
     initialised_(false),

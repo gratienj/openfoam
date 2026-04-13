@@ -32,14 +32,14 @@ Description
     boundary condition.
 
 SourceFiles
-    eddy.C
+    eddy.cxx
     eddyI.H
-    eddyIO.C
+    eddyIO.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef turbulentDFSEMInletFvPatchVectorField_eddy_H
-#define turbulentDFSEMInletFvPatchVectorField_eddy_H
+#ifndef Foam_turbulentDFSEMInletFvPatchVectorField_eddy_H
+#define Foam_turbulentDFSEMInletFvPatchVectorField_eddy_H
 
 #include "vector.H"
 #include "point.H"

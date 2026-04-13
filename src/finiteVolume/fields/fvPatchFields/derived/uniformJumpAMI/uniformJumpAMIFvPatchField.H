@@ -65,12 +65,12 @@ See also
     Foam::Function1Types
 
 SourceFiles
-    uniformJumpAMIFvPatchField.C
+    uniformJumpAMIFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef uniformJumpAMIFvPatchField_H
-#define uniformJumpAMIFvPatchField_H
+#ifndef Foam_uniformJumpAMIFvPatchField_H
+#define Foam_uniformJumpAMIFvPatchField_H
 
 #include "fixedJumpAMIFvPatchField.H"
 #include "Function1.H"
@@ -89,10 +89,12 @@ class uniformJumpAMIFvPatchField
 :
     public fixedJumpAMIFvPatchField<Type>
 {
+    typedef uniformJumpAMIFvPatchField<Type> this_bctype;
+    typedef fixedJumpAMIFvPatchField<Type> parent_bctype;
 
 protected:
 
-    // Protected data
+    // Protected Data
 
         //- "jump" table
         autoPtr<Function1<Type>> jumpTable_;
@@ -120,34 +122,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given uniformJumpAMIFvPatchField onto a
-        //  new patch
+        //- Construct by mapping onto a new patch
         uniformJumpAMIFvPatchField
         (
-            const uniformJumpAMIFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        uniformJumpAMIFvPatchField
-        (
-            const uniformJumpAMIFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         uniformJumpAMIFvPatchField
         (
-            const uniformJumpAMIFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        uniformJumpAMIFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -166,6 +158,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -176,7 +174,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "uniformJumpAMIFvPatchField.C"
+    #include "uniformJumpAMIFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

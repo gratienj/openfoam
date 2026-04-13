@@ -45,7 +45,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    extrapolatedCalculatedFvPatchField.C
+    extrapolatedCalculatedFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -68,6 +68,9 @@ class extrapolatedCalculatedFvPatchField
 :
     public calculatedFvPatchField<Type>
 {
+    typedef extrapolatedCalculatedFvPatchField<Type> this_bctype;
+    typedef calculatedFvPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -92,33 +95,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         extrapolatedCalculatedFvPatchField
         (
-            const extrapolatedCalculatedFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        extrapolatedCalculatedFvPatchField
-        (
-            const extrapolatedCalculatedFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         extrapolatedCalculatedFvPatchField
         (
-            const extrapolatedCalculatedFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        extrapolatedCalculatedFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -137,6 +131,12 @@ public:
         (
             const Pstream::commsTypes commsType=Pstream::commsTypes::buffered
         );
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -147,7 +147,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "extrapolatedCalculatedFvPatchField.C"
+    #include "extrapolatedCalculatedFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -40,7 +40,7 @@ inclinedFilmNusseltHeightFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     filmRegionName_("surfaceFilmProperties"),
     GammaMean_(),
     a_(),
@@ -51,13 +51,13 @@ inclinedFilmNusseltHeightFvPatchScalarField
 Foam::inclinedFilmNusseltHeightFvPatchScalarField::
 inclinedFilmNusseltHeightFvPatchScalarField
 (
-    const inclinedFilmNusseltHeightFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     filmRegionName_(ptf.filmRegionName_),
     GammaMean_(ptf.GammaMean_.clone()),
     a_(ptf.a_.clone()),
@@ -73,7 +73,7 @@ inclinedFilmNusseltHeightFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     filmRegionName_
     (
         dict.getOrDefault<word>("filmRegion", "surfaceFilmProperties")
@@ -87,25 +87,11 @@ inclinedFilmNusseltHeightFvPatchScalarField
 Foam::inclinedFilmNusseltHeightFvPatchScalarField::
 inclinedFilmNusseltHeightFvPatchScalarField
 (
-    const inclinedFilmNusseltHeightFvPatchScalarField& wmfrhpsf
-)
-:
-    fixedValueFvPatchScalarField(wmfrhpsf),
-    filmRegionName_(wmfrhpsf.filmRegionName_),
-    GammaMean_(wmfrhpsf.GammaMean_.clone()),
-    a_(wmfrhpsf.a_.clone()),
-    omega_(wmfrhpsf.omega_.clone())
-{}
-
-
-Foam::inclinedFilmNusseltHeightFvPatchScalarField::
-inclinedFilmNusseltHeightFvPatchScalarField
-(
-    const inclinedFilmNusseltHeightFvPatchScalarField& wmfrhpsf,
+    const this_bctype& wmfrhpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(wmfrhpsf, iF),
+    parent_bctype(wmfrhpsf, iF),
     filmRegionName_(wmfrhpsf.filmRegionName_),
     GammaMean_(wmfrhpsf.GammaMean_.clone()),
     a_(wmfrhpsf.a_.clone()),
@@ -185,7 +171,7 @@ void Foam::inclinedFilmNusseltHeightFvPatchScalarField::updateCoeffs()
         cbrt(3*sqr(mup/rhop)/(gTan + ROOTVSMALL))*cbrt(Re)
     );
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

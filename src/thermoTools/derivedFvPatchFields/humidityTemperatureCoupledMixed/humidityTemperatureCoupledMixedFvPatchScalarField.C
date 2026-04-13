@@ -132,7 +132,7 @@ humidityTemperatureCoupledMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch(), temperatureCoupledBase::mtFluidThermo),
     mode_(mtConstantMass),
     pName_("p"),
@@ -168,13 +168,13 @@ humidityTemperatureCoupledMixedFvPatchScalarField
 Foam::humidityTemperatureCoupledMixedFvPatchScalarField::
 humidityTemperatureCoupledMixedFvPatchScalarField
 (
-    const humidityTemperatureCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     temperatureCoupledBase(patch(), psf),
     mode_(psf.mode_),
     pName_(psf.pName_),
@@ -211,7 +211,7 @@ humidityTemperatureCoupledMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch(), dict),
     mode_(mtCondensationAndEvaporation),
     pName_(dict.getOrDefault<word>("p", "p")),
@@ -333,11 +333,11 @@ humidityTemperatureCoupledMixedFvPatchScalarField
 Foam::humidityTemperatureCoupledMixedFvPatchScalarField::
 humidityTemperatureCoupledMixedFvPatchScalarField
 (
-    const humidityTemperatureCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     temperatureCoupledBase(patch(), psf),
     mode_(psf.mode_),
     pName_(psf.pName_),
@@ -373,7 +373,7 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    mixedFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     temperatureCoupledBase::autoMap(m);
 
     if (fluid_)
@@ -395,13 +395,9 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const humidityTemperatureCoupledMixedFvPatchScalarField& tiptf =
-        refCast<const humidityTemperatureCoupledMixedFvPatchScalarField>
-        (
-            ptf
-        );
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     temperatureCoupledBase::rmap(tiptf, addr);
     if (fluid_)
@@ -425,8 +421,7 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::updateCoeffs()
     }
 
     // Get the coupling information from the mappedPatchBase
-    const mappedPatchBase& mpp =
-        refCast<const mappedPatchBase>(patch().patch());
+    const auto& mpp = refCast<const mappedPatchBase>(patch().patch());
 
     const scalarField& magSf = patch().magSf();
 
@@ -436,10 +431,8 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::updateCoeffs()
     const fvPatch& nbrPatch =
         refCast<const fvMesh>(nbrMesh).boundary()[nbrPatchI];
 
-    const auto& nbrField = refCast
-        <
-            const humidityTemperatureCoupledMixedFvPatchScalarField
-        >
+    const auto& nbrField =
+        refCast<const this_bctype>
         (
             nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
         );
@@ -502,16 +495,10 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::updateCoeffs()
             scalarField Tdew(patch().size(), Zero);
             scalarField RH(patch().size(), Zero);
 
-            fixedGradientFvPatchField<scalar>& Yp =
-                const_cast<fixedGradientFvPatchField<scalar>&>
+            auto& Yp =
+                refConstCast<fixedGradientFvPatchField<scalar>>
                 (
-                    refCast
-                    <
-                        const fixedGradientFvPatchField<scalar>
-                    >
-                    (
-                        patch().lookupPatchField<volScalarField>(specieName_)
-                    )
+                    patch().lookupPatchField<volScalarField>(specieName_)
                 );
 
             const auto& pp =
@@ -729,7 +716,7 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::updateCoeffs()
 
     refValue() = (KDeltaNbr*nbrIntFld + mpCpdt*TpOld + dmHfg)/alpha;
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     if (debug && fluid_)
     {

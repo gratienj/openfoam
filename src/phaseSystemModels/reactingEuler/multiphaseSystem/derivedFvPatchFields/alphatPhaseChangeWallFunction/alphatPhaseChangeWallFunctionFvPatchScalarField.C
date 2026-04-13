@@ -50,7 +50,7 @@ alphatPhaseChangeWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     dmdt_(p.size(), Zero),
     mDotL_(p.size(), Zero)
 {}
@@ -64,7 +64,7 @@ alphatPhaseChangeWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     dmdt_("dmdt", dict, p.size(), IOobjectOption::LAZY_READ),
     mDotL_("mDotL", dict, p.size(), IOobjectOption::LAZY_READ)
 {}
@@ -73,13 +73,13 @@ alphatPhaseChangeWallFunctionFvPatchScalarField
 alphatPhaseChangeWallFunctionFvPatchScalarField::
 alphatPhaseChangeWallFunctionFvPatchScalarField
 (
-    const alphatPhaseChangeWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     dmdt_(ptf.dmdt_, mapper),
     mDotL_(ptf.mDotL_, mapper)
 {}
@@ -88,23 +88,11 @@ alphatPhaseChangeWallFunctionFvPatchScalarField
 alphatPhaseChangeWallFunctionFvPatchScalarField::
 alphatPhaseChangeWallFunctionFvPatchScalarField
 (
-    const alphatPhaseChangeWallFunctionFvPatchScalarField& awfpsf
-)
-:
-    fixedValueFvPatchScalarField(awfpsf),
-    dmdt_(awfpsf.dmdt_),
-    mDotL_(awfpsf.mDotL_)
-{}
-
-
-alphatPhaseChangeWallFunctionFvPatchScalarField::
-alphatPhaseChangeWallFunctionFvPatchScalarField
-(
-    const alphatPhaseChangeWallFunctionFvPatchScalarField& awfpsf,
+    const this_bctype& awfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(awfpsf, iF),
+    parent_bctype(awfpsf, iF),
     dmdt_(awfpsf.dmdt_),
     mDotL_(awfpsf.mDotL_)
 {}

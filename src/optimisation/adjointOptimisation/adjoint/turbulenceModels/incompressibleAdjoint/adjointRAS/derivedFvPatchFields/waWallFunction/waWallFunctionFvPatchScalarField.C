@@ -62,7 +62,7 @@ waWallFunctionFvPatchScalarField::waWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     adjointScalarBoundaryCondition(p, iF, "wa")
 {
     checkType();
@@ -71,13 +71,13 @@ waWallFunctionFvPatchScalarField::waWallFunctionFvPatchScalarField
 
 waWallFunctionFvPatchScalarField::waWallFunctionFvPatchScalarField
 (
-    const waWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointScalarBoundaryCondition(p, iF, ptf.adjointSolverName_)
 {
     checkType();
@@ -91,7 +91,7 @@ waWallFunctionFvPatchScalarField::waWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     adjointScalarBoundaryCondition(p, iF, dict.get<word>("solverName"))
 {
     checkType();
@@ -100,23 +100,11 @@ waWallFunctionFvPatchScalarField::waWallFunctionFvPatchScalarField
 
 waWallFunctionFvPatchScalarField::waWallFunctionFvPatchScalarField
 (
-    const waWallFunctionFvPatchScalarField& ewfpsf
-)
-:
-    fixedValueFvPatchField<scalar>(ewfpsf),
-    adjointScalarBoundaryCondition(ewfpsf)
-{
-    checkType();
-}
-
-
-waWallFunctionFvPatchScalarField::waWallFunctionFvPatchScalarField
-(
-    const waWallFunctionFvPatchScalarField& ewfpsf,
+    const this_bctype& ewfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(ewfpsf, iF),
+    parent_bctype(ewfpsf, iF),
     adjointScalarBoundaryCondition(ewfpsf)
 {
     checkType();
@@ -261,7 +249,7 @@ void waWallFunctionFvPatchScalarField::updateCoeffs()
     }
 
     operator == (scalarField(patch().size(), Zero));
-    fixedValueFvPatchField<scalar>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
@@ -299,7 +287,7 @@ waWallFunctionFvPatchScalarField::gradientInternalCoeffs() const
 
 void waWallFunctionFvPatchScalarField::write(Ostream& os) const
 {
-    fixedValueFvPatchField<scalar>::write(os);
+    this->parent_bctype::write(os);
 }
 
 

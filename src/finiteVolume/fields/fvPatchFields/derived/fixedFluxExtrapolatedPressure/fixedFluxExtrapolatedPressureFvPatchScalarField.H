@@ -50,8 +50,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedFluxExtrapolatedPressureFvPatchScalarField_H
-#define fixedFluxExtrapolatedPressureFvPatchScalarField_H
+#ifndef Foam_fixedFluxExtrapolatedPressureFvPatchScalarField_H
+#define Foam_fixedFluxExtrapolatedPressureFvPatchScalarField_H
 
 #include "fixedFluxPressureFvPatchScalarField.H"
 
@@ -68,6 +68,8 @@ class fixedFluxExtrapolatedPressureFvPatchScalarField
 :
     public fixedFluxPressureFvPatchScalarField
 {
+    typedef fixedFluxExtrapolatedPressureFvPatchScalarField this_bctype;
+    typedef fixedFluxPressureFvPatchScalarField parent_bctype;
 
 public:
 
@@ -92,34 +94,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  fixedFluxExtrapolatedPressureFvPatchScalarField onto a new patch
+        //- Construct by mapping onto a new patch
         fixedFluxExtrapolatedPressureFvPatchScalarField
         (
-            const fixedFluxExtrapolatedPressureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedFluxExtrapolatedPressureFvPatchScalarField
-        (
-            const fixedFluxExtrapolatedPressureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         fixedFluxExtrapolatedPressureFvPatchScalarField
         (
-            const fixedFluxExtrapolatedPressureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedFluxExtrapolatedPressureFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -129,6 +124,12 @@ public:
         {
             return fvPatchField<scalar>::Clone(*this, iF);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

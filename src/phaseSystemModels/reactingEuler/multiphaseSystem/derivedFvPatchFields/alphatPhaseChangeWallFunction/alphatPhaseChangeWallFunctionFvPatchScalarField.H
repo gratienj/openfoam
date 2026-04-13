@@ -63,8 +63,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef alphatPhaseChangeWallFunctionFvPatchScalarField_H
-#define alphatPhaseChangeWallFunctionFvPatchScalarField_H
+#ifndef Foam_alphatPhaseChangeWallFunctionFvPatchScalarField_H
+#define Foam_alphatPhaseChangeWallFunctionFvPatchScalarField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "phasePairKey.H"
@@ -84,6 +84,9 @@ class alphatPhaseChangeWallFunctionFvPatchScalarField
 :
     public fixedValueFvPatchScalarField
 {
+    typedef alphatPhaseChangeWallFunctionFvPatchScalarField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
 protected:
 
     // Protected Data
@@ -118,29 +121,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- alphatPhaseChangeWallFunctionFvPatchScalarField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         alphatPhaseChangeWallFunctionFvPatchScalarField
         (
-            const alphatPhaseChangeWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        alphatPhaseChangeWallFunctionFvPatchScalarField
-        (
-            const alphatPhaseChangeWallFunctionFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         alphatPhaseChangeWallFunctionFvPatchScalarField
         (
-            const alphatPhaseChangeWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
+
+        //- No copy without an internal field
+        alphatPhaseChangeWallFunctionFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         // No clone methods - abstract class
 
@@ -200,6 +201,12 @@ public:
 
             //- Write
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

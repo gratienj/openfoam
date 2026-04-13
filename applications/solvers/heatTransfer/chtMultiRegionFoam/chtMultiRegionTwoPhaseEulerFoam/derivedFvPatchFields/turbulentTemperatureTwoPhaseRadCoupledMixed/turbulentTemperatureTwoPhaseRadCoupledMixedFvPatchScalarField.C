@@ -181,7 +181,7 @@ turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     regionType_(fluid),
     method_(mtLookup),
     kappaName_("none"),
@@ -199,13 +199,13 @@ turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField
 turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField::
 turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField
 (
-    const turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     regionType_(psf.regionType_),
     method_(psf.method_),
     kappaName_(psf.kappaName_),
@@ -224,7 +224,7 @@ turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     regionType_(regionTypeNames_.get("region", dict)),
     method_(KMethodTypeNames_.get("kappaMethod", dict)),
     kappaName_(dict.getOrDefault<word>("kappa", "none")),
@@ -263,11 +263,11 @@ turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField
 turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField::
 turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField
 (
-    const turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     regionType_(psf.regionType_),
     method_(psf.method_),
     kappaName_(psf.kappaName_),
@@ -306,10 +306,10 @@ updateCoeffs()
     scalarField& Tp = *this;
 
     const auto& nbrField =
-        refCast
-        <
-            const turbulentTemperatureTwoPhaseRadCoupledMixedFvPatchScalarField
-        >(nbrPatch.lookupPatchField<volScalarField>(TnbrName_));
+        refCast<const this_bctype>
+        (
+            nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
+        );
 
     // Swap to obtain full local values of neighbour internal field
     scalarField TcNbr(nbrField.patchInternalField());
@@ -481,7 +481,7 @@ updateCoeffs()
 
     UPstream::msgType(oldTag);  // Restore tag
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

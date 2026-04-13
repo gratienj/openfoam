@@ -83,19 +83,19 @@ alphaContactAngleFvPatchScalarField::alphaContactAngleFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    zeroGradientFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 alphaContactAngleFvPatchScalarField::alphaContactAngleFvPatchScalarField
 (
-    const alphaContactAngleFvPatchScalarField& gcpsf,
+    const this_bctype& gcpsf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    zeroGradientFvPatchScalarField(gcpsf, p, iF, mapper),
+    parent_bctype(gcpsf, p, iF, mapper),
     thetaProps_(gcpsf.thetaProps_)
 {}
 
@@ -107,7 +107,7 @@ alphaContactAngleFvPatchScalarField::alphaContactAngleFvPatchScalarField
     const dictionary& dict
 )
 :
-    zeroGradientFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     thetaProps_(dict.lookup("thetaProperties"))
 {
     evaluate();
@@ -116,11 +116,11 @@ alphaContactAngleFvPatchScalarField::alphaContactAngleFvPatchScalarField
 
 alphaContactAngleFvPatchScalarField::alphaContactAngleFvPatchScalarField
 (
-    const alphaContactAngleFvPatchScalarField& gcpsf,
+    const this_bctype& gcpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    zeroGradientFvPatchScalarField(gcpsf, iF),
+    parent_bctype(gcpsf, iF),
     thetaProps_(gcpsf.thetaProps_)
 {}
 

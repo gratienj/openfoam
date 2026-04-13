@@ -102,6 +102,9 @@ class filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
     public mixedFvPatchScalarField,
     public temperatureCoupledBase
 {
+    typedef filmPyrolysisRadiativeCoupledMixedFvPatchScalarField this_bctype;
+    typedef mixedFvPatchScalarField parent_bctype;
+
 public:
 
     typedef Foam::regionModels::surfaceFilmModels::thermoSingleLayer
@@ -109,8 +112,6 @@ public:
 
     typedef Foam::regionModels::pyrolysisModels::pyrolysisModel
         pyrolysisModelType;
-
-    typedef filmPyrolysisRadiativeCoupledMixedFvPatchScalarField myType;
 
 
 private:
@@ -171,13 +172,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  turbulentTemperatureCoupledBaffleMixedFvPatchScalarField onto a
-        //  new patch
+        //- Construct by mapping onto a new patch
         filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
         (
-            const
-            filmPyrolysisRadiativeCoupledMixedFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
@@ -186,15 +184,15 @@ public:
         //- Construct as copy setting internal field reference
         filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
         (
-            const filmPyrolysisRadiativeCoupledMixedFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        filmPyrolysisRadiativeCoupledMixedFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -232,6 +230,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

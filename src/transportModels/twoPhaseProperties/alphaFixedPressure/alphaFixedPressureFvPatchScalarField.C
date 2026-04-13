@@ -42,7 +42,7 @@ alphaFixedPressureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     p_(p.size(), Zero)
 {}
 
@@ -50,13 +50,13 @@ alphaFixedPressureFvPatchScalarField
 Foam::alphaFixedPressureFvPatchScalarField::
 alphaFixedPressureFvPatchScalarField
 (
-    const alphaFixedPressureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     p_(ptf.p_, mapper)
 {}
 
@@ -70,7 +70,7 @@ alphaFixedPressureFvPatchScalarField
 )
 :
     // The 'value' is optional (handled below)
-    fixedValueFvPatchScalarField(p, iF, dict, IOobjectOption::NO_READ),
+    parent_bctype(p, iF, dict, IOobjectOption::NO_READ),
     p_("p", dict, p.size())
 {
     if (!this->readValueEntry(dict))
@@ -83,23 +83,12 @@ alphaFixedPressureFvPatchScalarField
 Foam::alphaFixedPressureFvPatchScalarField::
 alphaFixedPressureFvPatchScalarField
 (
-    const alphaFixedPressureFvPatchScalarField& tppsf
-)
-:
-    fixedValueFvPatchScalarField(tppsf),
-    p_(tppsf.p_)
-{}
-
-
-Foam::alphaFixedPressureFvPatchScalarField::
-alphaFixedPressureFvPatchScalarField
-(
-    const alphaFixedPressureFvPatchScalarField& tppsf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(tppsf, iF),
-    p_(tppsf.p_)
+    parent_bctype(ptf, iF),
+    p_(ptf.p_)
 {}
 
 
@@ -121,10 +110,9 @@ void Foam::alphaFixedPressureFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedValueFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const alphaFixedPressureFvPatchScalarField& tiptf =
-        refCast<const alphaFixedPressureFvPatchScalarField>(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     p_.rmap(tiptf.p_, addr);
 }
@@ -144,7 +132,7 @@ void Foam::alphaFixedPressureFvPatchScalarField::updateCoeffs()
 
     operator==(p_ - rho*(g.value() & patch().Cf()));
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

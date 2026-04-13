@@ -128,7 +128,7 @@ turbulentTemperatureRadCoupledMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch()),  // default method (fluidThermo)
     mappedPatchFieldBase<scalar>
     (
@@ -161,13 +161,13 @@ turbulentTemperatureRadCoupledMixedFvPatchScalarField
 turbulentTemperatureRadCoupledMixedFvPatchScalarField::
 turbulentTemperatureRadCoupledMixedFvPatchScalarField
 (
-    const turbulentTemperatureRadCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     temperatureCoupledBase(patch(), psf),
     mappedPatchFieldBase<scalar>
     (
@@ -199,7 +199,7 @@ turbulentTemperatureRadCoupledMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch(), dict),
     mappedPatchFieldBase<scalar>
     (
@@ -331,45 +331,15 @@ turbulentTemperatureRadCoupledMixedFvPatchScalarField
 turbulentTemperatureRadCoupledMixedFvPatchScalarField::
 turbulentTemperatureRadCoupledMixedFvPatchScalarField
 (
-    const turbulentTemperatureRadCoupledMixedFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     temperatureCoupledBase(patch(), psf),
     mappedPatchFieldBase<scalar>
     (
         mappedPatchFieldBase<scalar>::mapper(patch(), iF),
-        *this,
-        psf
-    ),
-    functionObjects::writeFile(psf),
-    TnbrName_(psf.TnbrName_),
-    qrNbrName_(psf.qrNbrName_),
-    qrName_(psf.qrName_),
-    thicknessLayers_(psf.thicknessLayers_),
-    thicknessLayer_(psf.thicknessLayer_.clone(patch().patch())),
-    kappaLayers_(psf.kappaLayers_),
-    kappaLayer_(psf.kappaLayer_.clone(patch().patch())),
-    logInterval_(psf.logInterval_),
-    executionIndex_(psf.executionIndex_),
-    thermalInertia_(psf.thermalInertia_),
-    verbose_(psf.verbose_),
-    prefix_(psf.prefix_)
-{}
-
-
-turbulentTemperatureRadCoupledMixedFvPatchScalarField::
-turbulentTemperatureRadCoupledMixedFvPatchScalarField
-(
-    const turbulentTemperatureRadCoupledMixedFvPatchScalarField& psf
-)
-:
-    mixedFvPatchScalarField(psf),
-    temperatureCoupledBase(patch(), psf),
-    mappedPatchFieldBase<scalar>
-    (
-        mappedPatchFieldBase<scalar>::mapper(patch(), psf.internalField()),
         *this,
         psf
     ),
@@ -396,7 +366,7 @@ void turbulentTemperatureRadCoupledMixedFvPatchScalarField::autoMap
     const fvPatchFieldMapper& mapper
 )
 {
-    mixedFvPatchScalarField::autoMap(mapper);
+    this->parent_bctype::autoMap(mapper);
     temperatureCoupledBase::autoMap(mapper);
     //mappedPatchFieldBase<scalar>::autoMap(mapper);
     if (thicknessLayer_)
@@ -413,17 +383,13 @@ void turbulentTemperatureRadCoupledMixedFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const turbulentTemperatureRadCoupledMixedFvPatchScalarField& tiptf =
-        refCast
-        <
-            const turbulentTemperatureRadCoupledMixedFvPatchScalarField
-        >(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     temperatureCoupledBase::rmap(tiptf, addr);
     //mappedPatchFieldBase<scalar>::rmap(ptf, addr);
-    if (thicknessLayer_)
+    if (thicknessLayer_ && tiptf.thicknessLayer_)
     {
         thicknessLayer_().rmap(tiptf.thicknessLayer_(), addr);
         kappaLayer_().rmap(tiptf.kappaLayer_(), addr);
@@ -484,11 +450,11 @@ void turbulentTemperatureRadCoupledMixedFvPatchScalarField::updateCoeffs()
         const fvPatch& nbrPatch =
             refCast<const fvMesh>(nbrMesh).boundary()[samplePatchi];
 
-        const auto& nbrField = refCast
-                <const turbulentTemperatureRadCoupledMixedFvPatchScalarField>
-                (
-                    nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
-                );
+        const auto& nbrField =
+            refCast<const this_bctype>
+            (
+                nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
+            );
 
         // Swap to obtain full local values of neighbour K*delta
         TcNbr = nbrField.patchInternalField();
@@ -663,7 +629,7 @@ void turbulentTemperatureRadCoupledMixedFvPatchScalarField::updateCoeffs()
             );
     }
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
 
     if (verbose_)
@@ -817,8 +783,7 @@ turbulentTemperatureRadCoupledMixedFvPatchScalarField::alphaSfDelta() const
 tmp<scalarField> turbulentTemperatureRadCoupledMixedFvPatchScalarField::
 beta() const
 {
-    const mappedPatchBase& mpp =
-        refCast<const mappedPatchBase>(patch().patch());
+    const auto& mpp = refCast<const mappedPatchBase>(patch().patch());
 
     if (!mpp.sameWorld())
     {
@@ -833,12 +798,11 @@ beta() const
     const fvPatch& nbrPatch =
         refCast<const fvMesh>(nbrMesh).boundary()[samplePatchi];
 
-    const turbulentTemperatureRadCoupledMixedFvPatchScalarField&
-        nbrField = refCast
-            <const turbulentTemperatureRadCoupledMixedFvPatchScalarField>
-            (
-                nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
-            );
+    const auto& nbrField =
+        refCast<const this_bctype>
+        (
+            nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
+        );
 
     // Swap to obtain full local values of neighbour internal field
     scalarField TcNbr(nbrField.patchInternalField());
@@ -862,8 +826,7 @@ beta() const
 tmp<scalarField> turbulentTemperatureRadCoupledMixedFvPatchScalarField::
 deltaH() const
 {
-    const mappedPatchBase& mpp =
-        refCast<const mappedPatchBase>(patch().patch());
+    const auto& mpp = refCast<const mappedPatchBase>(patch().patch());
 
     if (!mpp.sameWorld())
     {
@@ -888,9 +851,6 @@ deltaH() const
         const label patchi = patch().index();
         const scalarField& pp = localThermo->p().boundaryField()[patchi];
         const scalarField& Tp = *this;
-
-        const mappedPatchBase& mpp =
-            refCast<const mappedPatchBase>(patch().patch());
 
         const label patchiNrb = mpp.samplePolyPatch().index();
 
@@ -958,7 +918,7 @@ void turbulentTemperatureRadCoupledMixedFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    mixedFvPatchField<scalar>::write(os);
+    this->parent_bctype::write(os);
 
     os.writeEntryIfDifferent<word>("Tnbr", "T", TnbrName_);
     os.writeEntryIfDifferent<word>("qrNbr", "none", qrNbrName_);

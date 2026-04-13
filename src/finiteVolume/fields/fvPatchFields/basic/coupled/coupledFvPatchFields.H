@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef coupledFvPatchFields_H
-#define coupledFvPatchFields_H
+#ifndef Foam_coupledFvPatchFields_H
+#define Foam_coupledFvPatchFields_H
 
 #include "coupledFvPatchField.H"
 #include "fieldTypes.H"

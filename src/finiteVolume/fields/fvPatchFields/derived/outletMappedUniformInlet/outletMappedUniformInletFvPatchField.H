@@ -115,13 +115,13 @@ See also
   - Foam::outletMappedUniformInletTemperatureFvPatchField
 
 SourceFiles
-    outletMappedUniformInletFvPatchField.C
-    outletMappedUniformInletFvPatchFields.C
+    outletMappedUniformInletFvPatchField.txx
+    outletMappedUniformInletFvPatchFields.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef outletMappedUniformInletFvPatchField_H
-#define outletMappedUniformInletFvPatchField_H
+#ifndef Foam_outletMappedUniformInletFvPatchField_H
+#define Foam_outletMappedUniformInletFvPatchField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "PatchFunction1.H"
@@ -140,6 +140,9 @@ class outletMappedUniformInletFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
+    typedef outletMappedUniformInletFvPatchField<Type> this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Base inlet patch field
@@ -193,34 +196,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given outletMappedUniformInletFvPatchField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         outletMappedUniformInletFvPatchField
         (
-            const outletMappedUniformInletFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        outletMappedUniformInletFvPatchField
-        (
-            const outletMappedUniformInletFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         outletMappedUniformInletFvPatchField
         (
-            const outletMappedUniformInletFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        outletMappedUniformInletFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -258,6 +251,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -268,7 +267,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "outletMappedUniformInletFvPatchField.C"
+    #include "outletMappedUniformInletFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

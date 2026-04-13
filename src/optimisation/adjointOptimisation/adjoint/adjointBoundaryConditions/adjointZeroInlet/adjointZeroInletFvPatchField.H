@@ -32,7 +32,7 @@ Class
 Description
 
 SourceFiles
-    adjointZeroInletFvPatchField.C
+    adjointZeroInletFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -51,12 +51,14 @@ namespace Foam
                    Class adjointZeroInletFvPatch Declaration
 \*---------------------------------------------------------------------------*/
 
-
 template<class Type>
 class adjointZeroInletFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
+    typedef adjointZeroInletFvPatchField this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -80,11 +82,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given adjointZeroInletFvPatchField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         adjointZeroInletFvPatchField
         (
-            const adjointZeroInletFvPatchField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
@@ -93,15 +94,15 @@ public:
         //- Construct as copy setting internal field reference
         adjointZeroInletFvPatchField
         (
-            const adjointZeroInletFvPatchField&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        adjointZeroInletFvPatchField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -128,6 +129,12 @@ public:
         (
             const tmp<scalarField>&
         ) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -138,7 +145,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "adjointZeroInletFvPatchField.C"
+    #include "adjointZeroInletFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -49,7 +49,7 @@ JohnsonJacksonParticleThetaFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     restitutionCoefficient_("restitutionCoefficient", dimless, Zero),
     specularityCoefficient_("specularityCoefficient", dimless, Zero)
 {}
@@ -58,13 +58,13 @@ JohnsonJacksonParticleThetaFvPatchScalarField
 Foam::JohnsonJacksonParticleThetaFvPatchScalarField::
 JohnsonJacksonParticleThetaFvPatchScalarField
 (
-    const JohnsonJacksonParticleThetaFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     restitutionCoefficient_(ptf.restitutionCoefficient_),
     specularityCoefficient_(ptf.specularityCoefficient_)
 {
@@ -79,7 +79,7 @@ JohnsonJacksonParticleThetaFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     restitutionCoefficient_("restitutionCoefficient", dimless, dict),
     specularityCoefficient_("specularityCoefficient", dimless, dict)
 {
@@ -112,23 +112,11 @@ JohnsonJacksonParticleThetaFvPatchScalarField
 Foam::JohnsonJacksonParticleThetaFvPatchScalarField::
 JohnsonJacksonParticleThetaFvPatchScalarField
 (
-    const JohnsonJacksonParticleThetaFvPatchScalarField& ptf
-)
-:
-    mixedFvPatchScalarField(ptf),
-    restitutionCoefficient_(ptf.restitutionCoefficient_),
-    specularityCoefficient_(ptf.specularityCoefficient_)
-{}
-
-
-Foam::JohnsonJacksonParticleThetaFvPatchScalarField::
-JohnsonJacksonParticleThetaFvPatchScalarField
-(
-    const JohnsonJacksonParticleThetaFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     restitutionCoefficient_(ptf.restitutionCoefficient_),
     specularityCoefficient_(ptf.specularityCoefficient_)
 {}
@@ -141,7 +129,7 @@ void Foam::JohnsonJacksonParticleThetaFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    mixedFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 }
 
 
@@ -151,7 +139,7 @@ void Foam::JohnsonJacksonParticleThetaFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 }
 
 
@@ -259,7 +247,7 @@ void Foam::JohnsonJacksonParticleThetaFvPatchScalarField::updateCoeffs()
         this->valueFraction() = 0.0;
     }
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

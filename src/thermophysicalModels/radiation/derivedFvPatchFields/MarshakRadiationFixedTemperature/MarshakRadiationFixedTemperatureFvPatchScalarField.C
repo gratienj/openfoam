@@ -43,7 +43,7 @@ MarshakRadiationFixedTemperatureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Trad_(p.size())
 {
     refValue() = Zero;
@@ -55,13 +55,13 @@ MarshakRadiationFixedTemperatureFvPatchScalarField
 Foam::radiation::MarshakRadiationFixedTemperatureFvPatchScalarField::
 MarshakRadiationFixedTemperatureFvPatchScalarField
 (
-    const MarshakRadiationFixedTemperatureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Trad_(ptf.Trad_, mapper)
 {}
 
@@ -74,7 +74,7 @@ MarshakRadiationFixedTemperatureFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Trad_("Trad", dict, p.size())
 {
     // refValue updated on each call to updateCoeffs()
@@ -89,22 +89,11 @@ MarshakRadiationFixedTemperatureFvPatchScalarField
 Foam::radiation::MarshakRadiationFixedTemperatureFvPatchScalarField::
 MarshakRadiationFixedTemperatureFvPatchScalarField
 (
-    const MarshakRadiationFixedTemperatureFvPatchScalarField& ptf
-)
-:
-    mixedFvPatchScalarField(ptf),
-    Trad_(ptf.Trad_)
-{}
-
-
-Foam::radiation::MarshakRadiationFixedTemperatureFvPatchScalarField::
-MarshakRadiationFixedTemperatureFvPatchScalarField
-(
-    const MarshakRadiationFixedTemperatureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     Trad_(ptf.Trad_)
 {}
 
@@ -117,7 +106,7 @@ autoMap
     const fvPatchFieldMapper& m
 )
 {
-    mixedFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     Trad_.autoMap(m);
 }
 
@@ -128,10 +117,9 @@ void Foam::radiation::MarshakRadiationFixedTemperatureFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const MarshakRadiationFixedTemperatureFvPatchScalarField& mrptf =
-        refCast<const MarshakRadiationFixedTemperatureFvPatchScalarField>(ptf);
+    const auto& mrptf = refCast<const this_bctype>(ptf);
 
     Trad_.rmap(mrptf.Trad_, addr);
 }
@@ -174,7 +162,7 @@ updateCoeffs()
 
     UPstream::msgType(oldTag);  // Restore tag
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -48,7 +48,7 @@ greyDiffusiveRadiationMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     TName_("T"),
     qRadExt_(0),
     qRadExtDir_(Zero)
@@ -62,13 +62,13 @@ greyDiffusiveRadiationMixedFvPatchScalarField
 Foam::radiation::greyDiffusiveRadiationMixedFvPatchScalarField::
 greyDiffusiveRadiationMixedFvPatchScalarField
 (
-    const greyDiffusiveRadiationMixedFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     TName_(ptf.TName_),
     qRadExt_(ptf.qRadExt_),
     qRadExtDir_(ptf.qRadExtDir_)
@@ -83,7 +83,7 @@ greyDiffusiveRadiationMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     TName_(dict.getOrDefault<word>("T", "T")),
     qRadExt_(dict.getOrDefault<scalar>("qRadExt", 0)),
     qRadExtDir_(dict.getOrDefault<vector>("qRadExtDir", Zero))
@@ -107,24 +107,11 @@ greyDiffusiveRadiationMixedFvPatchScalarField
 Foam::radiation::greyDiffusiveRadiationMixedFvPatchScalarField::
 greyDiffusiveRadiationMixedFvPatchScalarField
 (
-    const greyDiffusiveRadiationMixedFvPatchScalarField& ptf
-)
-:
-    mixedFvPatchScalarField(ptf),
-    TName_(ptf.TName_),
-    qRadExt_(ptf.qRadExt_),
-    qRadExtDir_(ptf.qRadExtDir_)
-{}
-
-
-Foam::radiation::greyDiffusiveRadiationMixedFvPatchScalarField::
-greyDiffusiveRadiationMixedFvPatchScalarField
-(
-    const greyDiffusiveRadiationMixedFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     TName_(ptf.TName_),
     qRadExt_(ptf.qRadExt_),
     qRadExtDir_(ptf.qRadExtDir_)
@@ -166,8 +153,7 @@ updateCoeffs()
 
     const vectorField n(patch().nf());
 
-    radiativeIntensityRay& ray =
-        const_cast<radiativeIntensityRay&>(dom.IRay(rayId));
+    auto& ray = const_cast<radiativeIntensityRay&>(dom.IRay(rayId));
 
     const scalarField nAve(n & ray.dAve());
 
@@ -359,7 +345,7 @@ updateCoeffs()
 
     UPstream::msgType(oldTag);  // Restore tag
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

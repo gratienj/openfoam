@@ -40,7 +40,7 @@ filmHeightInletVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     phiName_("phi"),
     rhoName_("rho"),
     deltafName_("deltaf")
@@ -50,13 +50,13 @@ filmHeightInletVelocityFvPatchVectorField
 Foam::filmHeightInletVelocityFvPatchVectorField::
 filmHeightInletVelocityFvPatchVectorField
 (
-    const filmHeightInletVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     phiName_(ptf.phiName_),
     rhoName_(ptf.rhoName_),
     deltafName_(ptf.deltafName_)
@@ -71,7 +71,7 @@ filmHeightInletVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     phiName_(dict.getOrDefault<word>("phi", "phi")),
     rhoName_(dict.getOrDefault<word>("rho", "rho")),
     deltafName_(dict.getOrDefault<word>("deltaf", "deltaf"))
@@ -81,24 +81,11 @@ filmHeightInletVelocityFvPatchVectorField
 Foam::filmHeightInletVelocityFvPatchVectorField::
 filmHeightInletVelocityFvPatchVectorField
 (
-    const filmHeightInletVelocityFvPatchVectorField& fhivpvf
-)
-:
-    fixedValueFvPatchVectorField(fhivpvf),
-    phiName_(fhivpvf.phiName_),
-    rhoName_(fhivpvf.rhoName_),
-    deltafName_(fhivpvf.deltafName_)
-{}
-
-
-Foam::filmHeightInletVelocityFvPatchVectorField::
-filmHeightInletVelocityFvPatchVectorField
-(
-    const filmHeightInletVelocityFvPatchVectorField& fhivpvf,
+    const this_bctype& fhivpvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(fhivpvf, iF),
+    parent_bctype(fhivpvf, iF),
     phiName_(fhivpvf.phiName_),
     rhoName_(fhivpvf.rhoName_),
     deltafName_(fhivpvf.deltafName_)
@@ -123,7 +110,7 @@ void Foam::filmHeightInletVelocityFvPatchVectorField::updateCoeffs()
 
     operator==(n*phip/(rhop*magSf*deltafp + ROOTVSMALL));
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

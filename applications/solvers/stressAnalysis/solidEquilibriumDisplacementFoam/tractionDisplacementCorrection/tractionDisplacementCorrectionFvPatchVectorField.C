@@ -43,7 +43,7 @@ tractionDisplacementCorrectionFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedGradientFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     traction_(p.size(), Zero),
     pressure_(p.size(), Zero)
 {
@@ -55,13 +55,13 @@ tractionDisplacementCorrectionFvPatchVectorField
 tractionDisplacementCorrectionFvPatchVectorField::
 tractionDisplacementCorrectionFvPatchVectorField
 (
-    const tractionDisplacementCorrectionFvPatchVectorField& tdpvf,
+    const this_bctype& tdpvf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedGradientFvPatchVectorField(tdpvf, p, iF, mapper),
+    parent_bctype(tdpvf, p, iF, mapper),
     traction_(tdpvf.traction_, mapper),
     pressure_(tdpvf.pressure_, mapper)
 {}
@@ -75,7 +75,7 @@ tractionDisplacementCorrectionFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedGradientFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     traction_("traction", dict, p.size()),
     pressure_("pressure", dict, p.size())
 {
@@ -87,23 +87,11 @@ tractionDisplacementCorrectionFvPatchVectorField
 tractionDisplacementCorrectionFvPatchVectorField::
 tractionDisplacementCorrectionFvPatchVectorField
 (
-    const tractionDisplacementCorrectionFvPatchVectorField& tdpvf
-)
-:
-    fixedGradientFvPatchVectorField(tdpvf),
-    traction_(tdpvf.traction_),
-    pressure_(tdpvf.pressure_)
-{}
-
-
-tractionDisplacementCorrectionFvPatchVectorField::
-tractionDisplacementCorrectionFvPatchVectorField
-(
-    const tractionDisplacementCorrectionFvPatchVectorField& tdpvf,
+    const this_bctype& tdpvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedGradientFvPatchVectorField(tdpvf, iF),
+    parent_bctype(tdpvf, iF),
     traction_(tdpvf.traction_),
     pressure_(tdpvf.pressure_)
 {}
@@ -116,7 +104,7 @@ void tractionDisplacementCorrectionFvPatchVectorField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    fixedGradientFvPatchVectorField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     traction_.autoMap(m);
     pressure_.autoMap(m);
 }
@@ -129,10 +117,9 @@ void tractionDisplacementCorrectionFvPatchVectorField::rmap
     const labelList& addr
 )
 {
-    fixedGradientFvPatchVectorField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const tractionDisplacementCorrectionFvPatchVectorField& dmptf =
-        refCast<const tractionDisplacementCorrectionFvPatchVectorField>(ptf);
+    const auto& dmptf = refCast<const this_bctype>(ptf);
 
     traction_.rmap(dmptf.traction_, addr);
     pressure_.rmap(dmptf.pressure_, addr);
@@ -175,7 +162,7 @@ void tractionDisplacementCorrectionFvPatchVectorField::updateCoeffs()
         (traction_ + pressure_*n)/rho - (n & (sigmaD + sigmaExp))
     )/(2.0*mu + lambda);
 
-    fixedGradientFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

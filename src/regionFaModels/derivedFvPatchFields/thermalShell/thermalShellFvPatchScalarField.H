@@ -91,7 +91,7 @@ class thermalShellFvPatchScalarField
 {
     // Typedefs
 
-        //- The parent boundary condition type
+        typedef thermalShellFvPatchScalarField this_bctype;
         typedef fixedValueFvPatchField<scalar> parent_bctype;
 
         //- The finite-area region model
@@ -136,11 +136,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- thermalShellFvPatchScalarField onto a new patch
+        //- Construct by mapping onto a new patch
         thermalShellFvPatchScalarField
         (
-            const thermalShellFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
@@ -149,25 +148,12 @@ public:
         //- Copy construct with internal field reference
         thermalShellFvPatchScalarField
         (
-            const thermalShellFvPatchScalarField& pfld,
+            const this_bctype& pfld,
             const DimensionedField<scalar, volMesh>& iF
         );
 
-        //- Copy construct
-        thermalShellFvPatchScalarField
-        (
-            const thermalShellFvPatchScalarField& pfld
-        )
-        :
-            thermalShellFvPatchScalarField(pfld, pfld.internalField())
-        {}
-
-
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        thermalShellFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -186,6 +172,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

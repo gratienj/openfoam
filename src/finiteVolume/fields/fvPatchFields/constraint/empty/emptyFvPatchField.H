@@ -48,7 +48,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    emptyFvPatchField.C
+    emptyFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -72,6 +72,9 @@ class emptyFvPatchField
 :
     public fvPatchField<Type>
 {
+    typedef emptyFvPatchField<Type> this_bctype;
+    typedef fvPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -96,33 +99,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given emptyFvPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         emptyFvPatchField
         (
-            const emptyFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        emptyFvPatchField
-        (
-            const emptyFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         emptyFvPatchField
         (
-            const emptyFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        emptyFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -212,6 +206,12 @@ public:
 
         //- Write without "value" entry!
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment (TBD: could also be ignore assignment)
+        using parent_bctype::operator=;
 };
 
 
@@ -222,7 +222,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "emptyFvPatchField.C"
+    #include "emptyFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -51,12 +51,12 @@ Description
     \endtable
 
 SourceFiles
-    mappedPatchFieldBase.C
+    mappedPatchFieldBase.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef mappedPatchFieldBase_H
-#define mappedPatchFieldBase_H
+#ifndef Foam_mappedPatchFieldBase_H
+#define Foam_mappedPatchFieldBase_H
 
 #include "fixedValueFvPatchFields.H"
 #include "volFieldsFwd.H"
@@ -292,7 +292,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "mappedPatchFieldBase.C"
+    #include "mappedPatchFieldBase.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

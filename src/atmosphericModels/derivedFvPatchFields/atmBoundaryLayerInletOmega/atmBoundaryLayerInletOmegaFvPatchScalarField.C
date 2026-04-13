@@ -45,7 +45,7 @@ atmBoundaryLayerInletOmegaFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    inletOutletFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     atmBoundaryLayer(iF.time(), p.patch())
 {}
 
@@ -58,7 +58,7 @@ atmBoundaryLayerInletOmegaFvPatchScalarField
     const dictionary& dict
 )
 :
-    inletOutletFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     atmBoundaryLayer(iF.time(), p.patch(), dict)
 {
     phiName_ = dict.getOrDefault<word>("phi", "phi");
@@ -82,13 +82,13 @@ atmBoundaryLayerInletOmegaFvPatchScalarField
 atmBoundaryLayerInletOmegaFvPatchScalarField::
 atmBoundaryLayerInletOmegaFvPatchScalarField
 (
-    const atmBoundaryLayerInletOmegaFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    inletOutletFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     atmBoundaryLayer(psf, p, mapper)
 {}
 
@@ -96,11 +96,11 @@ atmBoundaryLayerInletOmegaFvPatchScalarField
 atmBoundaryLayerInletOmegaFvPatchScalarField::
 atmBoundaryLayerInletOmegaFvPatchScalarField
 (
-    const atmBoundaryLayerInletOmegaFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    inletOutletFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     atmBoundaryLayer(psf)
 {}
 
@@ -116,7 +116,7 @@ void atmBoundaryLayerInletOmegaFvPatchScalarField::updateCoeffs()
 
     refValue() = omega(patch().Cf());
 
-    inletOutletFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
@@ -125,7 +125,7 @@ void atmBoundaryLayerInletOmegaFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    inletOutletFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     atmBoundaryLayer::autoMap(m);
 }
 
@@ -136,10 +136,9 @@ void atmBoundaryLayerInletOmegaFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    inletOutletFvPatchScalarField::rmap(psf, addr);
+    this->parent_bctype::rmap(psf, addr);
 
-    const atmBoundaryLayerInletOmegaFvPatchScalarField& blpsf =
-        refCast<const atmBoundaryLayerInletOmegaFvPatchScalarField>(psf);
+    const auto& blpsf = refCast<const this_bctype>(psf);
 
     atmBoundaryLayer::rmap(blpsf, addr);
 }

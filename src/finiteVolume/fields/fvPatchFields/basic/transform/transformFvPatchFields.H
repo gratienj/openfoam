@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef transformFvPatchFields_H
-#define transformFvPatchFields_H
+#ifndef Foam_transformFvPatchFields_H
+#define Foam_transformFvPatchFields_H
 
 #include "transformFvPatchField.H"
 #include "fieldTypes.H"

@@ -69,7 +69,10 @@ class JohnsonJacksonParticleSlipFvPatchVectorField
 :
     public partialSlipFvPatchVectorField
 {
-    // Private data
+    typedef JohnsonJacksonParticleSlipFvPatchVectorField this_bctype;
+    typedef partialSlipFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Specularity coefficient
         dimensionedScalar specularityCoefficient_;
@@ -101,30 +104,24 @@ public:
         //- Construct by mapping onto a new patch
         JohnsonJacksonParticleSlipFvPatchVectorField
         (
-            const JohnsonJacksonParticleSlipFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        JohnsonJacksonParticleSlipFvPatchVectorField
-        (
-            const JohnsonJacksonParticleSlipFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         JohnsonJacksonParticleSlipFvPatchVectorField
         (
-            const JohnsonJacksonParticleSlipFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        JohnsonJacksonParticleSlipFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -159,6 +156,12 @@ public:
         //- Write
         virtual void write(Ostream&) const;
 
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

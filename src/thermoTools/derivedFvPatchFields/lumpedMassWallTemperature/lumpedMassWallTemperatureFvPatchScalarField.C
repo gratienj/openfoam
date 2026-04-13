@@ -40,7 +40,7 @@ lumpedMassWallTemperatureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch()),  // default method (fluidThermo)
     Cp_(0.0),
     mass_(0.0),
@@ -55,13 +55,13 @@ lumpedMassWallTemperatureFvPatchScalarField
 Foam::lumpedMassWallTemperatureFvPatchScalarField::
 lumpedMassWallTemperatureFvPatchScalarField
 (
-    const lumpedMassWallTemperatureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     temperatureCoupledBase(patch(), ptf),
     Cp_(ptf.Cp_),
     mass_(ptf.mass_),
@@ -77,7 +77,7 @@ lumpedMassWallTemperatureFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch(), dict),
     Cp_(dict.get<scalar>("Cp")),
     mass_(dict.get<scalar>("mass")),
@@ -94,25 +94,11 @@ lumpedMassWallTemperatureFvPatchScalarField
 Foam::lumpedMassWallTemperatureFvPatchScalarField::
 lumpedMassWallTemperatureFvPatchScalarField
 (
-    const lumpedMassWallTemperatureFvPatchScalarField& tppsf
-)
-:
-    mixedFvPatchScalarField(tppsf),
-    temperatureCoupledBase(tppsf),
-    Cp_(tppsf.Cp_),
-    mass_(tppsf.mass_),
-    curTimeIndex_(-1)
-{}
-
-
-Foam::lumpedMassWallTemperatureFvPatchScalarField::
-lumpedMassWallTemperatureFvPatchScalarField
-(
-    const lumpedMassWallTemperatureFvPatchScalarField& tppsf,
+    const this_bctype& tppsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(tppsf, iF),
+    parent_bctype(tppsf, iF),
     temperatureCoupledBase(patch(), tppsf),
     Cp_(tppsf.Cp_),
     mass_(tppsf.mass_),
@@ -127,7 +113,7 @@ void Foam::lumpedMassWallTemperatureFvPatchScalarField::autoMap
     const fvPatchFieldMapper& mapper
 )
 {
-    mixedFvPatchScalarField::autoMap(mapper);
+    this->parent_bctype::autoMap(mapper);
     temperatureCoupledBase::autoMap(mapper);
 }
 
@@ -138,13 +124,9 @@ void Foam::lumpedMassWallTemperatureFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const lumpedMassWallTemperatureFvPatchScalarField& tiptf =
-        refCast
-        <
-            const lumpedMassWallTemperatureFvPatchScalarField
-        >(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     temperatureCoupledBase::rmap(tiptf, addr);
 }
@@ -176,7 +158,7 @@ void Foam::lumpedMassWallTemperatureFvPatchScalarField::updateCoeffs()
     refValue() = Tp;
     valueFraction() = 1.0;
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     if (debug)
     {
