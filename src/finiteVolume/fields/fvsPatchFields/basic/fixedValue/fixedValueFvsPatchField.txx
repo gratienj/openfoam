@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2023-2024 OpenCFD Ltd.
+    Copyright (C) 2024-2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,115 +26,125 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "slicedFvsPatchField.H"
+#include "fixedValueFvsPatchField.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
-(
-    const fvPatch& p,
-    const DimensionedField<Type, surfaceMesh>& iF,
-    const Field<Type>& completeOrBoundaryField,
-    const bool isBoundaryOnly
-)
-:
-    fvsPatchField<Type>(p, iF, Field<Type>())
-{
-    if (isBoundaryOnly)
-    {
-        // Set to a slice of the boundary field
-        UList<Type>::shallowCopy(p.boundarySlice(completeOrBoundaryField));
-    }
-    else
-    {
-        // Set to a slice of the complete field
-        UList<Type>::shallowCopy(p.patchSlice(completeOrBoundaryField));
-    }
-}
-
-
-template<class Type>
-Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
+Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 template<class Type>
-Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
+Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const dictionary& dict
+    const Type& value
 )
 :
-    fvsPatchField<Type>(p, iF)  // bypass dictionary constructor
-{
-    fvsPatchFieldBase::readDict(dict);
-    // Read "value" if present...
-
-    NotImplemented;
-}
+    parent_bctype(p, iF, value)
+{}
 
 
 template<class Type>
-Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
+Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
 (
-    const slicedFvsPatchField<Type>& ptf,
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF,
+    const dictionary& dict,
+    IOobjectOption::readOption requireValue
+)
+:
+    parent_bctype(p, iF, dict, IOobjectOption::MUST_READ)
+{}
+
+
+template<class Type>
+Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
+(
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fvsPatchField<Type>(ptf, p, iF, mapper)
-{
-    NotImplemented;
-}
-
-
-template<class Type>
-Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
-(
-    const slicedFvsPatchField<Type>& ptf,
-    const DimensionedField<Type, surfaceMesh>& iF
-)
-:
-    fvsPatchField<Type>(ptf.patch(), iF, Field<Type>())
-{
-    // Transfer the slice from the argument
-    UList<Type>::shallowCopy(ptf);
-}
-
-
-template<class Type>
-Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
-(
-    const slicedFvsPatchField<Type>& ptf
-)
-:
-    slicedFvsPatchField<Type>(ptf, ptf.internalField())
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+template<class Type>
+Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
+(
+    const this_bctype& pfld,
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF,
+    const Type& value
+)
+:
+    parent_bctype(pfld, p, iF, value)
+{}
+
 
 template<class Type>
-Foam::slicedFvsPatchField<Type>::~slicedFvsPatchField()
-{
-    // Set to nullptr to avoid deletion of underlying field
-    UList<Type>::shallowCopy(nullptr);
-}
+Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
+(
+    const this_bctype& pfld,
+    const DimensionedField<Type, surfaceMesh>& iF
+)
+:
+    parent_bctype(pfld, iF)
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::slicedFvsPatchField<Type>::write(Ostream& os) const
+Foam::tmp<Foam::Field<Type>>
+Foam::fixedValueFvsPatchField<Type>::valueInternalCoeffs
+(
+    const tmp<scalarField>&
+) const
+{
+    return tmp<Field<Type>>::New(this->size(), Foam::zero{});
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::fixedValueFvsPatchField<Type>::valueBoundaryCoeffs
+(
+    const tmp<scalarField>&
+) const
+{
+    return *this;
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::fixedValueFvsPatchField<Type>::gradientInternalCoeffs() const
+{
+    return -pTraits<Type>::one*this->patch().deltaCoeffs();
+}
+
+
+template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::fixedValueFvsPatchField<Type>::gradientBoundaryCoeffs() const
+{
+    return this->patch().deltaCoeffs()*(*this);
+}
+
+
+template<class Type>
+void Foam::fixedValueFvsPatchField<Type>::write(Ostream& os) const
 {
     fvsPatchField<Type>::write(os);
     fvsPatchField<Type>::writeValueEntry(os);

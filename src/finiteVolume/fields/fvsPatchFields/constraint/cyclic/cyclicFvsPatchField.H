@@ -42,7 +42,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    cyclicFvsPatchField.C
+    cyclicFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -66,6 +66,9 @@ class cyclicFvsPatchField
 :
     public coupledFvsPatchField<Type>
 {
+    typedef cyclicFvsPatchField<Type> this_bctype;
+    typedef coupledFvsPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the cyclic patch
@@ -96,33 +99,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given cyclicFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicFvsPatchField
         (
-            const cyclicFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        cyclicFvsPatchField
-        (
-            const cyclicFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         cyclicFvsPatchField
         (
-            const cyclicFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cyclicFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -132,6 +126,12 @@ public:
         {
             return fvsPatchField<Type>::Clone(*this, iF);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -142,7 +142,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cyclicFvsPatchField.C"
+    #include "cyclicFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

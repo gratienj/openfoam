@@ -256,31 +256,31 @@ $(derivedFvPatchFields)/mappedField/Sampled/makeSampledPatchFunction1s.C
 $(derivedFvPatchFields)/mappedField/mappedMixedFieldFvPatchField/mappedMixedFieldFvPatchFields.C
 
 fvsPatchFields = fields/fvsPatchFields
-$(fvsPatchFields)/fvsPatchField/fvsPatchFieldBase.C
-$(fvsPatchFields)/fvsPatchField/fvsPatchFields.C
+$(fvsPatchFields)/fvsPatchField/fvsPatchFieldBase.cxx
+$(fvsPatchFields)/fvsPatchField/fvsPatchFields.cxx
 
 basicFvsPatchFields = $(fvsPatchFields)/basic
-$(basicFvsPatchFields)/calculated/calculatedFvsPatchFields.C
-$(basicFvsPatchFields)/coupled/coupledFvsPatchFields.C
-$(basicFvsPatchFields)/fixedValue/fixedValueFvsPatchFields.C
-$(basicFvsPatchFields)/sliced/slicedFvsPatchFields.C
-$(basicFvsPatchFields)/zeroValue/zeroValueFvsPatchFields.C
+$(basicFvsPatchFields)/calculated/calculatedFvsPatchFields.cxx
+$(basicFvsPatchFields)/coupled/coupledFvsPatchFields.cxx
+$(basicFvsPatchFields)/fixedValue/fixedValueFvsPatchFields.cxx
+$(basicFvsPatchFields)/sliced/slicedFvsPatchFields.cxx
+$(basicFvsPatchFields)/zeroValue/zeroValueFvsPatchFields.cxx
 
 constraintFvsPatchFields = $(fvsPatchFields)/constraint
-$(constraintFvsPatchFields)/cyclic/cyclicFvsPatchFields.C
-$(constraintFvsPatchFields)/cyclicAMI/cyclicAMIFvsPatchFields.C
-$(constraintFvsPatchFields)/cyclicACMI/cyclicACMIFvsPatchFields.C
-$(constraintFvsPatchFields)/cyclicSlip/cyclicSlipFvsPatchFields.C
-$(constraintFvsPatchFields)/empty/emptyFvsPatchFields.C
-$(constraintFvsPatchFields)/nonuniformTransformCyclic/nonuniformTransformCyclicFvsPatchFields.C
-$(constraintFvsPatchFields)/processor/processorFvsPatchFields.C
-$(constraintFvsPatchFields)/processorCyclic/processorCyclicFvsPatchFields.C
-$(constraintFvsPatchFields)/symmetryPlane/symmetryPlaneFvsPatchFields.C
-$(constraintFvsPatchFields)/symmetry/symmetryFvsPatchFields.C
-$(constraintFvsPatchFields)/wedge/wedgeFvsPatchFields.C
+$(constraintFvsPatchFields)/cyclic/cyclicFvsPatchFields.cxx
+$(constraintFvsPatchFields)/cyclicAMI/cyclicAMIFvsPatchFields.cxx
+$(constraintFvsPatchFields)/cyclicACMI/cyclicACMIFvsPatchFields.cxx
+$(constraintFvsPatchFields)/cyclicSlip/cyclicSlipFvsPatchFields.cxx
+$(constraintFvsPatchFields)/empty/emptyFvsPatchFields.cxx
+$(constraintFvsPatchFields)/nonuniformTransformCyclic/nonuniformTransformCyclicFvsPatchFields.cxx
+$(constraintFvsPatchFields)/processor/processorFvsPatchFields.cxx
+$(constraintFvsPatchFields)/processorCyclic/processorCyclicFvsPatchFields.cxx
+$(constraintFvsPatchFields)/symmetryPlane/symmetryPlaneFvsPatchFields.cxx
+$(constraintFvsPatchFields)/symmetry/symmetryFvsPatchFields.cxx
+$(constraintFvsPatchFields)/wedge/wedgeFvsPatchFields.cxx
 
 fields/volFields/volFields.C
-fields/surfaceFields/surfaceFields.C
+fields/surfaceFields/surfaceFields.cxx
 
 expr = expressions
 $(expr)/base/fvExprDriver.C

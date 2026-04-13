@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2024 OpenCFD Ltd.
+    Copyright (C) 2023-2024 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,97 +26,108 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "emptyFvsPatchField.H"
-#include "fvPatchFieldMapper.H"
-#include "surfaceMesh.H"
+#include "slicedFvsPatchField.H"
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
+Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
+(
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF,
+    const Field<Type>& completeOrBoundaryField,
+    const bool isBoundaryOnly
+)
+:
+    parent_bctype(p, iF, Field<Type>())
+{
+    if (isBoundaryOnly)
+    {
+        // Set to a slice of the boundary field
+        UList<Type>::shallowCopy(p.boundarySlice(completeOrBoundaryField));
+    }
+    else
+    {
+        // Set to a slice of the complete field
+        UList<Type>::shallowCopy(p.patchSlice(completeOrBoundaryField));
+    }
+}
+
+
+template<class Type>
+Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(p, iF, Field<Type>())  // zero-sized patch field
+    parent_bctype(p, iF)
 {}
 
 
 template<class Type>
-Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
+Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    fvsPatchField<Type>(p, iF, Field<Type>())  // zero-sized patch field
+    parent_bctype(p, iF)  // bypass dictionary constructor
 {
-    // Empty means empty, so no patchType override
-    // with fvsPatchFieldBase::readDict(dict);
+    fvsPatchFieldBase::readDict(dict);
+    // Read "value" if present...
 
-    if (!isType<emptyFvPatch>(p))
-    {
-        FatalIOErrorInFunction(dict)
-            << "patch " << this->patch().index() << " not empty type. "
-            << "Patch type = " << p.type()
-            << exit(FatalIOError);
-    }
+    NotImplemented;
 }
 
 
 template<class Type>
-Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
+Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
 (
-    const emptyFvsPatchField<Type>&,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const fvPatchFieldMapper&
+    const fvPatchFieldMapper& mapper
 )
 :
-    fvsPatchField<Type>(p, iF, Field<Type>())  // zero-sized patch field
+    parent_bctype(ptf, p, iF, mapper)
 {
-    if (!isType<emptyFvPatch>(this->patch()))
-    {
-        FatalErrorInFunction
-            << "Field type does not correspond to patch type for patch "
-            << this->patch().index() << "." << endl
-            << "Field type: " << typeName << endl
-            << "Patch type: " << this->patch().type()
-            << exit(FatalError);
-    }
+    NotImplemented;
 }
 
 
 template<class Type>
-Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
+Foam::slicedFvsPatchField<Type>::slicedFvsPatchField
 (
-    const emptyFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(ptf.patch(), iF, Field<Type>())  // zero-sized
-{}
+    parent_bctype(ptf.patch(), iF, Field<Type>())
+{
+    // Transfer the slice from the argument
+    UList<Type>::shallowCopy(ptf);
+}
 
+
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
-(
-    const emptyFvsPatchField<Type>& ptf
-)
-:
-    emptyFvsPatchField<Type>(ptf, ptf.internalField())
-{}
+Foam::slicedFvsPatchField<Type>::~slicedFvsPatchField()
+{
+    // Set to nullptr to avoid deletion of underlying field
+    UList<Type>::shallowCopy(nullptr);
+}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::emptyFvsPatchField<Type>::write(Ostream& os) const
+void Foam::slicedFvsPatchField<Type>::write(Ostream& os) const
 {
     fvsPatchField<Type>::write(os);
-    // Never write "value"
+    fvsPatchField<Type>::writeValueEntry(os);
 }
 
 

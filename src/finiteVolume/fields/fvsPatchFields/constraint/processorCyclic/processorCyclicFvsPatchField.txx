@@ -36,7 +36,7 @@ Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    coupledFvsPatchField<Type>(p, iF),
+    parent_bctype(p, iF),
     procPatch_(refCast<const processorCyclicFvPatch>(p))
 {}
 
@@ -49,7 +49,7 @@ Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
     const Field<Type>& f
 )
 :
-    coupledFvsPatchField<Type>(p, iF, f),
+    parent_bctype(p, iF, f),
     procPatch_(refCast<const processorCyclicFvPatch>(p))
 {}
 
@@ -62,7 +62,7 @@ Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
     const dictionary& dict
 )
 :
-    coupledFvsPatchField<Type>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     procPatch_(refCast<const processorCyclicFvPatch>(p, dict))
 {
     if (!isType<processorCyclicFvPatch>(p))
@@ -78,13 +78,13 @@ Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
 template<class Type>
 Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
 (
-    const processorCyclicFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    coupledFvsPatchField<Type>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     procPatch_(refCast<const processorCyclicFvPatch>(p))
 {
     if (!isType<processorCyclicFvPatch>(this->patch()))
@@ -102,22 +102,11 @@ Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
 template<class Type>
 Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
 (
-    const processorCyclicFvsPatchField<Type>& ptf
-)
-:
-    coupledFvsPatchField<Type>(ptf),
-    procPatch_(refCast<const processorCyclicFvPatch>(ptf.patch()))
-{}
-
-
-template<class Type>
-Foam::processorCyclicFvsPatchField<Type>::processorCyclicFvsPatchField
-(
-    const processorCyclicFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    coupledFvsPatchField<Type>(ptf, iF),
+    parent_bctype(ptf, iF),
     procPatch_(refCast<const processorCyclicFvPatch>(ptf.patch()))
 {}
 

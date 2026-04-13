@@ -49,7 +49,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    calculatedFvsPatchField.C
+    calculatedFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -72,6 +72,9 @@ class calculatedFvsPatchField
 :
     public fvsPatchField<Type>
 {
+    typedef calculatedFvsPatchField<Type> this_bctype;
+    typedef fvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -96,33 +99,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         calculatedFvsPatchField
         (
-            const calculatedFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        calculatedFvsPatchField
-        (
-            const calculatedFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         calculatedFvsPatchField
         (
-            const calculatedFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        calculatedFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -141,6 +135,12 @@ public:
 
         //- Write includes "value" entry
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -151,7 +151,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "calculatedFvsPatchField.C"
+    #include "calculatedFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

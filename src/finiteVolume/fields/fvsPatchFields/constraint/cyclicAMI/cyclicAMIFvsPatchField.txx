@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2013-2015 OpenFOAM Foundation
+    Copyright (C) 2011-2015 OpenFOAM Foundation
     Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -26,35 +26,35 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "cyclicACMIFvsPatchField.H"
+#include "cyclicAMIFvsPatchField.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::cyclicACMIFvsPatchField<Type>::cyclicACMIFvsPatchField
+Foam::cyclicAMIFvsPatchField<Type>::cyclicAMIFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    coupledFvsPatchField<Type>(p, iF),
-    cyclicACMIPatch_(refCast<const cyclicACMIFvPatch>(p))
+    parent_bctype(p, iF),
+    cyclicAMIPatch_(refCast<const cyclicAMIFvPatch>(p))
 {}
 
 
 template<class Type>
-Foam::cyclicACMIFvsPatchField<Type>::cyclicACMIFvsPatchField
+Foam::cyclicAMIFvsPatchField<Type>::cyclicAMIFvsPatchField
 (
-    const cyclicACMIFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    coupledFvsPatchField<Type>(ptf, p, iF, mapper),
-    cyclicACMIPatch_(refCast<const cyclicACMIFvPatch>(p))
+    parent_bctype(ptf, p, iF, mapper),
+    cyclicAMIPatch_(refCast<const cyclicAMIFvPatch>(p))
 {
-    if (!isA<cyclicACMIFvPatch>(this->patch()))
+    if (!isA<cyclicAMIFvPatch>(this->patch()))
     {
         FatalErrorInFunction
             << "Field type does not correspond to patch type for patch "
@@ -67,20 +67,20 @@ Foam::cyclicACMIFvsPatchField<Type>::cyclicACMIFvsPatchField
 
 
 template<class Type>
-Foam::cyclicACMIFvsPatchField<Type>::cyclicACMIFvsPatchField
+Foam::cyclicAMIFvsPatchField<Type>::cyclicAMIFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    coupledFvsPatchField<Type>(p, iF, dict),
-    cyclicACMIPatch_(refCast<const cyclicACMIFvPatch>(p, dict))
+    parent_bctype(p, iF, dict),
+    cyclicAMIPatch_(refCast<const cyclicAMIFvPatch>(p, dict))
 {
-    if (!isA<cyclicACMIFvPatch>(p))
+    if (!isA<cyclicAMIFvPatch>(p))
     {
         FatalIOErrorInFunction(dict)
-            << "patch " << this->patch().index() << " not cyclicACMI type. "
+            << "patch " << this->patch().index() << " not cyclicAMI type. "
             << "Patch type = " << p.type()
             << exit(FatalIOError);
     }
@@ -88,46 +88,23 @@ Foam::cyclicACMIFvsPatchField<Type>::cyclicACMIFvsPatchField
 
 
 template<class Type>
-Foam::cyclicACMIFvsPatchField<Type>::cyclicACMIFvsPatchField
+Foam::cyclicAMIFvsPatchField<Type>::cyclicAMIFvsPatchField
 (
-    const cyclicACMIFvsPatchField<Type>& ptf
-)
-:
-    coupledFvsPatchField<Type>(ptf),
-    cyclicACMIPatch_(ptf.cyclicACMIPatch_)
-{}
-
-
-template<class Type>
-Foam::cyclicACMIFvsPatchField<Type>::cyclicACMIFvsPatchField
-(
-    const cyclicACMIFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    coupledFvsPatchField<Type>(ptf, iF),
-    cyclicACMIPatch_(ptf.cyclicACMIPatch_)
+    parent_bctype(ptf, iF),
+    cyclicAMIPatch_(ptf.cyclicAMIPatch_)
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-bool Foam::cyclicACMIFvsPatchField<Type>::coupled() const
+bool Foam::cyclicAMIFvsPatchField<Type>::coupled() const
 {
-    if
-    (
-        UPstream::parRun()
-     || (
-            this->cyclicACMIPatch_.size()
-         && this->cyclicACMIPatch_.cyclicACMIPatch().neighbPatch().size()
-        )
-    )
-    {
-        return true;
-    }
-
-    return false;
+    return cyclicAMIPatch_.coupled();
 }
 
 

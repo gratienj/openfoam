@@ -29,13 +29,10 @@ Class
 Description
     Foam::nonuniformTransformCyclicFvsPatchField
 
-SourceFiles
-    nonuniformTransformCyclicFvsPatchField.C
-
 \*---------------------------------------------------------------------------*/
 
-#ifndef nonuniformTransformCyclicFvsPatchField_H
-#define nonuniformTransformCyclicFvsPatchField_H
+#ifndef Foam_nonuniformTransformCyclicFvsPatchField_H
+#define Foam_nonuniformTransformCyclicFvsPatchField_H
 
 #include "cyclicFvsPatchField.H"
 #include "nonuniformTransformCyclicFvPatch.H"
@@ -54,6 +51,9 @@ class nonuniformTransformCyclicFvsPatchField
 :
     public cyclicFvsPatchField<Type>
 {
+    typedef nonuniformTransformCyclicFvsPatchField<Type> this_bctype;
+    typedef cyclicFvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -65,46 +65,48 @@ public:
         //- Construct from patch and internal field
         nonuniformTransformCyclicFvsPatchField
         (
-            const fvPatch&,
-            const DimensionedField<Type, surfaceMesh>&
-        );
+            const fvPatch& p,
+            const DimensionedField<Type, surfaceMesh>& iF
+        )
+        :
+            parent_bctype(p, iF)
+        {}
 
         //- Construct from patch, internal field and dictionary
         nonuniformTransformCyclicFvsPatchField
         (
-            const fvPatch&,
-            const DimensionedField<Type, surfaceMesh>&,
-            const dictionary&
-        );
+            const fvPatch& p,
+            const DimensionedField<Type, surfaceMesh>& iF,
+            const dictionary& dict
+        )
+        :
+            parent_bctype(p, iF, dict)
+        {}
 
-        //- Construct by mapping given
-        //  nonuniformTransformCyclicFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         nonuniformTransformCyclicFvsPatchField
         (
-            const nonuniformTransformCyclicFvsPatchField<Type>&,
-            const fvPatch&,
-            const DimensionedField<Type, surfaceMesh>&,
-            const fvPatchFieldMapper&
-        );
-
-        //- Construct as copy
-        nonuniformTransformCyclicFvsPatchField
-        (
-            const nonuniformTransformCyclicFvsPatchField<Type>&
-        );
+            const this_bctype& ptf,
+            const fvPatch& p,
+            const DimensionedField<Type, surfaceMesh>& iF,
+            const fvPatchFieldMapper& mapper
+        )
+        :
+            parent_bctype(ptf, p, iF, mapper)
+        {}
 
         //- Construct as copy setting internal field reference
         nonuniformTransformCyclicFvsPatchField
         (
-            const nonuniformTransformCyclicFvsPatchField<Type>&,
-            const DimensionedField<Type, surfaceMesh>&
-        );
+            const this_bctype& ptf,
+            const DimensionedField<Type, surfaceMesh>& iF
+        )
+        :
+            parent_bctype(ptf, iF)
+        {}
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        nonuniformTransformCyclicFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -114,18 +116,18 @@ public:
         {
             return fvsPatchField<Type>::Clone(*this, iF);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#ifdef NoRepository
-    #include "nonuniformTransformCyclicFvsPatchField.C"
-#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

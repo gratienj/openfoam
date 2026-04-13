@@ -32,12 +32,12 @@ Description
     an arbitrarily coupled mesh interface (ACMI) interpolation.
 
 SourceFiles
-    cyclicACMIFvsPatchField.C
+    cyclicACMIFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef cyclicACMIFvsPatchField_H
-#define cyclicACMIFvsPatchField_H
+#ifndef Foam_cyclicACMIFvsPatchField_H
+#define Foam_cyclicACMIFvsPatchField_H
 
 #include "coupledFvsPatchField.H"
 #include "cyclicACMIFvPatch.H"
@@ -56,6 +56,9 @@ class cyclicACMIFvsPatchField
 :
     public coupledFvsPatchField<Type>
 {
+    typedef cyclicACMIFvsPatchField<Type> this_bctype;
+    typedef coupledFvsPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the cyclic patch
@@ -86,33 +89,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given cyclicACMIFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicACMIFvsPatchField
         (
-            const cyclicACMIFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        cyclicACMIFvsPatchField
-        (
-            const cyclicACMIFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         cyclicACMIFvsPatchField
         (
-            const cyclicACMIFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cyclicACMIFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -128,6 +122,12 @@ public:
 
         //- Return true if running parallel
         virtual bool coupled() const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -138,7 +138,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cyclicACMIFvsPatchField.C"
+    #include "cyclicACMIFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

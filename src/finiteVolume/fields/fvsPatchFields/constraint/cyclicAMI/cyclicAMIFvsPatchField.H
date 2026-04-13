@@ -34,7 +34,7 @@ Description
     The "value" entry is MUST_READ.
 
 SourceFiles
-    cyclicAMIFvsPatchField.C
+    cyclicAMIFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,6 +58,9 @@ class cyclicAMIFvsPatchField
 :
     public coupledFvsPatchField<Type>
 {
+    typedef cyclicAMIFvsPatchField<Type> this_bctype;
+    typedef coupledFvsPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the cyclic patch
@@ -88,33 +91,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given cyclicAMIFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicAMIFvsPatchField
         (
-            const cyclicAMIFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        cyclicAMIFvsPatchField
-        (
-            const cyclicAMIFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         cyclicAMIFvsPatchField
         (
-            const cyclicAMIFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cyclicAMIFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -130,6 +124,12 @@ public:
 
         //- Return true if running parallel
         virtual bool coupled() const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -140,7 +140,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cyclicAMIFvsPatchField.C"
+    #include "cyclicAMIFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

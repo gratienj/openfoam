@@ -39,8 +39,9 @@ Description
     fields.
 
 SourceFiles
-    fvsPatchField.C
-    fvsPatchFieldNew.C
+    fvsPatchField.txx
+    fvsPatchFieldBase.cxx
+    fvsPatchFieldNew.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -395,7 +396,7 @@ public:
             )
         {}
 
-        //- Construct by mapping the given fvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         fvsPatchField
         (
             const fvsPatchField<Type>&,
@@ -421,20 +422,16 @@ public:
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Copy construct
-        fvsPatchField(const fvsPatchField<Type>& pfld)
-        :
-            fvsPatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        fvsPatchField(const fvsPatchField&) = delete;
 
-
-        //- Clone patch field with its own internal field reference
+        //- No clone without an internal field reference.
+        //  \note declared, but only for PtrList compilation requirements.
+        //  The \c tmp should normally contain a pointer in that context.
         virtual tmp<fvsPatchField<Type>> clone() const
         {
-            return tmp<fvsPatchField<Type>>
-            (
-                new fvsPatchField<Type>(*this, this->internalField_)
-            );
+            NotImplemented;
+            return nullptr;
         }
 
         //- Clone with an internal field reference
@@ -443,10 +440,7 @@ public:
             const DimensionedField<Type, surfaceMesh>& iF
         ) const
         {
-            return tmp<fvsPatchField<Type>>
-            (
-                new fvsPatchField<Type>(*this, iF)
-            );
+            return tmp<fvsPatchField<Type>>::New(*this, iF);
         }
 
 
@@ -650,8 +644,8 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fvsPatchField.C"
-    #include "fvsPatchFieldNew.C"
+    #include "fvsPatchField.txx"
+    #include "fvsPatchFieldNew.txx"
     #include "calculatedFvsPatchField.H"
 #endif
 

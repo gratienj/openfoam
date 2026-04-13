@@ -18,7 +18,7 @@ fvMeshPrimitiveLduAddressing/fvMeshPrimitiveLduAddressing.C
 oversetPolyPatch/oversetPolyPatch.C
 oversetPolyPatch/oversetFvPatch.C
 oversetPolyPatch/oversetFvPatchFields.C
-oversetPolyPatch/oversetFvsPatchFields.C
+oversetPolyPatch/oversetFvsPatchFields.cxx
 oversetPolyPatch/oversetPointPatch.C
 oversetPolyPatch/oversetPointPatchFields.cxx
 

@@ -5,7 +5,8 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2015 OpenFOAM Foundation
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Copyright (C) 2021-2024 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,65 +26,109 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "cyclicSlipFvsPatchField.H"
+#include "calculatedFvsPatchField.H"
+#include "fvPatchFieldMapper.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::cyclicSlipFvsPatchField<Type>::cyclicSlipFvsPatchField
+Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    cyclicFvsPatchField<Type>(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 template<class Type>
-Foam::cyclicSlipFvsPatchField<Type>::cyclicSlipFvsPatchField
+Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    cyclicFvsPatchField<Type>(p, iF, dict)
+    parent_bctype(p, iF, dict, IOobjectOption::MUST_READ)
 {}
 
 
 template<class Type>
-Foam::cyclicSlipFvsPatchField<Type>::cyclicSlipFvsPatchField
+Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
 (
-    const cyclicSlipFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    cyclicFvsPatchField<Type>(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
 template<class Type>
-Foam::cyclicSlipFvsPatchField<Type>::cyclicSlipFvsPatchField
+Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
 (
-    const cyclicSlipFvsPatchField<Type>& ptf
-)
-:
-    cyclicFvsPatchField<Type>(ptf)
-{}
-
-
-template<class Type>
-Foam::cyclicSlipFvsPatchField<Type>::cyclicSlipFvsPatchField
-(
-    const cyclicSlipFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    cyclicFvsPatchField<Type>(ptf, iF)
+    parent_bctype(ptf, iF)
 {}
+
+
+template<class Type>
+Foam::tmp<Foam::fvsPatchField<Type>>
+Foam::fvsPatchField<Type>::NewCalculatedType
+(
+    const fvPatch& p
+)
+{
+    auto* patchTypeCtor = patchConstructorTable(p.type());
+
+    if (patchTypeCtor)
+    {
+        return patchTypeCtor
+        (
+            p,
+            DimensionedField<Type, surfaceMesh>::null()
+        );
+    }
+    else
+    {
+        return tmp<fvsPatchField<Type>>
+        (
+            new calculatedFvsPatchField<Type>
+            (
+                p,
+                DimensionedField<Type, surfaceMesh>::null()
+            )
+        );
+    }
+}
+
+
+template<class Type>
+template<class AnyType>
+Foam::tmp<Foam::fvsPatchField<Type>>
+Foam::fvsPatchField<Type>::NewCalculatedType
+(
+    const fvsPatchField<AnyType>& pf
+)
+{
+    return NewCalculatedType(pf.patch());
+}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class Type>
+void Foam::calculatedFvsPatchField<Type>::write(Ostream& os) const
+{
+    fvsPatchField<Type>::write(os);
+    fvsPatchField<Type>::writeValueEntry(os);
+}
 
 
 // ************************************************************************* //

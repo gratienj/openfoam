@@ -42,7 +42,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    symmetryPlaneFvsPatchField.C
+    symmetryPlaneFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -66,6 +66,9 @@ class symmetryPlaneFvsPatchField
 :
     public fvsPatchField<Type>
 {
+    typedef symmetryPlaneFvsPatchField<Type> this_bctype;
+    typedef fvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -90,33 +93,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         symmetryPlaneFvsPatchField
         (
-            const symmetryPlaneFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        symmetryPlaneFvsPatchField
-        (
-            const symmetryPlaneFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         symmetryPlaneFvsPatchField
         (
-            const symmetryPlaneFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        symmetryPlaneFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -132,6 +126,12 @@ public:
 
         //- Write includes "value" entry
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -142,7 +142,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "symmetryPlaneFvsPatchField.C"
+    #include "symmetryPlaneFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

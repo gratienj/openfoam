@@ -5,7 +5,8 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2023-2025 OpenCFD Ltd.
+    Copyright (C) 2011-2015 OpenFOAM Foundation
+    Copyright (C) 2024 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,111 +26,82 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "zeroValueFvsPatchField.H"
+#include "wedgeFvsPatchField.H"
 
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
+Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    // Field is zero
-    parent_bctype(p, iF, Type(Zero))
+    parent_bctype(p, iF)
 {}
 
 
 template<class Type>
-Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
+Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    // Field is zero
-    parent_bctype(p, iF, Type(Zero))
+    parent_bctype(p, iF, dict, IOobjectOption::MUST_READ)
 {
-    fvsPatchFieldBase::readDict(dict);
+    if (!isType<wedgeFvPatch>(p))
+    {
+        FatalIOErrorInFunction(dict)
+            << "patch " << this->patch().index() << " not wedge type. "
+            << "Patch type = " << p.type()
+            << exit(FatalIOError);
+    }
 }
 
 
 template<class Type>
-Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
+Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
 (
-    const zeroValueFvsPatchField<Type>& pfld,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const fvPatchFieldMapper&
+    const fvPatchFieldMapper& mapper
 )
 :
-    // Field is zero. No mapping
-    parent_bctype(pfld, p, iF, Type(Zero))
-{}
+    parent_bctype(ptf, p, iF, mapper)
+{
+    if (!isType<wedgeFvPatch>(this->patch()))
+    {
+        FatalErrorInFunction
+            << "Field type does not correspond to patch type for patch "
+            << this->patch().index() << "." << endl
+            << "Field type: " << typeName << endl
+            << "Patch type: " << this->patch().type()
+            << exit(FatalError);
+    }
+}
 
 
 template<class Type>
-Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
+Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
 (
-    const zeroValueFvsPatchField<Type>& pfld,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    // Field is zero
-    parent_bctype(pfld, pfld.patch(), iF, Type(Zero))
+    parent_bctype(ptf, iF)
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::zeroValueFvsPatchField<Type>::valueInternalCoeffs
-(
-    const tmp<scalarField>&
-) const
-{
-    // No contribution from internal values
-    return tmp<Field<Type>>::New(this->size(), Foam::zero{});
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::zeroValueFvsPatchField<Type>::valueBoundaryCoeffs
-(
-    const tmp<scalarField>&
-) const
-{
-    // Patch field is zero
-    return tmp<Field<Type>>::New(this->size(), Foam::zero{});
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::zeroValueFvsPatchField<Type>::gradientInternalCoeffs() const
-{
-    return -pTraits<Type>::one*this->patch().deltaCoeffs();
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::zeroValueFvsPatchField<Type>::gradientBoundaryCoeffs() const
-{
-    // Patch field is zero
-    return tmp<Field<Type>>::New(this->size(), Foam::zero{});
-}
-
-
-template<class Type>
-void Foam::zeroValueFvsPatchField<Type>::write(Ostream& os) const
+void Foam::wedgeFvsPatchField<Type>::write(Ostream& os) const
 {
     fvsPatchField<Type>::write(os);
-    // Without writeValueEntry() since the value == zero
+    fvsPatchField<Type>::writeValueEntry(os);
 }
 
 

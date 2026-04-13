@@ -25,69 +25,89 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "nonuniformTransformCyclicFvsPatchField.H"
+#include "processorFvsPatchField.H"
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Constructors * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::nonuniformTransformCyclicFvsPatchField<Type>::
-nonuniformTransformCyclicFvsPatchField
+Foam::processorFvsPatchField<Type>::processorFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    cyclicFvsPatchField<Type>(p, iF)
+    parent_bctype(p, iF),
+    procPatch_(refCast<const processorFvPatch>(p))
 {}
 
 
 template<class Type>
-Foam::nonuniformTransformCyclicFvsPatchField<Type>::
-nonuniformTransformCyclicFvsPatchField
+Foam::processorFvsPatchField<Type>::processorFvsPatchField
+(
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF,
+    const Field<Type>& f
+)
+:
+    parent_bctype(p, iF, f),
+    procPatch_(refCast<const processorFvPatch>(p))
+{}
+
+
+template<class Type>
+Foam::processorFvsPatchField<Type>::processorFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    cyclicFvsPatchField<Type>(p, iF, dict)
-{}
+    parent_bctype(p, iF, dict),
+    procPatch_(refCast<const processorFvPatch>(p, dict))
+{
+    if (!isType<processorFvPatch>(p))
+    {
+        FatalIOErrorInFunction(dict)
+            << "patch " << this->patch().index() << " not processor type. "
+            << "Patch type = " << p.type()
+            << exit(FatalIOError);
+    }
+}
 
 
 template<class Type>
-Foam::nonuniformTransformCyclicFvsPatchField<Type>::
-nonuniformTransformCyclicFvsPatchField
+Foam::processorFvsPatchField<Type>::processorFvsPatchField
 (
-    const nonuniformTransformCyclicFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    cyclicFvsPatchField<Type>(ptf, p, iF, mapper)
-{}
+    parent_bctype(ptf, p, iF, mapper),
+    procPatch_(refCast<const processorFvPatch>(p))
+{
+    if (!isType<processorFvPatch>(this->patch()))
+    {
+        FatalErrorInFunction
+            << "Field type does not correspond to patch type for patch "
+            << this->patch().index() << "." << endl
+            << "Field type: " << typeName << endl
+            << "Patch type: " << this->patch().type()
+            << exit(FatalError);
+    }
+}
 
 
 template<class Type>
-Foam::nonuniformTransformCyclicFvsPatchField<Type>::
-nonuniformTransformCyclicFvsPatchField
+Foam::processorFvsPatchField<Type>::processorFvsPatchField
 (
-    const nonuniformTransformCyclicFvsPatchField<Type>& ptf
-)
-:
-    cyclicFvsPatchField<Type>(ptf)
-{}
-
-
-template<class Type>
-Foam::nonuniformTransformCyclicFvsPatchField<Type>::
-nonuniformTransformCyclicFvsPatchField
-(
-    const nonuniformTransformCyclicFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    cyclicFvsPatchField<Type>(ptf, iF)
+    parent_bctype(ptf, iF),
+    procPatch_(refCast<const processorFvPatch>(ptf.patch()))
 {}
 
 

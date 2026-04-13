@@ -26,89 +26,74 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "wedgeFvsPatchField.H"
+#include "coupledFvsPatchField.H"
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
+Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 template<class Type>
-Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
+Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const dictionary& dict
+    const Field<Type>& f
 )
 :
-    fvsPatchField<Type>(p, iF, dict, IOobjectOption::MUST_READ)
-{
-    if (!isType<wedgeFvPatch>(p))
-    {
-        FatalIOErrorInFunction(dict)
-            << "patch " << this->patch().index() << " not wedge type. "
-            << "Patch type = " << p.type()
-            << exit(FatalIOError);
-    }
-}
+    parent_bctype(p, iF, f)
+{}
 
 
 template<class Type>
-Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
+Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
 (
-    const wedgeFvsPatchField<Type>& ptf,
+    const fvPatch& p,
+    const DimensionedField<Type, surfaceMesh>& iF,
+    const dictionary& dict,
+    IOobjectOption::readOption requireValue
+)
+:
+    parent_bctype(p, iF, dict, requireValue)
+{}
+
+
+template<class Type>
+Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
+(
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fvsPatchField<Type>(ptf, p, iF, mapper)
-{
-    if (!isType<wedgeFvPatch>(this->patch()))
-    {
-        FatalErrorInFunction
-            << "Field type does not correspond to patch type for patch "
-            << this->patch().index() << "." << endl
-            << "Field type: " << typeName << endl
-            << "Patch type: " << this->patch().type()
-            << exit(FatalError);
-    }
-}
-
-
-template<class Type>
-Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
-(
-    const wedgeFvsPatchField<Type>& ptf,
-    const DimensionedField<Type, surfaceMesh>& iF
-)
-:
-    fvsPatchField<Type>(ptf, iF)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
 template<class Type>
-Foam::wedgeFvsPatchField<Type>::wedgeFvsPatchField
+Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
 (
-    const wedgeFvsPatchField<Type>& ptf
+    const this_bctype& ptf,
+    const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    wedgeFvsPatchField<Type>(ptf, ptf.internalField())
+    parent_bctype(ptf, iF)
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::wedgeFvsPatchField<Type>::write(Ostream& os) const
+void Foam::coupledFvsPatchField<Type>::write(Ostream& os) const
 {
     fvsPatchField<Type>::write(os);
     fvsPatchField<Type>::writeValueEntry(os);

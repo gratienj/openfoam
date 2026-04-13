@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2024 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,88 +25,77 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "coupledFvsPatchField.H"
+#include "cyclicFvsPatchField.H"
 
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
+Foam::cyclicFvsPatchField<Type>::cyclicFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(p, iF)
+    parent_bctype(p, iF),
+    cyclicPatch_(refCast<const cyclicFvPatch>(p))
 {}
 
 
 template<class Type>
-Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
+Foam::cyclicFvsPatchField<Type>::cyclicFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const Field<Type>& f
+    const dictionary& dict
 )
 :
-    fvsPatchField<Type>(p, iF, f)
-{}
+    parent_bctype(p, iF, dict),
+    cyclicPatch_(refCast<const cyclicFvPatch>(p, dict))
+{
+    if (!isA<cyclicFvPatch>(p))
+    {
+        FatalIOErrorInFunction(dict)
+            << "patch " << this->patch().index() << " not cyclic type. "
+            << "Patch type = " << p.type()
+            << exit(FatalIOError);
+    }
+}
 
 
 template<class Type>
-Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
+Foam::cyclicFvsPatchField<Type>::cyclicFvsPatchField
 (
-    const fvPatch& p,
-    const DimensionedField<Type, surfaceMesh>& iF,
-    const dictionary& dict,
-    IOobjectOption::readOption requireValue
-)
-:
-    fvsPatchField<Type>(p, iF, dict, requireValue)
-{}
-
-
-template<class Type>
-Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
-(
-    const coupledFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fvsPatchField<Type>(ptf, p, iF, mapper)
-{}
+    parent_bctype(ptf, p, iF, mapper),
+    cyclicPatch_(refCast<const cyclicFvPatch>(p))
+{
+    if (!isA<cyclicFvPatch>(this->patch()))
+    {
+        FatalErrorInFunction
+            << "Field type does not correspond to patch type for patch "
+            << this->patch().index() << "." << endl
+            << "Field type: " << typeName << endl
+            << "Patch type: " << this->patch().type()
+            << exit(FatalError);
+    }
+}
 
 
 template<class Type>
-Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
+Foam::cyclicFvsPatchField<Type>::cyclicFvsPatchField
 (
-    const coupledFvsPatchField<Type>& ptf
-)
-:
-    fvsPatchField<Type>(ptf)
-{}
-
-
-template<class Type>
-Foam::coupledFvsPatchField<Type>::coupledFvsPatchField
-(
-    const coupledFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(ptf, iF)
+    parent_bctype(ptf, iF),
+    cyclicPatch_(ptf.cyclicPatch_)
 {}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-template<class Type>
-void Foam::coupledFvsPatchField<Type>::write(Ostream& os) const
-{
-    fvsPatchField<Type>::write(os);
-    fvsPatchField<Type>::writeValueEntry(os);
-}
 
 
 // ************************************************************************* //

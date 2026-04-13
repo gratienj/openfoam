@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2021-2024 OpenCFD Ltd.
+    Copyright (C) 2024 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,118 +26,87 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "calculatedFvsPatchField.H"
+#include "emptyFvsPatchField.H"
 #include "fvPatchFieldMapper.H"
+#include "surfaceMesh.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
+Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(p, iF)
+    parent_bctype(p, iF, Field<Type>())  // zero-sized patch field
 {}
 
 
 template<class Type>
-Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
+Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    fvsPatchField<Type>(p, iF, dict, IOobjectOption::MUST_READ)
-{}
+    parent_bctype(p, iF, Field<Type>())  // zero-sized patch field
+{
+    // Empty means empty, so no patchType override
+    // with fvsPatchFieldBase::readDict(dict);
+
+    if (!isType<emptyFvPatch>(p))
+    {
+        FatalIOErrorInFunction(dict)
+            << "patch " << this->patch().index() << " not empty type. "
+            << "Patch type = " << p.type()
+            << exit(FatalIOError);
+    }
+}
 
 
 template<class Type>
-Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
+Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
 (
-    const calculatedFvsPatchField<Type>& ptf,
+    const emptyFvsPatchField<Type>&,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const fvPatchFieldMapper& mapper
+    const fvPatchFieldMapper&
 )
 :
-    fvsPatchField<Type>(ptf, p, iF, mapper)
-{}
+    parent_bctype(p, iF, Field<Type>())  // zero-sized patch field
+{
+    if (!isType<emptyFvPatch>(this->patch()))
+    {
+        FatalErrorInFunction
+            << "Field type does not correspond to patch type for patch "
+            << this->patch().index() << "." << endl
+            << "Field type: " << typeName << endl
+            << "Patch type: " << this->patch().type()
+            << exit(FatalError);
+    }
+}
 
 
 template<class Type>
-Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
+Foam::emptyFvsPatchField<Type>::emptyFvsPatchField
 (
-    const calculatedFvsPatchField<Type>& ptf
-)
-:
-    fvsPatchField<Type>(ptf)
-{}
-
-
-template<class Type>
-Foam::calculatedFvsPatchField<Type>::calculatedFvsPatchField
-(
-    const calculatedFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(ptf, iF)
+    parent_bctype(ptf.patch(), iF, Field<Type>())  // zero-sized
 {}
-
-
-template<class Type>
-Foam::tmp<Foam::fvsPatchField<Type>>
-Foam::fvsPatchField<Type>::NewCalculatedType
-(
-    const fvPatch& p
-)
-{
-    auto* patchTypeCtor = patchConstructorTable(p.type());
-
-    if (patchTypeCtor)
-    {
-        return patchTypeCtor
-        (
-            p,
-            DimensionedField<Type, surfaceMesh>::null()
-        );
-    }
-    else
-    {
-        return tmp<fvsPatchField<Type>>
-        (
-            new calculatedFvsPatchField<Type>
-            (
-                p,
-                DimensionedField<Type, surfaceMesh>::null()
-            )
-        );
-    }
-}
-
-
-template<class Type>
-template<class AnyType>
-Foam::tmp<Foam::fvsPatchField<Type>>
-Foam::fvsPatchField<Type>::NewCalculatedType
-(
-    const fvsPatchField<AnyType>& pf
-)
-{
-    return NewCalculatedType(pf.patch());
-}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::calculatedFvsPatchField<Type>::write(Ostream& os) const
+void Foam::emptyFvsPatchField<Type>::write(Ostream& os) const
 {
     fvsPatchField<Type>::write(os);
-    fvsPatchField<Type>::writeValueEntry(os);
+    // Never write "value"
 }
 
 

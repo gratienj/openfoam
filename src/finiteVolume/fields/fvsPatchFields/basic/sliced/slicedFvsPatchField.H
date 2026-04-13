@@ -37,7 +37,7 @@ Description
     Should only used as a template argument for SlicedGeometricField.
 
 SourceFiles
-    slicedFvsPatchField.C
+    slicedFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -61,6 +61,9 @@ class slicedFvsPatchField
 :
     public fvsPatchField<Type>
 {
+    typedef slicedFvsPatchField<Type> this_bctype;
+    typedef fvsPatchField<Type> parent_bctype;
+
 public:
 
     //- The mesh processor patch type
@@ -98,31 +101,25 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given sliced patch field onto a new patch
+        //- Construct by mapping onto a new patch
         //  Not implemented.
         slicedFvsPatchField
         (
-            const slicedFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        slicedFvsPatchField(const slicedFvsPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         slicedFvsPatchField
         (
-            const slicedFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        slicedFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -181,7 +178,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "slicedFvsPatchField.C"
+    #include "slicedFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -5,7 +5,8 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2015 OpenFOAM Foundation
+    Copyright (C) 2013-2015 OpenFOAM Foundation
+    Copyright (C) 2024 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,50 +26,35 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "processorFvsPatchField.H"
+#include "symmetryPlaneFvsPatchField.H"
 
-// * * * * * * * * * * * * * * * * Constructors * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::processorFvsPatchField<Type>::processorFvsPatchField
+Foam::symmetryPlaneFvsPatchField<Type>::symmetryPlaneFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    coupledFvsPatchField<Type>(p, iF),
-    procPatch_(refCast<const processorFvPatch>(p))
+    parent_bctype(p, iF)
 {}
 
 
 template<class Type>
-Foam::processorFvsPatchField<Type>::processorFvsPatchField
-(
-    const fvPatch& p,
-    const DimensionedField<Type, surfaceMesh>& iF,
-    const Field<Type>& f
-)
-:
-    coupledFvsPatchField<Type>(p, iF, f),
-    procPatch_(refCast<const processorFvPatch>(p))
-{}
-
-
-template<class Type>
-Foam::processorFvsPatchField<Type>::processorFvsPatchField
+Foam::symmetryPlaneFvsPatchField<Type>::symmetryPlaneFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const dictionary& dict
 )
 :
-    coupledFvsPatchField<Type>(p, iF, dict),
-    procPatch_(refCast<const processorFvPatch>(p, dict))
+    parent_bctype(p, iF, dict, IOobjectOption::MUST_READ)
 {
-    if (!isType<processorFvPatch>(p))
+    if (!isType<symmetryPlaneFvPatch>(p))
     {
         FatalIOErrorInFunction(dict)
-            << "patch " << this->patch().index() << " not processor type. "
+            << "patch " << this->patch().index() << " not symmetryPlane type. "
             << "Patch type = " << p.type()
             << exit(FatalIOError);
     }
@@ -76,18 +62,17 @@ Foam::processorFvsPatchField<Type>::processorFvsPatchField
 
 
 template<class Type>
-Foam::processorFvsPatchField<Type>::processorFvsPatchField
+Foam::symmetryPlaneFvsPatchField<Type>::symmetryPlaneFvsPatchField
 (
-    const processorFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    coupledFvsPatchField<Type>(ptf, p, iF, mapper),
-    procPatch_(refCast<const processorFvPatch>(p))
+    parent_bctype(ptf, p, iF, mapper)
 {
-    if (!isType<processorFvPatch>(this->patch()))
+    if (!isType<symmetryPlaneFvPatch>(this->patch()))
     {
         FatalErrorInFunction
             << "Field type does not correspond to patch type for patch "
@@ -100,26 +85,24 @@ Foam::processorFvsPatchField<Type>::processorFvsPatchField
 
 
 template<class Type>
-Foam::processorFvsPatchField<Type>::processorFvsPatchField
+Foam::symmetryPlaneFvsPatchField<Type>::symmetryPlaneFvsPatchField
 (
-    const processorFvsPatchField<Type>& ptf
-)
-:
-    coupledFvsPatchField<Type>(ptf),
-    procPatch_(refCast<const processorFvPatch>(ptf.patch()))
-{}
-
-
-template<class Type>
-Foam::processorFvsPatchField<Type>::processorFvsPatchField
-(
-    const processorFvsPatchField<Type>& ptf,
+    const this_bctype& ptf,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    coupledFvsPatchField<Type>(ptf, iF),
-    procPatch_(refCast<const processorFvPatch>(ptf.patch()))
+    parent_bctype(ptf, iF)
 {}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class Type>
+void Foam::symmetryPlaneFvsPatchField<Type>::write(Ostream& os) const
+{
+    fvsPatchField<Type>::write(os);
+    fvsPatchField<Type>::writeValueEntry(os);
+}
 
 
 // ************************************************************************* //

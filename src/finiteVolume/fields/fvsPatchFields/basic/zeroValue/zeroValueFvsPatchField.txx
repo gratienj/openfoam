@@ -5,8 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2024-2025 OpenCFD Ltd.
+    Copyright (C) 2023-2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,80 +25,60 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "fixedValueFvsPatchField.H"
+#include "zeroValueFvsPatchField.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
+Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(p, iF)
+    // Field is zero
+    parent_bctype(p, iF, Type(Zero))
 {}
 
 
 template<class Type>
-Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
+Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
 (
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const Type& value
+    const dictionary& dict
 )
 :
-    fvsPatchField<Type>(p, iF, value)
-{}
+    // Field is zero
+    parent_bctype(p, iF, Type(Zero))
+{
+    fvsPatchFieldBase::readDict(dict);
+}
 
 
 template<class Type>
-Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
+Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
 (
+    const this_bctype& pfld,
     const fvPatch& p,
     const DimensionedField<Type, surfaceMesh>& iF,
-    const dictionary& dict,
-    IOobjectOption::readOption requireValue
+    const fvPatchFieldMapper&
 )
 :
-    fvsPatchField<Type>(p, iF, dict, IOobjectOption::MUST_READ)
+    // Field is zero. No mapping
+    parent_bctype(pfld, p, iF, Type(Zero))
 {}
 
 
 template<class Type>
-Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
+Foam::zeroValueFvsPatchField<Type>::zeroValueFvsPatchField
 (
-    const fixedValueFvsPatchField<Type>& ptf,
-    const fvPatch& p,
-    const DimensionedField<Type, surfaceMesh>& iF,
-    const fvPatchFieldMapper& mapper
-)
-:
-    fvsPatchField<Type>(ptf, p, iF, mapper)
-{}
-
-
-template<class Type>
-Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
-(
-    const fixedValueFvsPatchField<Type>& pfld,
-    const fvPatch& p,
-    const DimensionedField<Type, surfaceMesh>& iF,
-    const Type& value
-)
-:
-    fvsPatchField<Type>(pfld, p, iF, value)
-{}
-
-
-template<class Type>
-Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
-(
-    const fixedValueFvsPatchField<Type>& pfld,
+    const this_bctype& pfld,
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchField<Type>(pfld, iF)
+    // Field is zero
+    parent_bctype(pfld, pfld.patch(), iF, Type(Zero))
 {}
 
 
@@ -107,29 +86,31 @@ Foam::fixedValueFvsPatchField<Type>::fixedValueFvsPatchField
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::fixedValueFvsPatchField<Type>::valueInternalCoeffs
+Foam::zeroValueFvsPatchField<Type>::valueInternalCoeffs
 (
     const tmp<scalarField>&
 ) const
 {
+    // No contribution from internal values
     return tmp<Field<Type>>::New(this->size(), Foam::zero{});
 }
 
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::fixedValueFvsPatchField<Type>::valueBoundaryCoeffs
+Foam::zeroValueFvsPatchField<Type>::valueBoundaryCoeffs
 (
     const tmp<scalarField>&
 ) const
 {
-    return *this;
+    // Patch field is zero
+    return tmp<Field<Type>>::New(this->size(), Foam::zero{});
 }
 
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::fixedValueFvsPatchField<Type>::gradientInternalCoeffs() const
+Foam::zeroValueFvsPatchField<Type>::gradientInternalCoeffs() const
 {
     return -pTraits<Type>::one*this->patch().deltaCoeffs();
 }
@@ -137,17 +118,18 @@ Foam::fixedValueFvsPatchField<Type>::gradientInternalCoeffs() const
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>>
-Foam::fixedValueFvsPatchField<Type>::gradientBoundaryCoeffs() const
+Foam::zeroValueFvsPatchField<Type>::gradientBoundaryCoeffs() const
 {
-    return this->patch().deltaCoeffs()*(*this);
+    // Patch field is zero
+    return tmp<Field<Type>>::New(this->size(), Foam::zero{});
 }
 
 
 template<class Type>
-void Foam::fixedValueFvsPatchField<Type>::write(Ostream& os) const
+void Foam::zeroValueFvsPatchField<Type>::write(Ostream& os) const
 {
     fvsPatchField<Type>::write(os);
-    fvsPatchField<Type>::writeValueEntry(os);
+    // Without writeValueEntry() since the value == zero
 }
 
 
