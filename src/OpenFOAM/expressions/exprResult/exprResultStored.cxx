@@ -121,20 +121,6 @@ void Foam::expressions::exprResultStored::operator=
 }
 
 
-void Foam::expressions::exprResultStored::operator=
-(
-    const exprResult& rhs
-)
-{
-    if (this == &rhs)
-    {
-        return;  // Self-assignment is a no-op
-    }
-
-    this->exprResult::operator=(rhs);
-}
-
-
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
 Foam::Istream& Foam::operator>>

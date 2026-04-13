@@ -69,7 +69,8 @@ bool Foam::expressions::exprResult::setAverageValueCheckedBool
         return false;
     }
 
-    const Field<Type>& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+    const auto& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+
     label len = fld.size();
 
     // The average of a bool is slightly dodgy
@@ -85,7 +86,9 @@ bool Foam::expressions::exprResult::setAverageValueCheckedBool
 
     if (parRun)
     {
-        reduce(nTrue, sumOp<label>());
+        label values[2] = { nTrue, len };
+        Foam::reduce(values, 2, sumOp<label>(), UPstream::msgType());
+        nTrue = values[0]; len = values[1];
     }
 
     if (!nTrue)
@@ -93,11 +96,6 @@ bool Foam::expressions::exprResult::setAverageValueCheckedBool
         // All false
         value_.set(false);
         return true;
-    }
-
-    if (parRun)
-    {
-        reduce(len, sumOp<label>());
     }
 
     if (nTrue == len)
@@ -142,7 +140,7 @@ bool Foam::expressions::exprResult::getUniformCheckedBool
 
     result.clear();
 
-    const Field<Type>& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+    const auto& fld = *static_cast<const Field<Type>*>(fieldPtr_);
     label len = fld.size();
 
     // The average of a bool is slightly dodgy
@@ -158,8 +156,9 @@ bool Foam::expressions::exprResult::getUniformCheckedBool
 
     if (parRun)
     {
-        reduce(nTrue, sumOp<label>());
-        reduce(len, sumOp<label>());
+        label values[2] = { nTrue, len };
+        Foam::reduce(values, 2, sumOp<label>(), UPstream::msgType());
+        nTrue = values[0]; len = values[1];
     }
 
     const Type avg = (nTrue > len/2);

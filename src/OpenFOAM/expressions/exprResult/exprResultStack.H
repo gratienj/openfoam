@@ -32,8 +32,8 @@ Description
     Can be used to build a list of results one at a time.
 
 SourceFiles
-    exprResultStack.C
-    exprResultStackTemplates.C
+    exprResultStack.cxx
+    exprResultStack.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -118,7 +118,10 @@ public:
         void operator=(const exprResultStack& rhs);
 
         //- Copy assignment
-        void operator=(const exprResult& rhs);
+        virtual void operator=(const exprResult& rhs);
+
+        //- Move assignment
+        virtual void operator=(exprResult&& rhs);
 };
 
 
@@ -130,7 +133,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "exprResultStackTemplates.C"
+    #include "exprResultStack.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

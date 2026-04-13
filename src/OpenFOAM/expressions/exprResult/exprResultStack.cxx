@@ -204,4 +204,25 @@ void Foam::expressions::exprResultStack::operator=
 }
 
 
+void Foam::expressions::exprResultStack::operator=(exprResult&& rhs)
+{
+    if (this == &rhs)
+    {
+        return;  // Self-assignment is a no-op
+    }
+
+    DebugInFunction << nl;
+
+    exprResult value
+    (
+        // Issue warning if the other result is not really uniform
+        rhs.getUniform(1, false)
+    );
+
+    this->push(value);
+
+    rhs.clear();
+}
+
+
 // ************************************************************************* //

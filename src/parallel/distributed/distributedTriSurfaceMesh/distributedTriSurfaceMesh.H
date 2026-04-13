@@ -369,6 +369,9 @@ private:
                 List<List<treeBoundBox>>& bbs
             ) const;
 
+            //- Any part overlaps with bounding box
+            using triSurfaceMesh::overlaps;
+
             //- Does any part of triangle overlap bb.
             static bool overlaps
             (

@@ -165,6 +165,8 @@ public:
             const label fieldi
         );
 
+        //- Inherited method
+        using fv::option::addSup;
 
         //- Read source dictionary
         virtual bool read(const dictionary& dict);
