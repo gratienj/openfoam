@@ -37,7 +37,7 @@ Description
     Should only used as a template argument for SlicedGeometricField.
 
 SourceFiles
-    slicedFaePatchField.C
+    slicedFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -61,6 +61,9 @@ class slicedFaePatchField
 :
     public faePatchField<Type>
 {
+    typedef slicedFaePatchField<Type> this_bctype;
+    typedef faePatchField<Type> parent_bctype;
+
 public:
 
     //- Type for the mesh processor patch
@@ -97,30 +100,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given sliced patch field onto a new patch
+        //- Construct by mapping onto a new patch
         slicedFaePatchField
         (
-            const slicedFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        slicedFaePatchField(const slicedFaePatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         slicedFaePatchField
         (
-            const slicedFaePatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, edgeMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        slicedFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -176,7 +173,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "slicedFaePatchField.C"
+    #include "slicedFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

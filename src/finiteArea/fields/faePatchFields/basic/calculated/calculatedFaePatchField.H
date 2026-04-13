@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    calculatedFaePatchField.C
+    calculatedFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class calculatedFaePatchField
 :
     public faePatchField<Type>
 {
+    typedef calculatedFaePatchField<Type> this_bctype;
+    typedef faePatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -82,30 +85,24 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         calculatedFaePatchField
         (
-            const calculatedFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        calculatedFaePatchField(const calculatedFaePatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         calculatedFaePatchField
         (
-            const calculatedFaePatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, edgeMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        calculatedFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -131,6 +128,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -141,7 +144,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "calculatedFaePatchField.C"
+    #include "calculatedFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

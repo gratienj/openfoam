@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    symmetryFaPatchField.C
+    symmetryFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,6 +58,9 @@ class symmetryFaPatchField
 :
     public basicSymmetryFaPatchField<Type>
 {
+    typedef symmetryFaPatchField<Type> this_bctype;
+    typedef basicSymmetryFaPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -82,33 +85,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given symmetryFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         symmetryFaPatchField
         (
-            const symmetryFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
+        //- Copy construct with an internal field reference
         symmetryFaPatchField
         (
-            const symmetryFaPatchField<Type>&
-        );
-
-        //- Construct as copy setting internal field reference
-        symmetryFaPatchField
-        (
-            const symmetryFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        symmetryFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -118,6 +112,12 @@ public:
         {
             return faPatchField<Type>::Clone(*this, iF);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -128,7 +128,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "symmetryFaPatchField.C"
+    #include "symmetryFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

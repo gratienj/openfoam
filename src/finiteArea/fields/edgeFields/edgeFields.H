@@ -34,12 +34,12 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    edgeFields.C
+    edgeFields.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef edgeFields_H
-#define edgeFields_H
+#ifndef Foam_edgeFields_H
+#define Foam_edgeFields_H
 
 #include "objectRegistry.H"
 #include "GeometricFields.H"

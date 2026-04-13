@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    zeroGradientFaPatchField.C
+    zeroGradientFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class zeroGradientFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef zeroGradientFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -80,34 +83,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given zeroGradient patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         zeroGradientFaPatchField
         (
-            const zeroGradientFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        zeroGradientFaPatchField
-        (
-            const zeroGradientFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         zeroGradientFaPatchField
         (
-            const zeroGradientFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        zeroGradientFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -165,6 +158,12 @@ public:
             //- Return the matrix source coefficients corresponding to the
             //- evaluation of the gradient of this patchField
             virtual tmp<Field<Type>> gradientBoundaryCoeffs() const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -175,7 +174,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "zeroGradientFaPatchField.C"
+    #include "zeroGradientFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

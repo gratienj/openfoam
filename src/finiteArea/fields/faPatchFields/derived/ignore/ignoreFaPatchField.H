@@ -52,9 +52,6 @@ Usage
     The inherited entries are elaborated in:
       - \link faPatchFields.H \endlink
 
-SourceFiles
-    ignoreFaPatchField.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef Foam_ignoreFaPatchField_H
@@ -76,6 +73,9 @@ class ignoreFaPatchField
 :
     public zeroGradientFaPatchField<Type>
 {
+    typedef ignoreFaPatchField<Type> this_bctype;
+    typedef zeroGradientFaPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -87,45 +87,48 @@ public:
         //- Construct from patch and internal field
         ignoreFaPatchField
         (
-            const faPatch&,
-            const DimensionedField<Type, areaMesh>&
-        );
+            const faPatch& p,
+            const DimensionedField<Type, areaMesh>& iF
+        )
+        :
+            parent_bctype(p, iF)
+        {}
 
         //- Construct from patch, internal field and dictionary
         ignoreFaPatchField
         (
-            const faPatch&,
-            const DimensionedField<Type, areaMesh>&,
-            const dictionary&
-        );
+            const faPatch& p,
+            const DimensionedField<Type, areaMesh>& iF,
+            const dictionary& dict
+        )
+        :
+            parent_bctype(p, iF, dict)
+        {}
 
-        //- Construct by mapping the given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         ignoreFaPatchField
         (
-            const ignoreFaPatchField<Type>&,
-            const faPatch&,
-            const DimensionedField<Type, areaMesh>&,
-            const faPatchFieldMapper&
-        );
+            const ignoreFaPatchField<Type>& ptf,
+            const faPatch& p,
+            const DimensionedField<Type, areaMesh>& iF,
+            const faPatchFieldMapper& mapper
+        )
+        :
+            parent_bctype(ptf, p, iF, mapper)
+        {}
 
-        //- Construct as copy
+        //- Copy construct with internal field reference
         ignoreFaPatchField
         (
-            const ignoreFaPatchField<Type>&
-        );
+            const ignoreFaPatchField<Type>& ptf,
+            const DimensionedField<Type, areaMesh>& iF
+        )
+        :
+            parent_bctype(ptf, iF)
+        {}
 
-        //- Construct as copy setting internal field reference
-        ignoreFaPatchField
-        (
-            const ignoreFaPatchField<Type>&,
-            const DimensionedField<Type, areaMesh>&
-        );
-
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        ignoreFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -139,18 +142,19 @@ public:
 
     //- Destructor
     virtual ~ignoreFaPatchField() = default;
+
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#ifdef NoRepository
-#   include "ignoreFaPatchField.C"
-#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

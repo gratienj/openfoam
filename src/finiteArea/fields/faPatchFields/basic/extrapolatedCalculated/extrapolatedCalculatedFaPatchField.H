@@ -46,7 +46,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    extrapolatedCalculatedFaPatchField.C
+    extrapolatedCalculatedFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -61,7 +61,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                   Class extrapolatedCalculatedFaPatchField Declaration
+             Class extrapolatedCalculatedFaPatchField Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class Type>
@@ -69,6 +69,9 @@ class extrapolatedCalculatedFaPatchField
 :
     public calculatedFaPatchField<Type>
 {
+    typedef extrapolatedCalculatedFaPatchField<Type> this_bctype;
+    typedef calculatedFaPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -93,33 +96,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patchField onto a new patch
+        //- Construct by mapping onto a new patch
         extrapolatedCalculatedFaPatchField
         (
-            const extrapolatedCalculatedFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        extrapolatedCalculatedFaPatchField
-        (
-            const extrapolatedCalculatedFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         extrapolatedCalculatedFaPatchField
         (
-            const extrapolatedCalculatedFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        extrapolatedCalculatedFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -138,6 +132,12 @@ public:
         (
             const Pstream::commsTypes commsType=Pstream::commsTypes::buffered
         );
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -148,7 +148,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "extrapolatedCalculatedFaPatchField.C"
+    #include "extrapolatedCalculatedFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

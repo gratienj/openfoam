@@ -63,7 +63,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    fixedGradientFaPatchField.C
+    fixedGradientFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -86,6 +86,9 @@ class fixedGradientFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef fixedGradientFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
     // Private Data
 
         Field<Type> gradient_;
@@ -128,34 +131,24 @@ public:
             IOobjectOption::readOption requireGrad = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given fixedGradient patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         fixedGradientFaPatchField
         (
-            const fixedGradientFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedGradientFaPatchField
-        (
-            const fixedGradientFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fixedGradientFaPatchField
         (
-            const fixedGradientFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedGradientFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -245,6 +238,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -255,7 +254,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedGradientFaPatchField.C"
+    #include "fixedGradientFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -39,7 +39,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    zeroValueFaePatchField.C
+    zeroValueFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -62,7 +62,7 @@ class zeroValueFaePatchField
 :
     public fixedValueFaePatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef zeroValueFaePatchField<Type> this_bctype;
     typedef fixedValueFaePatchField<Type> parent_bctype;
 
 public:
@@ -89,7 +89,6 @@ public:
         );
 
         //- Copy construct onto a new patch (no mapping needed)
-        //- onto a new patch
         zeroValueFaePatchField
         (
             const zeroValueFaePatchField<Type>& pfld,
@@ -105,18 +104,8 @@ public:
             const DimensionedField<Type, edgeMesh>& iF
         );
 
-        //- Copy construct
-        zeroValueFaePatchField(const zeroValueFaePatchField<Type>& pfld)
-        :
-            zeroValueFaePatchField<Type>(pfld, pfld.internalField())
-        {}
-
-
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        zeroValueFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -187,7 +176,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "zeroValueFaePatchField.C"
+    #include "zeroValueFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

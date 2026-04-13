@@ -69,12 +69,12 @@ See also
   - Foam::fixedValueFaPatchField
 
 SourceFiles
-    timeVaryingUniformFixedValueFaPatchField.C
+    timeVaryingUniformFixedValueFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef timeVaryingUniformFixedValueFaPatchField_H
-#define timeVaryingUniformFixedValueFaPatchField_H
+#ifndef Foam_timeVaryingUniformFixedValueFaPatchField_H
+#define Foam_timeVaryingUniformFixedValueFaPatchField_H
 
 #include "fixedValueFaPatchField.H"
 #include "interpolationTable.H"
@@ -93,6 +93,9 @@ class timeVaryingUniformFixedValueFaPatchField
 :
     public fixedValueFaPatchField<Type>
 {
+    typedef timeVaryingUniformFixedValueFaPatchField<Type> this_bctype;
+    typedef fixedValueFaPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- The time series being used, including the bounding treatment
@@ -122,33 +125,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         timeVaryingUniformFixedValueFaPatchField
         (
-            const timeVaryingUniformFixedValueFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        timeVaryingUniformFixedValueFaPatchField
-        (
-            const timeVaryingUniformFixedValueFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         timeVaryingUniformFixedValueFaPatchField
         (
-            const timeVaryingUniformFixedValueFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        timeVaryingUniformFixedValueFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -185,6 +179,12 @@ public:
 
             //- Write includes "value" entry
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -195,7 +195,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "timeVaryingUniformFixedValueFaPatchField.C"
+    #include "timeVaryingUniformFixedValueFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

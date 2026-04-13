@@ -35,7 +35,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    cyclicFaePatchField.C
+    cyclicFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -59,6 +59,9 @@ class cyclicFaePatchField
 :
     public coupledFaePatchField<Type>
 {
+    typedef cyclicFaePatchField<Type> this_bctype;
+    typedef coupledFaePatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the cyclic patch
@@ -88,33 +91,24 @@ public:
             const dictionary& dict
         );
 
-        //- Construct by mapping given cyclicFaePatchField onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicFaePatchField
         (
-            const cyclicFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        cyclicFaePatchField
-        (
-            const cyclicFaePatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         cyclicFaePatchField
         (
-            const cyclicFaePatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, edgeMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cyclicFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -128,6 +122,12 @@ public:
 
     //- Destructor
     virtual ~cyclicFaePatchField() = default;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -138,7 +138,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cyclicFaePatchField.C"
+    #include "cyclicFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

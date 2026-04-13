@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    processorFaPatchField.C
+    processorFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -61,6 +61,9 @@ class processorFaPatchField
     public processorLduInterfaceField,
     public coupledFaPatchField<Type>
 {
+    typedef processorFaPatchField<Type> this_bctype;
+    typedef coupledFaPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the processor patch
@@ -125,30 +128,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given processorFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         processorFaPatchField
         (
-            const processorFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        processorFaPatchField(const processorFaPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         processorFaPatchField
         (
-            const processorFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        processorFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -308,6 +305,12 @@ public:
         {
             return pTraits<Type>::rank;
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -318,7 +321,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "processorFaPatchField.C"
+    #include "processorFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

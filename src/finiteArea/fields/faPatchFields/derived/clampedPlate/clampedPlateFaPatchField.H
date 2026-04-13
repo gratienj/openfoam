@@ -52,12 +52,12 @@ Usage
       - \link faPatchFields.H \endlink
 
 SourceFiles
-    clampedPlateFaPatchField.C
+    clampedPlateFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef clampedPlateFaPatchField_H
-#define clampedPlateFaPatchField_H
+#ifndef Foam_clampedPlateFaPatchField_H
+#define Foam_clampedPlateFaPatchField_H
 
 #include "faPatchField.H"
 
@@ -75,6 +75,9 @@ class clampedPlateFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef clampedPlateFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -99,34 +102,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given clampedPlate patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         clampedPlateFaPatchField
         (
-            const clampedPlateFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        clampedPlateFaPatchField
-        (
-            const clampedPlateFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         clampedPlateFaPatchField
         (
-            const clampedPlateFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        clampedPlateFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -191,6 +184,12 @@ public:
 
             //- Write includes "value" entry
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -201,7 +200,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "clampedPlateFaPatchField.C"
+    #include "clampedPlateFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

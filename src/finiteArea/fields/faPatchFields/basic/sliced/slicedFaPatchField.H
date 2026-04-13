@@ -43,7 +43,7 @@ See also
     Foam::faPatchField
 
 SourceFiles
-    slicedFaPatchField.C
+    slicedFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -67,6 +67,9 @@ class slicedFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef slicedFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
 public:
 
     //- Type for the mesh processor patch
@@ -104,31 +107,25 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given patch field onto a new patch.
+        //- Construct by mapping onto a new patch.
         //- Not implemented
         slicedFaPatchField
         (
-            const slicedFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        slicedFaPatchField(const slicedFaPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         slicedFaPatchField
         (
-            const slicedFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        slicedFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -247,7 +244,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "slicedFaPatchField.C"
+    #include "slicedFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

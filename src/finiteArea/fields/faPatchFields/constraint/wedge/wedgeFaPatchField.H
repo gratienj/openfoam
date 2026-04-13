@@ -33,7 +33,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    wedgeFaPatchField.C
+    wedgeFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,6 +58,9 @@ class wedgeFaPatchField
 :
     public transformFaPatchField<Type>
 {
+    typedef wedgeFaPatchField<Type> this_bctype;
+    typedef transformFaPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -82,10 +85,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given wedgeFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         wedgeFaPatchField
         (
-            const wedgeFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
@@ -94,15 +97,12 @@ public:
         //- Construct as copy setting internal field reference
         wedgeFaPatchField
         (
-            const wedgeFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        wedgeFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -130,6 +130,12 @@ public:
 
         //- Return face-gradient transform diagonal
         virtual tmp<Field<Type>> snGradTransformDiag() const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -140,7 +146,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "wedgeFaPatchField.C"
+    #include "wedgeFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

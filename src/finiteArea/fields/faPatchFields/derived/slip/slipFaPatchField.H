@@ -34,9 +34,6 @@ Author
     Zeljko Tukovic, FMENA
     Hrvoje Jasak, Wikki Ltd.
 
-SourceFiles
-    slipFaPatchField.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef Foam_slipFaPatchField_H
@@ -58,6 +55,9 @@ class slipFaPatchField
 :
     public basicSymmetryFaPatchField<Type>
 {
+    typedef slipFaPatchField<Type> this_bctype;
+    typedef basicSymmetryFaPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -69,46 +69,49 @@ public:
         //- Construct from patch and internal field
         slipFaPatchField
         (
-            const faPatch&,
-            const DimensionedField<Type, areaMesh>&
-        );
+            const faPatch& p,
+            const DimensionedField<Type, areaMesh>& iF
+        )
+        :
+            parent_bctype(p, iF)
+        {}
 
         //- Construct from patch, internal field and dictionary
         //  The "value" entry: NO_READ
         slipFaPatchField
         (
-            const faPatch&,
-            const DimensionedField<Type, areaMesh>&,
-            const dictionary&
-        );
+            const faPatch& p,
+            const DimensionedField<Type, areaMesh>& iF,
+            const dictionary& dict
+        )
+        :
+            parent_bctype(p, iF, dict)
+        {}
 
-        //- Construct by mapping given slipFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         slipFaPatchField
         (
-            const slipFaPatchField<Type>&,
-            const faPatch&,
-            const DimensionedField<Type, areaMesh>&,
-            const faPatchFieldMapper&
-        );
+            const slipFaPatchField<Type>& ptf,
+            const faPatch& p,
+            const DimensionedField<Type, areaMesh>& iF,
+            const faPatchFieldMapper& mapper
+        )
+        :
+            parent_bctype(ptf, p, iF, mapper)
+        {}
 
-        //- Construct as copy
+        //- Copy construct with internal field reference
         slipFaPatchField
         (
-            const slipFaPatchField<Type>&
-        );
+            const slipFaPatchField<Type>& ptf,
+            const DimensionedField<Type, areaMesh>& iF
+        )
+        :
+            parent_bctype(ptf, iF)
+        {}
 
-        //- Construct as copy setting internal field reference
-        slipFaPatchField
-        (
-            const slipFaPatchField<Type>&,
-            const DimensionedField<Type, areaMesh>&
-        );
-
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        slipFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -122,6 +125,12 @@ public:
 
     //- Destructor
     virtual ~slipFaPatchField() = default;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -131,11 +140,6 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#ifdef NoRepository
-    #include "slipFaPatchField.C"
-#endif
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif
 

@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    coupledFaePatchField.C
+    coupledFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,6 +58,9 @@ class coupledFaePatchField
 :
     public faePatchField<Type>
 {
+    typedef coupledFaePatchField<Type> this_bctype;
+    typedef faePatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -91,30 +94,24 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::LAZY_READ
         );
 
-        //- Construct by mapping the given coupledFaePatchField onto a new patch
+        //- Construct by mapping onto a new patch
         coupledFaePatchField
         (
-            const coupledFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        coupledFaePatchField
-        (
-            const coupledFaePatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         coupledFaePatchField
         (
-            const coupledFaePatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, edgeMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const = 0;
+        //- No copy without an internal field
+        coupledFaePatchField(const this_bctype&) = delete;
 
         //- Construct and return a clone
         virtual tmp<faePatchField<Type>> clone
@@ -127,20 +124,19 @@ public:
     virtual ~coupledFaePatchField() = default;
 
 
-    // Member functions
+    // Member Functions
 
-        // Access
-
-            //- Return true if this patch field is derived from
-            //  coupledFaePatchField<Type>.
-            virtual bool coupled() const
-            {
-                return true;
-            }
-
+        //- True if derived from coupledFaePatchField
+        virtual bool coupled() const { return true; }
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -151,7 +147,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "coupledFaePatchField.C"
+    #include "coupledFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

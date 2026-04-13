@@ -35,7 +35,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    cyclicFaPatchField.C
+    cyclicFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -62,6 +62,9 @@ class cyclicFaPatchField
     virtual public cyclicLduInterfaceField,
     public coupledFaPatchField<Type>
 {
+    typedef cyclicFaPatchField<Type> this_bctype;
+    typedef coupledFaPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the cyclic patch
@@ -92,33 +95,24 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping given cyclicFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicFaPatchField
         (
-            const cyclicFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        cyclicFaPatchField
-        (
-            const cyclicFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         cyclicFaPatchField
         (
-            const cyclicFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cyclicFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -207,6 +201,12 @@ public:
             {
                 return pTraits<Type>::rank;
             }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -217,7 +217,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cyclicFaPatchField.C"
+    #include "cyclicFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

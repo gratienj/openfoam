@@ -78,7 +78,7 @@ See also
     Foam::mixedFaPatchField
 
 SourceFiles
-    uniformMixedFaPatchField.C
+    uniformMixedFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -102,6 +102,9 @@ class uniformMixedFaPatchField
 :
     public mixedFaPatchField<Type>
 {
+    typedef uniformMixedFaPatchField<Type> this_bctype;
+    typedef mixedFaPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Function providing the value
@@ -148,30 +151,21 @@ public:
         //- Construct by mapping onto a new patch
         uniformMixedFaPatchField
         (
-            const uniformMixedFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        uniformMixedFaPatchField
-        (
-            const uniformMixedFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         uniformMixedFaPatchField
         (
-            const uniformMixedFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        uniformMixedFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -190,6 +184,12 @@ public:
 
         //- Write includes "value" entry (for visualisation / restart)
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -200,7 +200,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "uniformMixedFaPatchField.C"
+    #include "uniformMixedFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

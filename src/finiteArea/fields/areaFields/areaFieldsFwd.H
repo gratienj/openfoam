@@ -27,9 +27,6 @@ License
 Description
     Forwards and collection of common area field types
 
-SourceFiles
-    areaFields.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef Foam_areaFieldsFwd_H

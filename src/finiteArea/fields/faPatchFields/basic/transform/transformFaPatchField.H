@@ -33,12 +33,12 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    transformFaPatchField.C
+    transformFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef transformFaPatchField_H
-#define transformFaPatchField_H
+#ifndef Foam_transformFaPatchField_H
+#define Foam_transformFaPatchField_H
 
 #include "faPatchField.H"
 #include "areaFaMesh.H"
@@ -57,6 +57,8 @@ class transformFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef transformFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
 
 public:
 
@@ -82,11 +84,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given transform patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         transformFaPatchField
         (
-            const transformFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
@@ -95,14 +96,14 @@ public:
         //- Construct as copy setting internal field reference
         transformFaPatchField
         (
-            const transformFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const = 0;
+        //- No copy without an internal field
+        transformFaPatchField(const this_bctype&) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
         (
             const DimensionedField<Type, areaMesh>&
@@ -145,9 +146,12 @@ public:
             virtual tmp<Field<Type>> gradientBoundaryCoeffs() const;
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const faPatchField<Type>&);
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -158,7 +162,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "transformFaPatchField.C"
+    #include "transformFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

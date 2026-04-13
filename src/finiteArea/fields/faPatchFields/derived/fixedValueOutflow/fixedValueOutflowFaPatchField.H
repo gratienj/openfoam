@@ -33,12 +33,12 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    fixedValueOutflowFaPatchField.C
+    fixedValueOutflowFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedValueOutflowFaPatchField_H
-#define fixedValueOutflowFaPatchField_H
+#ifndef Foam_fixedValueOutflowFaPatchField_H
+#define Foam_fixedValueOutflowFaPatchField_H
 
 #include "faPatchField.H"
 
@@ -56,6 +56,9 @@ class fixedValueOutflowFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef fixedValueOutflowFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -80,34 +83,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given fixedValueOutflow patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         fixedValueOutflowFaPatchField
         (
-            const fixedValueOutflowFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedValueOutflowFaPatchField
-        (
-            const fixedValueOutflowFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fixedValueOutflowFaPatchField
         (
-            const fixedValueOutflowFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedValueOutflowFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -185,7 +178,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedValueOutflowFaPatchField.C"
+    #include "fixedValueOutflowFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

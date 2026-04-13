@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    coupledFaPatchField.C
+    coupledFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -60,6 +60,9 @@ class coupledFaPatchField
     public lduInterfaceField,
     public faPatchField<Type>
 {
+    typedef coupledFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -93,32 +96,26 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given coupledFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         coupledFaPatchField
         (
-            const coupledFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        coupledFaPatchField
-        (
-            const coupledFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         coupledFaPatchField
         (
-            const coupledFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const = 0;
+        //- No copy without an internal field
+        coupledFaPatchField(const this_bctype&) = delete;
 
-        //- Construct and return a clone
+        //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
         (
             const DimensionedField<Type, areaMesh>&
@@ -129,12 +126,8 @@ public:
 
         // Access
 
-            //- Return true if this patch field is derived from
-            //  coupledFaPatchField<Type>.
-            virtual bool coupled() const
-            {
-                return true;
-            }
+            //- True if derived from coupledFaPatchField
+            virtual bool coupled() const { return true; }
 
             //- Return neighbour field of internal field
             virtual tmp<Field<Type>> patchNeighbourField() const = 0;
@@ -239,6 +232,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -249,7 +248,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "coupledFaPatchField.C"
+    #include "coupledFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

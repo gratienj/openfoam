@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    fixedValueFaPatchField.C
+    fixedValueFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class fixedValueFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef fixedValueFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -90,11 +93,10 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given fixedValue patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         fixedValueFaPatchField
         (
-            const fixedValueFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
@@ -117,18 +119,8 @@ public:
             const DimensionedField<Type, areaMesh>& iF
         );
 
-        //- Copy construct
-        fixedValueFaPatchField(const fixedValueFaPatchField<Type>& pfld)
-        :
-            fixedValueFaPatchField<Type>(pfld, pfld.internalField())
-        {}
-
-
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field reference
+        fixedValueFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -175,7 +167,7 @@ public:
         virtual void write(Ostream&) const;
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const UList<Type>&) {}
 
@@ -206,7 +198,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedValueFaPatchField.C"
+    #include "fixedValueFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

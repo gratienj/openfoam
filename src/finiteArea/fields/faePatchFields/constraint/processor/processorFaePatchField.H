@@ -33,7 +33,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    processorFaePatchField.C
+    processorFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class processorFaePatchField
 :
     public coupledFaePatchField<Type>
 {
+    typedef processorFaePatchField<Type> this_bctype;
+    typedef coupledFaePatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the processor patch
@@ -94,30 +97,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given processorFaePatchField onto a new patch
+        //- Construct by mapping onto a new patch
         processorFaePatchField
         (
-            const processorFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        processorFaePatchField(const processorFaePatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         processorFaePatchField
         (
-            const processorFaePatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, edgeMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        processorFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -136,10 +133,13 @@ public:
     // Member Functions
 
         //- Return true if running parallel
-        virtual bool coupled() const
-        {
-            return UPstream::parRun();
-        }
+        virtual bool coupled() const { return UPstream::parRun(); }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -150,7 +150,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "processorFaePatchField.C"
+    #include "processorFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    fixedValueFaePatchField.C
+    fixedValueFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class fixedValueFaePatchField
 :
     public faePatchField<Type>
 {
+    typedef fixedValueFaePatchField<Type> this_bctype;
+    typedef faePatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -90,11 +93,10 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given fixedValue patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         fixedValueFaePatchField
         (
-            const fixedValueFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
@@ -116,18 +118,8 @@ public:
             const DimensionedField<Type, edgeMesh>& iF
         );
 
-        //- Construct as copy
-        fixedValueFaePatchField(const fixedValueFaePatchField<Type>& pfld)
-        :
-            fixedValueFaePatchField<Type>(pfld, pfld.internalField())
-        {}
-
-
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedValueFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -186,7 +178,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedValueFaePatchField.C"
+    #include "fixedValueFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

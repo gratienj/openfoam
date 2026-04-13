@@ -37,12 +37,12 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    edgeNormalFixedValueFaPatchVectorField.C
+    edgeNormalFixedValueFaPatchVectorField.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef edgeNormalFixedValueFaPatchVectorField_H
-#define edgeNormalFixedValueFaPatchVectorField_H
+#ifndef Foam_edgeNormalFixedValueFaPatchVectorField_H
+#define Foam_edgeNormalFixedValueFaPatchVectorField_H
 
 #include "faPatchFields.H"
 #include "fixedValueFaPatchFields.H"
@@ -60,6 +60,9 @@ class edgeNormalFixedValueFaPatchVectorField
 :
     public fixedValueFaPatchVectorField
 {
+    typedef edgeNormalFixedValueFaPatchVectorField this_bctype;
+    typedef fixedValueFaPatchVectorField parent_bctype;
+
     // Private Data
 
         //- Edge-normal velocity value
@@ -97,34 +100,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given edgeNormalFixedValueFaPatchVectorField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         edgeNormalFixedValueFaPatchVectorField
         (
-            const edgeNormalFixedValueFaPatchVectorField&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<vector, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        edgeNormalFixedValueFaPatchVectorField
-        (
-            const edgeNormalFixedValueFaPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         edgeNormalFixedValueFaPatchVectorField
         (
-            const edgeNormalFixedValueFaPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<vector>> clone() const
-        {
-            return faPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        edgeNormalFixedValueFaPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<vector>> clone
@@ -136,31 +129,30 @@ public:
         }
 
 
-    // Member functions
+    // Member Functions
 
-        // Mapping functions
+    // Mapping Functions
 
-            //- Map (and resize as needed) from self given a mapping object
-            virtual void autoMap
-            (
-                const faPatchFieldMapper&
-            );
+        //- Map (and resize as needed) from self given a mapping object
+        virtual void autoMap(const faPatchFieldMapper&);
 
-            //- Reverse map the given faPatchField onto this faPatchField
-            virtual void rmap
-            (
-                const faPatchVectorField&,
-                const labelList&
-            );
+        //- Reverse map the given faPatchField onto this faPatchField
+        virtual void rmap(const faPatchVectorField&, const labelList&);
 
 
-    // Member functions
+    // Member Functions
 
         //- Update the coefficients associated with the patch field
         virtual void updateCoeffs();
 
         //- Write includes "value" entry
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

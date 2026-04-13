@@ -33,7 +33,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    wedgeFaePatchField.C
+    wedgeFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class wedgeFaePatchField
 :
     public faePatchField<Type>
 {
+    typedef wedgeFaePatchField<Type> this_bctype;
+    typedef faePatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -80,33 +83,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given wedgeFaePatchField onto a new patch
+        //- Construct by mapping onto a new patch
         wedgeFaePatchField
         (
-            const wedgeFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        wedgeFaePatchField
-        (
-            const wedgeFaePatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         wedgeFaePatchField
         (
-            const wedgeFaePatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, edgeMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        wedgeFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -116,6 +110,12 @@ public:
         {
             return faePatchField<Type>::Clone(*this, iF);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -126,7 +126,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "wedgeFaePatchField.C"
+    #include "wedgeFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
