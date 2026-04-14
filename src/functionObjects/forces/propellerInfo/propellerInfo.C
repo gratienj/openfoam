@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2021-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -118,8 +118,7 @@ void Foam::functionObjects::propellerInfo::setCoordinateSystem
 
 
     // Optional orientation axis for cylindrical coordinate system
-    vector alphaAxis;
-    if (dict.readIfPresent("alphaAxis", alphaAxis))
+    if (vector alphaAxis; dict.readIfPresent("alphaAxis", alphaAxis))
     {
         alphaAxis.normalise();
         coordSysPtr_.reset
@@ -205,9 +204,14 @@ void Foam::functionObjects::propellerInfo::createFiles()
 
     if (writeWakeFields_)
     {
-        if (!wakeFilePtr_) wakeFilePtr_ = newFileAtStartTime("wake");
-        if (!axialWakeFilePtr_) axialWakeFilePtr_ =
-            newFileAtStartTime("axialWake");
+        if (!wakeFilePtr_)
+        {
+            wakeFilePtr_ = newFileAtStartTime("wake");
+        }
+        if (!axialWakeFilePtr_)
+        {
+            axialWakeFilePtr_ = newFileAtStartTime("axialWake");
+        }
     }
 }
 
@@ -339,13 +343,13 @@ void Foam::functionObjects::propellerInfo::setSampleDiskSurface
     const dictionary& dict
 )
 {
-    const dictionary& sampleDiskDict(dict.subDict("sampleDisk"));
+    const dictionary& sampleDiskDict = dict.subDict("sampleDisk");
 
-    const scalar r1 = sampleDiskDict.getScalar("r1");
-    const scalar r2 = sampleDiskDict.getScalar("r2");
+    const scalar r1 = sampleDiskDict.get<scalar>("r1");
+    const scalar r2 = sampleDiskDict.get<scalar>("r2");
 
-    nTheta_ = sampleDiskDict.getLabel("nTheta");
-    nRadial_ = sampleDiskDict.getLabel("nRadial");
+    nTheta_ = sampleDiskDict.get<label>("nTheta");
+    nRadial_ = sampleDiskDict.get<label>("nRadial");
 
     setSampleDiskGeometry
     (
@@ -360,8 +364,11 @@ void Foam::functionObjects::propellerInfo::setSampleDiskSurface
 
     // Surface writer (keywords: surfaceWriter, writeOptions)
 
-    word writerType;
-    if (sampleDiskDict.readIfPresent("surfaceWriter", writerType))
+    if
+    (
+        word writerType;
+        sampleDiskDict.readIfPresent("surfaceWriter", writerType)
+    )
     {
         surfaceWriterPtr_ = surfaceWriter::New
         (
@@ -631,10 +638,10 @@ void Foam::functionObjects::propellerInfo::writeWake
 
     const pointField propPoints(coordSysPtr_->localPosition(points_));
     const label offset =
-        mag(propPoints[1][0] - propPoints[0][0]) < SMALL ? 0 : 1;
-    const scalar rMax = propPoints.last()[0];
+        mag(propPoints[1].x() - propPoints[0].x()) < SMALL ? 0 : 1;
+    const scalar rMax = propPoints.back().x();
 
-    const scalar UzMean = meanSampleDiskField(U.component(2));
+    const scalar UzMean = meanSampleDiskField(U.component(vector::Z));
 
     writeHeaderValue(os, "Time", time_.timeOutputValue());
     writeHeaderValue(os, "Reference velocity", URef);
@@ -663,7 +670,7 @@ void Foam::functionObjects::propellerInfo::writeWake
 
             if (pointMask_[pointi])
             {
-                const scalar rR = propPoints[radiusi*nTheta_][0]/rMax;
+                const scalar rR = propPoints[radiusi*nTheta_].x()/rMax;
 
                 os  << rR << tab << deg << tab
                     << points_[pointi] << tab << U[pointi] << nl;
@@ -690,8 +697,8 @@ void Foam::functionObjects::propellerInfo::writeAxialWake
 
     const pointField propPoints(coordSysPtr_->localPosition(points_));
     const label offset =
-        mag(propPoints[1][0] - propPoints[0][0]) < SMALL ? 0 : 1;
-    const scalar rMax = propPoints.last()[0];
+        mag(propPoints[1].x() - propPoints[0].x()) < SMALL ? 0 : 1;
+    const scalar rMax = propPoints.back().x();
 
     writeHeaderValue(os, "Time", time_.timeOutputValue());
 
@@ -699,7 +706,7 @@ void Foam::functionObjects::propellerInfo::writeAxialWake
     for (label radiusi = 0; radiusi <= nRadial_; ++radiusi)
     {
         label pointi = radiusi*nTheta_;
-        scalar r = propPoints[pointi][0];
+        scalar r = propPoints[pointi].x();
         os  << tab << "r/R=" << r/rMax;
     }
     os  << nl;
@@ -720,7 +727,7 @@ void Foam::functionObjects::propellerInfo::writeAxialWake
 
             if (pointMask_[pointi])
             {
-                os << tab << 1 - U[pointi][2]/URef;
+                os << tab << 1 - U[pointi].z()/URef;
             }
             else
             {
@@ -755,8 +762,9 @@ void Foam::functionObjects::propellerInfo::writeWakeFields(const scalar URef0)
     }
 
     // Normalised velocity
-    const vectorField UDisk(interpolate(U(), vector::uniform(nanValue_))());
-    const vectorField UrDisk(coordSysPtr_->localVector(UDisk));
+    const vectorField UDisk(interpolate(U(), vector::uniform(nanValue_)));
+    // Position-aware transform (cylindrical coordinates!)
+    const vectorField UrDisk(coordSysPtr_->invTransform(points_, UDisk));
 
     // Surface field data
     writeSampleDiskSurface(UDisk, UrDisk,  URef);
@@ -861,18 +869,16 @@ bool Foam::functionObjects::propellerInfo::read(const dictionary& dict)
     {
         dict_ = dict;
 
-        radius_ = dict.getScalar("radius");
+        radius_ = dict.get<scalar>("radius");
         URefPtr_.reset(Function1<scalar>::New("URef", dict, &mesh_));
         rotationMode_ = rotationModeNames_.get("rotationMode", dict);
 
-        writePropellerPerformance_ =
-            dict.get<bool>("writePropellerPerformance");
+        dict.readEntry("writePropellerPerformance", writePropellerPerformance_);
+        dict.readEntry("writeWakeFields", writeWakeFields_);
 
-        writeWakeFields_ = dict.get<bool>("writeWakeFields");
         if (writeWakeFields_)
         {
             dict.readIfPresent("interpolationScheme", interpolationScheme_);
-
             dict.readIfPresent("nanValue", nanValue_);
         }
 
@@ -907,19 +913,21 @@ bool Foam::functionObjects::propellerInfo::execute()
         // Only setting mean axial velocity result during execute
         // - wake fields are 'heavy' and controlled separately using the
         //   writeControl
-        const vectorField
-            UDisk
-            (
-                coordSysPtr_->localVector
-                (
-                    interpolate
-                    (
-                        U(),
-                        vector::uniform(nanValue_)
-                    )()
-                )
-            );
-        const scalar UzMean = meanSampleDiskField(UDisk.component(2));
+
+        const vectorField UDisk(interpolate(U(), vector::uniform(nanValue_)));
+        scalarField UzDisk(UDisk.size());
+
+        // Extracting z-component, so can just use localVector(...)
+        // and do not need invTransform(points_, UDisk)
+
+        const auto& cs = coordSysPtr_();
+
+        forAll(UDisk, i)
+        {
+            UzDisk[i] = cs.localVector(UDisk[i]).z();
+        }
+
+        const scalar UzMean = meanSampleDiskField(UzDisk);
 
         setResult("UzMean", UzMean);
     }
