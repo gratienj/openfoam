@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -71,6 +71,21 @@ public:
 
         //- The typeName ("edge")
         static const char* const typeName;
+
+
+    // Generated Methods
+
+        //- Copy construct
+        edge(const edge&) = default;
+
+        //- Move construct
+        edge(edge&&) = default;
+
+        //- Copy assignment
+        edge& operator=(const edge&) = default;
+
+        //- Move assignment
+        edge& operator=(edge&&) = default;
 
 
     // Constructors
@@ -304,6 +319,12 @@ public:
         //- Return constant edge element. Index should be limited to 0/1.
         inline const label& operator[](const label i) const;
 
+        //- Compare edges for equal content, ignoring orientation
+        inline bool operator==(const edge& other) const;
+
+        //- Compare edges for non-equal content, ignoring orientation
+        inline bool operator!=(const edge& other) const;
+
 
     // Hashing
 
@@ -391,19 +412,56 @@ inline edge reverse(const edge& e)
 }
 
 
-// * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * ADL Lookups * * * * * * * * * * * * * * * * //
 
-//- Compare edges for equal content, ignoring orientation
-inline bool operator==(const edge& a, const edge& b);
+template<std::size_t I>
+constexpr label& get(edge& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for edge");
+    return Foam::get<I>(static_cast<labelPair&>(t));
+}
 
-//- Compare edges for non-equal content, ignoring orientation
-inline bool operator!=(const edge& a, const edge& b);
+template<std::size_t I>
+constexpr const label& get(const edge& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for edge");
+    return Foam::get<I>(static_cast<const labelPair&>(t));
+}
 
+template<std::size_t I>
+constexpr label&& get(edge&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for edge");
+    return Foam::get<I>(static_cast<labelPair&&>(std::move(t)));
+}
 
+template<std::size_t I>
+constexpr const label&& get(const edge&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for edge");
+    return Foam::get<I>(static_cast<const labelPair&&>(std::move(t)));
+}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Specializations (structured binding)
+namespace std
+{
+
+//- The tuple_size of edge == 2
+template<>
+struct tuple_size<Foam::edge> : std::integral_constant<std::size_t, 2> {};
+
+//- Identical type (label) for all elements of edge
+template<std::size_t I>
+struct tuple_element<I, Foam::edge> { using type = Foam::label; };
+
+} // End namespace std
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

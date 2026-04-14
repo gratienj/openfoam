@@ -50,19 +50,25 @@ int main(int argc, char *argv[])
 {
     edge e1;
     printInfo(e1);
-    Info<<"has '2'? " << e1.found(2) << endl;
+    Info<<"has '2'? " << e1.contains(2) << endl;
 
     edge e2(1, 2);
     printInfo(e2);
-    Info<<"has '2'? " << e2.found(2) << endl;
+    Info<<"has '2'? " << e2.contains(2) << endl;
 
     edge e3{2, 3};
     printInfo(e3);
-    Info<<"has '2'? " << e3.found(2) << endl;
+    Info<<"has '2'? " << e3.contains(2) << endl;
 
     edge e4(4, 4);
     printInfo(e4);
-    Info<<"has '2'? " << e4.found(2) << endl;
+    Info<<"has '2'? " << e4.contains(2) << endl;
+
+    {
+        auto& [f, s] = e4;
+        f *= 2; s *= 4;
+        printInfo(e4);
+    }
 
     Info<<"collapse? -> " << e4.collapse() << endl;
     printInfo(e4);

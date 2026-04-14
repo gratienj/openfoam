@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -166,60 +166,34 @@ void Foam::FixedList<T, N>::swapLast(const label i)
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
 template<class T, unsigned N>
-bool Foam::FixedList<T, N>::operator==(const FixedList<T, N>& list) const
+bool Foam::FixedList<T, N>::operator==(const FixedList& other) const
 {
-    // Can dispatch with
-    // - std::execution::par_unseq
-    // - std::execution::unseq
+    // if constexpr (N >= 32)
+    //   - std::execution::par_unseq
+    //   - std::execution::unseq
     return
     (
         // List sizes are identical by definition (template parameter)
-        std::equal(this->cbegin(), this->cend(), list.cbegin())
+        std::equal(this->cbegin(), this->cend(), other.cbegin())
     );
 }
 
 
+// Don't yet bother with __cpp_lib_three_way_comparison here
+
 template<class T, unsigned N>
-bool Foam::FixedList<T, N>::operator<(const FixedList<T, N>& list) const
+bool Foam::FixedList<T, N>::operator<(const FixedList& other) const
 {
     // List sizes are identical by definition (template parameter)
 
-    // Can dispatch with
-    // - std::execution::par_unseq
-    // - std::execution::unseq
+    // if constexpr (N >= 32)
+    //   - std::execution::par_unseq
+    //   - std::execution::unseq
     return std::lexicographical_compare
     (
         this->cbegin(), this->cend(),
-        list.cbegin(), list.cend()
+        other.cbegin(), other.cend()
     );
-}
-
-
-template<class T, unsigned N>
-bool Foam::FixedList<T, N>::operator!=(const FixedList<T, N>& list) const
-{
-    return !operator==(list);
-}
-
-
-template<class T, unsigned N>
-bool Foam::FixedList<T, N>::operator>(const FixedList<T, N>& list) const
-{
-    return list.operator<(*this);
-}
-
-
-template<class T, unsigned N>
-bool Foam::FixedList<T, N>::operator<=(const FixedList<T, N>& list) const
-{
-    return !list.operator<(*this);
-}
-
-
-template<class T, unsigned N>
-bool Foam::FixedList<T, N>::operator>=(const FixedList<T, N>& list) const
-{
-    return !operator<(list);
 }
 
 

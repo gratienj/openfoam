@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,7 +42,7 @@ See also
 
 #include "Istream.H"
 #include "Ostream.H"
-#include "Pair.H"
+#include "Pair.H"  // includes <tuple>, <utility>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -56,10 +56,16 @@ namespace Foam
 template<class T1, class T2 = T1>
 class Tuple2
 {
+    // Typedefs
+
+        //- The data content type
+        typedef std::pair<T1, T2> tuple_type;
+
+
     // Private Data
 
-        T1 f_;
-        T2 s_;
+        //- The data content
+        std::pair<T1, T2> tuple_;
 
 public:
 
@@ -72,44 +78,55 @@ public:
         typedef T2 second_type;
 
 
-    // Constructors
+    // Generated Methods
 
         //- Default construct
         Tuple2() = default;
 
+        //- Copy construct
+        Tuple2(const Tuple2&) = default;
+
+        //- Move construct
+        Tuple2(Tuple2&&) = default;
+
+        //- Copy assignment
+        Tuple2& operator=(const Tuple2&) = default;
+
+        //- Move assignment
+        Tuple2& operator=(Tuple2&&) = default;
+
+
+    // Constructors
+
         //- Copy construct from components
         Tuple2(const T1& f, const T2& s)
         :
-            f_(f),
-            s_(s)
+            tuple_(f, s)
         {}
 
         //- Move construct from components
         Tuple2(T1&& f, T2&& s)
         :
-            f_(std::move(f)),
-            s_(std::move(s))
+            tuple_(std::move(f), std::move(s))
         {}
 
         //- Copy construct from std::pair
-        Tuple2(const std::pair<T1,T2>& vals)
+        Tuple2(const std::pair<T1,T2>& tup)
         :
-            f_(vals.first),
-            s_(vals.second)
+            tuple_(tup)
         {}
 
         //- Move construct from std::pair
-        Tuple2(std::pair<T1,T2>&& vals)
+        Tuple2(std::pair<T1,T2>&& tup)
         :
-            f_(std::move(vals.first)),
-            s_(std::move(vals.second))
+            tuple_(std::move(tup))
         {}
 
         //- Construct from Istream
         explicit Tuple2(Istream& is)
         {
             is.readBegin("Tuple2");
-            is >> f_ >> s_;
+            is >> tuple_.first >> tuple_.second;
             is.readEnd("Tuple2");
             is.check(FUNCTION_NAME);
         }
@@ -118,16 +135,44 @@ public:
     // Member Functions
 
         //- Access the first element
-        const T1& first() const noexcept { return f_; }
+        const T1& first() const noexcept { return tuple_.first; }
 
         //- Access the first element
-        T1& first() noexcept { return f_; }
+        T1& first() noexcept { return tuple_.first; }
 
         //- Access the second element
-        const T2& second() const noexcept { return s_; }
+        const T2& second() const noexcept { return tuple_.second; }
 
         //- Access the second element
-        T2& second() noexcept { return s_; }
+        T2& second() noexcept { return tuple_.second; }
+
+
+    // Member Operators
+
+        //- Compare for equality
+        bool operator==(const Tuple2& other) const
+        {
+            return (this->tuple_ == other.tuple_);
+        }
+
+        #if __cpp_lib_three_way_comparison
+        auto operator<=>(const Tuple2& other) const
+        {
+            return (this->tuple_ <=> other.tuple_);
+        }
+        #else  /* __cpp_lib_three_way_comparison */
+
+        //- Compare lexicographically
+        bool operator<(const Tuple2& other) const
+        {
+            return (this->tuple_ < other.tuple_);
+        }
+
+        bool operator!=(const Tuple2& other) const { return !(*this == other); }
+        bool operator<=(const Tuple2& other) const { return !(other < *this); }
+        bool operator>(const Tuple2& other) const { return (other < *this); }
+        bool operator>=(const Tuple2& other) const { return !(*this < other); }
+        #endif  /* __cpp_lib_three_way_comparison */
 };
 
 
@@ -154,54 +199,6 @@ inline Tuple2<T2, T1> reverse(const Tuple2<T1,T2>& t)
 }
 
 
-// * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * * //
-
-template<class T1, class T2>
-inline bool operator==(const Tuple2<T1,T2>& a, const Tuple2<T1,T2>& b)
-{
-    return (a.first() == b.first() && a.second() == b.second());
-}
-
-
-template<class T1, class T2>
-inline bool operator!=(const Tuple2<T1,T2>& a, const Tuple2<T1,T2>& b)
-{
-    return !(a == b);
-}
-
-
-template<class T1, class T2>
-inline bool operator<(const Tuple2<T1,T2>& a, const Tuple2<T1,T2>& b)
-{
-    return
-    (
-        a.first() < b.first()
-     || (!(b.first() < a.first()) && a.second() < b.second())
-    );
-}
-
-
-template<class T1, class T2>
-inline bool operator<=(const Tuple2<T1,T2>& a, const Tuple2<T1,T2>& b)
-{
-    return !(b < a);
-}
-
-
-template<class T1, class T2>
-inline bool operator>(const Tuple2<T1,T2>& a, const Tuple2<T1,T2>& b)
-{
-    return (b < a);
-}
-
-
-template<class T1, class T2>
-inline bool operator>=(const Tuple2<T1,T2>& a, const Tuple2<T1,T2>& b)
-{
-    return !(a < b);
-}
-
-
 // * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * * //
 
 // Comparing first only
@@ -222,6 +219,13 @@ struct minFirstOp
     {
         return (b.first() < a.first()) ? b : a;
     }
+
+    template<class T2>
+    const std::pair<T1,T2>&
+    operator()(const std::pair<T1,T2>& a, const std::pair<T1,T2>& b) const
+    {
+        return (b.first < a.first) ? b : a;
+    }
 };
 
 
@@ -238,6 +242,12 @@ struct minFirstEqOp
     void operator()(Tuple2<T1,T2>& x, const Tuple2<T1,T2>& y) const
     {
         if (y.first() < x.first()) x = y;
+    }
+
+    template<class T2>
+    void operator()(std::pair<T1,T2>& x, const std::pair<T1,T2>& y) const
+    {
+        if (y.first < x.first) x = y;
     }
 };
 
@@ -258,6 +268,13 @@ struct maxFirstOp
     {
         return (a.first() < b.first()) ? b : a;
     }
+
+    template<class T2>
+    const std::pair<T1,T2>&
+    operator()(const std::pair<T1,T2>& a, const std::pair<T1,T2>& b) const
+    {
+        return (a.first < b.first) ? b : a;
+    }
 };
 
 
@@ -274,6 +291,12 @@ struct maxFirstEqOp
     void operator()(Tuple2<T1,T2>& x, const Tuple2<T1,T2>& y) const
     {
         if (x.first() < y.first()) x = y;
+    }
+
+    template<class T2>
+    void operator()(std::pair<T1,T2>& x, const std::pair<T1,T2>& y) const
+    {
+        if (x.first < y.first) x = y;
     }
 };
 
@@ -304,9 +327,67 @@ inline Ostream& operator<<(Ostream& os, const Tuple2<T1,T2>& t)
 }
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * ADL Lookups * * * * * * * * * * * * * * * * //
+
+template<std::size_t I, class T1, class T2>
+decltype(auto) get(Tuple2<T1, T2>& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Tuple2");
+    if constexpr (I == 0) { return t.first(); }
+    else { return t.second(); }
+}
+
+template<std::size_t I, class T1, class T2>
+decltype(auto) get(const Tuple2<T1, T2>& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Tuple2");
+    if constexpr (I == 0) { return t.first(); }
+    else { return t.second(); }
+}
+
+template<std::size_t I, class T1, class T2>
+decltype(auto) get(Tuple2<T1, T2>&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Tuple2");
+    if constexpr (I == 0) { return std::move(t.first()); }
+    else { return std::move(t.second()); }
+}
+
+template<std::size_t I, class T1, class T2>
+decltype(auto) get(const Tuple2<T1, T2>&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Tuple2");
+    if constexpr (I == 0) { return std::move(t.first()); }
+    else { return std::move(t.second()); }
+}
 
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Specializations (structured binding)
+namespace std
+{
+
+//- The tuple_size of Tuple2 == 2
+template<class T1, class T2>
+struct tuple_size<Foam::Tuple2<T1, T2>>
+: std::integral_constant<std::size_t, 2> {};
+
+template<std::size_t I, class T1, class T2>
+struct tuple_element<I, Foam::Tuple2<T1, T2>>
+{
+    static_assert(I < 2, "Index out-of-bounds for Tuple2");
+};
+
+template<class T1, class T2>
+struct tuple_element<0, Foam::Tuple2<T1, T2>> { using type = T1; };
+
+template<class T1, class T2>
+struct tuple_element<1, Foam::Tuple2<T1, T2>> { using type = T2; };
+
+} // End namespace std
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

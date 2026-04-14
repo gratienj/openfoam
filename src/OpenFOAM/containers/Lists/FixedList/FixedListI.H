@@ -45,22 +45,6 @@ inline Foam::FixedList<T, N>::FixedList(Foam::zero)
 
 
 template<class T, unsigned N>
-inline Foam::FixedList<T, N>::FixedList(const FixedList<T, N>& list)
-{
-    // std::execution::unsequenced_policy
-    std::copy(list.begin(), list.end(), v_);
-}
-
-
-template<class T, unsigned N>
-inline Foam::FixedList<T, N>::FixedList(FixedList<T, N>&& list)
-{
-    // std::execution::unsequenced_policy
-    std::move(list.begin(), list.end(), v_);
-}
-
-
-template<class T, unsigned N>
 inline Foam::FixedList<T, N>::FixedList(std::initializer_list<T> list)
 {
     checkSize(list.size());
@@ -282,18 +266,15 @@ inline void Foam::FixedList<T, N>::checkIndex(const label i) const
 template<class T, unsigned N>
 inline bool Foam::FixedList<T, N>::uniform() const
 {
-    if (empty()) return false;   // <- Compile-time disabled anyhow
+    // This convenience method is not even used for compact output
+    // notation in the writeList() method.
+    // - requires 'operator!=' to be defined for the type.
 
-    // std::all_of()
-    for (unsigned i=1; i<N; ++i)
-    {
-        if (v_[0] != v_[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
+    return
+    (
+        Foam::ListPolicy::uniformity::UNIFORM
+     == Foam::ListPolicy::check_uniformity(this->v_, this->v_ + N)
+    );
 }
 
 
@@ -453,7 +434,7 @@ inline void Foam::FixedList<T, N>::operator=(Foam::zero)
 
 
 template<class T, unsigned N>
-inline void Foam::FixedList<T, N>::operator=(const FixedList<T, N>& list)
+inline void Foam::FixedList<T, N>::operator=(const FixedList& list)
 {
     if (this == &list)
     {
@@ -466,7 +447,7 @@ inline void Foam::FixedList<T, N>::operator=(const FixedList<T, N>& list)
 
 
 template<class T, unsigned N>
-inline void Foam::FixedList<T, N>::operator=(FixedList<T, N>&& list)
+inline void Foam::FixedList<T, N>::operator=(FixedList&& list)
 {
     if (this == &list)
     {

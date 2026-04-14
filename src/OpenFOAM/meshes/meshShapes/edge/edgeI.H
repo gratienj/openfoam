@@ -510,17 +510,15 @@ inline const Foam::label& Foam::edge::operator[](const label i) const
 }
 
 
-// * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * * //
-
-inline bool Foam::operator==(const edge& a, const edge& b)
+inline bool Foam::edge::operator==(const edge& other) const
 {
-    return edge::compare(a,b) != 0;
+    return (labelPair::compare(*this, other) != 0);
 }
 
 
-inline bool Foam::operator!=(const edge& a, const edge& b)
+inline bool Foam::edge::operator!=(const edge& other) const
 {
-    return edge::compare(a,b) == 0;
+    return (labelPair::compare(*this, other) == 0);
 }
 
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2023 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,6 +45,9 @@ See also
 #include "FixedList.H"
 #include "Istream.H"
 #include "Ostream.H"
+
+#include <cstddef>
+#include <tuple>
 #include <utility>  // For std::move, std::pair
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -69,12 +72,29 @@ class Pair
 :
     public FixedList<T, 2>
 {
+    // Typedefs
+
+        //- The data content type
+        typedef FixedList<T, 2> tuple_type;
+
 public:
 
     // Generated Methods
 
         //- Default construct
         Pair() = default;
+
+        //- Copy construct
+        Pair(const Pair&) = default;
+
+        //- Move construct
+        Pair(Pair&&) = default;
+
+        //- Copy assignment
+        Pair& operator=(const Pair&) = default;
+
+        //- Move assignment
+        Pair& operator=(Pair&&) = default;
 
         //- The front() accessor (from FixedList) has no purpose
         void front() = delete;
@@ -101,10 +121,10 @@ public:
         inline Pair(const FixedList<T, 2>& list);
 
         //- Copy construct, optionally sorted with first less-than second
-        inline Pair(const T& f, const T& s, const bool doSort);
+        inline Pair(const T& f, const T& s, bool doSort);
 
         //- Copy construct, optionally sorted with first less-than second
-        inline Pair(const FixedList<T, 2>& list, const bool doSort);
+        inline Pair(const FixedList<T, 2>& list, bool doSort);
 
         //- Construct from Istream
         inline explicit Pair(Istream& is);
@@ -153,6 +173,34 @@ public:
         //  - +1: identical values and order used
         //  - -1: identical values, but in reversed order
         static inline int compare(const Pair<T>& a, const Pair<T>& b);
+
+
+    // Member Operators
+
+        //- Compare for equality
+        bool operator==(const Pair& other) const
+        {
+            return
+            (
+                static_cast<const tuple_type&>(*this)
+             == static_cast<const tuple_type&>(other)
+            );
+        }
+
+        //- Compare lexicographically
+        bool operator<(const Pair& other) const
+        {
+            return
+            (
+                static_cast<const tuple_type&>(*this)
+              < static_cast<const tuple_type&>(other)
+            );
+        }
+
+        bool operator!=(const Pair& other) const { return !(*this == other); }
+        bool operator<=(const Pair& other) const { return !(other < *this); }
+        bool operator>(const Pair& other) const { return (other < *this); }
+        bool operator>=(const Pair& other) const { return !(*this < other); }
 
 
     // Hashing
@@ -216,54 +264,6 @@ Pair<T> reverse(const Pair<T>& p)
 }
 
 
-// * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * * //
-
-template<class T>
-bool operator==(const Pair<T>& a, const Pair<T>& b)
-{
-    return (a.first() == b.first() && a.second() == b.second());
-}
-
-
-template<class T>
-bool operator!=(const Pair<T>& a, const Pair<T>& b)
-{
-    return !(a == b);
-}
-
-
-template<class T>
-bool operator<(const Pair<T>& a, const Pair<T>& b)
-{
-    return
-    (
-        a.first() < b.first()
-     || (!(b.first() < a.first()) && a.second() < b.second())
-    );
-}
-
-
-template<class T>
-bool operator<=(const Pair<T>& a, const Pair<T>& b)
-{
-    return !(b < a);
-}
-
-
-template<class T>
-bool operator>(const Pair<T>& a, const Pair<T>& b)
-{
-    return (b < a);
-}
-
-
-template<class T>
-bool operator>=(const Pair<T>& a, const Pair<T>& b)
-{
-    return !(a < b);
-}
-
-
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
 //- Read std::pair from Istream
@@ -290,9 +290,54 @@ inline Ostream& operator<<(Ostream& os, const std::pair<T1,T2>& t)
 }
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * ADL Lookups * * * * * * * * * * * * * * * * //
+
+template<std::size_t I, class T>
+constexpr T& get(Pair<T>& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Pair");
+    return Foam::get<I>(static_cast<FixedList<T, 2>&>(t));
+}
+
+template<std::size_t I, class T>
+constexpr const T& get(const Pair<T>& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Pair");
+    return Foam::get<I>(static_cast<const FixedList<T, 2>&>(t));
+}
+
+template<std::size_t I, class T>
+constexpr T&& get(Pair<T>&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Pair");
+    return Foam::get<I>(static_cast<FixedList<T, 2>&&>(std::move(t)));
+}
+
+template<std::size_t I, class T>
+constexpr const T&& get(const Pair<T>&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for Pair");
+    return Foam::get<I>(static_cast<const FixedList<T, 2>&&>(std::move(t)));
+}
 
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Specializations (structured binding)
+namespace std
+{
+
+//- The tuple_size of Pair == 2
+template<class T>
+struct tuple_size<Foam::Pair<T>> : std::integral_constant<std::size_t, 2> {};
+
+//- Identical type for all elements of Pair
+template<std::size_t I, class T>
+struct tuple_element<I, Foam::Pair<T>> { using type = T; };
+
+} // End namespace std
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
