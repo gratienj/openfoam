@@ -28,6 +28,7 @@ License
 #include "fvcSurfaceOps.H"
 #include "fvMesh.H"
 #include "fusedGaussLaplacianScheme.H"
+// #include "emptyFvPatchField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -74,6 +75,12 @@ void surfaceSum
                 pfld.patchNeighbourField(slice);
                 isCoupled.set(pfld.patch().index());
             }
+            // else if (isA<emptyFvPatchField<Type>>(pfld))
+            // {
+            //     // Needed for cell-based loop approach, but not for
+            //     // face-based loop approach
+            //     slice = Zero;
+            // }
             else
             {
                 SubList<Type>(slice, pfld.size()) = pfld;
@@ -710,6 +717,10 @@ void surfaceSnSum
                 {
                     pfld.patchNeighbourField(slice);
                 }
+                // else if (isA<emptyFvPatchField<Type>>(pfld))
+                // {
+                //     slice = Zero;
+                // }
                 else
                 {
                     pfld.snGrad(slice);
@@ -847,6 +858,10 @@ void surfaceSnSum
                 {
                     pfld.patchNeighbourField(slice);
                 }
+                // else if (isA<emptyFvPatchField<Type>>(pfld))
+                // {
+                //     slice = Zero;
+                // }
                 else
                 {
                     pfld.snGrad(slice);
@@ -994,6 +1009,10 @@ void surfaceSnSum
                 {
                     pfld.patchNeighbourField(slice);
                 }
+                // else if (isA<emptyFvPatchField<Type>>(pfld))
+                // {
+                //     slice = Zero;
+                // }
                 else
                 {
                     pfld.snGrad(slice);
@@ -1171,6 +1190,10 @@ void surfaceSnSum
                 {
                     pfld.patchNeighbourField(slice);
                 }
+                // else if (isA<emptyFvPatchField<Type>>(pfld))
+                // {
+                //     slice = Zero;
+                // }
                 else
                 {
                     pfld.snGrad(slice);
@@ -1356,6 +1379,10 @@ void surfaceSnSum
                 {
                     pfld.patchNeighbourField(slice);
                 }
+                // else if (isA<emptyFvPatchField<Type>>(pfld))
+                // {
+                //     slice = Zero;
+                // }
                 else
                 {
                     pfld.snGrad(slice);

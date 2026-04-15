@@ -156,6 +156,9 @@ public:
             //- Return patch-normal gradient
             virtual tmp<Field<Type>> snGrad() const;
 
+            //- Retrieve patch-normal gradient [contiguous storage]
+            virtual void snGrad(UList<Type>& result) const;
+
             //- Return internal field next to patch
             virtual tmp<Field<Type>> patchInternalField() const;
 

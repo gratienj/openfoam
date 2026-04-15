@@ -179,6 +179,20 @@ Foam::adjointFarFieldPressureFvPatchScalarField::snGrad() const
 }
 
 
+void Foam::adjointFarFieldPressureFvPatchScalarField::snGrad
+(
+    UList<scalar>& result
+) const
+{
+    const fvsPatchField<scalar>& phip = boundaryContrPtr_->phib();
+
+    result.deepCopy
+    (
+        pos(phip)*patch().deltaCoeffs()*(this->patchInternalField() - (*this))
+    );
+}
+
+
 Foam::tmp<Foam::Field<Foam::scalar>>
 Foam::adjointFarFieldPressureFvPatchScalarField::valueInternalCoeffs
 (

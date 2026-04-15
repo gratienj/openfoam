@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -138,6 +139,13 @@ Foam::tmp<Foam::Field<Type>> Foam::slicedFvPatchField<Type>::snGrad() const
 {
     NotImplemented;
     return nullptr;
+}
+
+
+template<class Type>
+void Foam::slicedFvPatchField<Type>::snGrad(UList<Type>&) const
+{
+    NotImplemented;
 }
 
 

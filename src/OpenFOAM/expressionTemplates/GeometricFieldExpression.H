@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2024,2025 M. Janssens
-    Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2025-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,7 +41,6 @@ SourceFiles
 #include "ListExpression.H"
 #include "orientedType.H"
 #include "pointMesh.H"
-//#include "fixedValuePointPatchField.H"  // no assignable yet. tbd.
 //#include <boost/core/demangle.hpp>
 //#include <typeinfo>
 //#include <iostream>

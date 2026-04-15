@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2016 OpenFOAM Foundation
     Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -138,6 +139,37 @@ Foam::symmetryPlaneFvPatchField<Type>::snGrad() const
             (0.5*dc)
           * (transform(rot, pif) - pif)
         );
+    }
+}
+
+
+template<class Type>
+void Foam::symmetryPlaneFvPatchField<Type>::snGrad(UList<Type>& result) const
+{
+    if constexpr (!is_rotational_vectorspace_v<Type>)
+    {
+        // Rotational-invariant type: treat like zero-gradient
+        result = Foam::zero{};
+    }
+    else
+    {
+        // Get patch internal field, stored temporarily in result
+        this->patchInternalField(result);
+        const auto& pif = result;
+
+        const symmTensor rot(I - 2.0*sqr(symmetryPlanePatch_.n()));
+        const auto& dc = this->patch().deltaCoeffs();
+
+        const label len = result.size();
+
+        for (label i = 0; i < len; ++i)
+        {
+            result[i] =
+            (
+                (0.5*dc[i])
+              * (transform(rot, pif[i]) - pif[i])
+            );
+        }
     }
 }
 

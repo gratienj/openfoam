@@ -125,6 +125,9 @@ public:
             //- Return gradient at boundary
             virtual tmp<Field<Type>> snGrad() const = 0;
 
+            //- Retrieve patch-normal gradient [contiguous storage]
+            virtual void snGrad(UList<Type>&) const = 0;
+
             //- Return face-gradient transform diagonal
             virtual tmp<Field<Type>> snGradTransformDiag() const = 0;
 

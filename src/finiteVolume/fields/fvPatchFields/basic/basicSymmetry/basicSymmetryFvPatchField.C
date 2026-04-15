@@ -7,7 +7,8 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2025 OpenCFD Ltd.
--------------------------------------------------------------------------------
+    Copyright (C) 2026 Keysight Technologies
+    -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
 
@@ -83,6 +84,24 @@ Foam::basicSymmetryFvPatchField<Type>::basicSymmetryFvPatchField
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
+Foam::tmp<Foam::Field<Type>>
+Foam::basicSymmetryFvPatchField<Type>::snGrad() const
+{
+    if constexpr (!is_rotational_vectorspace_v<Type>)
+    {
+        // Rotational-invariant type : treat like zero-gradient
+        return tmp<Field<Type>>::New(this->size(), Foam::zero{});
+    }
+    else
+    {
+        auto tresult = tmp<Field<Type>>::New(this->size());
+        this->snGrad(static_cast<UList<Type>&>(tresult.ref()));
+        return tresult;
+    }
+}
+
+
+template<class Type>
 void Foam::basicSymmetryFvPatchField<Type>::snGrad(UList<Type>& result) const
 {
     if constexpr (!is_rotational_vectorspace_v<Type>)
@@ -113,24 +132,6 @@ void Foam::basicSymmetryFvPatchField<Type>::snGrad(UList<Type>& result) const
               * (transform(I - 2.0*sqr(nHat[i]), pif[i]) - pif[i])
             );
         }
-    }
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>>
-Foam::basicSymmetryFvPatchField<Type>::snGrad() const
-{
-    if constexpr (!is_rotational_vectorspace_v<Type>)
-    {
-        // Rotational-invariant type : treat like zero-gradient
-        return tmp<Field<Type>>::New(this->size(), Foam::zero{});
-    }
-    else
-    {
-        auto tresult = tmp<Field<Type>>::New(this->size());
-        this->snGrad(static_cast<UList<Type>&>(tresult.ref()));
-        return tresult;
     }
 }
 

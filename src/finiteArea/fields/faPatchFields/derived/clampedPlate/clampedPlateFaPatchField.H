@@ -152,6 +152,12 @@ public:
                 return tmp<Field<Type>>::New(this->size(), Foam::zero{});
             }
 
+            //- Retrieve patch-normal gradient [contiguous storage]
+            virtual void snGrad(UList<Type>& result) const
+            {
+                result = Foam::zero{};
+            }
+
             //- Evaluate the patch field
             virtual void evaluate
             (

@@ -142,6 +142,13 @@ Foam::tmp<Foam::Field<Type>> Foam::slicedFaPatchField<Type>::snGrad() const
 
 
 template<class Type>
+void Foam::slicedFaPatchField<Type>::snGrad(UList<Type>& result) const
+{
+    NotImplemented;
+}
+
+
+template<class Type>
 Foam::tmp<Foam::Field<Type>>
 Foam::slicedFaPatchField<Type>::patchInternalField() const
 {
