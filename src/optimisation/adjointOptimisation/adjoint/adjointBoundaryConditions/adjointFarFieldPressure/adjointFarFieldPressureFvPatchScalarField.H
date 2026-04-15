@@ -127,6 +127,9 @@ public:
         //- Return gradient at boundary
         virtual tmp<Field<scalar>> snGrad() const;
 
+        //- Retrieve patch-normal gradient [contiguous storage]
+        virtual void snGrad(UList<scalar>& result) const;
+
         //- Return the matrix diagonal coefficients corresponding to the
         //- evaluation of the value of this patchField with given weights
         virtual tmp<Field<scalar>> valueInternalCoeffs

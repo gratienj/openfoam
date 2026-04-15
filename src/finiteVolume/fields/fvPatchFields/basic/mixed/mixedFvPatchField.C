@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -260,6 +261,25 @@ Foam::mixedFvPatchField<Type>::snGrad() const
         (refValue_ - this->patchInternalField())*this->patch().deltaCoeffs(),
         valueFraction_
     );
+}
+
+
+template<class Type>
+void Foam::mixedFvPatchField<Type>::snGrad(UList<Type>& result) const
+{
+    //const Field<Type> pif(this->patchInternalField());
+    this->patchInternalField(result);
+    auto& pif = result;
+    const auto& dc = this->patch().deltaCoeffs();
+
+    const label len = result.size();
+
+    for (label i = 0; i < len; ++i)
+    {
+        result[i] =
+            (1 - valueFraction_[i])*refGrad_[i]
+          + valueFraction_[i]*(refValue_[i] - pif[i])*dc[i];
+    }
 }
 
 

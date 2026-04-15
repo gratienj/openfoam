@@ -6,7 +6,8 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -161,6 +162,47 @@ Foam::partialSlipFvPatchField<Type>::snGrad() const
     (
         lerp(rotated, refValue_, valueFraction_) - pif
     )*this->patch().deltaCoeffs();
+}
+
+
+template<class Type>
+void Foam::partialSlipFvPatchField<Type>::snGrad(UList<Type>& result) const
+{
+    // const Field<Type> pif(this->patchInternalField());
+    this->patchInternalField(result);
+    auto& pif = result;
+
+    const auto& dc = this->patch().deltaCoeffs();
+
+    const label len = result.size();
+
+    if constexpr (!is_rotational_vectorspace_v<Type>)
+    {
+        // Rotational-invariant type
+        for (label i = 0; i < len; ++i)
+        {
+            result[i] =
+                dc[i]*(lerp(pif[i], refValue_[i], valueFraction_[i]) - pif[i]);
+        }
+    }
+    else
+    {
+        const vectorField nHat(this->patch().nf());
+        for (label i = 0; i < len; ++i)
+        {
+            result[i] =
+                dc[i]
+              * (
+                    lerp
+                    (
+                        transform(I - sqr(nHat[i]), pif[i]),
+                        refValue_[i],
+                        valueFraction_[i]
+                    )
+                  - pif[i]
+                );
+        }
+    }
 }
 
 

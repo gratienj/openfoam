@@ -244,6 +244,25 @@ Foam::tmp<Foam::Field<Type>> Foam::mixedFaPatchField<Type>::snGrad() const
 
 
 template<class Type>
+void Foam::mixedFaPatchField<Type>::snGrad(UList<Type>& result) const
+{
+    //const Field<Type> pif(this->patchInternalField());
+    this->patchInternalField(result);
+    auto& pif = result;
+    const auto& dc = this->patch().deltaCoeffs();
+
+    const label len = result.size();
+
+    for (label i = 0; i < len; ++i)
+    {
+        result[i] =
+            (1 - valueFraction_[i])*refGrad_[i]
+          + valueFraction_[i]*(refValue_[i] - pif[i])*dc[i];
+    }
+}
+
+
+template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::mixedFaPatchField<Type>::valueInternalCoeffs
 (
     const tmp<scalarField>&

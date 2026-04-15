@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -150,6 +151,27 @@ Foam::directionMixedFvPatchField<Type>::snGrad() const
     return
         (normalValue + transformGradValue - pif)*
         this->patch().deltaCoeffs();
+}
+
+
+template<class Type>
+void Foam::directionMixedFvPatchField<Type>::snGrad(UList<Type>& result) const
+{
+    // const Field<Type> pif(this->patchInternalField());
+    this->patchInternalField(result);
+    auto& pif = result;
+    const auto& dc = this->patch().deltaCoeffs();
+
+    const label len = result.size();
+
+    for (label i = 0; i < len; ++i)
+    {
+        const Type normalValue = transform(valueFraction_[i], refValue_[i]);
+        const Type gradValue = pif[i] + refGrad_[i]/dc[i];
+        const Type transformGradValue =
+            transform(I - valueFraction_[i], gradValue);
+        result[i] = (normalValue + transformGradValue - pif[i])*dc[i];
+    }
 }
 
 

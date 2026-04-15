@@ -227,6 +227,9 @@ public:
             //- Return gradient at boundary
             virtual tmp<Field<Type>> snGrad() const;
 
+            //- Retrieve patch-normal gradient [contiguous storage]
+            virtual void snGrad(UList<Type>& result) const;
+
             //- Evaluate the patch field
             virtual void evaluate
             (

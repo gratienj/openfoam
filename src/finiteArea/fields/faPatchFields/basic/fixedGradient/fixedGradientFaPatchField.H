@@ -206,6 +206,12 @@ public:
                 return gradient_;
             }
 
+            //- Retrieve patch-normal gradient [contiguous storage]
+            virtual void snGrad(UList<Type>& result) const
+            {
+                result.deepCopy(gradient_);
+            }
+
             //- Evaluate the patch field
             virtual void evaluate
             (

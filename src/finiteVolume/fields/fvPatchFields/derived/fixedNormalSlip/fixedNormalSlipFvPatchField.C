@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2017-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -148,6 +149,37 @@ Foam::fixedNormalSlipFvPatchField<Type>::snGrad() const
     (
         (nHat*(nHat & fixedValue_) + transform(I - sqr(nHat), pif)) - pif
     )*this->patch().deltaCoeffs();
+}
+
+
+template<class Type>
+void Foam::fixedNormalSlipFvPatchField<Type>::snGrad(UList<Type>& result) const
+{
+    static_assert
+    (
+        is_rotational_vectorspace_v<Type>,
+        "normal-slip with vector, tensor only!"
+    );
+
+    const vectorField nHat(this->patch().nf());
+    // const Field<Type> pif(this->patchInternalField());
+    this->patchInternalField(result);
+    auto& pif = result;
+
+    const auto& dc = this->patch().deltaCoeffs();
+
+    const label len = result.size();
+
+    for (label i = 0; i < len; ++i)
+    {
+        result[i] =
+            dc[i]
+          * (
+                nHat[i]*(nHat[i] & fixedValue_[i])
+              + transform(I - sqr(nHat[i]), pif[i])
+              - pif[i]
+            );
+    }
 }
 
 
