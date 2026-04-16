@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,9 +31,9 @@ Description
     A 1D vector of objects of type \<T\> with a fixed length \<N\>.
 
 SourceFiles
-    FixedList.C
+    FixedList.txx
     FixedListI.H
-    FixedListIO.C
+    FixedListIO.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -50,7 +50,10 @@ SourceFiles
 #include "ListPolicy.H"  // Also includes "contiguous"
 #include "autoPtr.H"
 
+#include <cstddef>
 #include <limits>
+#include <tuple>
+#include <utility>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -144,23 +147,25 @@ public:
         }
 
 
-    // Constructors
+    // Generated Methods
 
         //- Default construct
         FixedList() = default;
+
+        //- Copy construct
+        FixedList(const FixedList&) = default;
+
+        //- Move construct
+        FixedList(FixedList&&) = default;
+
+
+    // Constructors
 
         //- Construct and initialize all entries to given value
         inline explicit FixedList(const T& val);
 
         //- Construct and initialize all entries to zero
         inline explicit FixedList(Foam::zero);
-
-        //- Copy construct
-        inline FixedList(const FixedList<T, N>& list);
-
-        //- Move construct by using move assignment for the individual
-        //- list elements
-        inline FixedList(FixedList<T, N>&& list);
 
         //- Construct from an initializer list. Runtime size check
         inline FixedList(std::initializer_list<T> list);
@@ -366,10 +371,10 @@ public:
         inline void operator=(Foam::zero);
 
         //- Copy assignment
-        inline void operator=(const FixedList<T, N>& list);
+        inline void operator=(const FixedList& list);
 
         //- Move assignment
-        inline void operator=(FixedList<T, N>&& list);
+        inline void operator=(FixedList&& list);
 
 
     // Random access iterator (non-const)
@@ -453,22 +458,34 @@ public:
         //- Equality operation on FixedLists of the same type.
         //  Returns true when the FixedLists are element-wise equal
         //  (using FixedList::value_type::operator==). Takes linear time
-        bool operator==(const FixedList<T, N>& list) const;
+        bool operator==(const FixedList& other) const;
+
+        //- Compare two FixedLists lexicographically. Takes linear time
+        bool operator<(const FixedList& other) const;
 
         //- The opposite of the equality operation. Takes linear time
-        bool operator!=(const FixedList<T, N>& list) const;
-
-        //- Compare two FixedLists lexicographically. Takes linear time
-        bool operator<(const FixedList<T, N>& list) const;
-
-        //- Compare two FixedLists lexicographically. Takes linear time
-        bool operator>(const FixedList<T, N>& list) const;
+        bool operator!=(const FixedList& other) const
+        {
+            return !(*this == other);
+        }
 
         //- Return true if !(a > b). Takes linear time
-        bool operator<=(const FixedList<T, N>& list) const;
+        bool operator<=(const FixedList& other) const
+        {
+            return !(other < *this);
+        }
+
+        //- Compare two FixedLists lexicographically. Takes linear time
+        bool operator>(const FixedList& other) const
+        {
+            return (other < *this);
+        }
 
         //- Return true if !(a < b). Takes linear time
-        bool operator>=(const FixedList<T, N>& list) const;
+        bool operator>=(const FixedList& other) const
+        {
+            return !(*this < other);
+        }
 
 
     // Reading/writing
@@ -615,7 +632,56 @@ inline void Swap(FixedList<T, N>& a, FixedList<T, N>& b)
     a.swap(b);
 }
 
+
+// * * * * * * * * * * * * * * * ADL Lookups * * * * * * * * * * * * * * * * //
+
+template<std::size_t I, class T, unsigned N>
+constexpr T& get(FixedList<T, N>& list) noexcept
+{
+    static_assert(I < N, "FixedList index out-of-range");
+    return *(list.data() + I);
+}
+
+template<std::size_t I, class T, unsigned N>
+constexpr const T& get(const FixedList<T, N>& list) noexcept
+{
+    static_assert(I < N, "FixedList index out-of-range");
+    return *(list.cdata() + I);
+}
+
+template<std::size_t I, class T, unsigned N>
+constexpr T&& get(FixedList<T, N>&& list) noexcept
+{
+    static_assert(I < N, "FixedList index out-of-range");
+    return std::move(*(list.data() + I));
+}
+
+template<std::size_t I, class T, unsigned N>
+constexpr const T&& get(const FixedList<T, N>&& list) noexcept
+{
+    static_assert(I < N, "FixedList index out-of-range");
+    return std::move(*(list.cdata() + I));
+}
+
 } // End namespace Foam
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Specializations (structured binding)
+namespace std
+{
+
+//- The tuple_size of FixedList is (N)
+template<class T, unsigned N>
+struct tuple_size<Foam::FixedList<T, N>>
+: std::integral_constant<std::size_t, N> {};
+
+//- Identical type for all elements of FixedList
+template<std::size_t I, class T, unsigned N>
+struct tuple_element<I, Foam::FixedList<T, N>> { using type = T; };
+
+} // End namespace std
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -625,8 +691,8 @@ inline void Swap(FixedList<T, N>& a, FixedList<T, N>& b)
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "FixedList.C"
-    #include "FixedListIO.C"
+    #include "FixedList.txx"
+    #include "FixedListIO.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -133,6 +133,16 @@ int main(int argc, char *argv[])
 
     Info<< "max_size:" << scalar2Type::max_size() << nl;
 
+    // Simple structured binding usage
+    {
+        label3Type values(-1);
+        auto& [a, b, c] = values;
+        a = 10; b = 20; c = 30;
+
+        Info<< "set via structured binding: " << values << nl;
+    }
+
+
     if (defaultTests || args.found("iter"))
     {
         Info<< nl
@@ -192,7 +202,9 @@ int main(int argc, char *argv[])
         Info<< "get<0>: " << list1.get<0>() << nl;
         Info<< "get<1>: " << list1.get<1>() << nl;
         Info<< "get<2>: " << list1.get<2>() << nl;
-        Info<< "get<3>: " << list1.get<3>() << nl;
+
+        // with ADL
+        Info<< "Foam::get<3>: " << get<3>(list1) << nl;
 // Will not compile:  Info<< "get<4>: " << list1.get<4>() << nl;
 
         // Test deprecated form

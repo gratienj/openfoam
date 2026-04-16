@@ -223,22 +223,15 @@ inline void Foam::UList<T>::checkIndex(const label i) const
 template<class T>
 inline bool Foam::UList<T>::uniform() const
 {
-    if (!size_)
-    {
-        return false;
-    }
+    // This convenience method is mostly just used for compact output
+    // notation in the writeList() method.
+    // - requires 'operator!=' to be defined for the type.
 
-    // std::all_of()
-
-    for (label i = 1; i < size_; ++i)
-    {
-        if (this->v_[0] != this->v_[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
+    return
+    (
+        Foam::ListPolicy::uniformity::UNIFORM
+     == Foam::ListPolicy::check_uniformity(this->v_, this->v_ + size_)
+    );
 }
 
 

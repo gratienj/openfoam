@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -116,7 +116,15 @@ int main(int argc, char *argv[])
 
     indexedScalar t2(1, 3.2);
 
-    Info<< "Foam::Tuple2: " << t2 << nl;
+    Info<< "Foam::Tuple2: " << t2;
+
+    // Simple structured binding usage
+    {
+        auto& [f, s] = t2;
+        f *= 10; s /= 2;
+        Info<< " * [10, 0.5]";
+    }
+    Info<< " -> " << t2 << nl;
 
     // As list. Generated so that we have duplicate indices
     List<indexedScalar> list1(3*4);
@@ -196,15 +204,22 @@ int main(int argc, char *argv[])
         indexedLabel pr(1, 3);
 
         Info<< "pair: "
-            << pr << " => "
-            << pr.first() << ' ' << pr.second() << nl;
+            << pr << " => " << pr.first() << ',' << pr.second();;
+
+        // Simple structured binding usage
+        {
+            auto& [f, s] = pr;
+            f *= 5; s *= 7;
+            Info<< " * [5, 7]";
+        }
+        Info<< " -> " << pr << nl;
 
         List<indexedLabel> list2 = ListOps::create<indexedLabel>
         (
             list1,
-            [](const indexedScalar& t2)
+            [](const auto& t2) -> indexedLabel
             {
-                return indexedLabel(t2.first(), t2.second());
+                return { t2.first(), t2.second() };
             }
         );
 
@@ -226,9 +241,9 @@ int main(int argc, char *argv[])
         List<indexedLabel> list2 = ListOps::create<indexedLabel>
         (
             list1,
-            [](const indexedScalar& t2)
+            [](const auto& t2) -> indexedLabel
             {
-                return indexedLabel(t2.first(), t2.second());
+                return { t2.first(), t2.second() };
             }
         );
 

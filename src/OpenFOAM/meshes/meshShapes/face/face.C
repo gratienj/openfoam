@@ -427,7 +427,7 @@ unsigned Foam::face::symmhash_code(const UList<label>& f, unsigned seed)
     if (!len)
     {
         // Trivial: zero-sized
-        return 0;
+        return seed;
     }
     else if (len == 1)
     {
@@ -478,7 +478,7 @@ Foam::label Foam::face::collapse()
         label ci = 0;
         for (label i=1; i<size(); i++)
         {
-            if (operator[](i) != operator[](ci))
+            if (operator[](ci) != operator[](i))
             {
                 operator[](++ci) = operator[](i);
             }

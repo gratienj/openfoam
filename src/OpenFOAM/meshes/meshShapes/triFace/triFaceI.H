@@ -66,12 +66,7 @@ inline Foam::triFace::triFace()
 {}
 
 
-inline Foam::triFace::triFace
-(
-    const label p0,
-    const label p1,
-    const label p2
-) noexcept
+inline Foam::triFace::triFace(label p0, label p1, label p2) noexcept
 {
     a() = p0;
     b() = p1;
@@ -165,7 +160,7 @@ inline Foam::pointField Foam::triFace::points(const UList<point>& pts) const
 }
 
 
-inline Foam::face Foam::triFace::triFaceFace() const
+inline Foam::face Foam::triFace::face() const
 {
     return Foam::face(*this);
 }
@@ -501,7 +496,7 @@ inline bool Foam::triFace::contains(const Foam::edge& e) const
 
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
-inline void Foam::triFace::operator+=(const label vertexOffset)
+inline void Foam::triFace::operator+=(label vertexOffset)
 {
     if (vertexOffset)
     {
@@ -509,20 +504,6 @@ inline void Foam::triFace::operator+=(const label vertexOffset)
         (*this)[1] += vertexOffset;
         (*this)[2] += vertexOffset;
     }
-}
-
-
-// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
-
-inline bool Foam::operator==(const triFace& a, const triFace& b)
-{
-    return triFace::compare(a,b) != 0;
-}
-
-
-inline bool Foam::operator!=(const triFace& a, const triFace& b)
-{
-    return triFace::compare(a,b) == 0;
 }
 
 

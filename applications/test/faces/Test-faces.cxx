@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
     f1 = t1;
     Info<< "face:" << f1 << nl;
 
-    f1 = t1.triFaceFace();
+    f1 = t1.face();
     Info<< "face:" << f1 << nl;
 
     #if 0

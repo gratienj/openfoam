@@ -159,23 +159,12 @@ inline void Foam::Matrix<Form, Type>::checkSize() const
 template<class Form, class Type>
 inline bool Foam::Matrix<Form, Type>::uniform() const
 {
-    const label len = size();
-
-    if (!len)
-    {
-        return false;
-    }
-
-    // std::all_of()
-    for (label idx = 1; idx < len; ++idx)
-    {
-        if (v_[0] != v_[idx])
-        {
-            return false;
-        }
-    }
-
-    return true;
+    // Assume Type has 'operator!=' defined
+    return
+    (
+        Foam::ListPolicy::uniformity::UNIFORM
+     == Foam::ListPolicy::check_uniformity(this->v_, this->v_ + size())
+    );
 }
 
 

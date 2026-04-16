@@ -39,7 +39,7 @@ SourceFiles
     faceIntersection.C
     faceContactSphere.C
     faceAreaInContact.C
-    faceTemplates.C
+    face.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -557,7 +557,7 @@ inline bool operator!=(const face& a, const face& b);
 #include "faceI.H"
 
 #ifdef NoRepository
-    #include "faceTemplates.C"
+    #include "face.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

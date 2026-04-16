@@ -85,7 +85,7 @@ inline Foam::Pair<T>::Pair(const FixedList<T, 2>& list)
 
 
 template<class T>
-inline Foam::Pair<T>::Pair(const T& f, const T& s, const bool doSort)
+inline Foam::Pair<T>::Pair(const T& f, const T& s, bool doSort)
 {
     if (doSort && s < f)
     {
@@ -101,7 +101,7 @@ inline Foam::Pair<T>::Pair(const T& f, const T& s, const bool doSort)
 
 
 template<class T>
-inline Foam::Pair<T>::Pair(const FixedList<T, 2>& list, const bool doSort)
+inline Foam::Pair<T>::Pair(const FixedList<T, 2>& list, bool doSort)
 :
     Pair<T>(list.template get<0>(), list.template get<1>(), doSort)
 {}

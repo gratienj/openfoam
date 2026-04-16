@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2023 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,7 @@ See also
 
 SourceFiles
     triFaceI.H
-    triFaceTemplates.C
+    triFace.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -60,9 +60,6 @@ namespace Foam
 class face;
 class triFace;
 
-inline bool operator==(const triFace& a, const triFace& b);
-inline bool operator!=(const triFace& a, const triFace& b);
-
 /*---------------------------------------------------------------------------*\
                           Class triFace Declaration
 \*---------------------------------------------------------------------------*/
@@ -71,9 +68,26 @@ class triFace
 :
     public FixedList<label, 3>
 {
+    // Typedefs
+
+        //- The data content type
+        typedef FixedList<label, 3> tuple_type;
+
 public:
 
     // Generated Methods
+
+        //- Copy construct
+        triFace(const triFace&) = default;
+
+        //- Move construct
+        triFace(triFace&&) = default;
+
+        //- Copy assignment
+        triFace& operator=(const triFace&) = default;
+
+        //- Move assignment
+        triFace& operator=(triFace&&) = default;
 
         //- The front() accessor (from FixedList) has no purpose
         void front() = delete;
@@ -88,7 +102,7 @@ public:
         inline triFace();
 
         //- Construct from three vertex labels
-        inline triFace(const label p0, const label p1, const label p2) noexcept;
+        inline triFace(label p0, label p1, label p2) noexcept;
 
         //- Construct from an initializer list of three vertex labels
         inline explicit triFace(std::initializer_list<label> list);
@@ -151,8 +165,8 @@ public:
         //- Return the points corresponding to this face
         inline pointField points(const UList<point>& pts) const;
 
-        //- Return triangle as a face
-        inline face triFaceFace() const;
+        //- Return as a Foam::face
+        inline Foam::face face() const;
 
         //- Return the triangle
         inline triPointRef tri(const UList<point>& points) const;
@@ -356,22 +370,35 @@ public:
     // Member Operators
 
         //- Increment (offset) vertices by given amount
-        inline void operator+=(const label vertexOffset);
+        inline void operator+=(label vertexOffset);
+
+        //- Equality: triFaces are equal if they share the same vertices
+        //- in any order (orientation-agnostic)
+        bool operator==(const triFace& other) const noexcept
+        {
+            return (triFace::compare(*this, other) != 0);
+        }
+
+        //- Inequality
+        bool operator!=(const triFace& other) const noexcept
+        {
+            return (triFace::compare(*this, other) == 0);
+        }
 
 
     // Hashing
 
-        //- The (commutative) hash value for triFace
-        inline unsigned hash_code(unsigned seed=0) const
+        //- The (commutative) hash value for triFace, hashes lower value first
+        inline unsigned hash_code(unsigned seed=0) const noexcept
         {
-            // Fortunately we don't need this very often
-            const uLabel t0((*this)[0]);
-            const uLabel t1((*this)[1]);
-            const uLabel t2((*this)[2]);
+            // Sort smallest-first for commutative incremental hashing
+            label x = a(), y = b(), z = c();
+            if (x > y) std::swap(x, y);
+            if (y > z) std::swap(y, z);
+            if (x > y) std::swap(x, y);
 
-            const uLabel val(t0*t1*t2 + t0+t1+t2);
-
-            return Foam::Hash<uLabel>()(val, seed);
+            Foam::Hash<label> op;
+            return op(z, op(y, op(x, seed)));
         }
 
         //- Hashing functor for triFace (commutative)
@@ -399,6 +426,9 @@ public:
 
         //- Identical to edge()
         Foam::edge faceEdge(label edgei) const { return this->edge(edgei); }
+
+        //- Identical to face()
+        Foam::face triFaceFace() const { return this->face(); }
 };
 
 
@@ -427,11 +457,35 @@ struct offsetOp<triFace>
 };
 
 
-// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * ADL Lookups * * * * * * * * * * * * * * * * //
 
-inline bool operator==(const triFace& a, const triFace& b);
-inline bool operator!=(const triFace& a, const triFace& b);
+template<std::size_t I>
+constexpr label& get(triFace& t) noexcept
+{
+    static_assert(I < 3, "Index out-of-bounds for triFace");
+    return Foam::get<I>(static_cast<FixedList<label, 3>&>(t));
+}
 
+template<std::size_t I>
+constexpr const label& get(const triFace& t) noexcept
+{
+    static_assert(I < 3, "Index out-of-bounds for triFace");
+    return Foam::get<I>(static_cast<const FixedList<label, 3>&>(t));
+}
+
+template<std::size_t I>
+constexpr label&& get(triFace&& t) noexcept
+{
+    static_assert(I < 3, "Index out-of-bounds for triFace");
+    return Foam::get<I>(static_cast<FixedList<label, 3>&&>(std::move(t)));
+}
+
+template<std::size_t I>
+constexpr const label&& get(const triFace&& t) noexcept
+{
+    static_assert(I < 3, "Index out-of-bounds for triFace");
+    return Foam::get<I>(static_cast<const FixedList<label, 3>&&>(std::move(t)));
+}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -439,10 +493,26 @@ inline bool operator!=(const triFace& a, const triFace& b);
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// Specializations (structured binding)
+namespace std
+{
+
+//- The tuple_size of triFace == 3
+template<>
+struct tuple_size<Foam::triFace> : std::integral_constant<std::size_t, 3> {};
+
+//- Identical type (label) for all elements of triFace
+template<std::size_t I>
+struct tuple_element<I, Foam::triFace> { using type = Foam::label; };
+
+} // End namespace std
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 #include "triFaceI.H"
 
 #ifdef NoRepository
-    #include "triFaceTemplates.C"
+    #include "triFace.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
