@@ -70,7 +70,7 @@ Foam::label Foam::fvMeshTools::addPatch
         {
             const polyPatch& pp = polyPatches[patchi];
 
-            if (isA<processorPolyPatch>(pp))
+            if (isA<processorPolyPatch>(pp) || isA<emptyPolyPatch>(pp))
             {
                 insertPatchi = patchi;
                 startFacei = pp.start();
