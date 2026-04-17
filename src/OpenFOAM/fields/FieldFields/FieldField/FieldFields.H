@@ -31,8 +31,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef FieldFields_H
-#define FieldFields_H
+#ifndef Foam_FieldFields_H
+#define Foam_FieldFields_H
 
 #include "scalarFieldField.H"
 #include "vectorFieldField.H"

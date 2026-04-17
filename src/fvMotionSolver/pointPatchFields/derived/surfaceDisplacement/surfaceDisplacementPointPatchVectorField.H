@@ -52,12 +52,12 @@ Description
                          that do not move
 
 SourceFiles
-    surfaceDisplacementPointPatchVectorField.C
+    surfaceDisplacementPointPatchVectorField.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef surfaceDisplacementPointPatchVectorField_H
-#define surfaceDisplacementPointPatchVectorField_H
+#ifndef Foam_surfaceDisplacementPointPatchVectorField_H
+#define Foam_surfaceDisplacementPointPatchVectorField_H
 
 #include "pointPatchFields.H"
 #include "fixedValuePointPatchFields.H"
@@ -78,6 +78,8 @@ class surfaceDisplacementPointPatchVectorField
 :
     public fixedValuePointPatchVectorField
 {
+    typedef surfaceDisplacementPointPatchVectorField this_bctype;
+    typedef fixedValuePointPatchVectorField parent_bctype;
 
 public:
 
@@ -92,7 +94,7 @@ public:
 
 private:
 
-    // Private data
+    // Private Data
 
         //- Project mode names
         static const Enum<projectMode> projectModeNames_;
@@ -124,13 +126,6 @@ private:
         //- Calculate displacement (w.r.t. points0()) to project onto surface
         void calcProjection(vectorField& displacement) const;
 
-        //- No copy assignment
-        void operator=
-        (
-            const surfaceDisplacementPointPatchVectorField&
-        ) = delete;
-
-
 public:
 
     //- Runtime type information
@@ -154,35 +149,26 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         surfaceDisplacementPointPatchVectorField
         (
-            const surfaceDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<vector, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Construct as copy
-        surfaceDisplacementPointPatchVectorField
-        (
-            const surfaceDisplacementPointPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         surfaceDisplacementPointPatchVectorField
         (
-            const surfaceDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<vector>> clone() const
-        {
-            return pointPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        surfaceDisplacementPointPatchVectorField(const this_bctype&) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
@@ -202,6 +188,18 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- No copy assignment
+        void operator=
+        (
+            const surfaceDisplacementPointPatchVectorField&
+        ) = delete;
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

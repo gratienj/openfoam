@@ -39,20 +39,20 @@ Foam::waveAlphaFvPatchScalarField::waveAlphaFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     waveDictName_(waveModel::dictName)
 {}
 
 
 Foam::waveAlphaFvPatchScalarField::waveAlphaFvPatchScalarField
 (
-    const waveAlphaFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     waveDictName_(ptf.waveDictName_)
 {}
 
@@ -64,28 +64,18 @@ Foam::waveAlphaFvPatchScalarField::waveAlphaFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     waveDictName_(dict.getOrDefault<word>("waveDict", waveModel::dictName))
 {}
 
 
 Foam::waveAlphaFvPatchScalarField::waveAlphaFvPatchScalarField
 (
-    const waveAlphaFvPatchScalarField& ptf
-)
-:
-    fixedValueFvPatchField<scalar>(ptf),
-    waveDictName_(ptf.waveDictName_)
-{}
-
-
-Foam::waveAlphaFvPatchScalarField::waveAlphaFvPatchScalarField
-(
-    const waveAlphaFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(ptf, iF),
+    parent_bctype(ptf, iF),
     waveDictName_(ptf.waveDictName_)
 {}
 
@@ -115,7 +105,7 @@ void Foam::waveAlphaFvPatchScalarField::updateCoeffs()
 
     operator==(model.alpha());
 
-    fixedValueFvPatchField<scalar>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -47,7 +47,7 @@ turbulentMixingLengthFrequencyInletFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    inletOutletFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     mixingLength_(0.0),
     kName_("undefined-k")
 {
@@ -59,13 +59,13 @@ turbulentMixingLengthFrequencyInletFvPatchScalarField
 turbulentMixingLengthFrequencyInletFvPatchScalarField::
 turbulentMixingLengthFrequencyInletFvPatchScalarField
 (
-    const turbulentMixingLengthFrequencyInletFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    inletOutletFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     mixingLength_(ptf.mixingLength_),
     kName_(ptf.kName_)
 {}
@@ -78,7 +78,7 @@ turbulentMixingLengthFrequencyInletFvPatchScalarField
     const dictionary& dict
 )
 :
-    inletOutletFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     mixingLength_(dict.get<scalar>("mixingLength")),
     kName_(dict.getOrDefault<word>("k", "k"))
 {
@@ -91,25 +91,15 @@ turbulentMixingLengthFrequencyInletFvPatchScalarField
     this->valueFraction() = 0.0;
 }
 
-turbulentMixingLengthFrequencyInletFvPatchScalarField::
-turbulentMixingLengthFrequencyInletFvPatchScalarField
-(
-    const turbulentMixingLengthFrequencyInletFvPatchScalarField& ptf
-)
-:
-    inletOutletFvPatchScalarField(ptf),
-    mixingLength_(ptf.mixingLength_),
-    kName_(ptf.kName_)
-{}
 
 turbulentMixingLengthFrequencyInletFvPatchScalarField::
 turbulentMixingLengthFrequencyInletFvPatchScalarField
 (
-    const turbulentMixingLengthFrequencyInletFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    inletOutletFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     mixingLength_(ptf.mixingLength_),
     kName_(ptf.kName_)
 {}
@@ -148,7 +138,7 @@ void turbulentMixingLengthFrequencyInletFvPatchScalarField::updateCoeffs()
     this->refValue() = sqrt(kp)/(Cmu25*mixingLength_);
     this->valueFraction() = neg(phip);
 
-    inletOutletFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

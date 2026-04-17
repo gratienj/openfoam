@@ -69,8 +69,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef SRFWallVelocityFvPatchVectorField_H
-#define SRFWallVelocityFvPatchVectorField_H
+#ifndef Foam_SRFWallVelocityFvPatchVectorField_H
+#define Foam_SRFWallVelocityFvPatchVectorField_H
 
 #include "fvPatchFields.H"
 #include "fixedValueFvPatchFields.H"
@@ -89,6 +89,8 @@ class SRFWallVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
+    typedef SRFWallVelocityFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
 
 public:
 
@@ -113,34 +115,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given SRFWallVelocityFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         SRFWallVelocityFvPatchVectorField
         (
-            const SRFWallVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        SRFWallVelocityFvPatchVectorField
-        (
-            const SRFWallVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         SRFWallVelocityFvPatchVectorField
         (
-            const SRFWallVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        SRFWallVelocityFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -180,6 +172,12 @@ public:
 
             //- Write
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

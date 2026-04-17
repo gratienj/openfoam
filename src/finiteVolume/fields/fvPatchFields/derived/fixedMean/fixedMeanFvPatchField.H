@@ -54,12 +54,12 @@ See also
     Foam::Function1Types
 
 SourceFiles
-    fixedMeanFvPatchField.C
+    fixedMeanFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedMeanFvPatchField_H
-#define fixedMeanFvPatchField_H
+#ifndef Foam_fixedMeanFvPatchField_H
+#define Foam_fixedMeanFvPatchField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "Function1.H"
@@ -78,7 +78,10 @@ class fixedMeanFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
-    // Private data
+    typedef fixedMeanFvPatchField<Type> this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
+
+    // Private Data
 
         //- MeanValue value the field is adjusted to maintain
         autoPtr<Function1<Type>> meanValue_;
@@ -107,34 +110,30 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given fixedMeanFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         fixedMeanFvPatchField
         (
-            const fixedMeanFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedMeanFvPatchField
-        (
-            const fixedMeanFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fixedMeanFvPatchField
         (
-            const fixedMeanFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        fixedMeanFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -153,6 +152,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -163,7 +168,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedMeanFvPatchField.C"
+    #include "fixedMeanFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    emptyFaePatchField.C
+    emptyFaePatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,6 +58,9 @@ class emptyFaePatchField
 :
     public faePatchField<Type>
 {
+    typedef emptyFaePatchField<Type> this_bctype;
+    typedef faePatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -82,33 +85,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given emptyFaePatchField onto a new patch
+        //- Construct by mapping onto a new patch
         emptyFaePatchField
         (
-            const emptyFaePatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, edgeMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        emptyFaePatchField
-        (
-            const emptyFaePatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         emptyFaePatchField
         (
-            const emptyFaePatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, edgeMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return faePatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        emptyFaePatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -126,28 +120,25 @@ public:
 
     // Member Functions
 
-        // Mapping Functions
+    // Mapping Functions
 
-            //- Map (and resize as needed) from self given a mapping object
-            virtual void autoMap
-            (
-                const faPatchFieldMapper&
-            )
-            {}
+        //- Map (and resize as needed) from self given a mapping object
+        virtual void autoMap(const faPatchFieldMapper&) {}
 
-            //- Reverse map the given fvsPatchField onto this fvsPatchField
-            virtual void rmap
-            (
-                const faePatchField<Type>&,
-                const labelList&
-            )
-            {}
+        //- Reverse map the given fvsPatchField onto this fvsPatchField
+        virtual void rmap(const faePatchField<Type>&, const labelList&) {}
 
 
     // Member Functions
 
         //- Write without "value" entry!
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment (TBD: could also be ignore assignment)
+        using parent_bctype::operator=;
 };
 
 
@@ -158,7 +149,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "emptyFaePatchField.C"
+    #include "emptyFaePatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

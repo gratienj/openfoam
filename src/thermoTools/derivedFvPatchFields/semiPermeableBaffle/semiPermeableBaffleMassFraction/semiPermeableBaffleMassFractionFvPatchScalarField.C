@@ -43,7 +43,7 @@ semiPermeableBaffleMassFractionFvPatchScalarField
 )
 :
     mappedPatchBase(p.patch()),
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     c_(0),
     phiName_("phi")
 {
@@ -62,7 +62,7 @@ semiPermeableBaffleMassFractionFvPatchScalarField
 )
 :
     mappedPatchBase(p.patch(), NEARESTPATCHFACE, dict),
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     c_(dict.getOrDefault<scalar>("c", 0)),
     phiName_(dict.getOrDefault<word>("phi", "phi"))
 {
@@ -77,14 +77,14 @@ semiPermeableBaffleMassFractionFvPatchScalarField
 Foam::semiPermeableBaffleMassFractionFvPatchScalarField::
 semiPermeableBaffleMassFractionFvPatchScalarField
 (
-    const semiPermeableBaffleMassFractionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
     mappedPatchBase(p.patch(), ptf),
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     c_(ptf.c_),
     phiName_(ptf.phiName_)
 {}
@@ -93,25 +93,12 @@ semiPermeableBaffleMassFractionFvPatchScalarField
 Foam::semiPermeableBaffleMassFractionFvPatchScalarField::
 semiPermeableBaffleMassFractionFvPatchScalarField
 (
-    const semiPermeableBaffleMassFractionFvPatchScalarField& ptf
-)
-:
-    mappedPatchBase(ptf.patch().patch(), ptf),
-    mixedFvPatchScalarField(ptf),
-    c_(ptf.c_),
-    phiName_(ptf.phiName_)
-{}
-
-
-Foam::semiPermeableBaffleMassFractionFvPatchScalarField::
-semiPermeableBaffleMassFractionFvPatchScalarField
-(
-    const semiPermeableBaffleMassFractionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
     mappedPatchBase(ptf.patch().patch(), ptf),
-    mixedFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     c_(ptf.c_),
     phiName_(ptf.phiName_)
 {}
@@ -161,7 +148,7 @@ void Foam::semiPermeableBaffleMassFractionFvPatchScalarField::updateCoeffs()
     valueFraction() = phip/(phip - patch().deltaCoeffs()*AMuEffp);
     refGrad() = - phiY()/AMuEffp;
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

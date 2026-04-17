@@ -225,7 +225,7 @@ alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphatPhaseChangeWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Prt_(0.85),
     Cmu_(0.09),
     kappa_(0.41),
@@ -243,7 +243,7 @@ alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    alphatPhaseChangeWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     Prt_(dict.getOrDefault<scalar>("Prt", 0.85)),
     Cmu_(dict.getOrDefault<scalar>("Cmu", 0.09)),
     kappa_(dict.getOrDefault<scalar>("kappa", 0.41)),
@@ -254,13 +254,13 @@ alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
 alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField::
 alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
 (
-    const alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    alphatPhaseChangeWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Prt_(ptf.Prt_),
     Cmu_(ptf.Cmu_),
     kappa_(ptf.kappa_),
@@ -271,25 +271,11 @@ alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
 alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField::
 alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
 (
-    const alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField& awfpsf
-)
-:
-    alphatPhaseChangeWallFunctionFvPatchScalarField(awfpsf),
-    Prt_(awfpsf.Prt_),
-    Cmu_(awfpsf.Cmu_),
-    kappa_(awfpsf.kappa_),
-    E_(awfpsf.E_)
-{}
-
-
-alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField::
-alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
-(
-    const alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField& awfpsf,
+    const this_bctype& awfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphatPhaseChangeWallFunctionFvPatchScalarField(awfpsf, iF),
+    parent_bctype(awfpsf, iF),
     Prt_(awfpsf.Prt_),
     Cmu_(awfpsf.Cmu_),
     kappa_(awfpsf.kappa_),

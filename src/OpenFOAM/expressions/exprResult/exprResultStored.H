@@ -39,7 +39,7 @@ Description
     \endtable
 
 SourceFiles
-    StoredExpressionResult.C
+    exprResultStored.cxx
 
 \*---------------------------------------------------------------------------*/
 
@@ -137,8 +137,8 @@ public:
         //- Copy assignment
         void operator=(const exprResultStored& rhs);
 
-        //- Copy assignment
-        void operator=(const exprResult& rhs);
+        //- Inherit assignment
+        using exprResult::operator=;
 
         //- Compare for inequality (need by Ulist)
         bool operator!=(const exprResultStored& rhs) const noexcept

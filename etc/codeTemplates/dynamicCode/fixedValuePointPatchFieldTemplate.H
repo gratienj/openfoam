@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2021 OpenCFD Ltd.
+    Copyright (C) 2019-2021,2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -54,7 +54,7 @@ class ${typeName}FixedValuePointPatch${FieldType}
     public fixedValuePointPatchField<${TemplateType}>,
     public dictionaryContent
 {
-    //- The parent boundary condition type
+    typedef ${typeName}FixedValuePointPatch${FieldType} this_bctype;
     typedef fixedValuePointPatchField<${TemplateType}> parent_bctype;
 
 
@@ -93,35 +93,29 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping a copy onto a new patch
+        //- Construct by mapping onto a new patch
         ${typeName}FixedValuePointPatch${FieldType}
         (
-            const ${typeName}FixedValuePointPatch${FieldType}&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<${TemplateType}, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Construct as copy
-        ${typeName}FixedValuePointPatch${FieldType}
-        (
-            const ${typeName}FixedValuePointPatch${FieldType}&
-        );
-
         //- Construct as copy setting internal field reference
         ${typeName}FixedValuePointPatch${FieldType}
         (
-            const ${typeName}FixedValuePointPatch${FieldType}&,
+            const this_bctype&,
             const DimensionedField<${TemplateType}, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<${TemplateType}>> clone() const
-        {
-            return pointPatchField<${TemplateType}>::Clone(*this);
-        }
+        //- No copy without an internal field
+        ${typeName}FixedValuePointPatch${FieldType}
+        (
+            const this_bctype&
+        ) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<${TemplateType}>> clone
         (
             const DimensionedField<${TemplateType}, pointMesh>& iF
@@ -132,7 +126,7 @@ public:
 
 
     //- Destructor
-    virtual ~${typeName}FixedValuePointPatch${FieldType}();
+    virtual ~${typeName}FixedValuePointPatch${FieldType}() = default;
 
 
     // Member Functions
@@ -145,6 +139,12 @@ public:
 
         //- Update the coefficients associated with the patch field
         virtual void updateCoeffs();
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

@@ -142,7 +142,7 @@ public:
         GeometricBoundaryField
         (
             const Internal& iField,
-            const GeometricBoundaryField<Type, PatchField, GeoMesh>& btf
+            const GeometricBoundaryField& btf
         );
 
         //- Construct as copy, setting the reference to the internal field
@@ -150,17 +150,10 @@ public:
         GeometricBoundaryField
         (
             const Internal& iField,
-            const GeometricBoundaryField<Type, PatchField, GeoMesh>& btf,
+            const GeometricBoundaryField& btf,
             const labelUList& patchIDs,
             const word& patchFieldName
         );
-
-        //- Copy construct
-        //  Dangerous because Field may be set to a field which gets deleted
-        //  Need new type of BoundaryField, one which is part of a geometric
-        //  field for which snGrad etc. may be called and a free standing
-        //  BoundaryField for which such operations are unavailable.
-        GeometricBoundaryField(const GeometricBoundaryField& btf);
 
         //- Construct from dictionary
         GeometricBoundaryField
@@ -169,6 +162,27 @@ public:
             const Internal& iField,
             const dictionary& dict
         );
+
+        //- No copy construct
+        //  Dangerous because it may be set to a field which gets deleted.
+        //  Need new type of BoundaryField, one which is part of a geometric
+        //  field for which snGrad etc. may be called and a free standing
+        //  BoundaryField for which such operations are unavailable.
+        GeometricBoundaryField(const GeometricBoundaryField& bf) = delete;
+        // :
+        //     FieldField<PatchField, Type>(bf),
+        //     bmesh_(bf.bmesh_)
+        // {}
+
+        //- No move construct: likely just as dangerous as copy construct
+        GeometricBoundaryField(GeometricBoundaryField&&) = delete;
+
+        // FUTURE?
+        // //- Clone, setting reference to the internal field
+        // tmp<GeometricBoundaryField> clone(const Internal& iField) const
+        // {
+        //     return tmp<GeometricBoundaryField>::New(iField, *this);
+        // }
 
 
     // Member Functions

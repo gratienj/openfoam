@@ -40,7 +40,7 @@ outletMappedUniformInletHeatAdditionFvPatchField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Qptr_(nullptr),
     outletPatchName_(),
     phiName_("phi"),
@@ -52,13 +52,13 @@ outletMappedUniformInletHeatAdditionFvPatchField
 Foam::outletMappedUniformInletHeatAdditionFvPatchField::
 outletMappedUniformInletHeatAdditionFvPatchField
 (
-    const outletMappedUniformInletHeatAdditionFvPatchField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Qptr_(ptf.Qptr_.clone()),
     outletPatchName_(ptf.outletPatchName_),
     phiName_(ptf.phiName_),
@@ -75,7 +75,7 @@ outletMappedUniformInletHeatAdditionFvPatchField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     Qptr_(Function1<scalar>::New("Q", dict, &db())),
     outletPatchName_(dict.get<word>("outletPatch")),
     phiName_(dict.getOrDefault<word>("phi", "phi")),
@@ -84,31 +84,14 @@ outletMappedUniformInletHeatAdditionFvPatchField
 {}
 
 
-
 Foam::outletMappedUniformInletHeatAdditionFvPatchField::
 outletMappedUniformInletHeatAdditionFvPatchField
 (
-    const outletMappedUniformInletHeatAdditionFvPatchField& ptf
-)
-:
-    fixedValueFvPatchScalarField(ptf),
-    Qptr_(ptf.Qptr_.clone()),
-    outletPatchName_(ptf.outletPatchName_),
-    phiName_(ptf.phiName_),
-    TMin_(ptf.TMin_),
-    TMax_(ptf.TMax_)
-{}
-
-
-
-Foam::outletMappedUniformInletHeatAdditionFvPatchField::
-outletMappedUniformInletHeatAdditionFvPatchField
-(
-    const outletMappedUniformInletHeatAdditionFvPatchField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     Qptr_(ptf.Qptr_.clone()),
     outletPatchName_(ptf.outletPatchName_),
     phiName_(ptf.phiName_),
@@ -183,7 +166,7 @@ void Foam::outletMappedUniformInletHeatAdditionFvPatchField::updateCoeffs()
         operator==(averageOutletField);
     }
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -187,20 +187,20 @@ Foam::nutkWallFunctionFvPatchScalarField::nutkWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     wallFunctionBlenders()
 {}
 
 
 Foam::nutkWallFunctionFvPatchScalarField::nutkWallFunctionFvPatchScalarField
 (
-    const nutkWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     wallFunctionBlenders(ptf)
 {}
 
@@ -212,28 +212,18 @@ Foam::nutkWallFunctionFvPatchScalarField::nutkWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     wallFunctionBlenders(dict, blenderType::STEPWISE, scalar(4))
 {}
 
 
 Foam::nutkWallFunctionFvPatchScalarField::nutkWallFunctionFvPatchScalarField
 (
-    const nutkWallFunctionFvPatchScalarField& wfpsf
-)
-:
-    nutWallFunctionFvPatchScalarField(wfpsf),
-    wallFunctionBlenders(wfpsf)
-{}
-
-
-Foam::nutkWallFunctionFvPatchScalarField::nutkWallFunctionFvPatchScalarField
-(
-    const nutkWallFunctionFvPatchScalarField& wfpsf,
+    const this_bctype& wfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(wfpsf, iF),
+    parent_bctype(wfpsf, iF),
     wallFunctionBlenders(wfpsf)
 {}
 
@@ -298,7 +288,7 @@ void Foam::nutkWallFunctionFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    nutWallFunctionFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     writeLocalEntries(os);
     fvPatchField<scalar>::writeValueEntry(os);
 }

@@ -40,7 +40,7 @@ Usage
     \endtable
 
 SourceFiles
-    patchExprFieldBase.C
+    patchExprFieldBase.cxx
 
 \*---------------------------------------------------------------------------*/
 

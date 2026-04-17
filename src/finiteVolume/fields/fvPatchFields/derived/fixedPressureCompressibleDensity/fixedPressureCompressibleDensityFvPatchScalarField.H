@@ -74,8 +74,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedPressureCompressibleDensityFvPatchScalarField_H
-#define fixedPressureCompressibleDensityFvPatchScalarField_H
+#ifndef Foam_fixedPressureCompressibleDensityFvPatchScalarField_H
+#define Foam_fixedPressureCompressibleDensityFvPatchScalarField_H
 
 #include "fixedValueFvPatchFields.H"
 
@@ -92,7 +92,10 @@ class fixedPressureCompressibleDensityFvPatchScalarField
 :
     public fixedValueFvPatchScalarField
 {
-    // Private data
+    typedef fixedPressureCompressibleDensityFvPatchScalarField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
+    // Private Data
 
         //- Name of static pressure field
         word pName_;
@@ -121,35 +124,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  fixedPressureCompressibleDensityFvPatchScalarField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         fixedPressureCompressibleDensityFvPatchScalarField
         (
-            const fixedPressureCompressibleDensityFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedPressureCompressibleDensityFvPatchScalarField
-        (
-            const fixedPressureCompressibleDensityFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         fixedPressureCompressibleDensityFvPatchScalarField
         (
-            const fixedPressureCompressibleDensityFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedPressureCompressibleDensityFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -168,6 +163,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

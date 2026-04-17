@@ -86,12 +86,12 @@ Usage
     \endverbatim
 
 SourceFiles
-    thermalBaffle1DFvPatchScalarField.C
+    thermalBaffle1DFvPatchScalarField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef thermalBaffle1DFvPatchScalarField_H
-#define thermalBaffle1DFvPatchScalarField_H
+#ifndef Foam_thermalBaffle1DFvPatchScalarField_H
+#define Foam_thermalBaffle1DFvPatchScalarField_H
 
 #include "mixedFvPatchFields.H"
 #include "autoPtr.H"
@@ -114,7 +114,10 @@ class thermalBaffle1DFvPatchScalarField
     public mappedPatchBase,
     public mixedFvPatchScalarField
 {
-    // Private data
+    //typedef thermalBaffle1DFvPatchScalarField this_bctype;
+    typedef mixedFvPatchScalarField parent_bctype;
+
+    // Private Data
 
         //- Name of the temperature field
         word TName_;
@@ -182,20 +185,13 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  thermalBaffle1DFvPatchScalarField onto a new patch
+        //- Construct by mapping onto a new patch
         thermalBaffle1DFvPatchScalarField
         (
             const thermalBaffle1DFvPatchScalarField&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
-        );
-
-        //- Construct as copy
-        thermalBaffle1DFvPatchScalarField
-        (
-            const thermalBaffle1DFvPatchScalarField&
         );
 
         //- Construct as copy setting internal field reference
@@ -205,11 +201,11 @@ public:
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        thermalBaffle1DFvPatchScalarField
+        (
+            const thermalBaffle1DFvPatchScalarField&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -244,6 +240,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -255,7 +257,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "thermalBaffle1DFvPatchScalarField.C"
+    #include "thermalBaffle1DFvPatchScalarField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -43,7 +43,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    symmetryFvsPatchField.C
+    symmetryFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -67,6 +67,9 @@ class symmetryFvsPatchField
 :
     public fvsPatchField<Type>
 {
+    typedef symmetryFvsPatchField<Type> this_bctype;
+    typedef fvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -91,33 +94,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given symmetryFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         symmetryFvsPatchField
         (
-            const symmetryFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        symmetryFvsPatchField
-        (
-            const symmetryFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         symmetryFvsPatchField
         (
-            const symmetryFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        symmetryFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -133,6 +127,12 @@ public:
 
         //- Write includes "value" entry
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -143,7 +143,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "symmetryFvsPatchField.C"
+    #include "symmetryFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

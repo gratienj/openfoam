@@ -134,6 +134,9 @@ public:
             const polyMesh& mesh,
             const pointField& currentPoints
         );
+
+        // Inherit methods
+        using pointSmoother::cellQuality;
 };
 
 

@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedGradientFvPatchFields_H
-#define fixedGradientFvPatchFields_H
+#ifndef Foam_fixedGradientFvPatchFields_H
+#define Foam_fixedGradientFvPatchFields_H
 
 #include "fixedGradientFvPatchField.H"
 #include "fieldTypes.H"

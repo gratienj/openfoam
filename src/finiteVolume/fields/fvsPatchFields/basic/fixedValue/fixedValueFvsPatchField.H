@@ -49,7 +49,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    fixedValueFvsPatchField.C
+    fixedValueFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -72,6 +72,9 @@ class fixedValueFvsPatchField
 :
     public fvsPatchField<Type>
 {
+    typedef fixedValueFvsPatchField<Type> this_bctype;
+    typedef fvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -104,11 +107,10 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given fixedValue patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         fixedValueFvsPatchField
         (
-            const fixedValueFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
@@ -131,18 +133,8 @@ public:
             const DimensionedField<Type, surfaceMesh>& iF
         );
 
-        //- Copy construct
-        fixedValueFvsPatchField(const fixedValueFvsPatchField<Type>& pfld)
-        :
-            fixedValueFvsPatchField<Type>(pfld, pfld.internalField())
-        {}
-
-
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedValueFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -222,7 +214,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedValueFvsPatchField.C"
+    #include "fixedValueFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -39,7 +39,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    zeroValueFvsPatchField.C
+    zeroValueFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -62,7 +62,7 @@ class zeroValueFvsPatchField
 :
     public fixedValueFvsPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef zeroValueFvsPatchField<Type> this_bctype;
     typedef fixedValueFvsPatchField<Type> parent_bctype;
 
 public:
@@ -91,7 +91,7 @@ public:
         //- Copy construct onto a new patch (no mapping needed)
         zeroValueFvsPatchField
         (
-            const zeroValueFvsPatchField<Type>& pfld,
+            const this_bctype& pfld,
             const fvPatch& p,
             const DimensionedField<Type, surfaceMesh>& iF,
             const fvPatchFieldMapper&
@@ -100,22 +100,12 @@ public:
         //- Copy construct with internal field reference
         zeroValueFvsPatchField
         (
-            const zeroValueFvsPatchField<Type>& pfld,
+            const this_bctype& pfld,
             const DimensionedField<Type, surfaceMesh>& iF
         );
 
-        //- Copy construct
-        zeroValueFvsPatchField(const zeroValueFvsPatchField<Type>& pfld)
-        :
-            zeroValueFvsPatchField<Type>(pfld, pfld.internalField())
-        {}
-
-
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        zeroValueFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -207,7 +197,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "zeroValueFvsPatchField.C"
+    #include "zeroValueFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

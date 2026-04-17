@@ -30,12 +30,12 @@ Description
     A Symmetry boundary condition for pointField
 
 SourceFiles
-    symmetryPointPatchField.C
+    symmetryPointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef symmetryPointPatchField_H
-#define symmetryPointPatchField_H
+#ifndef Foam_symmetryPointPatchField_H
+#define Foam_symmetryPointPatchField_H
 
 #include "basicSymmetryPointPatchField.H"
 #include "symmetryPointPatch.H"
@@ -54,6 +54,8 @@ class symmetryPointPatchField
 :
     public basicSymmetryPointPatchField<Type>
 {
+    typedef symmetryPointPatchField<Type> this_bctype;
+    typedef basicSymmetryPointPatchField<Type> parent_bctype;
 
 public:
 
@@ -78,10 +80,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         symmetryPointPatchField
         (
-            const symmetryPointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
@@ -90,17 +92,20 @@ public:
         //- Construct as copy setting internal field reference
         symmetryPointPatchField
         (
-            const symmetryPointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        symmetryPointPatchField(const this_bctype& pfld)
+        #ifdef Foam_pointPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -110,7 +115,7 @@ public:
         }
 
 
-    // Member functions
+    // Member Functions
 
         //- Return the constraint type this pointPatchField implements
         virtual const word& constraintType() const
@@ -118,6 +123,11 @@ public:
             return symmetryPointPatch::typeName;
         }
 
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -128,7 +138,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "symmetryPointPatchField.C"
+    #include "symmetryPointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

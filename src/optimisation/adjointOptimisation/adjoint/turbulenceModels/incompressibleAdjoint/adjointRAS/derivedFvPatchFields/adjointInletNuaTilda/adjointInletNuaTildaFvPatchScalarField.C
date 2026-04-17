@@ -43,20 +43,20 @@ adjointInletNuaTildaFvPatchScalarField::adjointInletNuaTildaFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     adjointScalarBoundaryCondition(p, iF, word::null)
 {}
 
 
 adjointInletNuaTildaFvPatchScalarField::adjointInletNuaTildaFvPatchScalarField
 (
-    const adjointInletNuaTildaFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointScalarBoundaryCondition(p, iF, ptf.adjointSolverName_)
 {}
 
@@ -68,18 +68,18 @@ adjointInletNuaTildaFvPatchScalarField::adjointInletNuaTildaFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     adjointScalarBoundaryCondition(p, iF, dict.get<word>("solverName"))
 {}
 
 
 adjointInletNuaTildaFvPatchScalarField::adjointInletNuaTildaFvPatchScalarField
 (
-    const adjointInletNuaTildaFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     adjointScalarBoundaryCondition(ptf)
 {}
 
@@ -95,7 +95,7 @@ void adjointInletNuaTildaFvPatchScalarField::updateCoeffs()
 
     operator==(Zero);
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -39,7 +39,7 @@ Foam::porousBafflePressureFvPatchField::porousBafflePressureFvPatchField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedJumpFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     phiName_("phi"),
     rhoName_("rho"),
     D_(),
@@ -57,7 +57,7 @@ Foam::porousBafflePressureFvPatchField::porousBafflePressureFvPatchField
     const bool needValue
 )
 :
-    fixedJumpFvPatchField<scalar>(p, iF, dict, false),  // needValue = false
+    parent_bctype(p, iF, dict, false),  // needValue = false
     phiName_(dict.getOrDefault<word>("phi", "phi")),
     rhoName_(dict.getOrDefault<word>("rho", "rho")),
     D_(Function1<scalar>::New("D", dict, &db())),
@@ -77,13 +77,13 @@ Foam::porousBafflePressureFvPatchField::porousBafflePressureFvPatchField
 
 Foam::porousBafflePressureFvPatchField::porousBafflePressureFvPatchField
 (
-    const porousBafflePressureFvPatchField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedJumpFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     phiName_(ptf.phiName_),
     rhoName_(ptf.rhoName_),
     D_(ptf.D_.clone()),
@@ -95,27 +95,11 @@ Foam::porousBafflePressureFvPatchField::porousBafflePressureFvPatchField
 
 Foam::porousBafflePressureFvPatchField::porousBafflePressureFvPatchField
 (
-    const porousBafflePressureFvPatchField& ptf
-)
-:
-    cyclicLduInterfaceField(),
-    fixedJumpFvPatchField<scalar>(ptf),
-    phiName_(ptf.phiName_),
-    rhoName_(ptf.rhoName_),
-    D_(ptf.D_.clone()),
-    I_(ptf.I_.clone()),
-    length_(ptf.length_),
-    uniformJump_(ptf.uniformJump_)
-{}
-
-
-Foam::porousBafflePressureFvPatchField::porousBafflePressureFvPatchField
-(
-    const porousBafflePressureFvPatchField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedJumpFvPatchField<scalar>(ptf, iF),
+    parent_bctype(ptf, iF),
     phiName_(ptf.phiName_),
     rhoName_(ptf.rhoName_),
     D_(ptf.D_.clone()),
@@ -193,13 +177,13 @@ void Foam::porousBafflePressureFvPatchField::updateCoeffs()
             << endl;
     }
 
-    fixedJumpFvPatchField<scalar>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
 void Foam::porousBafflePressureFvPatchField::write(Ostream& os) const
 {
-    fixedJumpFvPatchField<scalar>::write(os);
+    this->parent_bctype::write(os);
     os.writeEntryIfDifferent<word>("phi", "phi", phiName_);
     os.writeEntryIfDifferent<word>("rho", "rho", rhoName_);
     D_->writeData(os);

@@ -43,7 +43,7 @@ SRFFreestreamVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    inletOutletFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     relative_(false),
     UInf_(Zero)
 {}
@@ -52,13 +52,13 @@ SRFFreestreamVelocityFvPatchVectorField
 Foam::SRFFreestreamVelocityFvPatchVectorField::
 SRFFreestreamVelocityFvPatchVectorField
 (
-    const SRFFreestreamVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    inletOutletFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     relative_(ptf.relative_),
     UInf_(ptf.UInf_)
 {}
@@ -72,7 +72,7 @@ SRFFreestreamVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    inletOutletFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     relative_(dict.getOrDefault("relative", false)),
     UInf_(dict.get<vector>("UInf"))
 {
@@ -84,25 +84,13 @@ SRFFreestreamVelocityFvPatchVectorField
 Foam::SRFFreestreamVelocityFvPatchVectorField::
 SRFFreestreamVelocityFvPatchVectorField
 (
-    const SRFFreestreamVelocityFvPatchVectorField& srfvpvf
-)
-:
-    inletOutletFvPatchVectorField(srfvpvf),
-    relative_(srfvpvf.relative_),
-    UInf_(srfvpvf.UInf_)
-{}
-
-
-Foam::SRFFreestreamVelocityFvPatchVectorField::
-SRFFreestreamVelocityFvPatchVectorField
-(
-    const SRFFreestreamVelocityFvPatchVectorField& srfvpvf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    inletOutletFvPatchVectorField(srfvpvf, iF),
-    relative_(srfvpvf.relative_),
-    UInf_(srfvpvf.UInf_)
+    parent_bctype(ptf, iF),
+    relative_(ptf.relative_),
+    UInf_(ptf.UInf_)
 {}
 
 

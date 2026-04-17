@@ -65,12 +65,12 @@ See also
     Foam::jumpCyclicFvPatchField
 
 SourceFiles
-    fixedJumpFvPatchField.C
+    fixedJumpFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedJumpFvPatchField_H
-#define fixedJumpFvPatchField_H
+#ifndef Foam_fixedJumpFvPatchField_H
+#define Foam_fixedJumpFvPatchField_H
 
 #include "jumpCyclicFvPatchField.H"
 
@@ -88,8 +88,10 @@ class fixedJumpFvPatchField
 :
     public jumpCyclicFvPatchField<Type>
 {
+    typedef fixedJumpFvPatchField<Type> this_bctype;
+    typedef jumpCyclicFvPatchField<Type> parent_bctype;
 
-    // Private data
+    // Private Data
 
         //- "jump" field
         Field<Type> jump_;
@@ -131,34 +133,24 @@ public:
             const bool needValue = true
         );
 
-        //- Construct by mapping given fixedJumpFvPatchField onto a
-        //  new patch
+        //- Construct by mapping onto a new patch
         fixedJumpFvPatchField
         (
-            const fixedJumpFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedJumpFvPatchField
-        (
-            const fixedJumpFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fixedJumpFvPatchField
         (
-            const fixedJumpFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedJumpFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -211,6 +203,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -221,7 +219,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedJumpFvPatchField.C"
+    #include "fixedJumpFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

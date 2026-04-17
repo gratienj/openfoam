@@ -29,13 +29,10 @@ Class
 Description
     Foam::cyclicSlipFvsPatchField
 
-SourceFiles
-    cyclicSlipFvsPatchField.C
-
 \*---------------------------------------------------------------------------*/
 
-#ifndef cyclicSlipFvsPatchField_H
-#define cyclicSlipFvsPatchField_H
+#ifndef Foam_cyclicSlipFvsPatchField_H
+#define Foam_cyclicSlipFvsPatchField_H
 
 #include "cyclicFvsPatchField.H"
 #include "cyclicSlipFvPatch.H"
@@ -54,6 +51,9 @@ class cyclicSlipFvsPatchField
 :
     public cyclicFvsPatchField<Type>
 {
+    typedef cyclicSlipFvsPatchField<Type> this_bctype;
+    typedef cyclicFvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -65,45 +65,48 @@ public:
         //- Construct from patch and internal field
         cyclicSlipFvsPatchField
         (
-            const fvPatch&,
-            const DimensionedField<Type, surfaceMesh>&
-        );
+            const fvPatch& p,
+            const DimensionedField<Type, surfaceMesh>& iF
+        )
+        :
+            parent_bctype(p, iF)
+        {}
 
         //- Construct from patch, internal field and dictionary
         cyclicSlipFvsPatchField
         (
-            const fvPatch&,
-            const DimensionedField<Type, surfaceMesh>&,
-            const dictionary&
-        );
+            const fvPatch& p,
+            const DimensionedField<Type, surfaceMesh>& iF,
+            const dictionary& dict
+        )
+        :
+            parent_bctype(p, iF, dict)
+        {}
 
-        //- Construct by mapping given cyclicSlipFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicSlipFvsPatchField
         (
-            const cyclicSlipFvsPatchField<Type>&,
-            const fvPatch&,
-            const DimensionedField<Type, surfaceMesh>&,
-            const fvPatchFieldMapper&
-        );
-
-        //- Construct as copy
-        cyclicSlipFvsPatchField
-        (
-            const cyclicSlipFvsPatchField<Type>&
-        );
+            const this_bctype& ptf,
+            const fvPatch& p,
+            const DimensionedField<Type, surfaceMesh>& iF,
+            const fvPatchFieldMapper& mapper
+        )
+        :
+            parent_bctype(ptf, p, iF, mapper)
+        {}
 
         //- Construct as copy setting internal field reference
         cyclicSlipFvsPatchField
         (
-            const cyclicSlipFvsPatchField<Type>&,
-            const DimensionedField<Type, surfaceMesh>&
-        );
+            const this_bctype& ptf,
+            const DimensionedField<Type, surfaceMesh>& iF
+        )
+        :
+            parent_bctype(ptf, iF)
+        {}
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cyclicSlipFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -113,18 +116,18 @@ public:
         {
             return fvsPatchField<Type>::Clone(*this, iF);
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#ifdef NoRepository
-    #include "cyclicSlipFvsPatchField.C"
-#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

@@ -70,7 +70,7 @@ See also
     Foam::Function1Types
 
 SourceFiles
-    timeVaryingMappedFixedValueFvPatchField.C
+    timeVaryingMappedFixedValueFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -94,6 +94,9 @@ class timeVaryingMappedFixedValueFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
+    typedef timeVaryingMappedFixedValueFvPatchField<Type> this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
+
     // Private Data
 
         autoPtr<PatchFunction1Types::MappedFile<Type>> uniformValue_;
@@ -122,34 +125,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given timeVaryingMappedFixedValueFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         timeVaryingMappedFixedValueFvPatchField
         (
-            const timeVaryingMappedFixedValueFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        timeVaryingMappedFixedValueFvPatchField
-        (
-            const timeVaryingMappedFixedValueFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         timeVaryingMappedFixedValueFvPatchField
         (
-            const timeVaryingMappedFixedValueFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        timeVaryingMappedFixedValueFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -187,6 +180,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -197,7 +196,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "timeVaryingMappedFixedValueFvPatchField.C"
+    #include "timeVaryingMappedFixedValueFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

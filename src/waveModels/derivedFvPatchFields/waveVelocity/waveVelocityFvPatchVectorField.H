@@ -53,8 +53,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef waveVelocityFvPatchVectorField_H
-#define waveVelocityFvPatchVectorField_H
+#ifndef Foam_waveVelocityFvPatchVectorField_H
+#define Foam_waveVelocityFvPatchVectorField_H
 
 #include "fixedValueFvPatchFields.H"
 
@@ -71,7 +71,10 @@ class waveVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
-    // Private data
+    typedef waveVelocityFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Dictionary name
         word waveDictName_;
@@ -100,35 +103,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  waveVelocityFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         waveVelocityFvPatchVectorField
         (
-            const waveVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        waveVelocityFvPatchVectorField
-        (
-            const waveVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         waveVelocityFvPatchVectorField
         (
-            const waveVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        waveVelocityFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -147,6 +139,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

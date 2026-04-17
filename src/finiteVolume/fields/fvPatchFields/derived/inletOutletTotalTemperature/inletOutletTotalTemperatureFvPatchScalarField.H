@@ -68,8 +68,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef inletOutletTotalTemperatureFvPatchScalarField_H
-#define inletOutletTotalTemperatureFvPatchScalarField_H
+#ifndef Foam_inletOutletTotalTemperatureFvPatchScalarField_H
+#define Foam_inletOutletTotalTemperatureFvPatchScalarField_H
 
 #include "inletOutletFvPatchFields.H"
 
@@ -86,6 +86,9 @@ class inletOutletTotalTemperatureFvPatchScalarField
 :
     public inletOutletFvPatchScalarField
 {
+    typedef inletOutletTotalTemperatureFvPatchScalarField this_bctype;
+    typedef inletOutletFvPatchScalarField parent_bctype;
+
     // Private data
 
         //- Name of the velocity field
@@ -124,34 +127,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  inletOutletTotalTemperatureFvPatchScalarField onto a new patch
+        //- Construct by mapping onto a new patch
         inletOutletTotalTemperatureFvPatchScalarField
         (
-            const inletOutletTotalTemperatureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        inletOutletTotalTemperatureFvPatchScalarField
-        (
-            const inletOutletTotalTemperatureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         inletOutletTotalTemperatureFvPatchScalarField
         (
-            const inletOutletTotalTemperatureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        inletOutletTotalTemperatureFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -204,6 +200,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

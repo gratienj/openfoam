@@ -121,7 +121,7 @@ atmNutUWallFunctionFvPatchScalarField::atmNutUWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutUWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     boundNut_(true),
     z0_(nullptr)
 {}
@@ -129,13 +129,13 @@ atmNutUWallFunctionFvPatchScalarField::atmNutUWallFunctionFvPatchScalarField
 
 atmNutUWallFunctionFvPatchScalarField::atmNutUWallFunctionFvPatchScalarField
 (
-    const atmNutUWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutUWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     boundNut_(ptf.boundNut_),
     z0_(ptf.z0_.clone(p.patch()))
 {}
@@ -148,7 +148,7 @@ atmNutUWallFunctionFvPatchScalarField::atmNutUWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutUWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     boundNut_(dict.getOrDefault<bool>("boundNut", true)),
     z0_(PatchFunction1<scalar>::New(p.patch(), "z0", dict))
 {}
@@ -156,22 +156,11 @@ atmNutUWallFunctionFvPatchScalarField::atmNutUWallFunctionFvPatchScalarField
 
 atmNutUWallFunctionFvPatchScalarField::atmNutUWallFunctionFvPatchScalarField
 (
-    const atmNutUWallFunctionFvPatchScalarField& rwfpsf
-)
-:
-    nutUWallFunctionFvPatchScalarField(rwfpsf),
-    boundNut_(rwfpsf.boundNut_),
-    z0_(rwfpsf.z0_.clone(this->patch().patch()))
-{}
-
-
-atmNutUWallFunctionFvPatchScalarField::atmNutUWallFunctionFvPatchScalarField
-(
-    const atmNutUWallFunctionFvPatchScalarField& rwfpsf,
+    const this_bctype& rwfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutUWallFunctionFvPatchScalarField(rwfpsf, iF),
+    parent_bctype(rwfpsf, iF),
     boundNut_(rwfpsf.boundNut_),
     z0_(rwfpsf.z0_.clone(this->patch().patch()))
 {}
@@ -184,7 +173,7 @@ void atmNutUWallFunctionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    nutUWallFunctionFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     if (z0_)
     {
@@ -199,12 +188,11 @@ void atmNutUWallFunctionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    nutUWallFunctionFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const atmNutUWallFunctionFvPatchScalarField& nrwfpsf =
-        refCast<const atmNutUWallFunctionFvPatchScalarField>(ptf);
+    const auto& nrwfpsf = refCast<const this_bctype>(ptf);
 
-    if (z0_)
+    if (z0_ && nrwfpsf.z0_)
     {
         z0_->rmap(nrwfpsf.z0_(), addr);
     }

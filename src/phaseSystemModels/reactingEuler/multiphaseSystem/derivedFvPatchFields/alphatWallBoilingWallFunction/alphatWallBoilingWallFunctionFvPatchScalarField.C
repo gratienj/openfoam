@@ -72,7 +72,7 @@ alphatWallBoilingWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     otherPhaseName_("vapor"),
     phaseType_(liquidPhase),
     relax_(),
@@ -113,7 +113,7 @@ alphatWallBoilingWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     otherPhaseName_(dict.get<word>("otherPhase")),
     phaseType_(phaseTypeNames_.get("phaseType", dict)),
     relax_(Function1<scalar>::New("relax", dict, &db())),
@@ -286,19 +286,13 @@ alphatWallBoilingWallFunctionFvPatchScalarField
 alphatWallBoilingWallFunctionFvPatchScalarField::
 alphatWallBoilingWallFunctionFvPatchScalarField
 (
-    const alphatWallBoilingWallFunctionFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
-    (
-        psf,
-        p,
-        iF,
-        mapper
-    ),
+    parent_bctype(psf, p, iF, mapper),
     otherPhaseName_(psf.otherPhaseName_),
     phaseType_(psf.phaseType_),
     relax_(psf.relax_.clone()),
@@ -326,42 +320,11 @@ alphatWallBoilingWallFunctionFvPatchScalarField
 alphatWallBoilingWallFunctionFvPatchScalarField::
 alphatWallBoilingWallFunctionFvPatchScalarField
 (
-    const alphatWallBoilingWallFunctionFvPatchScalarField& psf
-)
-:
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(psf),
-    otherPhaseName_(psf.otherPhaseName_),
-    phaseType_(psf.phaseType_),
-    relax_(psf.relax_.clone()),
-    AbyV_(psf.AbyV_),
-    alphatConv_(psf.alphatConv_),
-    dDep_(psf.dDep_),
-    qq_(psf.qq_),
-    K_(psf.K_),
-    partitioningModel_(psf.partitioningModel_),
-    nucleationSiteModel_(psf.nucleationSiteModel_),
-    departureDiamModel_(psf.departureDiamModel_),
-    nucleatingModel_(psf.nucleatingModel_),
-    filmBoilingModel_(psf.filmBoilingModel_),
-    LeidenfrostModel_(psf.LeidenfrostModel_),
-    CHFModel_(psf.CHFModel_),
-    CHFSoobModel_(psf.CHFSoobModel_),
-    MHFModel_(psf.MHFModel_),
-    TDNBModel_(psf.TDNBModel_),
-    wp_(psf.wp_),
-    liquidTatYplus_(psf.liquidTatYplus_),
-    regimeTypes_(psf.regimeTypes_)
-{}
-
-
-alphatWallBoilingWallFunctionFvPatchScalarField::
-alphatWallBoilingWallFunctionFvPatchScalarField
-(
-    const alphatWallBoilingWallFunctionFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     otherPhaseName_(psf.otherPhaseName_),
     phaseType_(psf.phaseType_),
     relax_(psf.relax_.clone()),

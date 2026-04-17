@@ -200,22 +200,17 @@ void mixtureKEpsilon<BasicTurbulenceModel>::correctInletOutlet
     const volScalarField& refVsf
 ) const
 {
-    volScalarField::Boundary& bf = vsf.boundaryFieldRef();
-    const volScalarField::Boundary& refBf =
-        refVsf.boundaryField();
+    auto& bf = vsf.boundaryFieldRef();
+    const auto& refBf = refVsf.boundaryField();
 
     forAll(bf, patchi)
     {
-        if
-        (
-            isA<inletOutletFvPatchScalarField>(bf[patchi])
-         && isA<inletOutletFvPatchScalarField>(refBf[patchi])
-        )
+        auto* tgt = isA_constCast<inletOutletFvPatchScalarField>(bf[patchi]);
+        const auto* src = isA<inletOutletFvPatchScalarField>(refBf[patchi]);
+
+        if (tgt && src)
         {
-            refCast<inletOutletFvPatchScalarField>
-            (bf[patchi]).refValue() =
-            refCast<const inletOutletFvPatchScalarField>
-            (refBf[patchi]).refValue();
+            tgt->refValue() = src->refValue();
         }
     }
 }

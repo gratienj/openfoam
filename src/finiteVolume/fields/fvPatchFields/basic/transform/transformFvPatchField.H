@@ -34,7 +34,7 @@ Description
     The "value" entry is NO_READ, NO_WRITE.
 
 SourceFiles
-    transformFvPatchField.C
+    transformFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class transformFvPatchField
 :
     public fvPatchField<Type>
 {
+    typedef transformFvPatchField<Type> this_bctype;
+    typedef fvPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -81,33 +84,32 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given transform patch field
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         transformFvPatchField
         (
-            const transformFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        transformFvPatchField
-        (
-            const transformFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         transformFvPatchField
         (
-            const transformFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const = 0;
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        transformFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
         (
             const DimensionedField<Type, volMesh>&
@@ -154,9 +156,12 @@ public:
             virtual tmp<Field<Type>> gradientBoundaryCoeffs() const;
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const fvPatchField<Type>&);
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -167,7 +172,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "transformFvPatchField.C"
+    #include "transformFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

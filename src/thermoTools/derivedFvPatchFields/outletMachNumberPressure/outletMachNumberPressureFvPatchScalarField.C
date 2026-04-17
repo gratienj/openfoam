@@ -42,7 +42,7 @@ outletMachNumberPressureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     M_(1),
     pBack_(0.0),
     c1_(0.0),
@@ -63,7 +63,7 @@ outletMachNumberPressureFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     M_(dict.getOrDefault<scalar>("M", 0)),
     pBack_(dict.get<scalar>("pBack")),
     c1_(dict.getOrDefault<scalar>("c1", 0)),
@@ -79,13 +79,13 @@ outletMachNumberPressureFvPatchScalarField
 Foam::outletMachNumberPressureFvPatchScalarField::
 outletMachNumberPressureFvPatchScalarField
 (
-    const outletMachNumberPressureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     M_(ptf.M_),
     pBack_(ptf.pBack_),
     c1_(ptf.c1_),
@@ -101,30 +101,11 @@ outletMachNumberPressureFvPatchScalarField
 Foam::outletMachNumberPressureFvPatchScalarField::
 outletMachNumberPressureFvPatchScalarField
 (
-    const outletMachNumberPressureFvPatchScalarField& tppsf
-)
-:
-    fixedValueFvPatchScalarField(tppsf),
-    M_(tppsf.M_),
-    pBack_(tppsf.pBack_),
-    c1_(tppsf.c1_),
-    A1_(tppsf.A1_),
-    phiName_(tppsf.phiName_),
-    rhoName_(tppsf.rhoName_),
-    UName_(tppsf.UName_),
-    choked_(tppsf.choked_),
-    relax_(tppsf.relax_)
-{}
-
-
-Foam::outletMachNumberPressureFvPatchScalarField::
-outletMachNumberPressureFvPatchScalarField
-(
-    const outletMachNumberPressureFvPatchScalarField& tppsf,
+    const this_bctype& tppsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(tppsf, iF),
+    parent_bctype(tppsf, iF),
     M_(tppsf.M_),
     pBack_(tppsf.pBack_),
     c1_(tppsf.c1_),
@@ -238,7 +219,7 @@ void Foam::outletMachNumberPressureFvPatchScalarField::updateCoeffs()
 
     operator==(pbNew);
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -93,7 +93,7 @@ ${typeName}FixedValueFvPatch${FieldType}
 :
     parent_bctype(p, iF)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/DimensionedField");
     }
@@ -104,7 +104,7 @@ Foam::
 ${typeName}FixedValueFvPatch${FieldType}::
 ${typeName}FixedValueFvPatch${FieldType}
 (
-    const ${typeName}FixedValueFvPatch${FieldType}& rhs,
+    const this_bctype& rhs,
     const fvPatch& p,
     const DimensionedField<${TemplateType}, volMesh>& iF,
     const fvPatchFieldMapper& mapper
@@ -112,7 +112,7 @@ ${typeName}FixedValueFvPatch${FieldType}
 :
     parent_bctype(rhs, p, iF, mapper)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/DimensionedField/mapper");
     }
@@ -130,7 +130,7 @@ ${typeName}FixedValueFvPatch${FieldType}
 :
     parent_bctype(p, iF, dict)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/dictionary");
     }
@@ -141,45 +141,15 @@ Foam::
 ${typeName}FixedValueFvPatch${FieldType}::
 ${typeName}FixedValueFvPatch${FieldType}
 (
-    const ${typeName}FixedValueFvPatch${FieldType}& rhs
-)
-:
-    parent_bctype(rhs),
-    dictionaryContent(rhs)
-{
-    if (${verbose:-false})
-    {
-        printMessage("Copy construct ${typeName}");
-    }
-}
-
-
-Foam::
-${typeName}FixedValueFvPatch${FieldType}::
-${typeName}FixedValueFvPatch${FieldType}
-(
-    const ${typeName}FixedValueFvPatch${FieldType}& rhs,
+    const this_bctype& rhs,
     const DimensionedField<${TemplateType}, volMesh>& iF
 )
 :
     parent_bctype(rhs, iF)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : copy/DimensionedField");
-    }
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::
-${typeName}FixedValueFvPatch${FieldType}::
-~${typeName}FixedValueFvPatch${FieldType}()
-{
-    if (${verbose:-false})
-    {
-        printMessage("Destroy ${typeName}");
     }
 }
 
@@ -195,7 +165,7 @@ ${typeName}FixedValueFvPatch${FieldType}::updateCoeffs()
         return;
     }
 
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("updateCoeffs ${typeName}");
     }

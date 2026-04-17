@@ -299,7 +299,7 @@ public:
             const dictionary& dict
         );
 
-        //- Construct by mapping given atmBoundaryLayer onto a new patch
+        //- Construct by mapping onto a new patch
         atmBoundaryLayer
         (
             const atmBoundaryLayer& abl,

@@ -96,6 +96,12 @@ class alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
 :
     public alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
 {
+    typedef alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField this_bctype;
+
+    typedef
+        alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
+        parent_bctype;
+
     // Private Data
 
         //- Name of the vapor phase
@@ -134,35 +140,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
         (
-            const alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
-        (
-            const alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
         (
-            const alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -196,6 +194,12 @@ public:
 
             //- Write
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

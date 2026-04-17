@@ -39,7 +39,7 @@ Foam::kaqRWallFunctionFvPatchScalarField::kaqRWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    kqRWallFunctionFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     adjointScalarBoundaryCondition(p, iF, word::null)
 {}
 
@@ -51,41 +51,31 @@ Foam::kaqRWallFunctionFvPatchScalarField::kaqRWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    kqRWallFunctionFvPatchField<scalar>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     adjointScalarBoundaryCondition(p, iF, dict.get<word>("solverName"))
 {}
 
 
 Foam::kaqRWallFunctionFvPatchScalarField::kaqRWallFunctionFvPatchScalarField
 (
-    const kaqRWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    kqRWallFunctionFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointScalarBoundaryCondition(p, iF, ptf.adjointSolverName_)
 {}
 
 
 Foam::kaqRWallFunctionFvPatchScalarField::kaqRWallFunctionFvPatchScalarField
 (
-    const kaqRWallFunctionFvPatchScalarField& tkqrwfpf
-)
-:
-    kqRWallFunctionFvPatchField<scalar>(tkqrwfpf),
-    adjointScalarBoundaryCondition(tkqrwfpf)
-{}
-
-
-Foam::kaqRWallFunctionFvPatchScalarField::kaqRWallFunctionFvPatchScalarField
-(
-    const kaqRWallFunctionFvPatchScalarField& tkqrwfpf,
+    const this_bctype& tkqrwfpf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    kqRWallFunctionFvPatchField<scalar>(tkqrwfpf, iF),
+    parent_bctype(tkqrwfpf, iF),
     adjointScalarBoundaryCondition(tkqrwfpf)
 {}
 
@@ -114,8 +104,7 @@ void Foam::kaqRWallFunctionFvPatchScalarField::manipulateMatrix
         const scalarField& y = turbModel.y()[patchi];
         const tmp<scalarField> tnuw = turbModel.nu(patchi);
         const scalarField& nuw = tnuw();
-        const nutWallFunctionFvPatchScalarField& nutWF =
-            refCast<nutWallFunctionFvPatchScalarField>(nutWall);
+        const auto& nutWF = refCast<nutWallFunctionFvPatchScalarField>(nutWall);
         const wallFunctionCoefficients& wallCoeffs = nutWF.wallCoeffs();
         const scalar Cmu = wallCoeffs.Cmu();
         const scalar kappa = wallCoeffs.kappa();
@@ -156,7 +145,7 @@ void Foam::kaqRWallFunctionFvPatchScalarField::manipulateMatrix
 
 void Foam::kaqRWallFunctionFvPatchScalarField::write(Ostream& os) const
 {
-    kqRWallFunctionFvPatchField<scalar>::write(os);
+    this->parent_bctype::write(os);
     os.writeEntry("solverName", adjointSolverName_);
 }
 

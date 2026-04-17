@@ -46,7 +46,7 @@ convectiveHeatTransferFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     L_(1.0)
 {}
 
@@ -54,13 +54,13 @@ convectiveHeatTransferFvPatchScalarField
 convectiveHeatTransferFvPatchScalarField::
 convectiveHeatTransferFvPatchScalarField
 (
-    const convectiveHeatTransferFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     L_(ptf.L_)
 {}
 
@@ -73,7 +73,7 @@ convectiveHeatTransferFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     L_(dict.get<scalar>("L"))
 {}
 
@@ -81,22 +81,11 @@ convectiveHeatTransferFvPatchScalarField
 convectiveHeatTransferFvPatchScalarField::
 convectiveHeatTransferFvPatchScalarField
 (
-    const convectiveHeatTransferFvPatchScalarField& htcpsf
-)
-:
-    fixedValueFvPatchScalarField(htcpsf),
-    L_(htcpsf.L_)
-{}
-
-
-convectiveHeatTransferFvPatchScalarField::
-convectiveHeatTransferFvPatchScalarField
-(
-    const convectiveHeatTransferFvPatchScalarField& htcpsf,
+    const this_bctype& htcpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(htcpsf, iF),
+    parent_bctype(htcpsf, iF),
     L_(htcpsf.L_)
 {}
 
@@ -154,7 +143,7 @@ void convectiveHeatTransferFvPatchScalarField::updateCoeffs()
         }
     }
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

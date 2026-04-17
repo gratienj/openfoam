@@ -40,7 +40,7 @@ Usage
     Otherwise uses zero-gradient values.
 
 SourceFiles
-    exprValuePointPatchField.C
+    exprValuePointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -66,7 +66,7 @@ class exprValuePointPatchField
     public valuePointPatchField<Type>,
     public expressions::patchExprFieldBase
 {
-    //- The parent boundary condition type
+    typedef exprValuePointPatchField<Type> this_bctype;
     typedef valuePointPatchField<Type> parent_bctype;
 
 
@@ -107,7 +107,7 @@ public:
         //- Construct by mapping onto a new patch
         exprValuePointPatchField
         (
-            const exprValuePointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
@@ -116,23 +116,14 @@ public:
         //- Construct as copy setting internal field reference
         exprValuePointPatchField
         (
-            const exprValuePointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Construct as copy
-        exprValuePointPatchField
-        (
-            const exprValuePointPatchField<Type>&
-        );
+        //- No copy without an internal field
+        exprValuePointPatchField(const this_bctype&) = delete;
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -149,6 +140,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -159,7 +156,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#    include "exprValuePointPatchField.C"
+    #include "exprValuePointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

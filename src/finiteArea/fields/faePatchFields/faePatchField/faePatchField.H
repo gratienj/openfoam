@@ -40,9 +40,9 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    faePatchField.C
-    faePatchFieldBase.C
-    faePatchFieldNew.C
+    faePatchField.txx
+    faePatchFieldBase.cxx
+    faePatchFieldNew.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -378,7 +378,7 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::LAZY_READ
         );
 
-        //- Construct by mapping the given faePatchField onto a new patch
+        //- Construct by mapping onto a new patch
         faePatchField
         (
             const faePatchField<Type>&,
@@ -403,20 +403,16 @@ public:
             const DimensionedField<Type, edgeMesh>& iF
         );
 
-        //- Copy construct
-        faePatchField(const faePatchField<Type>& pfld)
-        :
-            faePatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        faePatchField(const faePatchField&) = delete;
 
-
-        //- Clone patch field with its own internal field reference
+        //- No clone without an internal field reference.
+        //  \note declared, but only for PtrList compilation requirements.
+        //  The \c tmp should normally contain a pointer in that context.
         virtual tmp<faePatchField<Type>> clone() const
         {
-            return tmp<faePatchField<Type>>
-            (
-                new faePatchField<Type>(*this, this->internalField_)
-            );
+            NotImplemented;
+            return nullptr;
         }
 
         //- Clone with an internal field reference
@@ -633,8 +629,8 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "faePatchField.C"
-    #include "faePatchFieldNew.C"
+    #include "faePatchField.txx"
+    #include "faePatchFieldNew.txx"
     #include "calculatedFaePatchField.H"
 #endif
 

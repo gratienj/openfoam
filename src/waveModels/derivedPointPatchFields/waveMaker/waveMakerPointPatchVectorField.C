@@ -143,7 +143,7 @@ Foam::waveMakerPointPatchVectorField::waveMakerPointPatchVectorField
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchField<vector>(p, iF),
+    parent_bctype(p, iF),
     motionType_(motionTypes::piston),
     n_(Zero),
     gHat_(Zero),
@@ -166,7 +166,7 @@ Foam::waveMakerPointPatchVectorField::waveMakerPointPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValuePointPatchField<vector>(p, iF, dict, IOobjectOption::NO_READ),
+    parent_bctype(p, iF, dict, IOobjectOption::NO_READ),
     motionType_(motionTypeNames.get("motionType", dict)),
     n_(dict.get<vector>("n")),
     gHat_(Zero),
@@ -221,13 +221,13 @@ Foam::waveMakerPointPatchVectorField::waveMakerPointPatchVectorField
 
 Foam::waveMakerPointPatchVectorField::waveMakerPointPatchVectorField
 (
-    const waveMakerPointPatchVectorField& ptf,
+    const this_bctype& ptf,
     const pointPatch& p,
     const DimensionedField<vector, pointMesh>& iF,
     const pointPatchFieldMapper& mapper
 )
 :
-    fixedValuePointPatchField<vector>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     motionType_(ptf.motionType_),
     n_(ptf.n_),
     gHat_(ptf.gHat_),
@@ -245,11 +245,11 @@ Foam::waveMakerPointPatchVectorField::waveMakerPointPatchVectorField
 
 Foam::waveMakerPointPatchVectorField::waveMakerPointPatchVectorField
 (
-    const waveMakerPointPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchField<vector>(ptf, iF),
+    parent_bctype(ptf, iF),
     motionType_(ptf.motionType_),
     n_(ptf.n_),
     gHat_(ptf.gHat_),
@@ -442,7 +442,7 @@ void Foam::waveMakerPointPatchVectorField::updateCoeffs()
         }
     }
 
-    fixedValuePointPatchField<vector>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

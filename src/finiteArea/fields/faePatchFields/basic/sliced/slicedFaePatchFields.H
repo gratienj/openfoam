@@ -26,11 +26,6 @@ License
 InClass
     Foam::slicedFaePatchFields
 
-Description
-
-SourceFiles
-    slicedFaePatchFields.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef Foam_slicedFaePatchFields_H

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2018-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -96,20 +96,22 @@ public:
         inline constexpr PtrList() noexcept;
 
         //- Construct with specified size, each element initialized to nullptr
-        inline explicit PtrList(const label len);
+        inline explicit PtrList(label len);
 
         //- Copy construct using 'clone()' method on each element
         inline PtrList(const PtrList<T>& list);
+
+        //- Copy construct using 'clone(arg, ...)' method on each element
+        //  \note the first clone argument is 'const&' and not '&&' to
+        //  avoid selection ambiguity with the INew constructor version.
+        template<class CloneArg, class... CloneArgs>
+        inline PtrList(const PtrList<T>&, const CloneArg&, CloneArgs&&...);
 
         //- Move construct
         inline PtrList(PtrList<T>&& list) noexcept;
 
         //- Take ownership of pointers in the list, set old pointers to null.
         inline explicit PtrList(UList<T*>& list);
-
-        //- Copy construct using 'clone()' method on each element
-        template<class CloneArg>
-        inline PtrList(const PtrList<T>& list, const CloneArg& cloneArgs);
 
         //- Construct as copy or re-use as specified
         inline PtrList(PtrList<T>& list, bool reuse);

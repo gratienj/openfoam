@@ -46,7 +46,7 @@ alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     vaporPhaseName_("vapor"),
     relax_(1.0),
     fixedDmdt_(0.0),
@@ -64,7 +64,7 @@ alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     vaporPhaseName_(dict.get<word>("vaporPhase")),
     relax_(dict.getOrDefault<scalar>("relax", 1)),
     fixedDmdt_(dict.getOrDefault<scalar>("fixedDmdt", 0)),
@@ -75,19 +75,13 @@ alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
 alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField::
 alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
 (
-    const alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField
-    (
-        psf,
-        p,
-        iF,
-        mapper
-    ),
+    parent_bctype(psf, p, iF, mapper),
     vaporPhaseName_(psf.vaporPhaseName_),
     relax_(psf.relax_),
     fixedDmdt_(psf.fixedDmdt_),
@@ -98,25 +92,11 @@ alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
 alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField::
 alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
 (
-    const alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField& psf
-)
-:
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(psf),
-    vaporPhaseName_(psf.vaporPhaseName_),
-    relax_(psf.relax_),
-    fixedDmdt_(psf.fixedDmdt_),
-    L_(psf.L_)
-{}
-
-
-alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField::
-alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField
-(
-    const alphatFixedDmdtWallBoilingWallFunctionFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphatPhaseChangeJayatillekeWallFunctionFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     vaporPhaseName_(psf.vaporPhaseName_),
     relax_(psf.relax_),
     fixedDmdt_(psf.fixedDmdt_),

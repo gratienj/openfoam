@@ -92,7 +92,7 @@ ${typeName}MixedValueFvPatch${FieldType}
 :
     parent_bctype(p, iF)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/DimensionedField");
     }
@@ -103,7 +103,7 @@ Foam::
 ${typeName}MixedValueFvPatch${FieldType}::
 ${typeName}MixedValueFvPatch${FieldType}
 (
-    const ${typeName}MixedValueFvPatch${FieldType}& rhs,
+    const this_bctype& rhs,
     const fvPatch& p,
     const DimensionedField<${TemplateType}, volMesh>& iF,
     const fvPatchFieldMapper& mapper
@@ -111,7 +111,7 @@ ${typeName}MixedValueFvPatch${FieldType}
 :
     parent_bctype(rhs, p, iF, mapper)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/DimensionedField/mapper");
     }
@@ -129,7 +129,7 @@ ${typeName}MixedValueFvPatch${FieldType}
 :
     parent_bctype(p, iF, dict)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/dictionary");
     }
@@ -140,45 +140,15 @@ Foam::
 ${typeName}MixedValueFvPatch${FieldType}::
 ${typeName}MixedValueFvPatch${FieldType}
 (
-    const ${typeName}MixedValueFvPatch${FieldType}& rhs
-)
-:
-    parent_bctype(rhs),
-    dictionaryContent(rhs)
-{
-    if (${verbose:-false})
-    {
-        printMessage("Copy construct ${typeName}");
-    }
-}
-
-
-Foam::
-${typeName}MixedValueFvPatch${FieldType}::
-${typeName}MixedValueFvPatch${FieldType}
-(
-    const ${typeName}MixedValueFvPatch${FieldType}& rhs,
+    const this_bctype& rhs,
     const DimensionedField<${TemplateType}, volMesh>& iF
 )
 :
     parent_bctype(rhs, iF)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : copy/DimensionedField");
-    }
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::
-${typeName}MixedValueFvPatch${FieldType}::
-~${typeName}MixedValueFvPatch${FieldType}()
-{
-    if (${verbose:-false})
-    {
-        printMessage("Destroy ${typeName}");
     }
 }
 
@@ -194,7 +164,7 @@ ${typeName}MixedValueFvPatch${FieldType}::updateCoeffs()
         return;
     }
 
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("updateCoeffs ${typeName}");
     }

@@ -41,7 +41,7 @@ Foam::smoluchowskiJumpTFvPatchScalarField::smoluchowskiJumpTFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     UName_("U"),
     rhoName_("rho"),
     psiName_("thermo:psi"),
@@ -58,13 +58,13 @@ Foam::smoluchowskiJumpTFvPatchScalarField::smoluchowskiJumpTFvPatchScalarField
 
 Foam::smoluchowskiJumpTFvPatchScalarField::smoluchowskiJumpTFvPatchScalarField
 (
-    const smoluchowskiJumpTFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     UName_(ptf.UName_),
     rhoName_(ptf.rhoName_),
     psiName_(ptf.psiName_),
@@ -82,7 +82,7 @@ Foam::smoluchowskiJumpTFvPatchScalarField::smoluchowskiJumpTFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     UName_(dict.getOrDefault<word>("U", "U")),
     rhoName_(dict.getOrDefault<word>("rho", "rho")),
     psiName_(dict.getOrDefault<word>("psi", "thermo:psi")),
@@ -117,11 +117,11 @@ Foam::smoluchowskiJumpTFvPatchScalarField::smoluchowskiJumpTFvPatchScalarField
 
 Foam::smoluchowskiJumpTFvPatchScalarField::smoluchowskiJumpTFvPatchScalarField
 (
-    const smoluchowskiJumpTFvPatchScalarField& ptpsf,
+    const this_bctype& ptpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(ptpsf, iF),
+    parent_bctype(ptpsf, iF),
     accommodationCoeff_(ptpsf.accommodationCoeff_),
     Twall_(ptpsf.Twall_),
     gamma_(ptpsf.gamma_)
@@ -136,7 +136,7 @@ void Foam::smoluchowskiJumpTFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    mixedFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 }
 
 
@@ -147,7 +147,7 @@ void Foam::smoluchowskiJumpTFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchField<scalar>::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 }
 
 
@@ -190,7 +190,7 @@ void Foam::smoluchowskiJumpTFvPatchScalarField::updateCoeffs()
     refValue() = Twall_;
     refGrad() = 0.0;
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

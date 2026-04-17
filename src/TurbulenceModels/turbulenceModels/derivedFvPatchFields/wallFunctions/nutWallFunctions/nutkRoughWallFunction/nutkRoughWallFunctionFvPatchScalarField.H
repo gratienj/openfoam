@@ -90,6 +90,9 @@ class nutkRoughWallFunctionFvPatchScalarField
 :
     public nutkWallFunctionFvPatchScalarField
 {
+    typedef nutkRoughWallFunctionFvPatchScalarField this_bctype;
+    typedef nutkWallFunctionFvPatchScalarField parent_bctype;
+
 protected:
 
     // Protected Data
@@ -136,35 +139,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- nutkRoughWallFunctionFvPatchScalarField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         nutkRoughWallFunctionFvPatchScalarField
         (
-            const nutkRoughWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        nutkRoughWallFunctionFvPatchScalarField
-        (
-            const nutkRoughWallFunctionFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         nutkRoughWallFunctionFvPatchScalarField
         (
-            const nutkRoughWallFunctionFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        nutkRoughWallFunctionFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -210,6 +202,12 @@ public:
 
             //- Write
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

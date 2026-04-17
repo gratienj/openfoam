@@ -52,6 +52,9 @@ class alphaFixedPressureFvPatchScalarField
 :
     public fixedValueFvPatchScalarField
 {
+    typedef alphaFixedPressureFvPatchScalarField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
     // Private data
 
         //- Fixed pressure
@@ -81,34 +84,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given alphaFixedPressureFvPatchScalarField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         alphaFixedPressureFvPatchScalarField
         (
-            const alphaFixedPressureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        alphaFixedPressureFvPatchScalarField
-        (
-            const alphaFixedPressureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         alphaFixedPressureFvPatchScalarField
         (
-            const alphaFixedPressureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        alphaFixedPressureFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -161,6 +154,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

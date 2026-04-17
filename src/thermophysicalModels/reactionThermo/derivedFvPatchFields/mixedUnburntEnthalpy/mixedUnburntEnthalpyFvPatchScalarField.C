@@ -40,7 +40,7 @@ mixedUnburntEnthalpyFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {
     refValue() = Zero;
     refGrad() = Zero;
@@ -51,13 +51,13 @@ mixedUnburntEnthalpyFvPatchScalarField
 Foam::mixedUnburntEnthalpyFvPatchScalarField::
 mixedUnburntEnthalpyFvPatchScalarField
 (
-    const mixedUnburntEnthalpyFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -69,28 +69,18 @@ mixedUnburntEnthalpyFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::mixedUnburntEnthalpyFvPatchScalarField::
 mixedUnburntEnthalpyFvPatchScalarField
 (
-    const mixedUnburntEnthalpyFvPatchScalarField& tppsf
-)
-:
-    mixedFvPatchScalarField(tppsf)
-{}
-
-
-Foam::mixedUnburntEnthalpyFvPatchScalarField::
-mixedUnburntEnthalpyFvPatchScalarField
-(
-    const mixedUnburntEnthalpyFvPatchScalarField& tppsf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(tppsf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -111,7 +101,7 @@ void Foam::mixedUnburntEnthalpyFvPatchScalarField::updateCoeffs()
     const label patchi = patch().index();
 
     const scalarField& pw = thermo.p().boundaryField()[patchi];
-    mixedFvPatchScalarField& Tw = refCast<mixedFvPatchScalarField>
+    auto& Tw = refCast<mixedFvPatchScalarField>
     (
         const_cast<fvPatchScalarField&>(thermo.Tu().boundaryField()[patchi])
     );
@@ -127,7 +117,7 @@ void Foam::mixedUnburntEnthalpyFvPatchScalarField::updateCoeffs()
           - thermo.heu(pw, Tw, patch().faceCells())
         );
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -30,19 +30,19 @@ fvPatchFields/derived/surfaceSlipDisplacement/surfaceSlipDisplacementFvPatchFiel
 
 derivedPoint = pointPatchFields/derived
 
-$(derivedPoint)/oscillatingVelocity/oscillatingVelocityPointPatchVectorField.C
-$(derivedPoint)/angularOscillatingVelocity/angularOscillatingVelocityPointPatchVectorField.C
+$(derivedPoint)/oscillatingVelocity/oscillatingVelocityPointPatchVectorField.cxx
+$(derivedPoint)/angularOscillatingVelocity/angularOscillatingVelocityPointPatchVectorField.cxx
 
-$(derivedPoint)/oscillatingDisplacement/oscillatingDisplacementPointPatchVectorField.C
-$(derivedPoint)/angularOscillatingDisplacement/angularOscillatingDisplacementPointPatchVectorField.C
-$(derivedPoint)/surfaceSlipDisplacement/surfaceSlipDisplacementPointPatchVectorField.C
-$(derivedPoint)/surfaceDisplacement/surfaceDisplacementPointPatchVectorField.C
-$(derivedPoint)/waveDisplacement/waveDisplacementPointPatchVectorField.C
-$(derivedPoint)/edgeSlipDisplacement/edgeSlipDisplacementPointPatchVectorField.C
-$(derivedPoint)/pointAttractionDisplacement/pointAttractionDisplacementPointPatchVectorField.C
+$(derivedPoint)/oscillatingDisplacement/oscillatingDisplacementPointPatchVectorField.cxx
+$(derivedPoint)/angularOscillatingDisplacement/angularOscillatingDisplacementPointPatchVectorField.cxx
+$(derivedPoint)/surfaceSlipDisplacement/surfaceSlipDisplacementPointPatchVectorField.cxx
+$(derivedPoint)/surfaceDisplacement/surfaceDisplacementPointPatchVectorField.cxx
+$(derivedPoint)/waveDisplacement/waveDisplacementPointPatchVectorField.cxx
+$(derivedPoint)/edgeSlipDisplacement/edgeSlipDisplacementPointPatchVectorField.cxx
+$(derivedPoint)/pointAttractionDisplacement/pointAttractionDisplacementPointPatchVectorField.cxx
 
-$(derivedPoint)/timeVaryingMappedFixedValue/timeVaryingMappedFixedValuePointPatchFields.C
-$(derivedPoint)/uniformInterpolatedDisplacement/uniformInterpolatedDisplacementPointPatchVectorField.C
+$(derivedPoint)/timeVaryingMappedFixedValue/timeVaryingMappedFixedValuePointPatchFields.cxx
+$(derivedPoint)/uniformInterpolatedDisplacement/uniformInterpolatedDisplacementPointPatchVectorField.cxx
 
 
 LIB = $(FOAM_LIBBIN)/libfvMotionSolvers

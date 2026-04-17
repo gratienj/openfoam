@@ -31,7 +31,7 @@ Description
     An exprResultStack with persistence.
 
 SourceFiles
-    exprResultStoredStack.C
+    exprResultStoredStack.cxx
 
 \*---------------------------------------------------------------------------*/
 
@@ -100,6 +100,9 @@ public:
 
         //- Copy assignment
         void operator=(const exprResultStoredStack& rhs);
+
+        //- Inherit assignment
+        using exprResultStack::operator=;
 };
 
 

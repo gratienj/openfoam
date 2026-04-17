@@ -40,20 +40,20 @@ gradientEnergyFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::gradientEnergyFvPatchScalarField::
 gradientEnergyFvPatchScalarField
 (
-    const gradientEnergyFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedGradientFvPatchScalarField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -65,28 +65,18 @@ gradientEnergyFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedGradientFvPatchScalarField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::gradientEnergyFvPatchScalarField::
 gradientEnergyFvPatchScalarField
 (
-    const gradientEnergyFvPatchScalarField& tppsf
-)
-:
-    fixedGradientFvPatchScalarField(tppsf)
-{}
-
-
-Foam::gradientEnergyFvPatchScalarField::
-gradientEnergyFvPatchScalarField
-(
-    const gradientEnergyFvPatchScalarField& tppsf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(tppsf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -103,7 +93,7 @@ void Foam::gradientEnergyFvPatchScalarField::updateCoeffs()
     const label patchi = patch().index();
 
     const scalarField& pw = thermo.p().boundaryField()[patchi];
-    fvPatchScalarField& Tw =
+    auto& Tw =
         const_cast<fvPatchScalarField&>(thermo.T().boundaryField()[patchi]);
 
     Tw.evaluate();
@@ -115,7 +105,7 @@ void Foam::gradientEnergyFvPatchScalarField::updateCoeffs()
           - thermo.he(pw, Tw, patch().faceCells())
         );
 
-    fixedGradientFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -141,7 +141,7 @@ atmEpsilonWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    epsilonWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     z0_(nullptr)
 {}
 
@@ -149,13 +149,13 @@ atmEpsilonWallFunctionFvPatchScalarField
 Foam::atmEpsilonWallFunctionFvPatchScalarField::
 atmEpsilonWallFunctionFvPatchScalarField
 (
-    const atmEpsilonWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    epsilonWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     z0_(ptf.z0_.clone(p.patch()))
 {}
 
@@ -168,7 +168,7 @@ atmEpsilonWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    epsilonWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     z0_(PatchFunction1<scalar>::New(p.patch(), "z0", dict))
 {}
 
@@ -176,22 +176,11 @@ atmEpsilonWallFunctionFvPatchScalarField
 Foam::atmEpsilonWallFunctionFvPatchScalarField::
 atmEpsilonWallFunctionFvPatchScalarField
 (
-    const atmEpsilonWallFunctionFvPatchScalarField& ewfpsf
-)
-:
-    epsilonWallFunctionFvPatchScalarField(ewfpsf),
-    z0_(ewfpsf.z0_.clone(this->patch().patch()))
-{}
-
-
-Foam::atmEpsilonWallFunctionFvPatchScalarField::
-atmEpsilonWallFunctionFvPatchScalarField
-(
-    const atmEpsilonWallFunctionFvPatchScalarField& ewfpsf,
+    const this_bctype& ewfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    epsilonWallFunctionFvPatchScalarField(ewfpsf, iF),
+    parent_bctype(ewfpsf, iF),
     z0_(ewfpsf.z0_.clone(this->patch().patch()))
 {}
 
@@ -203,7 +192,7 @@ void Foam::atmEpsilonWallFunctionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    epsilonWallFunctionFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     if (z0_)
     {
@@ -218,11 +207,11 @@ void Foam::atmEpsilonWallFunctionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    epsilonWallFunctionFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& atmpsf =
-        refCast<const atmEpsilonWallFunctionFvPatchScalarField>(ptf);
-    if (z0_)
+    const auto& atmpsf = refCast<const this_bctype>(ptf);
+
+    if (z0_ && atmpsf.z0_)
     {
         z0_->rmap(atmpsf.z0_(), addr);
     }

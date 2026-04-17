@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    basicSymmetryFaPatchField.C
+    basicSymmetryFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,6 +58,9 @@ class basicSymmetryFaPatchField
 :
     public transformFaPatchField<Type>
 {
+    typedef basicSymmetryFaPatchField<Type> this_bctype;
+    typedef transformFaPatchField<Type> parent_bctype;
+
 public:
 
     // Constructors
@@ -78,34 +81,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given basicSymmetryFaPatchField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         basicSymmetryFaPatchField
         (
-            const basicSymmetryFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Default copy construct
-        basicSymmetryFaPatchField
-        (
-            const basicSymmetryFaPatchField<Type>&
-        ) = default;
-
         //- Construct as copy setting internal field reference
         basicSymmetryFaPatchField
         (
-            const basicSymmetryFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        basicSymmetryFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -137,8 +130,8 @@ public:
 
     // Member Operators
 
-        //- Inherit assignment operators
-        using transformFaPatchField<Type>::operator=;
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -149,7 +142,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "basicSymmetryFaPatchField.C"
+    #include "basicSymmetryFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

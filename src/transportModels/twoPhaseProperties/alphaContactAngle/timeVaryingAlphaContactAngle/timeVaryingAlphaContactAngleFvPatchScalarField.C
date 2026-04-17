@@ -41,7 +41,7 @@ timeVaryingAlphaContactAngleFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     t0_(0.0),
     thetaT0_(0.0),
     te_(0.0),
@@ -52,13 +52,13 @@ timeVaryingAlphaContactAngleFvPatchScalarField
 Foam::timeVaryingAlphaContactAngleFvPatchScalarField::
 timeVaryingAlphaContactAngleFvPatchScalarField
 (
-    const timeVaryingAlphaContactAngleFvPatchScalarField& gcpsf,
+    const this_bctype& gcpsf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(gcpsf, p, iF, mapper),
+    parent_bctype(gcpsf, p, iF, mapper),
     t0_(gcpsf.t0_),
     thetaT0_(gcpsf.thetaT0_),
     te_(gcpsf.te_),
@@ -74,7 +74,7 @@ timeVaryingAlphaContactAngleFvPatchScalarField
     const dictionary& dict
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     t0_(dict.get<scalar>("t0")),
     thetaT0_(dict.get<scalar>("thetaT0")),
     te_(dict.get<scalar>("te")),
@@ -87,11 +87,11 @@ timeVaryingAlphaContactAngleFvPatchScalarField
 Foam::timeVaryingAlphaContactAngleFvPatchScalarField::
 timeVaryingAlphaContactAngleFvPatchScalarField
 (
-    const timeVaryingAlphaContactAngleFvPatchScalarField& gcpsf,
+    const this_bctype& gcpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(gcpsf, iF),
+    parent_bctype(gcpsf, iF),
     t0_(gcpsf.t0_),
     thetaT0_(gcpsf.thetaT0_),
     te_(gcpsf.te_),
@@ -133,7 +133,7 @@ void Foam::timeVaryingAlphaContactAngleFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    alphaContactAngleTwoPhaseFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     os.writeEntry("t0", t0_);
     os.writeEntry("thetaT0", thetaT0_);
     os.writeEntry("te", te_);

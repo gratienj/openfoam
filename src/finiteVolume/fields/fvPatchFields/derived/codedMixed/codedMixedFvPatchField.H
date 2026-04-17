@@ -103,7 +103,7 @@ See also
     Foam::functionEntries::codeStream
 
 SourceFiles
-    codedMixedFvPatchField.C
+    codedMixedFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -128,7 +128,7 @@ class codedMixedFvPatchField
     public mixedFvPatchField<Type>,
     public codedBase
 {
-    //- The parent boundary condition type
+    typedef codedMixedFvPatchField<Type> this_bctype;
     typedef mixedFvPatchField<Type> parent_bctype;
 
 
@@ -199,34 +199,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given codedMixedFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         codedMixedFvPatchField
         (
-            const codedMixedFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        codedMixedFvPatchField
-        (
-            const codedMixedFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         codedMixedFvPatchField
         (
-            const codedMixedFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        codedMixedFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -256,6 +246,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -266,7 +262,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "codedMixedFvPatchField.C"
+    #include "codedMixedFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

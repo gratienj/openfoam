@@ -88,8 +88,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef prghPermeableAlphaTotalPressureFvPatchScalarField_H
-#define prghPermeableAlphaTotalPressureFvPatchScalarField_H
+#ifndef Foam_prghPermeableAlphaTotalPressureFvPatchScalarField_H
+#define Foam_prghPermeableAlphaTotalPressureFvPatchScalarField_H
 
 #include "mixedFvPatchField.H"
 #include "volFields.H"
@@ -111,6 +111,9 @@ class prghPermeableAlphaTotalPressureFvPatchScalarField
     public mixedFvPatchField<scalar>,
     public updateablePatchTypes::updateableSnGrad
 {
+    typedef prghPermeableAlphaTotalPressureFvPatchScalarField this_bctype;
+    typedef mixedFvPatchField<scalar> parent_bctype;
+
     // Private Data
 
         //- Total pressure field
@@ -158,35 +161,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- prghPermeableAlphaTotalPressureFvPatchScalarField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         prghPermeableAlphaTotalPressureFvPatchScalarField
         (
-            const prghPermeableAlphaTotalPressureFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        prghPermeableAlphaTotalPressureFvPatchScalarField
-        (
-            const prghPermeableAlphaTotalPressureFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         prghPermeableAlphaTotalPressureFvPatchScalarField
         (
-            const prghPermeableAlphaTotalPressureFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        prghPermeableAlphaTotalPressureFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -227,6 +222,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

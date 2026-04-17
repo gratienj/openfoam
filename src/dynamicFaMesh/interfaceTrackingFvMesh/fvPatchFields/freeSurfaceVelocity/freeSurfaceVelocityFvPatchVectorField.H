@@ -57,6 +57,9 @@ class freeSurfaceVelocityFvPatchVectorField
 :
     public fixedGradientFvPatchVectorField
 {
+    typedef freeSurfaceVelocityFvPatchVectorField this_bctype;
+    typedef fixedGradientFvPatchVectorField parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -80,11 +83,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given freeSurfaceVelocityFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         freeSurfaceVelocityFvPatchVectorField
         (
-            const freeSurfaceVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
@@ -93,15 +95,12 @@ public:
         //- Construct as copy setting internal field reference
         freeSurfaceVelocityFvPatchVectorField
         (
-            const freeSurfaceVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        freeSurfaceVelocityFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -120,6 +119,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

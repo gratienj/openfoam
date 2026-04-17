@@ -66,7 +66,7 @@ See also
     Foam::inletOutletFaPatchField
 
 SourceFiles
-    outletInletFaPatchField.C
+    outletInletFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -89,6 +89,9 @@ class outletInletFaPatchField
 :
     public mixedFaPatchField<Type>
 {
+    typedef outletInletFaPatchField<Type> this_bctype;
+    typedef mixedFaPatchField<Type> parent_bctype;
+
 protected:
 
     // Protected Data
@@ -120,33 +123,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given outletInletFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         outletInletFaPatchField
         (
-            const outletInletFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        outletInletFaPatchField
-        (
-            const outletInletFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         outletInletFaPatchField
         (
-            const outletInletFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        outletInletFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -165,6 +159,12 @@ public:
 
         //- Write includes "value" entry
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -175,7 +175,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "outletInletFaPatchField.C"
+    #include "outletInletFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

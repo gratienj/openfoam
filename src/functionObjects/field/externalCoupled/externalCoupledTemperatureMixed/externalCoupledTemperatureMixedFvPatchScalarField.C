@@ -86,7 +86,7 @@ externalCoupledTemperatureMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    externalCoupledMixedFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     outTempType_(outputTemperatureType::WALL),
     refTempType_(refTemperatureType::CELL),
     Tref_(nullptr)
@@ -96,13 +96,13 @@ externalCoupledTemperatureMixedFvPatchScalarField
 Foam::externalCoupledTemperatureMixedFvPatchScalarField::
 externalCoupledTemperatureMixedFvPatchScalarField
 (
-    const externalCoupledTemperatureMixedFvPatchScalarField& rhs,
+    const this_bctype& rhs,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    externalCoupledMixedFvPatchField<scalar>(rhs, p, iF, mapper),
+    parent_bctype(rhs, p, iF, mapper),
     outTempType_(rhs.outTempType_),
     refTempType_(rhs.refTempType_),
     Tref_(rhs.Tref_.clone())
@@ -117,8 +117,8 @@ externalCoupledTemperatureMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    //externalCoupledMixedFvPatchField<scalar>(p, iF, dict)
-    externalCoupledMixedFvPatchField<scalar>(p, iF),
+    //parent_bctype(p, iF, dict)
+    parent_bctype(p, iF),
     outTempType_(outputTemperatureType::WALL),
     refTempType_
     (
@@ -174,24 +174,11 @@ externalCoupledTemperatureMixedFvPatchScalarField
 Foam::externalCoupledTemperatureMixedFvPatchScalarField::
 externalCoupledTemperatureMixedFvPatchScalarField
 (
-    const externalCoupledTemperatureMixedFvPatchScalarField& rhs
-)
-:
-    externalCoupledMixedFvPatchField<scalar>(rhs),
-    outTempType_(rhs.outTempType_),
-    refTempType_(rhs.refTempType_),
-    Tref_(rhs.Tref_.clone())
-{}
-
-
-Foam::externalCoupledTemperatureMixedFvPatchScalarField::
-externalCoupledTemperatureMixedFvPatchScalarField
-(
-    const externalCoupledTemperatureMixedFvPatchScalarField& rhs,
+    const this_bctype& rhs,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    externalCoupledMixedFvPatchField<scalar>(rhs, iF),
+    parent_bctype(rhs, iF),
     outTempType_(rhs.outTempType_),
     refTempType_(rhs.refTempType_),
     Tref_(rhs.Tref_.clone())

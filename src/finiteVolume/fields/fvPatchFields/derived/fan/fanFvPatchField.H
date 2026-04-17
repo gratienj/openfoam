@@ -111,14 +111,14 @@ See also
     Foam::Function1Types
 
 SourceFiles
-    fanFvPatchField.C
+    fanFvPatchField.txx
     fanFvPatchFields.H
-    fanFvPatchFields.C
+    fanFvPatchFields.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef foam_fanFvPatchField_H
-#define foam_fanFvPatchField_H
+#ifndef Foam_fanFvPatchField_H
+#define Foam_fanFvPatchField_H
 
 #include "uniformJumpFvPatchField.H"
 #include "Function1.H"
@@ -138,6 +138,9 @@ class fanFvPatchField
 :
     public uniformJumpFvPatchField<Type>
 {
+    typedef fanFvPatchField<Type> this_bctype;
+    typedef uniformJumpFvPatchField<Type> parent_bctype;
+
 public:
 
     // Public Data Types
@@ -204,33 +207,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given fanFvPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         fanFvPatchField
         (
-            const fanFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fanFvPatchField
-        (
-            const fanFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fanFvPatchField
         (
-            const fanFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fanFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -249,6 +243,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -264,7 +264,7 @@ void fanFvPatchField<scalar>::calcFanJump();
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fanFvPatchField.C"
+    #include "fanFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

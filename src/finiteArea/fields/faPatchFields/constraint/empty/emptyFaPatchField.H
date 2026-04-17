@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    emptyFaPatchField.C
+    emptyFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,6 +58,8 @@ class emptyFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef emptyFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
 
 public:
 
@@ -83,33 +85,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given emptyFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         emptyFaPatchField
         (
-            const emptyFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        emptyFaPatchField
-        (
-            const emptyFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         emptyFaPatchField
         (
-            const emptyFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        emptyFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -203,6 +196,12 @@ public:
 
         //- Write without "value" entry!
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment (TBD: could also be ignore assignment)
+        using parent_bctype::operator=;
 };
 
 
@@ -213,7 +212,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "emptyFaPatchField.C"
+    #include "emptyFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -215,7 +215,7 @@ nutUSpaldingWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     maxIter_(10),
     tolerance_(0.01)
     //invocations_(0),
@@ -228,13 +228,13 @@ nutUSpaldingWallFunctionFvPatchScalarField
 Foam::nutUSpaldingWallFunctionFvPatchScalarField::
 nutUSpaldingWallFunctionFvPatchScalarField
 (
-    const nutUSpaldingWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    nutWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     maxIter_(ptf.maxIter_),
     tolerance_(ptf.tolerance_)
     //invocations_(0),
@@ -252,7 +252,7 @@ nutUSpaldingWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    nutWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     maxIter_(dict.getOrDefault<label>("maxIter", 10)),
     tolerance_(dict.getOrDefault<scalar>("tolerance", 0.01))
     //invocations_(0),
@@ -265,27 +265,11 @@ nutUSpaldingWallFunctionFvPatchScalarField
 Foam::nutUSpaldingWallFunctionFvPatchScalarField::
 nutUSpaldingWallFunctionFvPatchScalarField
 (
-    const nutUSpaldingWallFunctionFvPatchScalarField& wfpsf
-)
-:
-    nutWallFunctionFvPatchScalarField(wfpsf),
-    maxIter_(wfpsf.maxIter_),
-    tolerance_(wfpsf.tolerance_)
-    //invocations_(wfpsf.invocations_),
-    //nontrivial_(wfpsf.nontrivial_),
-    //nonconvergence_(wfpsf.nonconvergence_),
-    //iterations_(wfpsf.iterations_)
-{}
-
-
-Foam::nutUSpaldingWallFunctionFvPatchScalarField::
-nutUSpaldingWallFunctionFvPatchScalarField
-(
-    const nutUSpaldingWallFunctionFvPatchScalarField& wfpsf,
+    const this_bctype& wfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    nutWallFunctionFvPatchScalarField(wfpsf, iF),
+    parent_bctype(wfpsf, iF),
     maxIter_(wfpsf.maxIter_),
     tolerance_(wfpsf.tolerance_)
     //invocations_(0),
@@ -348,7 +332,7 @@ void Foam::nutUSpaldingWallFunctionFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    nutWallFunctionFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     writeLocalEntries(os);
     fvPatchField<scalar>::writeValueEntry(os);
 }

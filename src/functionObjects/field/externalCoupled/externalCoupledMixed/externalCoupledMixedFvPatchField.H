@@ -55,12 +55,12 @@ SeeAlso
     externalCoupledFunctionObject
 
 SourceFiles
-    externalCoupledMixedFvPatchField.C
+    externalCoupledMixedFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef externalCoupledMixedFvPatchField_H
-#define externalCoupledMixedFvPatchField_H
+#ifndef Foam_externalCoupledMixedFvPatchField_H
+#define Foam_externalCoupledMixedFvPatchField_H
 
 #include "mixedFvPatchFields.H"
 
@@ -78,6 +78,8 @@ class externalCoupledMixedFvPatchField
 :
     public mixedFvPatchField<Type>
 {
+    typedef externalCoupledMixedFvPatchField<Type> this_bctype;
+    typedef mixedFvPatchField<Type> parent_bctype;
 
 public:
 
@@ -102,34 +104,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given externalCoupledMixedFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         externalCoupledMixedFvPatchField
         (
-            const externalCoupledMixedFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        externalCoupledMixedFvPatchField
-        (
-            const externalCoupledMixedFvPatchField&
-        );
-
         //- Construct as copy setting internal field reference
         externalCoupledMixedFvPatchField
         (
-            const externalCoupledMixedFvPatchField&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        externalCoupledMixedFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -155,6 +147,12 @@ public:
 
         //- Read data
         virtual void readData(Istream& is);
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -165,7 +163,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#   include "externalCoupledMixedFvPatchField.C"
+    #include "externalCoupledMixedFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

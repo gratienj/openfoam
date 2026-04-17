@@ -65,12 +65,12 @@ See also
     Foam::Function1Types
 
 SourceFiles
-    uniformJumpFvPatchField.C
+    uniformJumpFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef uniformJumpFvPatchField_H
-#define uniformJumpFvPatchField_H
+#ifndef Foam_uniformJumpFvPatchField_H
+#define Foam_uniformJumpFvPatchField_H
 
 #include "fixedJumpFvPatchField.H"
 #include "Function1.H"
@@ -89,10 +89,12 @@ class uniformJumpFvPatchField
 :
     public fixedJumpFvPatchField<Type>
 {
+    typedef uniformJumpFvPatchField<Type> this_bctype;
+    typedef fixedJumpFvPatchField<Type> parent_bctype;
 
 protected:
 
-    // Protected data
+    // Protected Data
 
         //- The "jump" table
         autoPtr<Function1<Type>> jumpTable_;
@@ -121,34 +123,24 @@ public:
             const bool needValue = true
         );
 
-        //- Construct by mapping given uniformJumpFvPatchField onto a
-        //  new patch
+        //- Construct by mapping onto a new patch
         uniformJumpFvPatchField
         (
-            const uniformJumpFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        uniformJumpFvPatchField
-        (
-            const uniformJumpFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         uniformJumpFvPatchField
         (
-            const uniformJumpFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        uniformJumpFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -167,6 +159,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -177,7 +175,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "uniformJumpFvPatchField.C"
+    #include "uniformJumpFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

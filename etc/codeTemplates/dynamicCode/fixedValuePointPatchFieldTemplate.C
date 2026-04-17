@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2021 OpenCFD Ltd.
+    Copyright (C) 2019-2021,2026 OpenCFD Ltd.
     Copyright (C) YEAR AUTHOR, AFFILIATION
 -------------------------------------------------------------------------------
 License
@@ -92,7 +92,7 @@ ${typeName}FixedValuePointPatch${FieldType}
 :
     parent_bctype(p, iF)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/DimensionedField");
     }
@@ -103,15 +103,15 @@ Foam::
 ${typeName}FixedValuePointPatch${FieldType}::
 ${typeName}FixedValuePointPatch${FieldType}
 (
-    const ${typeName}FixedValuePointPatch${FieldType}& rhs,
+    const this_bctype& pfld,
     const pointPatch& p,
     const DimensionedField<${TemplateType}, pointMesh>& iF,
     const pointPatchFieldMapper& mapper
 )
 :
-    parent_bctype(rhs, p, iF, mapper)
+    parent_bctype(pfld, p, iF, mapper)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/DimensionedField/mapper");
     }
@@ -130,7 +130,7 @@ ${typeName}FixedValuePointPatch${FieldType}
 :
     parent_bctype(p, iF, dict, requireValue)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("Construct ${typeName} : patch/dictionary");
     }
@@ -141,45 +141,15 @@ Foam::
 ${typeName}FixedValuePointPatch${FieldType}::
 ${typeName}FixedValuePointPatch${FieldType}
 (
-    const ${typeName}FixedValuePointPatch${FieldType}& rhs
-)
-:
-    parent_bctype(rhs),
-    dictionaryContent(rhs)
-{
-    if (${verbose:-false})
-    {
-        printMessage("Copy construct ${typeName}");
-    }
-}
-
-
-Foam::
-${typeName}FixedValuePointPatch${FieldType}::
-${typeName}FixedValuePointPatch${FieldType}
-(
-    const ${typeName}FixedValuePointPatch${FieldType}& rhs,
+    const this_bctype& pfld,
     const DimensionedField<${TemplateType}, pointMesh>& iF
 )
 :
-    parent_bctype(rhs, iF)
+    parent_bctype(pfld, iF)
 {
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
-        printMessage("Construct ${typeName} : copy/DimensionedField");
-    }
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::
-${typeName}FixedValuePointPatch${FieldType}::
-~${typeName}FixedValuePointPatch${FieldType}()
-{
-    if (${verbose:-false})
-    {
-        printMessage("Destroy ${typeName}");
+        printMessage("Copy construct ${typeName} with internal field");
     }
 }
 
@@ -195,7 +165,7 @@ ${typeName}FixedValuePointPatch${FieldType}::updateCoeffs()
         return;
     }
 
-    if (${verbose:-false})
+    if constexpr (${verbose:-false})
     {
         printMessage("updateCoeffs ${typeName}");
     }

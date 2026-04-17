@@ -138,8 +138,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef turbulentDFSEMInletFvPatchVectorField_H
-#define turbulentDFSEMInletFvPatchVectorField_H
+#ifndef Foam_turbulentDFSEMInletFvPatchVectorField_H
+#define Foam_turbulentDFSEMInletFvPatchVectorField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "Random.H"
@@ -161,6 +161,9 @@ class turbulentDFSEMInletFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
+    typedef turbulentDFSEMInletFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
     // Private Data
 
         //- Maximum number of attempts when seeding eddies
@@ -309,34 +312,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given turbulentDFSEMInletFvPatchVectorField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         turbulentDFSEMInletFvPatchVectorField
         (
-            const turbulentDFSEMInletFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        turbulentDFSEMInletFvPatchVectorField
-        (
-            const turbulentDFSEMInletFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         turbulentDFSEMInletFvPatchVectorField
         (
-            const turbulentDFSEMInletFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        turbulentDFSEMInletFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -389,6 +382,12 @@ public:
 
             //- Write
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

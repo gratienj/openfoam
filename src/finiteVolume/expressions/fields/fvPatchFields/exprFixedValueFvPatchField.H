@@ -45,7 +45,7 @@ Note
     with expression entries.
 
 SourceFiles
-    exprFixedValueFvPatchField.C
+    exprFixedValueFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -71,7 +71,7 @@ class exprFixedValueFvPatchField
     public fixedValueFvPatchField<Type>,
     public expressions::patchExprFieldBase
 {
-    //- The parent boundary condition type
+    typedef exprFixedValueFvPatchField<Type> this_bctype;
     typedef fixedValueFvPatchField<Type> parent_bctype;
 
 
@@ -119,30 +119,21 @@ public:
         //- Construct by mapping onto a new patch
         exprFixedValueFvPatchField
         (
-            const exprFixedValueFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        exprFixedValueFvPatchField
-        (
-            const exprFixedValueFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         exprFixedValueFvPatchField
         (
-            const exprFixedValueFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        exprFixedValueFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -161,6 +152,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -171,7 +168,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "exprFixedValueFvPatchField.C"
+    #include "exprFixedValueFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

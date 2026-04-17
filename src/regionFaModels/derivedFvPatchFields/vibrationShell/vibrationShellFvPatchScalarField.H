@@ -82,7 +82,7 @@ class vibrationShellFvPatchScalarField
 {
     // Typedefs
 
-        //- The parent boundary condition type
+        typedef vibrationShellFvPatchScalarField this_bctype;
         typedef mixedFvPatchField<scalar> parent_bctype;
 
         //- The finite-area region model
@@ -127,11 +127,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- vibrationShellFvPatchScalarField onto a new patch
+        //- Construct by mapping onto a new patch
         vibrationShellFvPatchScalarField
         (
-            const vibrationShellFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
@@ -140,25 +139,12 @@ public:
         //- Copy construct with internal field reference
         vibrationShellFvPatchScalarField
         (
-            const vibrationShellFvPatchScalarField& pfld,
+            const this_bctype& pfld,
             const DimensionedField<scalar, volMesh>& iF
         );
 
-        //- Copy construct
-        vibrationShellFvPatchScalarField
-        (
-            const vibrationShellFvPatchScalarField& pfld
-        )
-        :
-            vibrationShellFvPatchScalarField(pfld, pfld.internalField())
-        {}
-
-
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        vibrationShellFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -177,6 +163,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

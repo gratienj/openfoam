@@ -96,7 +96,7 @@ bool Foam::expressions::exprResult::getUniformChecked
 
     result.clear();
 
-    const Field<Type>& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+    const auto& fld = *static_cast<const Field<Type>*>(fieldPtr_);
 
     const Type avg = (parRun ? gAverage(fld) : average(fld));
 
@@ -424,7 +424,7 @@ bool Foam::expressions::exprResult::writeSingleValueChecked(Ostream& os) const
     }
     else
     {
-        const Field<Type>& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+        const auto& fld = *static_cast<const Field<Type>*>(fieldPtr_);
 
         os << fld.front();
     }
@@ -475,7 +475,7 @@ bool Foam::expressions::exprResult::writeFieldChecked
     }
     else
     {
-        const Field<Type>& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+        const auto& fld = *static_cast<const Field<Type>*>(fieldPtr_);
 
         if (keyword.empty())
         {
@@ -532,7 +532,7 @@ bool Foam::expressions::exprResult::writeEntryChecked
     }
     else
     {
-        const Field<Type>& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+        const auto& fld = *static_cast<const Field<Type>*>(fieldPtr_);
 
         if (value_.good() && is_contiguous_v<Type>)
         {
@@ -561,7 +561,7 @@ bool Foam::expressions::exprResult::setAverageValueChecked(const bool parRun)
         return false;
     }
 
-    const Field<Type>& fld = *static_cast<const Field<Type>*>(fieldPtr_);
+    const auto& fld = *static_cast<const Field<Type>*>(fieldPtr_);
 
     const MinMax<Type> limits = (parRun ? gMinMax(fld) : minMax(fld));
 
@@ -591,7 +591,7 @@ bool Foam::expressions::exprResult::duplicateFieldChecked(const void* ptr)
         deleteChecked<Type>();
     }
 
-    const Field<Type>& fld = *static_cast<const Field<Type>*>(ptr);
+    const auto& fld = *static_cast<const Field<Type>*>(ptr);
 
     size_ = fld.size();
     fieldPtr_ = new Field<Type>(fld);
@@ -719,7 +719,7 @@ inline Type Foam::expressions::exprResult::getReduced
 
     Type result = initial;
 
-    const Field<Type>& fld = *static_cast<Field<Type>*>(fieldPtr_);
+    const auto& fld = *static_cast<Field<Type>*>(fieldPtr_);
 
     for (const Type& val : fld)
     {

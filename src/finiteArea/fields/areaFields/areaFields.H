@@ -34,7 +34,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    areaFields.C
+    areaFields.cxx
 
 \*---------------------------------------------------------------------------*/
 

@@ -44,7 +44,7 @@ fixedMultiPhaseHeatFluxFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     q_(p.size(), Zero),
     relax_(1),
     Tmin_(273)
@@ -59,7 +59,7 @@ fixedMultiPhaseHeatFluxFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     q_("q", dict, p.size()),
     relax_(dict.getOrDefault<scalar>("relax", 1)),
     Tmin_(dict.getOrDefault<scalar>("Tmin", 273))
@@ -69,13 +69,13 @@ fixedMultiPhaseHeatFluxFvPatchScalarField
 Foam::fixedMultiPhaseHeatFluxFvPatchScalarField::
 fixedMultiPhaseHeatFluxFvPatchScalarField
 (
-    const fixedMultiPhaseHeatFluxFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     q_(psf.q_, mapper),
     relax_(psf.relax_),
     Tmin_(psf.Tmin_)
@@ -85,24 +85,11 @@ fixedMultiPhaseHeatFluxFvPatchScalarField
 Foam::fixedMultiPhaseHeatFluxFvPatchScalarField::
 fixedMultiPhaseHeatFluxFvPatchScalarField
 (
-    const fixedMultiPhaseHeatFluxFvPatchScalarField& psf
-)
-:
-    fixedValueFvPatchScalarField(psf),
-    q_(psf.q_),
-    relax_(psf.relax_),
-    Tmin_(psf.Tmin_)
-{}
-
-
-Foam::fixedMultiPhaseHeatFluxFvPatchScalarField::
-fixedMultiPhaseHeatFluxFvPatchScalarField
-(
-    const fixedMultiPhaseHeatFluxFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     q_(psf.q_),
     relax_(psf.relax_),
     Tmin_(psf.Tmin_)
@@ -169,7 +156,7 @@ void Foam::fixedMultiPhaseHeatFluxFvPatchScalarField::updateCoeffs()
 
     operator==((scalar(1) - relax_)*Tp + relax_*max(Tmin_,(q_ + A)/(B)));
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
@@ -178,7 +165,7 @@ void Foam::fixedMultiPhaseHeatFluxFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    fixedValueFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     m(q_);
 }
 
@@ -189,10 +176,9 @@ void Foam::fixedMultiPhaseHeatFluxFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedValueFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const fixedMultiPhaseHeatFluxFvPatchScalarField& mptf =
-        refCast<const fixedMultiPhaseHeatFluxFvPatchScalarField>(ptf);
+    const auto& mptf = refCast<const this_bctype>(ptf);
 
     q_.rmap(mptf.q_, addr);
 }

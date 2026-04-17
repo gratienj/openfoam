@@ -36,7 +36,7 @@ Note
     on Time and flushes stale values according to the time index.
 
 SourceFiles
-    exprResultGlobals.C
+    exprResultGlobals.cxx
 
 \*---------------------------------------------------------------------------*/
 

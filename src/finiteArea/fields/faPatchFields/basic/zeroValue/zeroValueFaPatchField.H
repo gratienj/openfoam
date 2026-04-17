@@ -38,7 +38,7 @@ Description
     \endverbatim
 
 SourceFiles
-    zeroValueFaPatchField.C
+    zeroValueFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -61,7 +61,7 @@ class zeroValueFaPatchField
 :
     public fixedValueFaPatchField<Type>
 {
-    //- The parent boundary condition type
+    typedef zeroValueFaPatchField<Type> this_bctype;
     typedef fixedValueFaPatchField<Type> parent_bctype;
 
 public:
@@ -103,32 +103,16 @@ public:
             const DimensionedField<Type, areaMesh>& iF
         );
 
-        //- Copy construct
-        zeroValueFaPatchField(const zeroValueFaPatchField<Type>& pfld)
-        :
-            zeroValueFaPatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        zeroValueFaPatchField(const this_bctype&) = delete;
 
-
-        //- Construct and return a clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return tmp<faPatchField<Type>>
-            (
-                new zeroValueFaPatchField<Type>(*this)
-            );
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
         (
             const DimensionedField<Type, areaMesh>& iF
         ) const
         {
-            return tmp<faPatchField<Type>>
-            (
-                new zeroValueFaPatchField<Type>(*this, iF)
-            );
+            return faPatchField<Type>::Clone(*this, iF);
         }
 
 
@@ -212,7 +196,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "zeroValueFaPatchField.C"
+    #include "zeroValueFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

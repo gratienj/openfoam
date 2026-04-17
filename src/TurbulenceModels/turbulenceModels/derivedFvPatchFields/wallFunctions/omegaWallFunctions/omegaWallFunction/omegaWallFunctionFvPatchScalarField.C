@@ -53,7 +53,7 @@ void Foam::omegaWallFunctionFvPatchScalarField::setMaster()
     label master = -1;
     forAll(bf, patchi)
     {
-        if (isA<omegaWallFunctionFvPatchScalarField>(bf[patchi]))
+        if (isA<this_bctype>(bf[patchi]))
         {
             omegaWallFunctionFvPatchScalarField& opf = omegaPatch(patchi);
 
@@ -100,7 +100,7 @@ void Foam::omegaWallFunctionFvPatchScalarField::createAveragingWeights()
     DynamicList<label> omegaPatches(bf.size());
     forAll(bf, patchi)
     {
-        if (isA<omegaWallFunctionFvPatchScalarField>(bf[patchi]))
+        if (isA<this_bctype>(bf[patchi]))
         {
             omegaPatches.append(patchi);
 
@@ -135,12 +135,7 @@ Foam::omegaWallFunctionFvPatchScalarField::omegaPatch
     const auto& omega =
         static_cast<const volScalarField&>(this->internalField());
 
-    const volScalarField::Boundary& bf = omega.boundaryField();
-
-    const auto& opf =
-        refCast<const omegaWallFunctionFvPatchScalarField>(bf[patchi]);
-
-    return const_cast<omegaWallFunctionFvPatchScalarField&>(opf);
+    return refConstCast<this_bctype>(omega.boundaryField()[patchi]);
 }
 
 
@@ -362,7 +357,7 @@ Foam::omegaWallFunctionFvPatchScalarField::omegaWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     wallFunctionBlenders(),
     initialised_(false),
     master_(-1),
@@ -376,13 +371,13 @@ Foam::omegaWallFunctionFvPatchScalarField::omegaWallFunctionFvPatchScalarField
 
 Foam::omegaWallFunctionFvPatchScalarField::omegaWallFunctionFvPatchScalarField
 (
-    const omegaWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     wallFunctionBlenders(ptf),
     initialised_(false),
     master_(-1),
@@ -401,7 +396,7 @@ Foam::omegaWallFunctionFvPatchScalarField::omegaWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchField<scalar>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     wallFunctionBlenders(dict, blenderType::BINOMIAL, scalar(2)),
     initialised_(false),
     master_(-1),
@@ -418,28 +413,11 @@ Foam::omegaWallFunctionFvPatchScalarField::omegaWallFunctionFvPatchScalarField
 
 Foam::omegaWallFunctionFvPatchScalarField::omegaWallFunctionFvPatchScalarField
 (
-    const omegaWallFunctionFvPatchScalarField& owfpsf
-)
-:
-    fixedValueFvPatchField<scalar>(owfpsf),
-    wallFunctionBlenders(owfpsf),
-    initialised_(false),
-    master_(-1),
-    beta1_(owfpsf.beta1_),
-    wallCoeffs_(owfpsf.wallCoeffs_),
-    G_(),
-    omega_(),
-    cornerWeights_()
-{}
-
-
-Foam::omegaWallFunctionFvPatchScalarField::omegaWallFunctionFvPatchScalarField
-(
-    const omegaWallFunctionFvPatchScalarField& owfpsf,
+    const this_bctype& owfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<scalar>(owfpsf, iF),
+    parent_bctype(owfpsf, iF),
     wallFunctionBlenders(owfpsf),
     initialised_(false),
     master_(-1),

@@ -89,12 +89,12 @@ See also
     Foam::timeVaryingMappedFixedValueFvPatchField
 
 SourceFiles
-    fixedProfileFvPatchField.C
+    fixedProfileFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fixedProfileFvPatchField_H
-#define fixedProfileFvPatchField_H
+#ifndef Foam_fixedProfileFvPatchField_H
+#define Foam_fixedProfileFvPatchField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "Function1.H"
@@ -113,7 +113,10 @@ class fixedProfileFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
-    // Private data
+    typedef fixedProfileFvPatchField<Type> this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
+
+    // Private Data
 
         //- Profile data
         autoPtr<Function1<Type>> profile_;
@@ -156,34 +159,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given fixedProfileFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         fixedProfileFvPatchField
         (
-            const fixedProfileFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        fixedProfileFvPatchField
-        (
-            const fixedProfileFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         fixedProfileFvPatchField
         (
-            const fixedProfileFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fixedProfileFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -205,6 +198,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -215,7 +214,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fixedProfileFvPatchField.C"
+    #include "fixedProfileFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

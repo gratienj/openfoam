@@ -62,6 +62,8 @@ class adjointOutletVelocityFluxFvPatchVectorField
     public fixedValueFvPatchVectorField,
     public adjointVectorBoundaryCondition
 {
+    typedef adjointOutletVelocityFluxFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
 
 public:
 
@@ -86,12 +88,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- adjointOutletVelocityFluxFvPatchVectorField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         adjointOutletVelocityFluxFvPatchVectorField
         (
-            const adjointOutletVelocityFluxFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
@@ -100,15 +100,15 @@ public:
         //- Construct as copy setting internal field reference
         adjointOutletVelocityFluxFvPatchVectorField
         (
-            const adjointOutletVelocityFluxFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        adjointOutletVelocityFluxFvPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -162,9 +162,12 @@ public:
         virtual void write(Ostream&) const;
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const fvPatchField<vector>& pvf);
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

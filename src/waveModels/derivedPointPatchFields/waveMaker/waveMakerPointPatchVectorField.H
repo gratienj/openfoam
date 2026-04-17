@@ -80,8 +80,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef waveMakerPointPatchVectorField_H
-#define waveMakerPointPatchVectorField_H
+#ifndef Foam_waveMakerPointPatchVectorField_H
+#define Foam_waveMakerPointPatchVectorField_H
 
 #include "fixedValuePointPatchField.H"
 #include "Enum.H"
@@ -99,7 +99,12 @@ class waveMakerPointPatchVectorField
 :
     public fixedValuePointPatchField<vector>
 {
-    public:
+    typedef waveMakerPointPatchVectorField this_bctype;
+    typedef fixedValuePointPatchField<vector> parent_bctype;
+
+public:
+
+    // Public data types
 
         enum motionTypes
         {
@@ -108,11 +113,12 @@ class waveMakerPointPatchVectorField
             solitary
         };
 
+private:
+
+    // Private Data
+
         //- Names for motion types
         static const Enum<motionTypes> motionTypeNames;
-
-
-    // Private data
 
         //- Motion type
         motionTypes motionType_;
@@ -239,10 +245,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         waveMakerPointPatchVectorField
         (
-            const waveMakerPointPatchVectorField&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<vector, pointMesh>&,
             const pointPatchFieldMapper&
@@ -251,17 +257,14 @@ public:
         //- Construct as copy setting internal field reference
         waveMakerPointPatchVectorField
         (
-            const waveMakerPointPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<vector>> clone() const
-        {
-            return pointPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        waveMakerPointPatchVectorField(const this_bctype&) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
@@ -271,16 +274,19 @@ public:
         }
 
 
-    // Member functions
+    // Member Functions
 
-        // Evaluation functions
-
-            //- Update the coefficients associated with the patch field
-            virtual void updateCoeffs();
-
+        //- Update the coefficients associated with the patch field
+        virtual void updateCoeffs();
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

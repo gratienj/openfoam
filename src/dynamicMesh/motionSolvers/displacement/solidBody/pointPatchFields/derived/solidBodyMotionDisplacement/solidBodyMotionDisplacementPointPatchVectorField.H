@@ -36,8 +36,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef solidBodyMotionDisplacementPointPatchVectorField_H
-#define solidBodyMotionDisplacementPointPatchVectorField_H
+#ifndef Foam_solidBodyMotionDisplacementPointPatchVectorField_H
+#define Foam_solidBodyMotionDisplacementPointPatchVectorField_H
 
 #include "solidBodyMotionFunction.H"
 #include "fixedValuePointPatchFields.H"
@@ -48,13 +48,16 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-          Class solidBodyMotionDisplacementPointPatchVectorField Declaration
+      Class solidBodyMotionDisplacementPointPatchVectorField Declaration
 \*---------------------------------------------------------------------------*/
 
 class solidBodyMotionDisplacementPointPatchVectorField
 :
     public fixedValuePointPatchVectorField
 {
+    typedef solidBodyMotionDisplacementPointPatchVectorField this_bctype;
+    typedef fixedValuePointPatchVectorField parent_bctype;
+
     // Private Data
 
         //- The motion control function
@@ -86,36 +89,29 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         solidBodyMotionDisplacementPointPatchVectorField
         (
-            const solidBodyMotionDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<vector, pointMesh>&,
             const pointPatchFieldMapper&
         );
 
-        //- Construct as copy
-        solidBodyMotionDisplacementPointPatchVectorField
-        (
-            const solidBodyMotionDisplacementPointPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         solidBodyMotionDisplacementPointPatchVectorField
         (
-            const solidBodyMotionDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, pointMesh>&
         );
 
+        //- No copy without an internal field
+        solidBodyMotionDisplacementPointPatchVectorField
+        (
+            const this_bctype&
+        ) = delete;
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<vector>> clone() const
-        {
-            return pointPatchField<vector>::Clone(*this);
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
@@ -146,6 +142,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

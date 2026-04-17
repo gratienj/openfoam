@@ -115,6 +115,8 @@ class atmBoundaryLayerInletEpsilonFvPatchScalarField
     public inletOutletFvPatchScalarField,
     public atmBoundaryLayer
 {
+    typedef atmBoundaryLayerInletEpsilonFvPatchScalarField this_bctype;
+    typedef inletOutletFvPatchScalarField parent_bctype;
 
 public:
 
@@ -139,11 +141,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- atmBoundaryLayerInletEpsilonFvPatchScalarField onto a new patch
+        //- Construct by mapping onto a new patch
         atmBoundaryLayerInletEpsilonFvPatchScalarField
         (
-            const atmBoundaryLayerInletEpsilonFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
@@ -152,15 +153,15 @@ public:
         //- Construct as copy setting internal field reference
         atmBoundaryLayerInletEpsilonFvPatchScalarField
         (
-            const atmBoundaryLayerInletEpsilonFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy setting without an internal field
+        atmBoundaryLayerInletEpsilonFvPatchScalarField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -195,6 +196,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

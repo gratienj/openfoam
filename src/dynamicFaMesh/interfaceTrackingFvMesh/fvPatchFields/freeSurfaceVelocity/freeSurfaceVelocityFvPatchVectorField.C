@@ -42,20 +42,20 @@ freeSurfaceVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedGradientFvPatchVectorField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::freeSurfaceVelocityFvPatchVectorField::
 freeSurfaceVelocityFvPatchVectorField
 (
-    const freeSurfaceVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedGradientFvPatchVectorField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -67,7 +67,7 @@ freeSurfaceVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedGradientFvPatchVectorField(p, iF)
+    parent_bctype(p, iF)
 {
     fvPatchFieldBase::readDict(dict);
     // Apply zero-gradient condition on start-up
@@ -78,11 +78,11 @@ freeSurfaceVelocityFvPatchVectorField
 Foam::freeSurfaceVelocityFvPatchVectorField::
 freeSurfaceVelocityFvPatchVectorField
 (
-    const freeSurfaceVelocityFvPatchVectorField& fcvpvf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedGradientFvPatchVectorField(fcvpvf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -111,7 +111,7 @@ void Foam::freeSurfaceVelocityFvPatchVectorField::updateCoeffs()
         gradient() = itm->freeSurfaceSnGradU();
     }
 
-    fixedGradientFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

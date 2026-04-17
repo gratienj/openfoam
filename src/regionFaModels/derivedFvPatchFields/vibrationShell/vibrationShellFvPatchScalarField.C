@@ -68,7 +68,7 @@ vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
 
 vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
 (
-    const vibrationShellFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
@@ -127,7 +127,7 @@ vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
 
 vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
 (
-    const vibrationShellFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :

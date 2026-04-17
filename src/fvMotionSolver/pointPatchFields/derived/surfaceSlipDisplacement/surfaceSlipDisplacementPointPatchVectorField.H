@@ -53,7 +53,7 @@ Description
 
 
 SourceFiles
-    surfaceSlipDisplacementPointPatchVectorField.C
+    surfaceSlipDisplacementPointPatchVectorField.cxx
 
 \*---------------------------------------------------------------------------*/
 
@@ -77,6 +77,9 @@ class surfaceSlipDisplacementPointPatchVectorField
 :
     public pointPatchVectorField
 {
+    typedef surfaceSlipDisplacementPointPatchVectorField this_bctype;
+    typedef pointPatchVectorField parent_bctype;
+
 public:
 
     // Public Data Types
@@ -90,7 +93,7 @@ public:
 
 private:
 
-    // Private data
+    // Private Data
 
         //- Project mode names
         static const Enum<projectMode> projectModeNames_;
@@ -122,13 +125,6 @@ private:
         //- Calculate displacement (w.r.t. points0()) to project onto surface
         void calcProjection(vectorField& displacement) const;
 
-        //- No copy assignment
-        void operator=
-        (
-            const surfaceSlipDisplacementPointPatchVectorField&
-        ) = delete;
-
-
 public:
 
     //- Runtime type information
@@ -152,10 +148,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         surfaceSlipDisplacementPointPatchVectorField
         (
-            const surfaceSlipDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<vector, pointMesh>&,
             const pointPatchFieldMapper&
@@ -164,31 +160,17 @@ public:
         //- Copy construct with internal field reference
         surfaceSlipDisplacementPointPatchVectorField
         (
-            const surfaceSlipDisplacementPointPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, pointMesh>&
         );
 
-        //- Copy construct
+        //- No copy without an internal field
         surfaceSlipDisplacementPointPatchVectorField
         (
-            const surfaceSlipDisplacementPointPatchVectorField& pfld
-        )
-        :
-            surfaceSlipDisplacementPointPatchVectorField
-            (
-                pfld,
-                pfld.internalField()
-            )
-        {}
+            const this_bctype&
+        ) = delete;
 
-
-        //- Return a clone
-        virtual autoPtr<pointPatchField<vector>> clone() const
-        {
-            return pointPatchField<vector>::Clone(*this);
-        }
-
-        //- Construct and return a clone setting internal field reference
+        //- Clone with an internal field reference
         virtual autoPtr<pointPatchField<vector>> clone
         (
             const DimensionedField<vector, pointMesh>& iF
@@ -208,6 +190,18 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- No copy assignment
+        void operator=
+        (
+            const surfaceSlipDisplacementPointPatchVectorField&
+        ) = delete;
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

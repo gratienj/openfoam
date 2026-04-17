@@ -41,20 +41,20 @@ fixedUnburntEnthalpyFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::fixedUnburntEnthalpyFvPatchScalarField::
 fixedUnburntEnthalpyFvPatchScalarField
 (
-    const fixedUnburntEnthalpyFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -66,28 +66,18 @@ fixedUnburntEnthalpyFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::fixedUnburntEnthalpyFvPatchScalarField::
 fixedUnburntEnthalpyFvPatchScalarField
 (
-    const fixedUnburntEnthalpyFvPatchScalarField& tppsf
-)
-:
-    fixedValueFvPatchScalarField(tppsf)
-{}
-
-
-Foam::fixedUnburntEnthalpyFvPatchScalarField::
-fixedUnburntEnthalpyFvPatchScalarField
-(
-    const fixedUnburntEnthalpyFvPatchScalarField& tppsf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(tppsf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -108,12 +98,13 @@ void Foam::fixedUnburntEnthalpyFvPatchScalarField::updateCoeffs()
     const label patchi = patch().index();
 
     const scalarField& pw = thermo.p().boundaryField()[patchi];
-    fvPatchScalarField& Tw =
+    auto& Tw =
         const_cast<fvPatchScalarField&>(thermo.Tu().boundaryField()[patchi]);
+
     Tw.evaluate();
     operator==(thermo.heu(pw, Tw, patchi));
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -44,7 +44,7 @@ Usage
     \endverbatim
 
 SourceFiles
-    wedgeFvsPatchField.C
+    wedgeFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -68,6 +68,9 @@ class wedgeFvsPatchField
 :
     public fvsPatchField<Type>
 {
+    typedef wedgeFvsPatchField<Type> this_bctype;
+    typedef fvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -92,33 +95,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given wedgeFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         wedgeFvsPatchField
         (
-            const wedgeFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        wedgeFvsPatchField
-        (
-            const wedgeFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         wedgeFvsPatchField
         (
-            const wedgeFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        wedgeFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -134,6 +128,12 @@ public:
 
         //- Write includes "value" entry
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -144,7 +144,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "wedgeFvsPatchField.C"
+    #include "wedgeFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

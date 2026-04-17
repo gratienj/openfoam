@@ -45,7 +45,7 @@ solidBodyMotionDisplacementPointPatchVectorField
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     SBMFPtr_(nullptr),
     localPoints0Ptr_(nullptr)
 {}
@@ -59,17 +59,18 @@ solidBodyMotionDisplacementPointPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValuePointPatchVectorField(p, iF, dict, IOobjectOption::NO_READ),
+    parent_bctype(p, iF, dict, IOobjectOption::NO_READ),
     SBMFPtr_(solidBodyMotionFunction::New(dict, this->db().time())),
     localPoints0Ptr_(nullptr)
 {
     if (!dict.found("value"))
     {
+        const auto& pts0 = localPoints0();
+
         // Determine current local points and offset
         fixedValuePointPatchVectorField::operator==
         (
-            transformPoints(SBMFPtr_().transformation(), localPoints0())
-           -localPoints0()
+            transformPoints(SBMFPtr_().transformation(), pts0) - pts0
         );
     }
 }
@@ -78,22 +79,23 @@ solidBodyMotionDisplacementPointPatchVectorField
 solidBodyMotionDisplacementPointPatchVectorField::
 solidBodyMotionDisplacementPointPatchVectorField
 (
-    const solidBodyMotionDisplacementPointPatchVectorField& ptf,
+    const this_bctype& ptf,
     const pointPatch& p,
     const DimensionedField<vector, pointMesh>& iF,
     const pointPatchFieldMapper& mapper
 )
 :
-    fixedValuePointPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     SBMFPtr_(ptf.SBMFPtr_().clone()),
     localPoints0Ptr_(nullptr)
 {
     // For safety re-evaluate
 
+    const auto& pts0 = localPoints0();
+
     fixedValuePointPatchVectorField::operator==
     (
-        transformPoints(SBMFPtr_().transformation(), localPoints0())
-       -localPoints0()
+        transformPoints(SBMFPtr_().transformation(), pts0) - pts0
     );
 }
 
@@ -101,32 +103,21 @@ solidBodyMotionDisplacementPointPatchVectorField
 solidBodyMotionDisplacementPointPatchVectorField::
 solidBodyMotionDisplacementPointPatchVectorField
 (
-    const solidBodyMotionDisplacementPointPatchVectorField& ptf
-)
-:
-    fixedValuePointPatchVectorField(ptf),
-    SBMFPtr_(ptf.SBMFPtr_().clone()),
-    localPoints0Ptr_(nullptr)
-{}
-
-
-solidBodyMotionDisplacementPointPatchVectorField::
-solidBodyMotionDisplacementPointPatchVectorField
-(
-    const solidBodyMotionDisplacementPointPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchVectorField(ptf, iF),
+    parent_bctype(ptf, iF),
     SBMFPtr_(ptf.SBMFPtr_().clone()),
     localPoints0Ptr_(nullptr)
 {
     // For safety re-evaluate
 
+    const auto& pts0 = localPoints0();
+
     fixedValuePointPatchVectorField::operator==
     (
-        transformPoints(SBMFPtr_().transformation(), localPoints0())
-       -localPoints0()
+        transformPoints(SBMFPtr_().transformation(), pts0) - pts0
     );
 }
 
@@ -166,14 +157,15 @@ void solidBodyMotionDisplacementPointPatchVectorField::updateCoeffs()
         return;
     }
 
+    const auto& pts0 = localPoints0();
+
     // Determine current local points and offset
     fixedValuePointPatchVectorField::operator==
     (
-        transformPoints(SBMFPtr_().transformation(), localPoints0())
-       -localPoints0()
+        transformPoints(SBMFPtr_().transformation(), pts0) - pts0
     );
 
-    fixedValuePointPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
@@ -181,7 +173,7 @@ void solidBodyMotionDisplacementPointPatchVectorField::
 write(Ostream& os) const
 {
     // Note: write value
-    fixedValuePointPatchField<vector>::write(os);
+    this->parent_bctype::write(os);
 
     os.writeEntry(solidBodyMotionFunction::typeName, SBMFPtr_->type());
 

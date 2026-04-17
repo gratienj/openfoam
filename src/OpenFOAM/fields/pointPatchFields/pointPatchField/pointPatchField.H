@@ -37,8 +37,9 @@ Description
     are reset to the fixed-values by applying the stored values.
 
 SourceFiles
-    pointPatchField.C
-    pointPatchFieldNew.C
+    pointPatchField.txx
+    pointPatchFieldBase.cxx
+    pointPatchFieldNew.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -49,6 +50,10 @@ SourceFiles
 #include "DimensionedField.H"
 #include "fieldTypes.H"
 #include "autoPtr.H"
+
+// Transitional features
+#define Foam_pointPatchField_copyConstruct(TypeName) \
+    TypeName(const TypeName& pfld) : TypeName(pfld, pfld.internalField()) {}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -348,7 +353,7 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         pointPatchField
         (
             const pointPatchField<Type>&,
@@ -373,15 +378,23 @@ public:
             const DimensionedField<Type, pointMesh>& iF
         );
 
-        //- Copy construct
-        pointPatchField(const pointPatchField<Type>& pfld)
-        :
-            pointPatchField(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        pointPatchField(const pointPatchField& pfld)
+        #ifdef Foam_pointPatchField_copyConstruct
+        : pointPatchField(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
-
-        //- Clone patch field with its own internal field reference
-        virtual autoPtr<pointPatchField<Type>> clone() const = 0;
+        //- No clone without an internal field reference.
+        //  \note declared, but only for PtrList compilation requirements.
+        //  The \c tmp should normally contain a pointer in that context.
+        virtual autoPtr<pointPatchField<Type>> clone() const
+        {
+            NotImplemented;
+            return nullptr;
+        }
 
         //- Clone patch field with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
@@ -632,29 +645,28 @@ public:
 
     // Member Operators
 
-        virtual void operator=(const pointPatchField<Type>&){}
+        virtual void operator=(const pointPatchField<Type>&) {}
+        virtual void operator=(const Field<Type>&) {}
+        virtual void operator=(const Type&) {}
+
         virtual void operator+=(const pointPatchField<Type>&){}
         virtual void operator-=(const pointPatchField<Type>&){}
         virtual void operator*=(const pointPatchField<scalar>&){}
         virtual void operator/=(const pointPatchField<scalar>&){}
 
-        virtual void operator=(const Field<Type>&){}
         virtual void operator+=(const Field<Type>&){}
         virtual void operator-=(const Field<Type>&){}
-
         virtual void operator*=(const Field<scalar>&){}
         virtual void operator/=(const Field<scalar>&){}
 
-        virtual void operator=(const Type&){}
         virtual void operator+=(const Type&){}
         virtual void operator-=(const Type&){}
         virtual void operator*=(const scalar){}
         virtual void operator/=(const scalar){}
 
 
-        // Force an assignment irrespective of form of patch
-        // By generic these do nothing unless the patch actually has boundary
-        // values
+        // Force an assignment irrespective of form of patch.
+        // Do nothing unless the patch actually has boundary values
 
         virtual void operator==(const pointPatchField<Type>&) {}
         virtual void operator==(const Field<Type>&) {}
@@ -707,8 +719,8 @@ const pointPatchField<Type>& operator+
 #include "pointPatchFieldFunctions.H"
 
 #ifdef NoRepository
-    #include "pointPatchField.C"
-    #include "pointPatchFieldNew.C"
+    #include "pointPatchField.txx"
+    #include "pointPatchFieldNew.txx"
     #include "calculatedPointPatchField.H"
     #include "zeroGradientPointPatchField.H"
 #endif

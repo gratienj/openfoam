@@ -63,7 +63,7 @@ See also
     Foam::fixedValueFaPatchField
 
 SourceFiles
-    uniformFixedValueFaPatchField.C
+    uniformFixedValueFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -87,6 +87,9 @@ class uniformFixedValueFaPatchField
 :
     public fixedValueFaPatchField<Type>
 {
+    typedef uniformFixedValueFaPatchField<Type> this_bctype;
+    typedef fixedValueFaPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Function providing the value
@@ -127,30 +130,21 @@ public:
         //- Construct by mapping onto a new patch
         uniformFixedValueFaPatchField
         (
-            const uniformFixedValueFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        uniformFixedValueFaPatchField
-        (
-            const uniformFixedValueFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         uniformFixedValueFaPatchField
         (
-            const uniformFixedValueFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        uniformFixedValueFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -169,6 +163,12 @@ public:
 
         //- Write includes "value" entry
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -179,7 +179,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "uniformFixedValueFaPatchField.C"
+    #include "uniformFixedValueFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

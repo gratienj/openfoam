@@ -62,8 +62,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef rotatingWallVelocityFvPatchVectorField_H
-#define rotatingWallVelocityFvPatchVectorField_H
+#ifndef Foam_rotatingWallVelocityFvPatchVectorField_H
+#define Foam_rotatingWallVelocityFvPatchVectorField_H
 
 #include "fixedValueFvPatchFields.H"
 #include "Function1.H"
@@ -81,7 +81,10 @@ class rotatingWallVelocityFvPatchVectorField
 :
     public fixedValueFvPatchVectorField
 {
-    // Private data
+    typedef rotatingWallVelocityFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Origin of the rotation
         vector origin_;
@@ -116,34 +119,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given rotatingWallVelocityFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         rotatingWallVelocityFvPatchVectorField
         (
-            const rotatingWallVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        rotatingWallVelocityFvPatchVectorField
-        (
-            const rotatingWallVelocityFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         rotatingWallVelocityFvPatchVectorField
         (
-            const rotatingWallVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        rotatingWallVelocityFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -189,6 +182,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

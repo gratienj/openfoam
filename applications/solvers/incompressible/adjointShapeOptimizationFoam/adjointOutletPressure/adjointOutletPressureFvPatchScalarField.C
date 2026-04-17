@@ -40,20 +40,20 @@ adjointOutletPressureFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::adjointOutletPressureFvPatchScalarField::
 adjointOutletPressureFvPatchScalarField
 (
-    const adjointOutletPressureFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -65,18 +65,18 @@ adjointOutletPressureFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::adjointOutletPressureFvPatchScalarField::
 adjointOutletPressureFvPatchScalarField
 (
-    const adjointOutletPressureFvPatchScalarField& tppsf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(tppsf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -96,7 +96,7 @@ void Foam::adjointOutletPressureFvPatchScalarField::updateCoeffs()
 
     operator==((phiap/patch().magSf() - 1.0)*phip/patch().magSf() + (Up & Uap));
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

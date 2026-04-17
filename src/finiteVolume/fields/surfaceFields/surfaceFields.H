@@ -30,7 +30,7 @@ Description
     Foam::surfaceFields
 
 SourceFiles
-    surfaceFields.C
+    surfaceFields.cxx
 
 \*---------------------------------------------------------------------------*/
 

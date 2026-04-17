@@ -38,7 +38,7 @@ Foam::copiedFixedValueFvPatchScalarField::copiedFixedValueFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     sourceFieldName_("default")
 {}
 
@@ -50,41 +50,31 @@ Foam::copiedFixedValueFvPatchScalarField::copiedFixedValueFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     sourceFieldName_(dict.lookup("sourceFieldName"))
 {}
 
 
 Foam::copiedFixedValueFvPatchScalarField::copiedFixedValueFvPatchScalarField
 (
-    const copiedFixedValueFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     sourceFieldName_(ptf.sourceFieldName_)
 {}
 
 
 Foam::copiedFixedValueFvPatchScalarField::copiedFixedValueFvPatchScalarField
 (
-    const copiedFixedValueFvPatchScalarField& awfpsf
-)
-:
-    fixedValueFvPatchScalarField(awfpsf),
-    sourceFieldName_(awfpsf.sourceFieldName_)
-{}
-
-
-Foam::copiedFixedValueFvPatchScalarField::copiedFixedValueFvPatchScalarField
-(
-    const copiedFixedValueFvPatchScalarField& awfpsf,
+    const this_bctype& awfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(awfpsf, iF),
+    parent_bctype(awfpsf, iF),
     sourceFieldName_(awfpsf.sourceFieldName_)
 {}
 
@@ -104,7 +94,7 @@ void Foam::copiedFixedValueFvPatchScalarField::updateCoeffs()
         patch().lookupPatchField<volScalarField>(sourceFieldName_)
     );
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

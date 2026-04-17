@@ -65,7 +65,7 @@ timeVaryingMassSorptionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     kabs_(scalar(1)),
     max_(scalar(1)),
     kdes_(scalar(1))
@@ -80,7 +80,7 @@ timeVaryingMassSorptionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict, IOobjectOption::NO_READ),
+    parent_bctype(p, iF, dict, IOobjectOption::NO_READ),
     kabs_(dict.getCheck<scalar>("kabs", scalarMinMax::ge(0))),
     max_(dict.getCheck<scalar>("max", scalarMinMax::ge(0))),
     kdes_(dict.getCheckOrDefault<scalar>("kdes", 0, scalarMinMax::ge(0)))
@@ -95,13 +95,13 @@ timeVaryingMassSorptionFvPatchScalarField
 Foam::timeVaryingMassSorptionFvPatchScalarField::
 timeVaryingMassSorptionFvPatchScalarField
 (
-    const timeVaryingMassSorptionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     kabs_(ptf.kabs_),
     max_(ptf.max_),
     kdes_(ptf.kdes_)
@@ -111,24 +111,11 @@ timeVaryingMassSorptionFvPatchScalarField
 Foam::timeVaryingMassSorptionFvPatchScalarField::
 timeVaryingMassSorptionFvPatchScalarField
 (
-    const timeVaryingMassSorptionFvPatchScalarField& ptf
-)
-:
-    fixedValueFvPatchScalarField(ptf),
-    kabs_(ptf.kabs_),
-    max_(ptf.max_),
-    kdes_(ptf.kdes_)
-{}
-
-
-Foam::timeVaryingMassSorptionFvPatchScalarField::
-timeVaryingMassSorptionFvPatchScalarField
-(
-    const timeVaryingMassSorptionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     kabs_(ptf.kabs_),
     max_(ptf.max_),
     kdes_(ptf.kdes_)
@@ -142,7 +129,7 @@ void Foam::timeVaryingMassSorptionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    fixedValueFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 }
 
 
@@ -152,7 +139,7 @@ void Foam::timeVaryingMassSorptionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedValueFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 }
 
 
@@ -245,7 +232,7 @@ void Foam::timeVaryingMassSorptionFvPatchScalarField::updateCoeffs()
         }
     }
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -40,20 +40,20 @@ fixedEnergyFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::fixedEnergyFvPatchScalarField::
 fixedEnergyFvPatchScalarField
 (
-    const fixedEnergyFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -65,28 +65,18 @@ fixedEnergyFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::fixedEnergyFvPatchScalarField::
 fixedEnergyFvPatchScalarField
 (
-    const fixedEnergyFvPatchScalarField& tppsf
-)
-:
-    fixedValueFvPatchScalarField(tppsf)
-{}
-
-
-Foam::fixedEnergyFvPatchScalarField::
-fixedEnergyFvPatchScalarField
-(
-    const fixedEnergyFvPatchScalarField& tppsf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(tppsf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -103,12 +93,13 @@ void Foam::fixedEnergyFvPatchScalarField::updateCoeffs()
     const label patchi = patch().index();
 
     const scalarField& pw = thermo.p().boundaryField()[patchi];
-    fvPatchScalarField& Tw =
+    auto& Tw =
         const_cast<fvPatchScalarField&>(thermo.T().boundaryField()[patchi]);
+
     Tw.evaluate();
     operator==(thermo.he(pw, Tw, patchi));
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef extrapolatedCalculatedFvPatchFields_H
-#define extrapolatedCalculatedFvPatchFields_H
+#ifndef Foam_extrapolatedCalculatedFvPatchFields_H
+#define Foam_extrapolatedCalculatedFvPatchFields_H
 
 #include "extrapolatedCalculatedFvPatchField.H"
 #include "fieldTypes.H"

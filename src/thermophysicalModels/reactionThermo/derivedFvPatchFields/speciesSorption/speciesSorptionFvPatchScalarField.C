@@ -145,7 +145,7 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    zeroGradientFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     equilibriumModel_(equilibriumModelType::LANGMUIR),
     kinematicModel_(kineticModelType::PseudoFirstOrder),
     thicknessPtr_(nullptr),
@@ -166,7 +166,7 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
     const dictionary& dict
 )
 :
-    zeroGradientFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     equilibriumModel_(equilibriumModelTypeNames.get("equilibriumModel", dict)),
     kinematicModel_(kinematicModelTypeNames.get("kinematicModel", dict)),
     thicknessPtr_(PatchFunction1<scalar>::New(p.patch(), "thickness", dict)),
@@ -187,13 +187,13 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
 
 Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
 (
-    const speciesSorptionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    zeroGradientFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     equilibriumModel_(ptf.equilibriumModel_),
     kinematicModel_(ptf.kinematicModel_),
     thicknessPtr_(ptf.thicknessPtr_.clone(patch().patch())),
@@ -209,30 +209,11 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
 
 Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
 (
-    const speciesSorptionFvPatchScalarField& ptf
-)
-:
-    zeroGradientFvPatchScalarField(ptf),
-    equilibriumModel_(ptf.equilibriumModel_),
-    kinematicModel_(ptf.kinematicModel_),
-    thicknessPtr_(ptf.thicknessPtr_.clone(patch().patch())),
-    kabs_(ptf.kabs_),
-    kl_(ptf.kl_),
-    max_(ptf.max_),
-    rhoS_(ptf.rhoS_),
-    pName_(ptf.pName_),
-    dfldp_(ptf.dfldp_),
-    mass_(ptf.mass_)
-{}
-
-
-Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
-(
-    const speciesSorptionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    zeroGradientFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     equilibriumModel_(ptf.equilibriumModel_),
     kinematicModel_(ptf.kinematicModel_),
     thicknessPtr_(ptf.thicknessPtr_.clone(patch().patch())),
@@ -253,7 +234,7 @@ void Foam::speciesSorptionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    zeroGradientFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     dfldp_.autoMap(m);
     mass_.autoMap(m);
@@ -271,14 +252,14 @@ void Foam::speciesSorptionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    zeroGradientFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& tiptf = refCast<const speciesSorptionFvPatchScalarField>(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     dfldp_.rmap(tiptf.dfldp_, addr);
     mass_.rmap(tiptf.mass_, addr);
 
-    if (thicknessPtr_)
+    if (thicknessPtr_ && tiptf.thicknessPtr_)
     {
         thicknessPtr_->rmap(tiptf.thicknessPtr_(), addr);
     }
@@ -399,7 +380,7 @@ void Foam::speciesSorptionFvPatchScalarField::updateCoeffs()
             << limits.min() << " - " << limits.max() << endl;
     }
 
-    zeroGradientFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

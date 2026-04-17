@@ -79,8 +79,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fluxCorrectedVelocityFvPatchVectorField_H
-#define fluxCorrectedVelocityFvPatchVectorField_H
+#ifndef Foam_fluxCorrectedVelocityFvPatchVectorField_H
+#define Foam_fluxCorrectedVelocityFvPatchVectorField_H
 
 #include "fvPatchFields.H"
 #include "zeroGradientFvPatchFields.H"
@@ -98,7 +98,10 @@ class fluxCorrectedVelocityFvPatchVectorField
 :
     public zeroGradientFvPatchVectorField
 {
-    // Private data
+    typedef fluxCorrectedVelocityFvPatchVectorField this_bctype;
+    typedef zeroGradientFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Name of flux field
         word phiName_;
@@ -130,11 +133,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given fluxCorrectedVelocityFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         fluxCorrectedVelocityFvPatchVectorField
         (
-            const fluxCorrectedVelocityFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
@@ -143,15 +145,12 @@ public:
         //- Construct as copy setting internal field reference
         fluxCorrectedVelocityFvPatchVectorField
         (
-            const fluxCorrectedVelocityFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        fluxCorrectedVelocityFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -173,6 +172,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

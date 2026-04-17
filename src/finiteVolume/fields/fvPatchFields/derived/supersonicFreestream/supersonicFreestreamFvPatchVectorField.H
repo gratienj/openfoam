@@ -71,8 +71,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef supersonicFreestreamFvPatchVectorField_H
-#define supersonicFreestreamFvPatchVectorField_H
+#ifndef Foam_supersonicFreestreamFvPatchVectorField_H
+#define Foam_supersonicFreestreamFvPatchVectorField_H
 
 #include "fvPatchFields.H"
 #include "mixedFvPatchFields.H"
@@ -90,7 +90,10 @@ class supersonicFreestreamFvPatchVectorField
 :
     public mixedFvPatchVectorField
 {
-    // Private data
+    typedef supersonicFreestreamFvPatchVectorField this_bctype;
+    typedef mixedFvPatchVectorField parent_bctype;
+
+    // Private Data
 
         //- Name of temperature field, default = "T"
         word TName_;
@@ -137,34 +140,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given supersonicFreestreamFvPatchVectorField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         supersonicFreestreamFvPatchVectorField
         (
-            const supersonicFreestreamFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        supersonicFreestreamFvPatchVectorField
-        (
-            const supersonicFreestreamFvPatchVectorField&
-        );
-
         //- Construct as copy setting internal field reference
         supersonicFreestreamFvPatchVectorField
         (
-            const supersonicFreestreamFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        supersonicFreestreamFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -226,6 +219,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

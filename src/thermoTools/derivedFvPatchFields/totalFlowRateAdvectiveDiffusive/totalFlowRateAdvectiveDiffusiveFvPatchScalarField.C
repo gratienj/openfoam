@@ -42,7 +42,7 @@ totalFlowRateAdvectiveDiffusiveFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     phiName_("phi"),
     rhoName_("none"),
     massFluxFraction_(1.0)
@@ -61,7 +61,7 @@ totalFlowRateAdvectiveDiffusiveFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchField<scalar>(p, iF),
+    parent_bctype(p, iF),
     phiName_(dict.getOrDefault<word>("phi", "phi")),
     rhoName_(dict.getOrDefault<word>("rho", "none")),
     massFluxFraction_(dict.getOrDefault<scalar>("massFluxFraction", 1))
@@ -81,13 +81,13 @@ totalFlowRateAdvectiveDiffusiveFvPatchScalarField
 Foam::totalFlowRateAdvectiveDiffusiveFvPatchScalarField::
 totalFlowRateAdvectiveDiffusiveFvPatchScalarField
 (
-    const totalFlowRateAdvectiveDiffusiveFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchField<scalar>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     phiName_(ptf.phiName_),
     rhoName_(ptf.rhoName_),
     massFluxFraction_(ptf.massFluxFraction_)
@@ -97,24 +97,11 @@ totalFlowRateAdvectiveDiffusiveFvPatchScalarField
 Foam::totalFlowRateAdvectiveDiffusiveFvPatchScalarField::
 totalFlowRateAdvectiveDiffusiveFvPatchScalarField
 (
-    const totalFlowRateAdvectiveDiffusiveFvPatchScalarField& tppsf
-)
-:
-    mixedFvPatchField<scalar>(tppsf),
-    phiName_(tppsf.phiName_),
-    rhoName_(tppsf.rhoName_),
-    massFluxFraction_(tppsf.massFluxFraction_)
-{}
-
-
-Foam::totalFlowRateAdvectiveDiffusiveFvPatchScalarField::
-totalFlowRateAdvectiveDiffusiveFvPatchScalarField
-(
-    const totalFlowRateAdvectiveDiffusiveFvPatchScalarField& tppsf,
+    const this_bctype& tppsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchField<scalar>(tppsf, iF),
+    parent_bctype(tppsf, iF),
     phiName_(tppsf.phiName_),
     rhoName_(tppsf.rhoName_),
     massFluxFraction_(tppsf.massFluxFraction_)
@@ -128,7 +115,7 @@ void Foam::totalFlowRateAdvectiveDiffusiveFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    mixedFvPatchField<scalar>::autoMap(m);
+    this->parent_bctype::autoMap(m);
 }
 
 
@@ -138,7 +125,7 @@ void Foam::totalFlowRateAdvectiveDiffusiveFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchField<scalar>::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 }
 
 
@@ -175,7 +162,7 @@ void Foam::totalFlowRateAdvectiveDiffusiveFvPatchScalarField::updateCoeffs()
           + alphap*patch().deltaCoeffs()*patch().magSf()/max(mag(phip), SMALL)
         );
 
-    mixedFvPatchField<scalar>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     if (debug)
     {

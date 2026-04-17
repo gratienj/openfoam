@@ -39,20 +39,20 @@ Foam::waveVelocityFvPatchVectorField::waveVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<vector>(p, iF),
+    parent_bctype(p, iF),
     waveDictName_(waveModel::dictName)
 {}
 
 
 Foam::waveVelocityFvPatchVectorField::waveVelocityFvPatchVectorField
 (
-    const waveVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchField<vector>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     waveDictName_(ptf.waveDictName_)
 {}
 
@@ -64,28 +64,18 @@ Foam::waveVelocityFvPatchVectorField::waveVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchField<vector>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     waveDictName_(dict.getOrDefault<word>("waveDict", waveModel::dictName))
 {}
 
 
 Foam::waveVelocityFvPatchVectorField::waveVelocityFvPatchVectorField
 (
-    const waveVelocityFvPatchVectorField& ptf
-)
-:
-    fixedValueFvPatchField<vector>(ptf),
-    waveDictName_(ptf.waveDictName_)
-{}
-
-
-Foam::waveVelocityFvPatchVectorField::waveVelocityFvPatchVectorField
-(
-    const waveVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchField<vector>(ptf, iF),
+    parent_bctype(ptf, iF),
     waveDictName_(ptf.waveDictName_)
 {}
 
@@ -115,7 +105,7 @@ void Foam::waveVelocityFvPatchVectorField::updateCoeffs()
 
     operator==(model.U());
 
-    fixedValueFvPatchField<vector>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

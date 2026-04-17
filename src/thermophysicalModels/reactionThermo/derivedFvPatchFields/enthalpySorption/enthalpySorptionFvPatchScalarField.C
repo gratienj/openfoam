@@ -53,7 +53,7 @@ Foam::enthalpySorptionFvPatchScalarField::enthalpySorptionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    zeroGradientFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     enthalpyModel_(enthalpyModelType::estimated),
     includeHs_(false),
     enthalpyMassLoadPtr_(nullptr),
@@ -73,7 +73,7 @@ Foam::enthalpySorptionFvPatchScalarField::enthalpySorptionFvPatchScalarField
     const dictionary& dict
 )
 :
-    zeroGradientFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     enthalpyModel_(enthalpyModelTypeNames.get("enthalpyModel", dict)),
     includeHs_(dict.getOrDefault<bool>("includeHs", true)),
     enthalpyMassLoadPtr_(nullptr),
@@ -107,13 +107,13 @@ Foam::enthalpySorptionFvPatchScalarField::enthalpySorptionFvPatchScalarField
 
 Foam::enthalpySorptionFvPatchScalarField::enthalpySorptionFvPatchScalarField
 (
-    const enthalpySorptionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    zeroGradientFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     enthalpyModel_(ptf.enthalpyModel_),
     includeHs_(ptf.includeHs_),
     enthalpyMassLoadPtr_(ptf.enthalpyMassLoadPtr_.clone()),
@@ -128,29 +128,11 @@ Foam::enthalpySorptionFvPatchScalarField::enthalpySorptionFvPatchScalarField
 
 Foam::enthalpySorptionFvPatchScalarField::enthalpySorptionFvPatchScalarField
 (
-    const enthalpySorptionFvPatchScalarField& ptf
-)
-:
-    zeroGradientFvPatchScalarField(ptf),
-    enthalpyModel_(ptf.enthalpyModel_),
-    includeHs_(ptf.includeHs_),
-    enthalpyMassLoadPtr_(ptf.enthalpyMassLoadPtr_.clone()),
-    C_(ptf.C_),
-    Hvap_(ptf.Hvap_),
-    speciesName_(ptf.speciesName_),
-    pName_(ptf.pName_),
-    TName_(ptf.TName_),
-    dhdt_(ptf.dhdt_)
-{}
-
-
-Foam::enthalpySorptionFvPatchScalarField::enthalpySorptionFvPatchScalarField
-(
-    const enthalpySorptionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    zeroGradientFvPatchScalarField(ptf, iF),
+    parent_bctype(ptf, iF),
     enthalpyModel_(ptf.enthalpyModel_),
     includeHs_(ptf.includeHs_),
     enthalpyMassLoadPtr_(ptf.enthalpyMassLoadPtr_.clone()),
@@ -170,7 +152,7 @@ void Foam::enthalpySorptionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    zeroGradientFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     dhdt_.autoMap(m);
 }
@@ -182,9 +164,9 @@ void Foam::enthalpySorptionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    zeroGradientFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& tiptf = refCast<const enthalpySorptionFvPatchScalarField>(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     dhdt_.rmap(tiptf.dhdt_, addr);
 }
@@ -290,7 +272,7 @@ void Foam::enthalpySorptionFvPatchScalarField::updateCoeffs()
             << limits.min() << " - " << limits.max() << endl;
     }
 
-    zeroGradientFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -45,7 +45,7 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    mixedFaPatchField.C
+    mixedFaPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -68,6 +68,9 @@ class mixedFaPatchField
 :
     public faPatchField<Type>
 {
+    typedef mixedFaPatchField<Type> this_bctype;
+    typedef faPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Value field
@@ -78,6 +81,7 @@ class mixedFaPatchField
 
         //- Fraction (0-1) of value used for boundary condition
         scalarField valueFraction_;
+
 
 protected:
 
@@ -110,12 +114,12 @@ public:
         );
 
         //- Construct from patch and internal field,
-        //- initialise as zero-gradient
+        //- initialise as zero-gradient (with zero value and zero fraction)
         mixedFaPatchField
         (
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
-            const Foam::zero
+            Foam::zero
         );
 
         //- Construct from patch, internal field and dictionary
@@ -129,33 +133,24 @@ public:
             IOobjectOption::readOption requireMixed = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given mixedFaPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         mixedFaPatchField
         (
-            const mixedFaPatchField<Type>&,
+            const this_bctype&,
             const faPatch&,
             const DimensionedField<Type, areaMesh>&,
             const faPatchFieldMapper&
         );
 
-        //- Construct as copy
-        mixedFaPatchField
-        (
-            const mixedFaPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         mixedFaPatchField
         (
-            const mixedFaPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, areaMesh>&
         );
 
-        //- Return clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return faPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        mixedFaPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -295,7 +290,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "mixedFaPatchField.C"
+    #include "mixedFaPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

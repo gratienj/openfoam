@@ -42,7 +42,7 @@ Description
     \endverbatim
 
 SourceFiles
-    processorFvsPatchField.C
+    processorFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -66,6 +66,9 @@ class processorFvsPatchField
 :
     public coupledFvsPatchField<Type>
 {
+    typedef processorFvsPatchField<Type> this_bctype;
+    typedef coupledFvsPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the processor patch
@@ -104,30 +107,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given processorFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         processorFvsPatchField
         (
-            const processorFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        processorFvsPatchField(const processorFvsPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         processorFvsPatchField
         (
-            const processorFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        processorFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -146,10 +143,13 @@ public:
     // Member Functions
 
         //- True if running parallel
-        virtual bool coupled() const
-        {
-            return UPstream::parRun();
-        }
+        virtual bool coupled() const { return UPstream::parRun(); }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -160,7 +160,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "processorFvsPatchField.C"
+    #include "processorFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

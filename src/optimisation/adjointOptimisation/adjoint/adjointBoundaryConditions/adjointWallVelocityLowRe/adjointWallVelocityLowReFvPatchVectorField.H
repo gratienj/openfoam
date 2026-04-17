@@ -57,6 +57,9 @@ class adjointWallVelocityLowReFvPatchVectorField
     public fixedValueFvPatchVectorField,
     public adjointVectorBoundaryCondition
 {
+    typedef adjointWallVelocityLowReFvPatchVectorField this_bctype;
+    typedef fixedValueFvPatchVectorField parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -80,11 +83,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- adjointWallVelocityLowReFvPatchVectorField onto a new patch
+        //- Construct by mapping onto a new patch
         adjointWallVelocityLowReFvPatchVectorField
         (
-            const adjointWallVelocityLowReFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
@@ -93,15 +95,12 @@ public:
         //- Construct as copy setting internal field reference
         adjointWallVelocityLowReFvPatchVectorField
         (
-            const adjointWallVelocityLowReFvPatchVectorField&,
+            const this_bctype&,
             const DimensionedField<vector, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        adjointWallVelocityLowReFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -120,6 +119,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

@@ -40,12 +40,12 @@ See also
     Foam::cyclicAMIFvPatchField
 
 SourceFiles
-    jumpCyclicAMIFvPatchField.C
+    jumpCyclicAMIFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef jumpCyclicAMIFvPatchField_H
-#define jumpCyclicAMIFvPatchField_H
+#ifndef Foam_jumpCyclicAMIFvPatchField_H
+#define Foam_jumpCyclicAMIFvPatchField_H
 
 #include "cyclicAMIFvPatchField.H"
 
@@ -63,6 +63,8 @@ class jumpCyclicAMIFvPatchField
 :
     public cyclicAMIFvPatchField<Type>
 {
+    typedef jumpCyclicAMIFvPatchField<Type> this_bctype;
+    typedef cyclicAMIFvPatchField<Type> parent_bctype;
 
 public:
 
@@ -87,28 +89,30 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given jumpCyclicAMIFvPatchField onto a
-        //  new patch
+        //- Construct by mapping onto a new patch
         jumpCyclicAMIFvPatchField
         (
-            const jumpCyclicAMIFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        jumpCyclicAMIFvPatchField
-        (
-            const jumpCyclicAMIFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         jumpCyclicAMIFvPatchField
         (
-            const jumpCyclicAMIFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
+
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        jumpCyclicAMIFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
 
     // Member functions
@@ -185,6 +189,12 @@ public:
                 const scalarField&,
                 const Pstream::commsTypes commsType
             ) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -210,7 +220,7 @@ void jumpCyclicAMIFvPatchField<scalar>::updateInterfaceMatrix
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "jumpCyclicAMIFvPatchField.C"
+    #include "jumpCyclicAMIFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

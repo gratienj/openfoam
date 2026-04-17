@@ -40,9 +40,9 @@ Author
     Hrvoje Jasak, Wikki Ltd.
 
 SourceFiles
-    faPatchField.C
-    faPatchFieldBase.C
-    faPatchFieldNew.C
+    faPatchField.txx
+    faPatchFieldBase.cxx
+    faPatchFieldNew.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -400,7 +400,7 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::LAZY_READ
         );
 
-        //- Construct by mapping the given faPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         faPatchField
         (
             const faPatchField<Type>&,
@@ -426,20 +426,16 @@ public:
             const DimensionedField<Type, areaMesh>& iF
         );
 
-        //- Copy construct
-        faPatchField(const faPatchField<Type>& pfld)
-        :
-            faPatchField<Type>(pfld, pfld.internalField())
-        {}
+        //- No copy without an internal field
+        faPatchField(const faPatchField&) = delete;
 
-
-        //- Clone patch field with its own internal field reference
+        //- No clone without an internal field reference.
+        //  \note declared, but only for PtrList compilation requirements.
+        //  The \c tmp should normally contain a pointer in that context.
         virtual tmp<faPatchField<Type>> clone() const
         {
-            return tmp<faPatchField<Type>>
-            (
-                new faPatchField<Type>(*this, this->internalField_)
-            );
+            NotImplemented;
+            return nullptr;
         }
 
         //- Clone with an internal field reference
@@ -448,39 +444,23 @@ public:
             const DimensionedField<Type, areaMesh>& iF
         ) const
         {
-            return tmp<faPatchField<Type>>
-            (
-                new faPatchField<Type>(*this, iF)
-            );
+            return tmp<faPatchField<Type>>::New(*this, iF);
         }
 
 
     // Factory Methods
 
-        //- Clone a patch field with its own internal field reference
-        template<class DerivedPatchField>
-        static tmp<faPatchField<Type>> Clone
-        (
-            const DerivedPatchField& pf
-        )
-        {
-            return tmp<faPatchField<Type>>
-            (
-                new DerivedPatchField(pf)
-            );
-        }
-
-        //- Clone a patch field with an internal field reference
-        template<class DerivedPatchField>
+        //- Clone a patch field, optionally with internal field reference etc
+        template<class DerivedPatchField, class... Args>
         static tmp<faPatchField<Type>> Clone
         (
             const DerivedPatchField& pf,
-            const DimensionedField<Type, areaMesh>& iF
+            Args&&... args
         )
         {
             return tmp<faPatchField<Type>>
             (
-                new DerivedPatchField(pf, iF)
+                new DerivedPatchField(pf, std::forward<Args>(args)...)
             );
         }
 
@@ -822,8 +802,8 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "faPatchField.C"
-    #include "faPatchFieldNew.C"
+    #include "faPatchField.txx"
+    #include "faPatchFieldNew.txx"
     #include "calculatedFaPatchField.H"
     #include "zeroGradientFaPatchField.H"
 #endif

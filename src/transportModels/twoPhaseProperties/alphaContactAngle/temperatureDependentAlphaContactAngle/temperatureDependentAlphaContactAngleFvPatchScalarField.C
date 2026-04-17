@@ -40,7 +40,7 @@ temperatureDependentAlphaContactAngleFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     TName_("T"),
     theta0_()
 {}
@@ -54,7 +54,7 @@ temperatureDependentAlphaContactAngleFvPatchScalarField
     const dictionary& dict
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     TName_(dict.getOrDefault<word>("T", "T")),
     theta0_(Function1<scalar>::New("theta0", dict, &db()))
 {
@@ -65,13 +65,13 @@ temperatureDependentAlphaContactAngleFvPatchScalarField
 Foam::temperatureDependentAlphaContactAngleFvPatchScalarField::
 temperatureDependentAlphaContactAngleFvPatchScalarField
 (
-    const temperatureDependentAlphaContactAngleFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     TName_(psf.TName_),
     theta0_(psf.theta0_.clone())
 {}
@@ -80,23 +80,11 @@ temperatureDependentAlphaContactAngleFvPatchScalarField
 Foam::temperatureDependentAlphaContactAngleFvPatchScalarField::
 temperatureDependentAlphaContactAngleFvPatchScalarField
 (
-    const temperatureDependentAlphaContactAngleFvPatchScalarField& psf
-)
-:
-    alphaContactAngleTwoPhaseFvPatchScalarField(psf),
-    TName_(psf.TName_),
-    theta0_(psf.theta0_.clone())
-{}
-
-
-Foam::temperatureDependentAlphaContactAngleFvPatchScalarField::
-temperatureDependentAlphaContactAngleFvPatchScalarField
-(
-    const temperatureDependentAlphaContactAngleFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    alphaContactAngleTwoPhaseFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     TName_(psf.TName_),
     theta0_(psf.theta0_.clone())
 {}
@@ -123,7 +111,7 @@ void Foam::temperatureDependentAlphaContactAngleFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    alphaContactAngleTwoPhaseFvPatchScalarField::write(os);
+    this->parent_bctype::write(os);
     os.writeEntryIfDifferent<word>("T", "T", TName_);
     theta0_->writeData(os);
     fvPatchField<scalar>::writeValueEntry(os);

@@ -31,7 +31,7 @@ Description
     Cyclic AMI front and back plane patch field
 
 SourceFiles
-    cyclicAMIPointPatchField.C
+    cyclicAMIPointPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -56,17 +56,21 @@ class cyclicAMIPointPatchField
 :
     public coupledPointPatchField<Type>
 {
+    typedef cyclicAMIPointPatchField<Type> this_bctype;
+    typedef coupledPointPatchField<Type> parent_bctype;
+    typedef PrimitivePatchInterpolation<primitivePatch> patchInterp_type;
+    //typedef cyclicAMIPointPatch patch_type;
+
     // Private Data
 
         //- Local reference cast into the cyclicAMI patch
         const cyclicAMIPointPatch& cyclicAMIPatch_;
 
         //- Owner side patch interpolation pointer
-        mutable autoPtr<PrimitivePatchInterpolation<primitivePatch>> ppiPtr_;
+        mutable autoPtr<patchInterp_type> ppiPtr_;
 
         //- Neighbour side patch interpolation pointer
-        mutable autoPtr<PrimitivePatchInterpolation<primitivePatch>>
-            nbrPpiPtr_;
+        mutable autoPtr<patchInterp_type> nbrPpiPtr_;
 
 
     // Private Member Functions
@@ -78,13 +82,12 @@ class cyclicAMIPointPatchField
             {
                 ppiPtr_.reset
                 (
-                    new PrimitivePatchInterpolation<primitivePatch>
+                    new patchInterp_type
                     (
                         cyclicAMIPatch_.cyclicAMIPatch()
                     )
                 );
             }
-
             return *ppiPtr_;
         }
 
@@ -95,13 +98,12 @@ class cyclicAMIPointPatchField
             {
                 nbrPpiPtr_.reset
                 (
-                    new PrimitivePatchInterpolation<primitivePatch>
+                    new patchInterp_type
                     (
                         cyclicAMIPatch_.cyclicAMIPatch().neighbPatch()
                     )
                 );
             }
-
             return *nbrPpiPtr_;
         }
 
@@ -129,10 +131,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         cyclicAMIPointPatchField
         (
-            const cyclicAMIPointPatchField<Type>&,
+            const this_bctype&,
             const pointPatch&,
             const DimensionedField<Type, pointMesh>&,
             const pointPatchFieldMapper&
@@ -141,17 +143,14 @@ public:
         //- Construct as copy setting internal field reference
         cyclicAMIPointPatchField
         (
-            const cyclicAMIPointPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, pointMesh>&
         );
 
-        //- Return a clone
-        virtual autoPtr<pointPatchField<Type>> clone() const
-        {
-            return pointPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cyclicAMIPointPatchField(const this_bctype&) = delete;
 
-        //- Construct and return a clone setting internal field reference
+        //- Construct with an internal field reference
         virtual autoPtr<pointPatchField<Type>> clone
         (
             const DimensionedField<Type, pointMesh>& iF
@@ -217,6 +216,12 @@ public:
                 const Pstream::commsTypes commsType,
                 Field<Type>&
             ) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -227,7 +232,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cyclicAMIPointPatchField.C"
+    #include "cyclicAMIPointPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

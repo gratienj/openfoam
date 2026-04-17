@@ -30,12 +30,12 @@ Description
     Foam::cellMotionFvPatchField
 
 SourceFiles
-    cellMotionFvPatchField.C
+    cellMotionFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef cellMotionFvPatchField_H
-#define cellMotionFvPatchField_H
+#ifndef Foam_cellMotionFvPatchField_H
+#define Foam_cellMotionFvPatchField_H
 
 #include "fixedValueFvPatchFields.H"
 
@@ -53,6 +53,8 @@ class cellMotionFvPatchField
 :
     public fixedValueFvPatchField<Type>
 {
+    typedef cellMotionFvPatchField<Type> this_bctype;
+    typedef fixedValueFvPatchField<Type> parent_bctype;
 
 public:
 
@@ -77,34 +79,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given cellMotionFvPatchField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         cellMotionFvPatchField
         (
-            const cellMotionFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        cellMotionFvPatchField
-        (
-            const cellMotionFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         cellMotionFvPatchField
         (
-            const cellMotionFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        cellMotionFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -116,13 +108,19 @@ public:
         }
 
 
-    // Member functions
+    // Member Functions
 
         //- Update the coefficients associated with the patch field
         virtual void updateCoeffs();
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -133,7 +131,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "cellMotionFvPatchField.C"
+    #include "cellMotionFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

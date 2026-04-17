@@ -97,6 +97,9 @@ class CONSTRUCT
 :
     public PARENT
 {
+    typedef CLASS this_bctype;
+    typedef PARENT parent_bctype;
+
     // Private Data
 
         //- Single valued scalar quantity, e.g. a coefficient
@@ -155,48 +158,29 @@ public:
         //- Construct by mapping onto a new patch
         CONSTRUCT
         (
-            const CLASS&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<TYPE, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Copy construct
-        CONSTRUCT
-        (
-            const CLASS&
-        );
-
-        //- Construct and return a clone
-        virtual tmp<FVPATCHF> clone() const
-        {
-            return tmp<FVPATCHF>
-            (
-                new CLASS(*this)
-            );
-        }
-
         //- Construct as copy setting internal field reference
         CONSTRUCT
         (
-            const CLASS&,
+            const this_bctype&,
             const DimensionedField<TYPE, volMesh>&
         );
 
-        //- Construct and return a clone setting internal field reference
-        virtual tmp<FVPATCHF> clone
+        //- No copy without an internal field
+        CONSTRUCT(const this_bctype&) = delete;
+
+        //- Clone with an internal field reference
+        virtual tmp<fvPatchField<TYPE>> clone
         (
             const DimensionedField<TYPE, volMesh>& iF
         ) const
         {
-            return tmp<FVPATCHF>
-            (
-                new CLASS
-                (
-                    *this,
-                    iF
-                )
-            );
+            return fvPatchField<TYPE>::Clone(*this, iF);
         }
 
 
@@ -226,6 +210,12 @@ public:
 
         //- Write
         virtual void write(Ostream& os) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

@@ -54,6 +54,9 @@ class dynamicAlphaContactAngleFvPatchScalarField
 :
     public alphaContactAngleTwoPhaseFvPatchScalarField
 {
+    typedef dynamicAlphaContactAngleFvPatchScalarField this_bctype;
+    typedef alphaContactAngleTwoPhaseFvPatchScalarField parent_bctype;
+
     // Private data
 
         //- Equilibrium contact angle
@@ -92,35 +95,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //  dynamicAlphaContactAngleFvPatchScalarField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         dynamicAlphaContactAngleFvPatchScalarField
         (
-            const dynamicAlphaContactAngleFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        dynamicAlphaContactAngleFvPatchScalarField
-        (
-            const dynamicAlphaContactAngleFvPatchScalarField&
-        );
-
         //- Construct as copy setting internal field reference
         dynamicAlphaContactAngleFvPatchScalarField
         (
-            const dynamicAlphaContactAngleFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        dynamicAlphaContactAngleFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -143,6 +135,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

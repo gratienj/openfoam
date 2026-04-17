@@ -87,7 +87,10 @@ class outletMappedUniformInletHeatAdditionFvPatchField
 :
     public fixedValueFvPatchScalarField
 {
-    // Private data
+    typedef outletMappedUniformInletHeatAdditionFvPatchField this_bctype;
+    typedef fixedValueFvPatchScalarField parent_bctype;
+
+    // Private Data
 
         //- Input energy
         autoPtr<Function1<scalar>> Qptr_;
@@ -131,30 +134,24 @@ public:
         //- Construct by mapping onto a new patch
         outletMappedUniformInletHeatAdditionFvPatchField
         (
-            const outletMappedUniformInletHeatAdditionFvPatchField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        outletMappedUniformInletHeatAdditionFvPatchField
-        (
-            const outletMappedUniformInletHeatAdditionFvPatchField&
-        );
-
         //- Construct as copy setting internal field reference
         outletMappedUniformInletHeatAdditionFvPatchField
         (
-            const outletMappedUniformInletHeatAdditionFvPatchField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        outletMappedUniformInletHeatAdditionFvPatchField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -185,6 +182,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

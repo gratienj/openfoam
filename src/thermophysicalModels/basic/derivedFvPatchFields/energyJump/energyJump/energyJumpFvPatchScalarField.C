@@ -39,19 +39,19 @@ Foam::energyJumpFvPatchScalarField::energyJumpFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedJumpFvPatchField<scalar>(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::energyJumpFvPatchScalarField::energyJumpFvPatchScalarField
 (
-    const energyJumpFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedJumpFvPatchField<scalar>(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -62,7 +62,7 @@ Foam::energyJumpFvPatchScalarField::energyJumpFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedJumpFvPatchField<scalar>(p, iF)
+    parent_bctype(p, iF)
 {
     if (!this->readValueEntry(dict))
     {
@@ -73,20 +73,11 @@ Foam::energyJumpFvPatchScalarField::energyJumpFvPatchScalarField
 
 Foam::energyJumpFvPatchScalarField::energyJumpFvPatchScalarField
 (
-    const energyJumpFvPatchScalarField& ptf
-)
-:
-    fixedJumpFvPatchField<scalar>(ptf)
-{}
-
-
-Foam::energyJumpFvPatchScalarField::energyJumpFvPatchScalarField
-(
-    const energyJumpFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedJumpFvPatchField<scalar>(ptf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -105,14 +96,13 @@ void Foam::energyJumpFvPatchScalarField::updateCoeffs()
         label patchID = patch().index();
 
         const scalarField& pp = thermo.p().boundaryField()[patchID];
-        const fixedJumpFvPatchScalarField& TbPatch =
+        const auto& TbPatch =
             refCast<const fixedJumpFvPatchScalarField>
             (
                 thermo.T().boundaryField()[patchID]
             );
 
-        fixedJumpFvPatchScalarField& Tbp =
-            const_cast<fixedJumpFvPatchScalarField&>(TbPatch);
+        auto& Tbp = const_cast<fixedJumpFvPatchScalarField&>(TbPatch);
 
         // force update of jump
         Tbp.evaluate(Pstream::commsTypes::buffered);
@@ -126,13 +116,13 @@ void Foam::energyJumpFvPatchScalarField::updateCoeffs()
         );
     }
 
-    fixedJumpFvPatchField<scalar>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
 void Foam::energyJumpFvPatchScalarField::write(Ostream& os) const
 {
-    fixedJumpFvPatchField<scalar>::write(os);
+    this->parent_bctype::write(os);
     fvPatchField<scalar>::writeValueEntry(os);
 }
 

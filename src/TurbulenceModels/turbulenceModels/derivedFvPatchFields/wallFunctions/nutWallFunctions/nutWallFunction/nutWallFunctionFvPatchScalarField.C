@@ -88,7 +88,7 @@ Foam::nutWallFunctionFvPatchScalarField::nutWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     UName_(),
     wallCoeffs_()
 {
@@ -98,13 +98,13 @@ Foam::nutWallFunctionFvPatchScalarField::nutWallFunctionFvPatchScalarField
 
 Foam::nutWallFunctionFvPatchScalarField::nutWallFunctionFvPatchScalarField
 (
-    const nutWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     UName_(ptf.UName_),
     wallCoeffs_(ptf.wallCoeffs_)
 {
@@ -119,7 +119,7 @@ Foam::nutWallFunctionFvPatchScalarField::nutWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     UName_(dict.getOrDefault<word>("U", word::null)),
     wallCoeffs_(dict)
 {
@@ -129,24 +129,11 @@ Foam::nutWallFunctionFvPatchScalarField::nutWallFunctionFvPatchScalarField
 
 Foam::nutWallFunctionFvPatchScalarField::nutWallFunctionFvPatchScalarField
 (
-    const nutWallFunctionFvPatchScalarField& wfpsf
-)
-:
-    fixedValueFvPatchScalarField(wfpsf),
-    UName_(wfpsf.UName_),
-    wallCoeffs_(wfpsf.wallCoeffs_)
-{
-    checkType();
-}
-
-
-Foam::nutWallFunctionFvPatchScalarField::nutWallFunctionFvPatchScalarField
-(
-    const nutWallFunctionFvPatchScalarField& wfpsf,
+    const this_bctype& wfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(wfpsf, iF),
+    parent_bctype(wfpsf, iF),
     UName_(wfpsf.UName_),
     wallCoeffs_(wfpsf.wallCoeffs_)
 {
@@ -164,7 +151,7 @@ Foam::nutWallFunctionFvPatchScalarField::nutw
 )
 {
     return
-        refCast<const nutWallFunctionFvPatchScalarField>
+        refCast<const this_bctype>
         (
             turbModel.nut()().boundaryField()[patchi],
             patchi
@@ -181,7 +168,7 @@ void Foam::nutWallFunctionFvPatchScalarField::updateCoeffs()
 
     operator==(calcNut());
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

@@ -124,7 +124,7 @@ atmOmegaWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    omegaWallFunctionFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     z0_(nullptr)
 {}
 
@@ -132,13 +132,13 @@ atmOmegaWallFunctionFvPatchScalarField
 Foam::atmOmegaWallFunctionFvPatchScalarField::
 atmOmegaWallFunctionFvPatchScalarField
 (
-    const atmOmegaWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    omegaWallFunctionFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     z0_(ptf.z0_.clone(p.patch()))
 {}
 
@@ -151,7 +151,7 @@ atmOmegaWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    omegaWallFunctionFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     z0_(PatchFunction1<scalar>::New(p.patch(), "z0", dict))
 {}
 
@@ -159,22 +159,11 @@ atmOmegaWallFunctionFvPatchScalarField
 Foam::atmOmegaWallFunctionFvPatchScalarField::
 atmOmegaWallFunctionFvPatchScalarField
 (
-    const atmOmegaWallFunctionFvPatchScalarField& owfpsf
-)
-:
-    omegaWallFunctionFvPatchScalarField(owfpsf),
-    z0_(owfpsf.z0_.clone(this->patch().patch()))
-{}
-
-
-Foam::atmOmegaWallFunctionFvPatchScalarField::
-atmOmegaWallFunctionFvPatchScalarField
-(
-    const atmOmegaWallFunctionFvPatchScalarField& owfpsf,
+    const this_bctype& owfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    omegaWallFunctionFvPatchScalarField(owfpsf, iF),
+    parent_bctype(owfpsf, iF),
     z0_(owfpsf.z0_.clone(this->patch().patch()))
 {}
 
@@ -186,7 +175,7 @@ void Foam::atmOmegaWallFunctionFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    omegaWallFunctionFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     if (z0_)
     {
@@ -201,12 +190,11 @@ void Foam::atmOmegaWallFunctionFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    omegaWallFunctionFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const auto& atmpsf =
-        refCast<const atmOmegaWallFunctionFvPatchScalarField>(ptf);
+    const auto& atmpsf = refCast<const this_bctype>(ptf);
 
-    if (z0_)
+    if (z0_ && atmpsf.z0_)
     {
         z0_->rmap(atmpsf.z0_(), addr);
     }

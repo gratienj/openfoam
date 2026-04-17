@@ -70,7 +70,7 @@ semiPermeableBaffleVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     rhoName_("rho")
 {}
 
@@ -83,7 +83,7 @@ semiPermeableBaffleVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     rhoName_(dict.getOrDefault<word>("rho", "rho"))
 {
     this->readValueEntry(dict, IOobjectOption::MUST_READ);
@@ -93,13 +93,13 @@ semiPermeableBaffleVelocityFvPatchVectorField
 Foam::semiPermeableBaffleVelocityFvPatchVectorField::
 semiPermeableBaffleVelocityFvPatchVectorField
 (
-    const semiPermeableBaffleVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     rhoName_(ptf.rhoName_)
 {}
 
@@ -107,22 +107,11 @@ semiPermeableBaffleVelocityFvPatchVectorField
 Foam::semiPermeableBaffleVelocityFvPatchVectorField::
 semiPermeableBaffleVelocityFvPatchVectorField
 (
-    const semiPermeableBaffleVelocityFvPatchVectorField& ptf
-)
-:
-    fixedValueFvPatchVectorField(ptf),
-    rhoName_(ptf.rhoName_)
-{}
-
-
-Foam::semiPermeableBaffleVelocityFvPatchVectorField::
-semiPermeableBaffleVelocityFvPatchVectorField
-(
-    const semiPermeableBaffleVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(ptf, iF),
+    parent_bctype(ptf, iF),
     rhoName_(ptf.rhoName_)
 {}
 
@@ -161,7 +150,7 @@ void Foam::semiPermeableBaffleVelocityFvPatchVectorField::updateCoeffs()
 
     this->operator==(patch().nf()*phip/(rhop*patch().magSf()));
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

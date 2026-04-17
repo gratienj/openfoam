@@ -41,7 +41,7 @@ filmPyrolysisVelocityCoupledFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     filmRegionName_("surfaceFilmProperties"),
     pyrolysisRegionName_("pyrolysisProperties"),
     phiName_("phi"),
@@ -52,13 +52,13 @@ filmPyrolysisVelocityCoupledFvPatchVectorField
 Foam::filmPyrolysisVelocityCoupledFvPatchVectorField::
 filmPyrolysisVelocityCoupledFvPatchVectorField
 (
-    const filmPyrolysisVelocityCoupledFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     filmRegionName_(ptf.filmRegionName_),
     pyrolysisRegionName_(ptf.pyrolysisRegionName_),
     phiName_(ptf.phiName_),
@@ -74,7 +74,7 @@ filmPyrolysisVelocityCoupledFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     filmRegionName_
     (
         dict.getOrDefault<word>("filmRegion", "surfaceFilmProperties")
@@ -91,25 +91,11 @@ filmPyrolysisVelocityCoupledFvPatchVectorField
 Foam::filmPyrolysisVelocityCoupledFvPatchVectorField::
 filmPyrolysisVelocityCoupledFvPatchVectorField
 (
-    const filmPyrolysisVelocityCoupledFvPatchVectorField& fpvpvf
-)
-:
-    fixedValueFvPatchVectorField(fpvpvf),
-    filmRegionName_(fpvpvf.filmRegionName_),
-    pyrolysisRegionName_(fpvpvf.pyrolysisRegionName_),
-    phiName_(fpvpvf.phiName_),
-    rhoName_(fpvpvf.rhoName_)
-{}
-
-
-Foam::filmPyrolysisVelocityCoupledFvPatchVectorField::
-filmPyrolysisVelocityCoupledFvPatchVectorField
-(
-    const filmPyrolysisVelocityCoupledFvPatchVectorField& fpvpvf,
+    const this_bctype& fpvpvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(fpvpvf, iF),
+    parent_bctype(fpvpvf, iF),
     filmRegionName_(fpvpvf.filmRegionName_),
     pyrolysisRegionName_(fpvpvf.pyrolysisRegionName_),
     phiName_(fpvpvf.phiName_),
@@ -200,7 +186,7 @@ void Foam::filmPyrolysisVelocityCoupledFvPatchVectorField::updateCoeffs()
 
     UPstream::msgType(oldTag);  // Restore tag
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

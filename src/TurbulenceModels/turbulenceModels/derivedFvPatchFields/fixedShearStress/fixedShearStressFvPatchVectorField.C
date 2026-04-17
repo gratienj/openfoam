@@ -41,7 +41,7 @@ Foam::fixedShearStressFvPatchVectorField::fixedShearStressFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     tau0_(Zero)
 {}
 
@@ -53,7 +53,7 @@ Foam::fixedShearStressFvPatchVectorField::fixedShearStressFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF, dict, IOobjectOption::NO_READ),
+    parent_bctype(p, iF, dict, IOobjectOption::NO_READ),
     tau0_(dict.getOrDefault<vector>("tau", Zero))
 {
     this->extrapolateInternal();  // Zero-gradient patch values
@@ -62,34 +62,24 @@ Foam::fixedShearStressFvPatchVectorField::fixedShearStressFvPatchVectorField
 
 Foam::fixedShearStressFvPatchVectorField::fixedShearStressFvPatchVectorField
 (
-    const fixedShearStressFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     tau0_(ptf.tau0_)
 {}
 
 
 Foam::fixedShearStressFvPatchVectorField::fixedShearStressFvPatchVectorField
 (
-    const fixedShearStressFvPatchVectorField& ptf
-)
-:
-    fixedValueFvPatchVectorField(ptf),
-    tau0_(ptf.tau0_)
-{}
-
-
-Foam::fixedShearStressFvPatchVectorField::fixedShearStressFvPatchVectorField
-(
-    const fixedShearStressFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(ptf, iF),
+    parent_bctype(ptf, iF),
     tau0_(ptf.tau0_)
 {}
 
@@ -122,7 +112,7 @@ void Foam::fixedShearStressFvPatchVectorField::updateCoeffs()
 
     operator==(tauHat*(tauHat & (tau0_*(1.0/(ry*nuEff)) + Uc)));
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

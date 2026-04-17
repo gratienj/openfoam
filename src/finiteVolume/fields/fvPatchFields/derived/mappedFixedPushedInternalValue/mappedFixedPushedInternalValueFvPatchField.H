@@ -65,12 +65,12 @@ See also
     Foam::mappedFixedValueFvPatchField
 
 SourceFiles
-    mappedFixedPushedInternalValueFvPatchField.C
+    mappedFixedPushedInternalValueFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef mappedFixedPushedInternalValueFvPatchField_H
-#define mappedFixedPushedInternalValueFvPatchField_H
+#ifndef Foam_mappedFixedPushedInternalValueFvPatchField_H
+#define Foam_mappedFixedPushedInternalValueFvPatchField_H
 
 #include "mappedFixedValueFvPatchField.H"
 
@@ -88,6 +88,8 @@ class mappedFixedPushedInternalValueFvPatchField
 :
     public mappedFixedValueFvPatchField<Type>
 {
+    typedef mappedFixedPushedInternalValueFvPatchField<Type> this_bctype;
+    typedef mappedFixedValueFvPatchField<Type> parent_bctype;
 
 public:
 
@@ -112,34 +114,27 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given a
-        //  mappedFixedPushedInternalValueFvPatchField  onto a new patch
+        //- Construct by mapping onto a new patch
         mappedFixedPushedInternalValueFvPatchField
         (
-            const mappedFixedPushedInternalValueFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        mappedFixedPushedInternalValueFvPatchField
-        (
-            const mappedFixedPushedInternalValueFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         mappedFixedPushedInternalValueFvPatchField
         (
-            const mappedFixedPushedInternalValueFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        mappedFixedPushedInternalValueFvPatchField
+        (
+            const this_bctype&
+        ) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -160,6 +155,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -170,7 +171,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "mappedFixedPushedInternalValueFvPatchField.C"
+    #include "mappedFixedPushedInternalValueFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

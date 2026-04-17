@@ -33,7 +33,7 @@ Description
     The "value" entry is usually MUST_READ and always WRITE.
 
 SourceFiles
-    coupledFvsPatchField.C
+    coupledFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class coupledFvsPatchField
 :
     public fvsPatchField<Type>
 {
+    typedef coupledFvsPatchField<Type> this_bctype;
+    typedef fvsPatchField<Type> parent_bctype;
+
 public:
 
     //- Runtime type information
@@ -89,30 +92,24 @@ public:
             IOobjectOption::readOption requireValue = IOobjectOption::MUST_READ
         );
 
-        //- Construct by mapping the given coupledFvsPatchField onto a new patch
+        //- Construct by mapping onto a new patch
         coupledFvsPatchField
         (
-            const coupledFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        coupledFvsPatchField
-        (
-            const coupledFvsPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         coupledFvsPatchField
         (
-            const coupledFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const = 0;
+        //- No copy without an internal field
+        coupledFvsPatchField(const this_bctype&) = delete;
 
         //- Construct and return a clone
         virtual tmp<fvsPatchField<Type>> clone
@@ -124,13 +121,16 @@ public:
     // Member Functions
 
         //- True: this patch field is derived from coupledFvsPatchField
-        virtual bool coupled() const
-        {
-            return true;
-        }
+        virtual bool coupled() const { return true; }
 
         //- Write includes "value" entry
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -141,7 +141,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "coupledFvsPatchField.C"
+    #include "coupledFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -33,7 +33,7 @@ Description
     The "value" entry is MUST_READ.
 
 SourceFiles
-    processorCyclicFvsPatchField.C
+    processorCyclicFvsPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -57,6 +57,9 @@ class processorCyclicFvsPatchField
 :
     public coupledFvsPatchField<Type>
 {
+    typedef processorCyclicFvsPatchField<Type> this_bctype;
+    typedef coupledFvsPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Local reference cast into the processor patch
@@ -95,30 +98,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given patch field onto a new patch
+        //- Construct by mapping onto a new patch
         processorCyclicFvsPatchField
         (
-            const processorCyclicFvsPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, surfaceMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        processorCyclicFvsPatchField(const processorCyclicFvsPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         processorCyclicFvsPatchField
         (
-            const processorCyclicFvsPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, surfaceMesh>&
         );
 
-        //- Return clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return fvsPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        processorCyclicFvsPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -137,10 +134,13 @@ public:
     // Member Functions
 
         //- True if running parallel
-        virtual bool coupled() const
-        {
-            return UPstream::parRun();
-        }
+        virtual bool coupled() const { return UPstream::parRun(); }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -151,7 +151,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "processorCyclicFvsPatchField.C"
+    #include "processorCyclicFvsPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

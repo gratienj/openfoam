@@ -46,7 +46,7 @@ adjointFarFieldTMVar2FvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     adjointScalarBoundaryCondition(p, iF, word::null)
 {}
 
@@ -54,13 +54,13 @@ adjointFarFieldTMVar2FvPatchScalarField
 adjointFarFieldTMVar2FvPatchScalarField::
 adjointFarFieldTMVar2FvPatchScalarField
 (
-    const adjointFarFieldTMVar2FvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointScalarBoundaryCondition(p, iF, ptf.adjointSolverName_)
 {}
 
@@ -73,7 +73,7 @@ adjointFarFieldTMVar2FvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     adjointScalarBoundaryCondition(p, iF, dict.get<word>("solverName"))
 {
     this->readValueEntry(dict, IOobjectOption::MUST_READ);
@@ -83,11 +83,11 @@ adjointFarFieldTMVar2FvPatchScalarField
 adjointFarFieldTMVar2FvPatchScalarField::
 adjointFarFieldTMVar2FvPatchScalarField
 (
-    const adjointFarFieldTMVar2FvPatchScalarField& tppsf,
+    const this_bctype& tppsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(tppsf, iF),
+    parent_bctype(tppsf, iF),
     adjointScalarBoundaryCondition(tppsf)
 {}
 
@@ -122,7 +122,7 @@ void adjointFarFieldTMVar2FvPatchScalarField::updateCoeffs()
         )
     );
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

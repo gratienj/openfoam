@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef slicedFvPatchFields_H
-#define slicedFvPatchFields_H
+#ifndef Foam_slicedFvPatchFields_H
+#define Foam_slicedFvPatchFields_H
 
 #include "slicedFvPatchField.H"
 #include "fieldTypes.H"

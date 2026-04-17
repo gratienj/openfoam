@@ -48,7 +48,7 @@ turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch()),  // default method (fluidThermo)
     mappedPatchFieldBase<scalar>
     (
@@ -66,13 +66,13 @@ turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
 turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::
 turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
 (
-    const turbulentTemperatureCoupledBaffleMixedFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    mixedFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     temperatureCoupledBase(patch(), ptf),
     mappedPatchFieldBase<scalar>
     (
@@ -96,7 +96,7 @@ turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
     const dictionary& dict
 )
 :
-    mixedFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch(), dict),
     mappedPatchFieldBase<scalar>
     (
@@ -176,37 +176,15 @@ turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
 turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::
 turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
 (
-    const turbulentTemperatureCoupledBaffleMixedFvPatchScalarField& wtcsf,
+    const this_bctype& wtcsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    mixedFvPatchScalarField(wtcsf, iF),
+    parent_bctype(wtcsf, iF),
     temperatureCoupledBase(patch(), wtcsf),
     mappedPatchFieldBase<scalar>
     (
         mappedPatchFieldBase<scalar>::mapper(patch(), iF),
-        *this,
-        wtcsf
-    ),
-    TnbrName_(wtcsf.TnbrName_),
-    thicknessLayers_(wtcsf.thicknessLayers_),
-    thicknessLayer_(wtcsf.thicknessLayer_.clone(patch().patch())),
-    kappaLayers_(wtcsf.kappaLayers_),
-    kappaLayer_(wtcsf.kappaLayer_.clone(patch().patch()))
-{}
-
-
-turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::
-turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
-(
-    const turbulentTemperatureCoupledBaffleMixedFvPatchScalarField& wtcsf
-)
-:
-    mixedFvPatchScalarField(wtcsf),
-    temperatureCoupledBase(patch(), wtcsf),
-    mappedPatchFieldBase<scalar>
-    (
-        mappedPatchFieldBase<scalar>::mapper(patch(), wtcsf.internalField()),
         *this,
         wtcsf
     ),
@@ -225,7 +203,7 @@ void turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::autoMap
     const fvPatchFieldMapper& mapper
 )
 {
-    mixedFvPatchScalarField::autoMap(mapper);
+    this->parent_bctype::autoMap(mapper);
     temperatureCoupledBase::autoMap(mapper);
     //mappedPatchFieldBase<scalar>::autoMap(mapper);
     if (thicknessLayer_)
@@ -242,17 +220,13 @@ void turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    mixedFvPatchScalarField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 
-    const turbulentTemperatureCoupledBaffleMixedFvPatchScalarField& tiptf =
-        refCast
-        <
-            const turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
-        >(ptf);
+    const auto& tiptf = refCast<const this_bctype>(ptf);
 
     temperatureCoupledBase::rmap(tiptf, addr);
     //mappedPatchFieldBase<scalar>::rmap(ptf, addr);
-    if (thicknessLayer_)
+    if (thicknessLayer_ && tiptf.thicknessLayer_)
     {
         thicknessLayer_().rmap(tiptf.thicknessLayer_(), addr);
         kappaLayer_().rmap(tiptf.kappaLayer_(), addr);
@@ -335,12 +309,7 @@ void turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::updateCoeffs()
         const label nbrPatchID = mpp.samplePolyPatch().index();
         const auto& nbrPatch = nbrMesh.boundary()[nbrPatchID];
 
-        const turbulentTemperatureCoupledBaffleMixedFvPatchScalarField&
-        nbrField =
-        refCast
-        <
-        const turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
-        >
+        const auto& nbrField = refCast<const this_bctype>
         (
             nbrPatch.lookupPatchField<volScalarField>(TnbrName_)
         );
@@ -379,7 +348,7 @@ void turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::updateCoeffs()
     this->refGrad() = Zero;
     this->valueFraction() = nbrKDelta/(nbrKDelta + myKDelta());
 
-    mixedFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     if (debug)
     {
@@ -446,7 +415,7 @@ void turbulentTemperatureCoupledBaffleMixedFvPatchScalarField::write
     Ostream& os
 ) const
 {
-    mixedFvPatchField<scalar>::write(os);
+    this->parent_bctype::write(os);
     os.writeEntry("Tnbr", TnbrName_);
     if (thicknessLayer_)
     {

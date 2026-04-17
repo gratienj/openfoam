@@ -122,9 +122,7 @@ Foam::Detail::PtrListDetail<T>::clone(Args&&... args) const
 
     for (label i = 0; i < len; ++i)
     {
-        const T* ptr = ptrs[i];
-
-        if (ptr)
+        if (const T* ptr = ptrs[i]; ptr)
         {
             cloned[i] = ptr->clone(std::forward<Args>(args)...).ptr();
         }

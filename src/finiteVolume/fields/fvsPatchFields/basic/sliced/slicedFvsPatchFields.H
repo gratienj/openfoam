@@ -29,12 +29,12 @@ InClass
 Description
 
 SourceFiles
-    slicedFvsPatchFields.C
+    slicedFvsPatchFields.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef slicedFvsPatchFields_H
-#define slicedFvsPatchFields_H
+#ifndef Foam_slicedFvsPatchFields_H
+#define Foam_slicedFvsPatchFields_H
 
 #include "slicedFvsPatchField.H"
 #include "fieldTypes.H"

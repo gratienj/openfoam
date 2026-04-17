@@ -40,7 +40,7 @@ Description
     - initInterfaceMatrixUpdate etc: adding of neighbouring data
 
 SourceFiles
-    calculatedProcessorFvPatchField.C
+    calculatedProcessorFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -66,6 +66,9 @@ class calculatedProcessorFvPatchField
     public processorLduInterfaceField,
     public coupledFvPatchField<Type>
 {
+    typedef calculatedProcessorFvPatchField<Type> this_bctype;
+    typedef coupledFvPatchField<Type> parent_bctype;
+
 protected:
 
     // Protected Data
@@ -126,24 +129,21 @@ public:
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Construct as copy
-        calculatedProcessorFvPatchField
-        (
-            const calculatedProcessorFvPatchField<Type>&
-        );
-
         //- Construct as copy setting internal field reference
         calculatedProcessorFvPatchField
         (
-            const calculatedProcessorFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        [[deprecated("2026-03: soon = delete")]]
+        calculatedProcessorFvPatchField(const this_bctype& pfld)
+        #ifdef Foam_fvPatchField_copyConstruct
+        : this_bctype(pfld, pfld.internalField()) {}
+        #else
+        = delete;
+        #endif
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -281,6 +281,12 @@ public:
         {
             return pTraits<Type>::rank;
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -291,7 +297,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "calculatedProcessorFvPatchField.C"
+    #include "calculatedProcessorFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

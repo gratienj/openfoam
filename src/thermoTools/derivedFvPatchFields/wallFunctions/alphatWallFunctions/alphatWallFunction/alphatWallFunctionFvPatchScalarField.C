@@ -47,20 +47,20 @@ alphatWallFunctionFvPatchScalarField::alphatWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     Prt_(0.85)
 {}
 
 
 alphatWallFunctionFvPatchScalarField::alphatWallFunctionFvPatchScalarField
 (
-    const alphatWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     Prt_(ptf.Prt_)
 {}
 
@@ -72,28 +72,18 @@ alphatWallFunctionFvPatchScalarField::alphatWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     Prt_(dict.getOrDefault<scalar>("Prt", 0.85))
 {}
 
 
 alphatWallFunctionFvPatchScalarField::alphatWallFunctionFvPatchScalarField
 (
-    const alphatWallFunctionFvPatchScalarField& awfpsf
-)
-:
-    fixedValueFvPatchScalarField(awfpsf),
-    Prt_(awfpsf.Prt_)
-{}
-
-
-alphatWallFunctionFvPatchScalarField::alphatWallFunctionFvPatchScalarField
-(
-    const alphatWallFunctionFvPatchScalarField& awfpsf,
+    const this_bctype& awfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(awfpsf, iF),
+    parent_bctype(awfpsf, iF),
     Prt_(awfpsf.Prt_)
 {}
 
@@ -124,7 +114,7 @@ void alphatWallFunctionFvPatchScalarField::updateCoeffs()
 
     operator==(rhow*tnutw/Prt_);
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

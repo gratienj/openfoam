@@ -53,7 +53,7 @@ alphatFilmWallFunctionFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     filmRegionName_("surfaceFilmProperties"),
     B_(5.5),
     yPlusCrit_(11.05),
@@ -66,13 +66,13 @@ alphatFilmWallFunctionFvPatchScalarField
 alphatFilmWallFunctionFvPatchScalarField::
 alphatFilmWallFunctionFvPatchScalarField
 (
-    const alphatFilmWallFunctionFvPatchScalarField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchScalarField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     filmRegionName_(ptf.filmRegionName_),
     B_(ptf.B_),
     yPlusCrit_(ptf.yPlusCrit_),
@@ -90,7 +90,7 @@ alphatFilmWallFunctionFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchScalarField(p, iF, dict),
+    parent_bctype(p, iF, dict),
     filmRegionName_
     (
         dict.getOrDefault<word>("filmRegion", "surfaceFilmProperties")
@@ -106,27 +106,11 @@ alphatFilmWallFunctionFvPatchScalarField
 alphatFilmWallFunctionFvPatchScalarField::
 alphatFilmWallFunctionFvPatchScalarField
 (
-    const alphatFilmWallFunctionFvPatchScalarField& fwfpsf
-)
-:
-    fixedValueFvPatchScalarField(fwfpsf),
-    filmRegionName_(fwfpsf.filmRegionName_),
-    B_(fwfpsf.B_),
-    yPlusCrit_(fwfpsf.yPlusCrit_),
-    Cmu_(fwfpsf.Cmu_),
-    kappa_(fwfpsf.kappa_),
-    Prt_(fwfpsf.Prt_)
-{}
-
-
-alphatFilmWallFunctionFvPatchScalarField::
-alphatFilmWallFunctionFvPatchScalarField
-(
-    const alphatFilmWallFunctionFvPatchScalarField& fwfpsf,
+    const this_bctype& fwfpsf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedValueFvPatchScalarField(fwfpsf, iF),
+    parent_bctype(fwfpsf, iF),
     filmRegionName_(fwfpsf.filmRegionName_),
     B_(fwfpsf.B_),
     yPlusCrit_(fwfpsf.yPlusCrit_),
@@ -235,7 +219,7 @@ void alphatFilmWallFunctionFvPatchScalarField::updateCoeffs()
 
     UPstream::msgType(oldTag);  // Restore tag
 
-    fixedValueFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

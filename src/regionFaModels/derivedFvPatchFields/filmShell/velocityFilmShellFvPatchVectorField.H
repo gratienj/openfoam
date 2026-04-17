@@ -134,7 +134,7 @@ class velocityFilmShellFvPatchVectorField
 {
     // Typedefs
 
-        //- The parent boundary condition type
+        typedef velocityFilmShellFvPatchVectorField this_bctype;
         typedef mixedFvPatchField<vector> parent_bctype;
 
         //- The finite-area region model
@@ -185,11 +185,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given
-        //- velocityFilmShellFvPatchVectorField onto a new patch
+        //- Construct by mapping onto a new patch
         velocityFilmShellFvPatchVectorField
         (
-            const velocityFilmShellFvPatchVectorField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<vector, volMesh>&,
             const fvPatchFieldMapper&
@@ -198,25 +197,12 @@ public:
         //- Copy construct with internal field reference
         velocityFilmShellFvPatchVectorField
         (
-            const velocityFilmShellFvPatchVectorField& pfld,
+            const this_bctype& pfld,
             const DimensionedField<vector, volMesh>& iF
         );
 
-        //- Copy construct
-        velocityFilmShellFvPatchVectorField
-        (
-            const velocityFilmShellFvPatchVectorField& pfld
-        )
-        :
-            velocityFilmShellFvPatchVectorField(pfld, pfld.internalField())
-        {}
-
-
-        //- Return a clone
-        virtual tmp<fvPatchField<vector>> clone() const
-        {
-            return fvPatchField<vector>::Clone(*this);
-        }
+        //- No copy without an internal field
+        velocityFilmShellFvPatchVectorField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<vector>> clone
@@ -235,6 +221,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

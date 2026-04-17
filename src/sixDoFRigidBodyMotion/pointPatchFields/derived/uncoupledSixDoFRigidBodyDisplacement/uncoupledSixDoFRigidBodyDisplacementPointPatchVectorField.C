@@ -48,7 +48,7 @@ uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchField<vector>(p, iF),
+    parent_bctype(p, iF),
     motion_(db().time()),
     initialPoints_(p.localPoints()),
     curTimeIndex_(-1)
@@ -63,7 +63,7 @@ uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValuePointPatchField<vector>(p, iF, dict),
+    parent_bctype(p, iF, dict),
     motion_(dict, dict, db().time()),
     curTimeIndex_(-1)
 {
@@ -86,13 +86,13 @@ uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
 uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField::
 uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
 (
-    const uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField& ptf,
+    const this_bctype& ptf,
     const pointPatch& p,
     const DimensionedField<vector, pointMesh>& iF,
     const pointPatchFieldMapper& mapper
 )
 :
-    fixedValuePointPatchField<vector>(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     motion_(ptf.motion_),
     initialPoints_(ptf.initialPoints_, mapper),
     curTimeIndex_(-1)
@@ -102,11 +102,11 @@ uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
 uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField::
 uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
 (
-    const uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField& ptf,
+    const this_bctype& ptf,
     const DimensionedField<vector, pointMesh>& iF
 )
 :
-    fixedValuePointPatchField<vector>(ptf, iF),
+    parent_bctype(ptf, iF),
     motion_(ptf.motion_),
     initialPoints_(ptf.initialPoints_),
     curTimeIndex_(-1)
@@ -120,7 +120,7 @@ void uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField::autoMap
     const pointPatchFieldMapper& m
 )
 {
-    fixedValuePointPatchField<vector>::autoMap(m);
+    this->parent_bctype::autoMap(m);
 
     initialPoints_.autoMap(m);
 }
@@ -132,13 +132,9 @@ void uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField::rmap
     const labelList& addr
 )
 {
-    const uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField& uSDoFptf =
-    refCast
-    <
-        const uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField
-    >(ptf);
+    this->parent_bctype::rmap(ptf, addr);
 
-    fixedValuePointPatchField<vector>::rmap(uSDoFptf, addr);
+    const auto& uSDoFptf = refCast<const this_bctype>(ptf);
 
     initialPoints_.rmap(uSDoFptf.initialPoints_, addr);
 }
@@ -188,7 +184,7 @@ void uncoupledSixDoFRigidBodyDisplacementPointPatchVectorField::updateCoeffs()
         motion_.transform(initialPoints_) - initialPoints_
     );
 
-    fixedValuePointPatchField<vector>::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

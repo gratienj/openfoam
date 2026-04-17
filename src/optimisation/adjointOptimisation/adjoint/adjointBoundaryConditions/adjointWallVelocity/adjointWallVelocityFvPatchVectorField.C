@@ -41,7 +41,7 @@ adjointWallVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     adjointVectorBoundaryCondition(p, iF, word::null),
     kappa_(0.41),
     E_(9.8)
@@ -51,13 +51,13 @@ adjointWallVelocityFvPatchVectorField
 Foam::adjointWallVelocityFvPatchVectorField::
 adjointWallVelocityFvPatchVectorField
 (
-    const adjointWallVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper),
+    parent_bctype(ptf, p, iF, mapper),
     adjointVectorBoundaryCondition(p, iF, ptf.adjointSolverName_),
     kappa_(ptf.kappa_),
     E_(ptf.E_)
@@ -72,7 +72,7 @@ adjointWallVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF),
+    parent_bctype(p, iF),
     adjointVectorBoundaryCondition(p, iF, dict.get<word>("solverName")),
     kappa_(dict.getOrDefault<scalar>("kappa", 0.41)),
     E_(dict.getOrDefault<scalar>("E", 9.8))
@@ -84,11 +84,11 @@ adjointWallVelocityFvPatchVectorField
 Foam::adjointWallVelocityFvPatchVectorField::
 adjointWallVelocityFvPatchVectorField
 (
-    const adjointWallVelocityFvPatchVectorField& pivpvf,
+    const this_bctype& pivpvf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(pivpvf, iF),
+    parent_bctype(pivpvf, iF),
     adjointVectorBoundaryCondition(pivpvf),
     kappa_(pivpvf.kappa_),
     E_(pivpvf.E_)
@@ -217,7 +217,7 @@ void Foam::adjointWallVelocityFvPatchVectorField::updateCoeffs()
 
     operator==(Uan + Uap_t1 + Uap_t2);
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

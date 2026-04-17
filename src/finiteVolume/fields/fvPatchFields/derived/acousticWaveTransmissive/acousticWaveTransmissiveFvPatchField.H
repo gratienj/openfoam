@@ -63,12 +63,12 @@ See also
   - Foam::advectiveFvPatchFields
 
 SourceFiles
-    acousticWaveTransmissiveFvPatchField.C
+    acousticWaveTransmissiveFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef acousticWaveTransmissiveFvPatchField_H
-#define acousticWaveTransmissiveFvPatchField_H
+#ifndef Foam_acousticWaveTransmissiveFvPatchField_H
+#define Foam_acousticWaveTransmissiveFvPatchField_H
 
 #include "advectiveFvPatchFields.H"
 
@@ -86,6 +86,9 @@ class acousticWaveTransmissiveFvPatchField
 :
     public advectiveFvPatchField<Type>
 {
+    typedef acousticWaveTransmissiveFvPatchField<Type> this_bctype;
+    typedef advectiveFvPatchField<Type> parent_bctype;
+
     // Private Data
 
         //- Advection speed value
@@ -115,34 +118,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given acousticWaveTransmissiveFvPatchField
-        //- onto a new patch
+        //- Construct by mapping onto a new patch
         acousticWaveTransmissiveFvPatchField
         (
-            const acousticWaveTransmissiveFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        acousticWaveTransmissiveFvPatchField
-        (
-            const acousticWaveTransmissiveFvPatchField&
-        );
-
         //- Construct as copy setting internal field reference
         acousticWaveTransmissiveFvPatchField
         (
-            const acousticWaveTransmissiveFvPatchField&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        acousticWaveTransmissiveFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -166,6 +159,12 @@ public:
 
             //- Write
             virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
@@ -176,7 +175,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "acousticWaveTransmissiveFvPatchField.C"
+    #include "acousticWaveTransmissiveFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

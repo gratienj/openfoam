@@ -67,12 +67,12 @@ Usage
     \endverbatim
 
 SourceFiles
-    Sampled.C
+    Sampled.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef PatchFunction1Types_Sampled_H
-#define PatchFunction1Types_Sampled_H
+#ifndef Foam_PatchFunction1Types_Sampled_H
+#define Foam_PatchFunction1Types_Sampled_H
 
 #include "PatchFunction1.H"
 #include "mappedPatchBase.H"
@@ -221,7 +221,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "Sampled.C"
+    #include "Sampled.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -44,7 +44,7 @@ fixedIncidentRadiationFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     temperatureCoupledBase(patch()),  // default method (fluidThermo)
     qrIncident_(p.size(), Zero)
 {}
@@ -53,13 +53,13 @@ fixedIncidentRadiationFvPatchScalarField
 Foam::radiation::fixedIncidentRadiationFvPatchScalarField::
 fixedIncidentRadiationFvPatchScalarField
 (
-    const fixedIncidentRadiationFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedGradientFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     temperatureCoupledBase(patch(), psf),
     qrIncident_(psf.qrIncident_)
 {}
@@ -73,7 +73,7 @@ fixedIncidentRadiationFvPatchScalarField
     const dictionary& dict
 )
 :
-    fixedGradientFvPatchScalarField(p, iF),  // Bypass dictionary constructor
+    parent_bctype(p, iF),  // Bypass dictionary constructor
     temperatureCoupledBase(patch(), dict),
     qrIncident_("qrIncident", dict, p.size())
 {
@@ -88,25 +88,13 @@ fixedIncidentRadiationFvPatchScalarField
 Foam::radiation::fixedIncidentRadiationFvPatchScalarField::
 fixedIncidentRadiationFvPatchScalarField
 (
-    const fixedIncidentRadiationFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    fixedGradientFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     temperatureCoupledBase(patch(), psf),
     qrIncident_(psf.qrIncident_)
-{}
-
-
-Foam::radiation::fixedIncidentRadiationFvPatchScalarField::
-fixedIncidentRadiationFvPatchScalarField
-(
-    const fixedIncidentRadiationFvPatchScalarField& ptf
-)
-:
-    fixedGradientFvPatchScalarField(ptf),
-    temperatureCoupledBase(patch(), ptf),
-    qrIncident_(ptf.qrIncident_)
 {}
 
 
@@ -117,7 +105,7 @@ void Foam::radiation::fixedIncidentRadiationFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    fixedGradientFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     temperatureCoupledBase::autoMap(m);
     qrIncident_.autoMap(m);
 }
@@ -129,13 +117,9 @@ void Foam::radiation::fixedIncidentRadiationFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    fixedGradientFvPatchScalarField::rmap(psf, addr);
+    this->parent_bctype::rmap(psf, addr);
 
-    const fixedIncidentRadiationFvPatchScalarField& thftpsf =
-        refCast<const fixedIncidentRadiationFvPatchScalarField>
-        (
-            psf
-        );
+    const auto& thftpsf = refCast<const this_bctype>(psf);
 
     temperatureCoupledBase::rmap(thftpsf, addr);
     qrIncident_.rmap(thftpsf.qrIncident_, addr);
@@ -166,7 +150,7 @@ void Foam::radiation::fixedIncidentRadiationFvPatchScalarField::updateCoeffs()
           - physicoChemical::sigma.value()*pow4(*this)
         )/kappa(*this);
 
-    fixedGradientFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 
     if (debug)
     {

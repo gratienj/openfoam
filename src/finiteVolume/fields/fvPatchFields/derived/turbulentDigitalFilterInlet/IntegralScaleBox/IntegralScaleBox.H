@@ -31,7 +31,7 @@ Description
     \c turbulentDigitalFilterInletFvPatchField boundary condition.
 
 SourceFiles
-    IntegralScaleBox.C
+    IntegralScaleBox.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -296,7 +296,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "IntegralScaleBox.C"
+    #include "IntegralScaleBox.txx"
 #endif
 
 #endif

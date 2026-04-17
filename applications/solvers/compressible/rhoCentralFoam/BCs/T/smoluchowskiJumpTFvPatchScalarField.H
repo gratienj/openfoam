@@ -52,8 +52,10 @@ class smoluchowskiJumpTFvPatchScalarField
 :
     public mixedFvPatchScalarField
 {
+    typedef smoluchowskiJumpTFvPatchScalarField this_bctype;
+    typedef mixedFvPatchScalarField parent_bctype;
 
-    // Private data
+    // Private Data
 
         //- Velocity field name, default = "U"
         word UName_;
@@ -100,11 +102,10 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping given smoluchowskiJumpTFvPatchScalarField
-        //  onto a new patch
+        //- Construct by mapping onto a new patch
         smoluchowskiJumpTFvPatchScalarField
         (
-            const smoluchowskiJumpTFvPatchScalarField&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
@@ -113,15 +114,12 @@ public:
         //- Construct as copy setting internal field reference
         smoluchowskiJumpTFvPatchScalarField
         (
-            const smoluchowskiJumpTFvPatchScalarField&,
+            const this_bctype&,
             const DimensionedField<scalar, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<scalar>> clone() const
-        {
-            return fvPatchField<scalar>::Clone(*this);
-        }
+        //- No copy without an internal field
+        smoluchowskiJumpTFvPatchScalarField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<scalar>> clone
@@ -157,6 +155,12 @@ public:
 
         //- Write
         virtual void write(Ostream&) const;
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 

@@ -46,7 +46,7 @@ atmBoundaryLayerInletKFvPatchScalarField
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    inletOutletFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     atmBoundaryLayer(iF.time(), p.patch())
 {}
 
@@ -59,7 +59,7 @@ atmBoundaryLayerInletKFvPatchScalarField
     const dictionary& dict
 )
 :
-    inletOutletFvPatchScalarField(p, iF),
+    parent_bctype(p, iF),
     atmBoundaryLayer(iF.time(), p.patch(), dict)
 {
     phiName_ = dict.getOrDefault<word>("phi", "phi");
@@ -83,13 +83,13 @@ atmBoundaryLayerInletKFvPatchScalarField
 atmBoundaryLayerInletKFvPatchScalarField::
 atmBoundaryLayerInletKFvPatchScalarField
 (
-    const atmBoundaryLayerInletKFvPatchScalarField& psf,
+    const this_bctype& psf,
     const fvPatch& p,
     const DimensionedField<scalar, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    inletOutletFvPatchScalarField(psf, p, iF, mapper),
+    parent_bctype(psf, p, iF, mapper),
     atmBoundaryLayer(psf, p, mapper)
 {}
 
@@ -97,11 +97,11 @@ atmBoundaryLayerInletKFvPatchScalarField
 atmBoundaryLayerInletKFvPatchScalarField::
 atmBoundaryLayerInletKFvPatchScalarField
 (
-    const atmBoundaryLayerInletKFvPatchScalarField& psf,
+    const this_bctype& psf,
     const DimensionedField<scalar, volMesh>& iF
 )
 :
-    inletOutletFvPatchScalarField(psf, iF),
+    parent_bctype(psf, iF),
     atmBoundaryLayer(psf)
 {}
 
@@ -117,7 +117,7 @@ void atmBoundaryLayerInletKFvPatchScalarField::updateCoeffs()
 
     refValue() = k(patch().Cf());
 
-    inletOutletFvPatchScalarField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 
@@ -126,7 +126,7 @@ void atmBoundaryLayerInletKFvPatchScalarField::autoMap
     const fvPatchFieldMapper& m
 )
 {
-    inletOutletFvPatchScalarField::autoMap(m);
+    this->parent_bctype::autoMap(m);
     atmBoundaryLayer::autoMap(m);
 }
 
@@ -137,10 +137,9 @@ void atmBoundaryLayerInletKFvPatchScalarField::rmap
     const labelList& addr
 )
 {
-    inletOutletFvPatchScalarField::rmap(psf, addr);
+    this->parent_bctype::rmap(psf, addr);
 
-    const atmBoundaryLayerInletKFvPatchScalarField& blpsf =
-        refCast<const atmBoundaryLayerInletKFvPatchScalarField>(psf);
+    const auto& blpsf = refCast<const this_bctype>(psf);
 
     atmBoundaryLayer::rmap(blpsf, addr);
 }

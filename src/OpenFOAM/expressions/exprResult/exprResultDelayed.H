@@ -42,7 +42,7 @@ Description
     \endtable
 
 SourceFiles
-    exprResultDelayed.C
+    exprResultDelayed.cxx
 
 \*---------------------------------------------------------------------------*/
 
@@ -172,10 +172,10 @@ public:
         void operator=(const exprResultDelayed& rhs);
 
         //- Copy assignment
-        void operator=(const exprResult& rhs);
+        virtual void operator=(const exprResult& rhs);
 
         //- Move assignment
-        void operator=(exprResult&& rhs);
+        virtual void operator=(exprResult&& rhs);
 
         //- Compare for inequality (need by Ulist)
         bool operator!=(const exprResultDelayed& rhs) const noexcept

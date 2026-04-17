@@ -43,7 +43,7 @@ See also
     Foam::fvPatchField
 
 SourceFiles
-    slicedFvPatchField.C
+    slicedFvPatchField.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -67,6 +67,9 @@ class slicedFvPatchField
 :
     public fvPatchField<Type>
 {
+    typedef slicedFvPatchField<Type> this_bctype;
+    typedef fvPatchField<Type> parent_bctype;
+
 public:
 
     //- The mesh processor patch type
@@ -103,30 +106,24 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping the given sliced patch field onto a new patch
+        //- Construct by mapping onto a new patch
         slicedFvPatchField
         (
-            const slicedFvPatchField<Type>&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<Type, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        slicedFvPatchField(const slicedFvPatchField<Type>&);
-
         //- Construct as copy setting internal field reference
         slicedFvPatchField
         (
-            const slicedFvPatchField<Type>&,
+            const this_bctype&,
             const DimensionedField<Type, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return fvPatchField<Type>::Clone(*this);
-        }
+        //- No copy without an internal field
+        slicedFvPatchField(const this_bctype&) = delete;
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -214,7 +211,7 @@ public:
         virtual void write(Ostream&) const;
 
 
-    // Member operators
+    // Member Operators
 
         virtual void operator=(const UList<Type>&) {}
 
@@ -245,7 +242,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "slicedFvPatchField.C"
+    #include "slicedFvPatchField.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

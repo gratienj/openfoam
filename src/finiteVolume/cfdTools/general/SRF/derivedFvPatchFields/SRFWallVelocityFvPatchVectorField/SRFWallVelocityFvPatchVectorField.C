@@ -39,19 +39,19 @@ Foam::SRFWallVelocityFvPatchVectorField::SRFWallVelocityFvPatchVectorField
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(p, iF)
+    parent_bctype(p, iF)
 {}
 
 
 Foam::SRFWallVelocityFvPatchVectorField::SRFWallVelocityFvPatchVectorField
 (
-    const SRFWallVelocityFvPatchVectorField& ptf,
+    const this_bctype& ptf,
     const fvPatch& p,
     const DimensionedField<vector, volMesh>& iF,
     const fvPatchFieldMapper& mapper
 )
 :
-    fixedValueFvPatchVectorField(ptf, p, iF, mapper)
+    parent_bctype(ptf, p, iF, mapper)
 {}
 
 
@@ -62,26 +62,17 @@ Foam::SRFWallVelocityFvPatchVectorField::SRFWallVelocityFvPatchVectorField
     const dictionary& dict
 )
 :
-    fixedValueFvPatchVectorField(p, iF, dict)
+    parent_bctype(p, iF, dict)
 {}
 
 
 Foam::SRFWallVelocityFvPatchVectorField::SRFWallVelocityFvPatchVectorField
 (
-    const SRFWallVelocityFvPatchVectorField& srfvpvf
-)
-:
-    fixedValueFvPatchVectorField(srfvpvf)
-{}
-
-
-Foam::SRFWallVelocityFvPatchVectorField::SRFWallVelocityFvPatchVectorField
-(
-    const SRFWallVelocityFvPatchVectorField& srfvpvf,
+    const this_bctype& ptf,
     const DimensionedField<vector, volMesh>& iF
 )
 :
-    fixedValueFvPatchVectorField(srfvpvf, iF)
+    parent_bctype(ptf, iF)
 {}
 
 
@@ -102,7 +93,7 @@ void Foam::SRFWallVelocityFvPatchVectorField::rmap
     const labelList& addr
 )
 {
-    fixedValueFvPatchVectorField::rmap(ptf, addr);
+    this->parent_bctype::rmap(ptf, addr);
 }
 
 
@@ -125,7 +116,7 @@ void Foam::SRFWallVelocityFvPatchVectorField::updateCoeffs()
     const vectorField n(patch().nf());
     vectorField::operator=(Up - n*(n & Up));
 
-    fixedValueFvPatchVectorField::updateCoeffs();
+    this->parent_bctype::updateCoeffs();
 }
 
 

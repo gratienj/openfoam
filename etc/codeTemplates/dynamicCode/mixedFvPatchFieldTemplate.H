@@ -54,7 +54,7 @@ class ${typeName}MixedValueFvPatch${FieldType}
     public mixedFvPatchField<${TemplateType}>,
     public dictionaryContent
 {
-    //- The parent boundary condition type
+    typedef ${typeName}MixedValueFvPatch${FieldType} this_bctype;
     typedef mixedFvPatchField<${TemplateType}> parent_bctype;
 
 
@@ -92,33 +92,25 @@ public:
             const dictionary&
         );
 
-        //- Construct by mapping a copy onto a new patch
+        //- Construct by mapping onto a new patch
         ${typeName}MixedValueFvPatch${FieldType}
         (
-            const ${typeName}MixedValueFvPatch${FieldType}&,
+            const this_bctype&,
             const fvPatch&,
             const DimensionedField<${TemplateType}, volMesh>&,
             const fvPatchFieldMapper&
         );
 
-        //- Construct as copy
-        ${typeName}MixedValueFvPatch${FieldType}
-        (
-            const ${typeName}MixedValueFvPatch${FieldType}&
-        );
-
         //- Construct as copy setting internal field reference
         ${typeName}MixedValueFvPatch${FieldType}
         (
-            const ${typeName}MixedValueFvPatch${FieldType}&,
+            const this_bctype&,
             const DimensionedField<${TemplateType}, volMesh>&
         );
 
-        //- Return a clone
-        virtual tmp<fvPatchField<${TemplateType}>> clone() const
-        {
-            return fvPatchField<${TemplateType}>::Clone(*this);
-        }
+        //- No copy construct
+        ${typeName}MixedValueFvPatch${FieldType}(const this_bctype&) = delete;
+
 
         //- Clone with an internal field reference
         virtual tmp<fvPatchField<${TemplateType}>> clone
@@ -131,7 +123,7 @@ public:
 
 
     //- Destructor
-    virtual ~${typeName}MixedValueFvPatch${FieldType}();
+    virtual ~${typeName}MixedValueFvPatch${FieldType}() = default;
 
 
     // Member Functions
@@ -144,6 +136,12 @@ public:
 
         //- Update the coefficients associated with the patch field
         virtual void updateCoeffs();
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using parent_bctype::operator=;
 };
 
 
