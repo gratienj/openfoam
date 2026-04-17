@@ -139,6 +139,7 @@ void Foam::sampledSets::performAction
 
         const word& setName = s.name();
         Field<Type> values(s.size());
+        boolList validSamples(s.size(), true);
 
         if (interpPtr)
         {
@@ -150,7 +151,8 @@ void Foam::sampledSets::performAction
 
                 if (celli == -1 && facei == -1)
                 {
-                    // Special condition for illegal sampling points
+                    // Bad sampling location
+                    validSamples[samplei] = false;
                     values[samplei] = pTraits<Type>::max;
                 }
                 else
@@ -167,6 +169,8 @@ void Foam::sampledSets::performAction
 
                 if (celli == -1)
                 {
+                    // Bad sampling location
+                    validSamples[samplei] = false;
                     values[samplei] = pTraits<Type>::max;
                 }
                 else
@@ -178,6 +182,7 @@ void Foam::sampledSets::performAction
 
         // Collect data from all processors
         globIdx.gatherInplace(values);
+        globIdx.gatherInplace(validSamples);
 
         // Local min/max/avg values - calculate on master
         Type avgValue = Zero;
@@ -186,17 +191,25 @@ void Foam::sampledSets::performAction
 
         if (Pstream::master())
         {
-            avgValue = sum(values);
-            sizeValue = values.size();
-            limits = MinMax<Type>(values);
+            forAll(values, samplei)
+            {
+                if (!validSamples[samplei])
+                {
+                    continue;
+                }
 
-            // Ensemble values
-            avgEnsemble += avgValue;
-            sizeEnsemble += sizeValue;
-            limitsEnsemble += limits;
+                avgValue += values[samplei];
+                limits.add(values[samplei]);
+                ++sizeValue;
+            }
 
             if (sizeValue)
             {
+                // Ensemble values
+                avgEnsemble += avgValue;
+                sizeEnsemble += sizeValue;
+                limitsEnsemble += limits;
+
                 avgValue /= sizeValue;
             }
 
@@ -205,11 +218,26 @@ void Foam::sampledSets::performAction
         }
         Pstream::broadcasts(UPstream::worldComm, avgValue, sizeValue, limits);
 
+        // Nothing sampled for this set?
+        // - warn
+        // - define limits that avoid overflow
+        //   (or just emit the inverted range instead?)
+        if (!sizeValue)
+        {
+            limits.reset(avgValue);
+
+            WarningInFunction
+                << "No valid sample points for set " << setName
+                << " and field " << fieldName
+                << ". Skipping result publication for this set." << endl;
+        }
+
         // Store results: min/max/average/size with the name of the set
         // for scoping.
         // Eg, average(lines,T) ...
         const word resultArg('(' + setName + ',' + fieldName + ')');
 
+        // Store results, even if nothing was sampled.
         this->setResult("average" + resultArg, avgValue);
         this->setResult("min" + resultArg, limits.min());
         this->setResult("max" + resultArg, limits.max());
@@ -263,10 +291,19 @@ void Foam::sampledSets::performAction
             limitsEnsemble
         );
 
+        // Nothing sampled for the sets?
+        // - define limits that avoid overflow
+        //   (or just emit the inverted range instead?)
+        if (!sizeEnsemble)
+        {
+            limitsEnsemble.reset(avgEnsemble);
+        }
+
         // Store results: min/max/average/size for the ensemble
         // Eg, average(T) ...
         const word resultArg('(' + fieldName + ')');
 
+        // Store results, even if nothing was sampled.
         this->setResult("average" + resultArg, avgEnsemble);
         this->setResult("min" + resultArg, limitsEnsemble.min());
         this->setResult("max" + resultArg, limitsEnsemble.max());
