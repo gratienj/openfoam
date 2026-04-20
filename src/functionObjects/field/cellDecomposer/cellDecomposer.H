@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2024-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -70,6 +71,8 @@ Usage
         decomposeType   <word>;       // polyhedral;
         selectionMode   <word>;       //all;
 
+        faceSelectionMode <word>;   // see below, how to select faces
+
         // Inherited entries
         ...
     }
@@ -85,6 +88,7 @@ Usage
       mapRegion    | Name of region to map to           | word |  yes  | -
       decomposeType | How to decompose cells            | word |  yes  | -
       selectionMode | How to select cells (see fvOption)| word |  yes  | -
+      faceSelectionMode | How to select faces           | word |  no   | -
     \endtable
 
     The inherited entries are elaborated in:
