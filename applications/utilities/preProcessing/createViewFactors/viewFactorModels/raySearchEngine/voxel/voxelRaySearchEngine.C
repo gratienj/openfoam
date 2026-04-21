@@ -26,6 +26,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "voxelRaySearchEngine.H"
+#include "treeBoundBox.H"
 #include "processorPolyPatch.H"
 #include "addToRunTimeSelectionTable.H"
 

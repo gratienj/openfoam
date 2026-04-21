@@ -944,15 +944,17 @@ bool Foam::MeshedSurface<Face>::checkFaces
 template<class Face>
 Foam::label Foam::MeshedSurface<Face>::nTriangles() const
 {
-    if (faceTraits<Face>::isTri())
+    if constexpr (faceTraits<Face>::isTri())
     {
         return MeshReference::size();
     }
-
-    return nTriangles
-    (
-        const_cast<labelList&>(labelList::null())
-    );
+    else
+    {
+        return nTriangles
+        (
+            const_cast<labelList&>(labelList::null())
+        );
+    }
 }
 
 
@@ -1004,7 +1006,7 @@ Foam::label Foam::MeshedSurface<Face>::nTriangles
 template<class Face>
 Foam::label Foam::MeshedSurface<Face>::triangulate()
 {
-    if (faceTraits<Face>::isTri())
+    if constexpr (faceTraits<Face>::isTri())
     {
         // Inplace triangulation of triFace/labelledTri surface = no-op
         return 0;

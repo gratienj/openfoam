@@ -31,8 +31,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef faceTraits_H
-#define faceTraits_H
+#ifndef Foam_faceTraits_H
+#define Foam_faceTraits_H
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -48,20 +48,18 @@ class labelledTri;
 \*---------------------------------------------------------------------------*/
 
 template<class FaceType>
-class faceTraits
+struct faceTraits
 {
-public:
-
     //- Face-type only handles triangles. Not true in general.
-    inline static bool isTri()  { return false; }
+    inline static constexpr bool isTri() noexcept { return false; }
 };
 
 
 template<>
-inline bool faceTraits<triFace>::isTri()        { return true; }
+inline constexpr bool faceTraits<triFace>::isTri() noexcept { return true; }
 
 template<>
-inline bool faceTraits<labelledTri>::isTri()    { return true; }
+inline constexpr bool faceTraits<labelledTri>::isTri() noexcept { return true; }
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -52,7 +52,6 @@ SourceFiles
 #include "Pair.H"
 #include "Tuple2.H"
 #include "barycentric2D.H"
-#include "treeBoundBox.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -78,6 +77,8 @@ class triPoints
 :
     public FixedList<point, 3>
 {
+    typedef FixedList<point, 3> tuple_type;
+
 public:
 
     // Generated Methods

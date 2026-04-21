@@ -33,6 +33,7 @@ License
 #include "triSurfaceTools.H"
 #include "triSurface.H"
 #include "triangle.H"
+#include "treeBoundBox.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

@@ -426,9 +426,6 @@ public:
 
         //- Identical to edge()
         Foam::edge faceEdge(label edgei) const { return this->edge(edgei); }
-
-        //- Identical to face()
-        Foam::face triFaceFace() const { return this->face(); }
 };
 
 

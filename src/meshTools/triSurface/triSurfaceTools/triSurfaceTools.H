@@ -62,6 +62,7 @@ SourceFiles
 #include "Pair.H"
 #include "vector2D.H"
 #include "triangle.H"
+#include "triFace.H"
 #include "surfaceLocation.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

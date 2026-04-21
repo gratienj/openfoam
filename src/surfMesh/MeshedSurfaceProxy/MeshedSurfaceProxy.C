@@ -255,18 +255,20 @@ Foam::MeshedSurfaceProxy<Face>::MeshedSurfaceProxy
 template<class Face>
 inline Foam::label Foam::MeshedSurfaceProxy<Face>::nTriangles() const
 {
-    if (faceTraits<Face>::isTri())
+    if constexpr (faceTraits<Face>::isTri())
     {
         return this->size();
     }
-
-    label nTri = 0;
-    for (const auto& f : faces_)
+    else
     {
-        nTri += f.nTriangles();
-    }
+        label nTri = 0;
+        for (const auto& f : faces_)
+        {
+            nTri += f.nTriangles();
+        }
 
-    return nTri;
+        return nTri;
+    }
 }
 
 

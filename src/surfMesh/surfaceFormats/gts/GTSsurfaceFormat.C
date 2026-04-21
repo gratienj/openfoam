@@ -41,10 +41,14 @@ bool Foam::fileFormats::GTSsurfaceFormat<Face>::checkIfTriangulated
     const UList<Face>& faceLst
 )
 {
-    label nNonTris = 0;
-
-    if (!faceTraits<Face>::isTri())
+    if constexpr (faceTraits<Face>::isTri())
     {
+        return true;
+    }
+    else
+    {
+        label nNonTris = 0;
+
         for (const auto& f : faceLst)
         {
             if (f.size() != 3)
@@ -52,16 +56,16 @@ bool Foam::fileFormats::GTSsurfaceFormat<Face>::checkIfTriangulated
                 ++nNonTris;
             }
         }
-    }
 
-    if (nNonTris)
-    {
-        FatalErrorInFunction
-            << "Surface has " << nNonTris << '/' << faceLst.size()
-            << " non-triangulated faces - not writing!" << endl;
-    }
+        if (nNonTris)
+        {
+            FatalErrorInFunction
+                << "Surface has " << nNonTris << '/' << faceLst.size()
+                << " non-triangulated faces - not writing!" << endl;
+        }
 
-    return nNonTris == 0;
+        return nNonTris == 0;
+    }
 }
 
 

@@ -168,9 +168,9 @@ bool Foam::fileFormats::VTKsurfaceFormat<Face>::read
 
     // Check if it needs triangulation
     label nTri = 0;
-    if (faceTraits<Face>::isTri())
+    if constexpr (faceTraits<Face>::isTri())
     {
-        for (const face& f : faces)
+        for (const auto& f : faces)
         {
             nTri += f.nTriangles();
         }

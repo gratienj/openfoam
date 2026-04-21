@@ -62,14 +62,14 @@ template<class Face>
 void Foam::MeshedSurface<Face>::writeStats(Ostream& os) const
 {
     os  << "points      : " << this->points().size() << nl;
-    if (faceTraits<Face>::isTri())
+    if constexpr (faceTraits<Face>::isTri())
     {
         os << "triangles   : " << this->size() << nl;
     }
     else
     {
         label nTri = 0, nQuad = 0;
-        for (const Face& f : *this)
+        for (const auto& f : *this)
         {
             const label n = f.size();
 

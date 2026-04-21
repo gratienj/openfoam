@@ -37,6 +37,7 @@ License
 #include "triSurfaceTools.H"
 #include "Time.H"
 #include "triangle.H"
+#include "treeBoundBox.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

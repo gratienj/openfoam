@@ -403,7 +403,7 @@ bool Foam::fileFormats::NASsurfaceFormat<Face>::read
                 // Info<< "zone" << zoneId << " => group " << groupId <<nl;
             }
 
-            if (faceTraits<Face>::isTri())
+            if constexpr (faceTraits<Face>::isTri())
             {
                 ignoreElemId = true;
                 dynElemId.clear();

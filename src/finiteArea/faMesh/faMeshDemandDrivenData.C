@@ -38,6 +38,7 @@ License
 #include "emptyFaPatchFields.H"
 #include "wedgeFaPatch.H"
 #include "triangle.H"
+#include "treeBoundBox.H"
 
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 

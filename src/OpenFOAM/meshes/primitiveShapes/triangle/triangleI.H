@@ -233,8 +233,8 @@ inline Foam::Pair<Point> Foam::triangle<Point, PointRef>::box
 {
     return Pair<Point>
     (
-        min(p0, min(p1, p2)),
-        max(p0, max(p1, p2))
+        Foam::min(p0, Foam::min(p1, p2)),
+        Foam::max(p0, Foam::max(p1, p2))
     );
 }
 
