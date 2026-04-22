@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,6 +58,7 @@ bool Foam::memInfo::supported()
 
 Foam::memInfo::memInfo()
 :
+    hwm_(0),
     peak_(0),
     size_(0),
     rss_(0),
@@ -77,7 +78,7 @@ bool Foam::memInfo::good() const noexcept
 
 void Foam::memInfo::clear() noexcept
 {
-    peak_ = size_ = rss_ = free_ = 0;
+    hwm_ = peak_ = size_ = rss_ = free_ = 0;
 }
 
 
@@ -103,6 +104,9 @@ void Foam::memInfo::populate()
             peak_ = int64_t(pmc.PeakWorkingSetSize) / 1024;
             size_ = int64_t(pmc.WorkingSetSize) / 1024;
             rss_ = int64_t(pmc.WorkingSetSize - pmc.PagefileUsage) / 1024;
+
+            // Nothing better available...
+            hwm_ = peak_;
         }
         CloseHandle(proc);
 
@@ -131,6 +135,7 @@ const Foam::memInfo& Foam::memInfo::update()
 void Foam::memInfo::writeEntries(Ostream& os) const
 {
     os.writeEntry("size", size_);
+    os.writeEntry("hwm", hwm_);
     os.writeEntry("peak", peak_);
     os.writeEntry("rss", rss_);
     os.writeEntry("free", free_);
@@ -151,7 +156,7 @@ void Foam::memInfo::writeEntry(const word& keyword, Ostream& os) const
 // Foam::Istream& Foam::operator>>(Istream& is, memInfo& m)
 // {
 //     is.readBegin("memInfo");
-//     is  >> m.peak_ >> m.size_ >> m.rss_ >> m.free_;
+//     is  >> m.hwm_ >> m.peak_ >> m.size_ >> m.rss_ >> m.free_;
 //     is.readEnd("memInfo");
 //
 //     is.check(FUNCTION_NAME);
@@ -162,6 +167,7 @@ void Foam::memInfo::writeEntry(const word& keyword, Ostream& os) const
 Foam::Ostream& Foam::operator<<(Ostream& os, const memInfo& m)
 {
     os  << token::BEGIN_LIST
+        << m.hwm()  << token::SPACE
         << m.peak() << token::SPACE
         << m.size() << token::SPACE
         << m.rss()  << token::SPACE

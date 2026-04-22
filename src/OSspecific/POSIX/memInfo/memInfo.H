@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +32,8 @@ Description
     that is free.
 
 Note
-    Uses the information from /proc/PID/status and from /proc/meminfo
+    Uses the information from /proc/PID/status and from /proc/meminfo (Linux)
+    or POSIX getrusage() for process memory (cross-platform).
 
 SourceFiles
     memInfo.C
@@ -63,6 +64,9 @@ Ostream& operator<<(Ostream& os, const memInfo& m);
 class memInfo
 {
     // Private Data
+
+        //- Memory high-water mark in process (VmHWM in /proc/PID/status)
+        int64_t hwm_;
 
         //- Peak memory used by the process (VmPeak in /proc/PID/status)
         int64_t peak_;
@@ -102,6 +106,9 @@ public:
         //- True if the memory information appears valid
         bool good() const noexcept;
 
+        //- Memory high-water mark - (VmHWM in /proc/PID/status)
+        int64_t hwm() const noexcept { return hwm_; }
+
         //- Peak memory at last update - (VmPeak in /proc/PID/status)
         int64_t peak() const noexcept { return peak_; }
 
@@ -120,13 +127,13 @@ public:
         //- Reset to zero
         void clear() noexcept;
 
-        //- Update according to /proc/PID/status and /proc/memory contents
+        //- Update according to process resource usage and system memory
         const memInfo& update();
 
 
     // IOstream Operators
 
-        //- Write peak/size/rss to stream
+        //- Write hmm/peak/size/rss to stream
         friend Ostream& operator<<(Ostream& os, const memInfo& m);
 
 

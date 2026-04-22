@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -64,6 +64,9 @@ class memInfo
 {
     // Private Data
 
+        //- Memory high-water mark in process
+        int64_t hwm_;
+
         //- Peak memory used by the process
         int64_t peak_;
 
@@ -102,6 +105,9 @@ public:
         //- True if the memory information appears valid
         bool good() const noexcept;
 
+        //- Memory high-water mark
+        int64_t hwm() const noexcept { return hwm_; }
+
         //- Peak memory at last update
         int64_t peak() const noexcept { return peak_; }
 
@@ -126,7 +132,7 @@ public:
 
     // IOstream Operators
 
-        //- Write peak/size/rss to stream
+        //- Write hwm/peak/size/rss to stream
         friend Ostream& operator<<(Ostream& os, const memInfo& m);
 
 

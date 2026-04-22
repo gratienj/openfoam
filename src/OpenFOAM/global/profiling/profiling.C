@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2009-2016 Bernhard Gschaider
-    Copyright (C) 2016-2023 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,6 +32,7 @@ License
 #include "profilingSysInfo.H"
 #include "cpuInfo.H"
 #include "memInfo.H"
+#include "OSspecific.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -264,21 +265,17 @@ Foam::profiling::profiling
 :
     profiling(io, owner, false)
 {
+    if (bool on; dict.readIfPresent("sysInfo", on) && on)
     {
-        bool on = false;
-
-        if (dict.readIfPresent("sysInfo", on) && on)
-        {
-            sysInfo_.reset(new profilingSysInfo);
-        }
-        if (dict.readIfPresent("cpuInfo", on) && on)
-        {
-            cpuInfo_.reset(new cpuInfo);
-        }
-        if (dict.readIfPresent("memInfo", on) && on)
-        {
-            memInfo_.reset(new memInfo);
-        }
+        sysInfo_.reset(new profilingSysInfo);
+    }
+    if (bool on; dict.readIfPresent("cpuInfo", on) && on)
+    {
+        cpuInfo_.reset(new cpuInfo);
+    }
+    if (bool on; dict.readIfPresent("memInfo", on) && on)
+    {
+        memInfo_.reset(new memInfo);
     }
 }
 
@@ -356,6 +353,12 @@ bool Foam::profiling::writeData(Ostream& os) const
     {
         os << nl;
         sysInfo_->writeEntry("sysInfo", os);
+    }
+    else
+    {
+        // Ensure that host information is available somewhere
+        os << nl;
+        os.writeEntry("host", Foam::hostName());
     }
 
     if (cpuInfo_)

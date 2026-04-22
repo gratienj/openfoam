@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2016-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,13 +34,16 @@ License
 #include <fstream>
 #include <string>
 
-// Future?
-// - with sysctl(...)
-//
-// #ifdef __APPLE__
-// #include <sys/types.h>
-// #include <sys/sysctl.h>
-// #endif
+#ifndef __linux__
+#include <sys/resource.h>  // For getrusage()
+#endif
+
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <mach/mach.h>
+#include <mach/task.h>
+#endif
 
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
@@ -51,9 +54,15 @@ bool Foam::memInfo::supported()
 {
     if (is_supported < 0)
     {
+        #ifdef __linux__
         // This is Linux-specific!
         std::ifstream is("/proc/meminfo");
         is_supported = is.good();
+        #else
+        // POSIX getrusage is universally available
+        struct rusage usage;
+        is_supported = (::getrusage(RUSAGE_SELF, &usage) == 0);
+        #endif
     }
 
     return is_supported;
@@ -64,6 +73,7 @@ bool Foam::memInfo::supported()
 
 Foam::memInfo::memInfo()
 :
+    hwm_(0),
     peak_(0),
     size_(0),
     rss_(0),
@@ -83,12 +93,13 @@ bool Foam::memInfo::good() const noexcept
 
 void Foam::memInfo::clear() noexcept
 {
-    peak_ = size_ = rss_ = free_ = 0;
+    hwm_= peak_ = size_ = rss_ = free_ = 0;
 }
 
 
 void Foam::memInfo::populate()
 {
+    #ifdef __linux__
     std::string line;
 
     // This is all Linux-specific!
@@ -102,11 +113,7 @@ void Foam::memInfo::populate()
     // ...
     // Stop parsing when known keys have been extracted
 
-    if
-    (
-        std::ifstream is("/proc/meminfo");
-        is.good()
-    )
+    if (std::ifstream is("/proc/meminfo"); is.good())
     {
         for
         (
@@ -135,7 +142,6 @@ void Foam::memInfo::populate()
             #undef  parseValue
             #define parseValue (std::strtol(value, &endptr, 10))
             // Could also check for 'kB' etc ending
-
 
             // ------------------
             // Extract key: value
@@ -172,7 +178,7 @@ void Foam::memInfo::populate()
     {
         for
         (
-            unsigned nkeys = 3;
+            unsigned nkeys = 4;
             nkeys && is.good() && std::getline(is, line);
             /*nil*/
         )
@@ -203,7 +209,12 @@ void Foam::memInfo::populate()
             // Extract key: value
             // ------------------
 
-            if (isKeyEqual("VmPeak"))
+            if (isKeyEqual("VmHWM"))
+            {
+                hwm_ = parseValue;
+                --nkeys;
+            }
+            else if (isKeyEqual("VmPeak"))
             {
                 peak_ = parseValue;
                 --nkeys;
@@ -223,6 +234,53 @@ void Foam::memInfo::populate()
             #undef parseValue
         }
     }
+
+    #else  /* __linux__ */
+
+    // Get process memory using POSIX getrusage()
+    if
+    (
+        struct rusage usage;
+        ::getrusage(RUSAGE_SELF, &usage) == 0
+    )
+    {
+        // Normalize values to kB for consistency
+        #ifdef __APPLE__
+        hwm_ = usage.ru_maxrss / 1024;  // BSD/MacOS: ru_maxrss is bytes
+        #else
+        hwm_ = usage.ru_maxrss;         // Linux: ru_maxrss already in kB
+        #endif
+
+        peak_ = hwm_;  // ru_maxrss is the peak memory used
+        rss_  = hwm_;  //<- getrusage doesn't distinguish current RSS from peak
+        size_ = hwm_;  // Virtual size estimate from peak
+    }
+
+    // Get system free memory - platform dependent
+    #ifdef __APPLE__
+    {
+        // MacOS: use mach API to get memory information
+        mach_port_t host = mach_host_self();
+        mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+        vm_statistics64_data_t vm_stat;
+
+        if
+        (
+            host_statistics64
+            (
+                host,
+                HOST_VM_INFO64,
+                reinterpret_cast<host_info64_t>(&vm_stat),
+               &count
+            ) == KERN_SUCCESS
+        )
+        {
+            // vm_page_size is in bytes, convert to kB
+            free_ = (vm_stat.free_count * vm_page_size) / 1024;
+        }
+    }
+    #endif  /* __APPLE__ */
+    #endif  /* __linux__ */
 }
 
 
@@ -237,6 +295,7 @@ const Foam::memInfo& Foam::memInfo::update()
 void Foam::memInfo::writeEntries(Ostream& os) const
 {
     os.writeEntry("size", size_);
+    os.writeEntry("hwm", hwm_);
     os.writeEntry("peak", peak_);
     os.writeEntry("rss", rss_);
     os.writeEntry("free", free_);
@@ -257,7 +316,7 @@ void Foam::memInfo::writeEntry(const word& keyword, Ostream& os) const
 // Foam::Istream& Foam::operator>>(Istream& is, memInfo& m)
 // {
 //     is.readBegin("memInfo");
-//     is  >> m.peak_ >> m.size_ >> m.rss_ >> m.free_;
+//     is  >> m.hwm_ >> m.peak_ >> m.size_ >> m.rss_ >> m.free_;
 //     is.readEnd("memInfo");
 //
 //     is.check(FUNCTION_NAME);
@@ -268,6 +327,7 @@ void Foam::memInfo::writeEntry(const word& keyword, Ostream& os) const
 Foam::Ostream& Foam::operator<<(Ostream& os, const memInfo& m)
 {
     os  << token::BEGIN_LIST
+        << m.hwm()  << token::SPACE
         << m.peak() << token::SPACE
         << m.size() << token::SPACE
         << m.rss()  << token::SPACE
