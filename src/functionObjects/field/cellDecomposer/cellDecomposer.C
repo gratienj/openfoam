@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2024-2025 OpenCFD Ltd.
-    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -43,7 +42,6 @@ License
 #include "prismMatcher.H"
 #include "pyrMatcher.H"
 #include "tetMatcher.H"
-#include "faceSet.H"
 
 #include "OBJstream.H"
 
@@ -94,31 +92,7 @@ void Foam::functionObjects::cellDecomposer::makeMesh
     (
         tetDecomposer::FACE_CENTRE_TRIS
     );
-    word faceSelectionMode;
-    if (dict.readIfPresent("faceSelectionMode", faceSelectionMode))
-    {
-        if (faceSelectionMode == "faceSet")
-        {
-            const word selectionName(dict.get<word>("faceSet"));
-            Info<< indent
-                << "- selecting faces using faceSet "
-                << selectionName << endl;
 
-            decomposeFacePtr.reset(new bitSet(mesh_.nFaces()));
-            decomposeFacePtr().set
-            (
-                faceSet(mesh_, selectionName, IOobject::MUST_READ).toc()
-            );
-        }
-        else
-        {
-            FatalErrorInFunction
-                << "Unsupported faceSelectionMode "
-                << faceSelectionMode
-                << ". Valid faceSelectionMode types are faceSet only"
-                << exit(FatalError);
-        }
-    }
 
     switch (selectionMode)
     {
