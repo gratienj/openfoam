@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2014 OpenFOAM Foundation
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,6 +66,10 @@ Foam::masterCoarsestGAMGProcAgglomeration::masterCoarsestGAMGProcAgglomeration
     nCellsInMasterLevel_
     (
         controlDict.getOrDefault<label>("nCellsInMasterLevel", -1)
+    ),
+    compactMasters_
+    (
+        controlDict.getOrDefault<bool>("compactMasters", false)
     )
 {
     const auto* ePtr = controlDict.findEntry("nMasters", keyType::LITERAL);
@@ -101,13 +105,6 @@ Foam::masterCoarsestGAMGProcAgglomeration::masterCoarsestGAMGProcAgglomeration
 }
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::masterCoarsestGAMGProcAgglomeration::
-~masterCoarsestGAMGProcAgglomeration()
-{}
-
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
@@ -138,13 +135,44 @@ bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
 
                 if (nProcessorsPerMaster_ > 0)
                 {
-                    forAll(procAgglomMap, fineProci)
+                    if (compactMasters_)
                     {
-                        procAgglomMap[fineProci] =
-                        (
-                            fineProci
-                          / nProcessorsPerMaster_
-                        );
+                        // e.g. 12 cores, nProcessorsPerMaster_ = 3 so 4 masters
+                        // with 3 procs each:
+                        // proc          : 0  1  2  3  4  5  6  7  8  9 10 11
+                        // procAgglomMap : 0  1  2  3  0  0  1  1  2  2  3  3
+                        // So this will make 0-3 masters with 3 procs each
+                        const label nMasters =
+                            (nProcs + nProcessorsPerMaster_ - 1)
+                        / nProcessorsPerMaster_;
+
+                        label proci = 0;
+                        for (label masteri = 0; masteri < nMasters; masteri++)
+                        {
+                            procAgglomMap[proci++] = masteri;
+                        }
+                        for (label masteri = 0; masteri < nMasters; masteri++)
+                        {
+                            for (label i = 1; i < nProcessorsPerMaster_; i++)
+                            {
+                                if (proci < nProcs)
+                                {
+                                    procAgglomMap[proci++] = masteri;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Equi-distant masters
+                        forAll(procAgglomMap, fineProci)
+                        {
+                            procAgglomMap[fineProci] =
+                            (
+                                fineProci
+                            / nProcessorsPerMaster_
+                            );
+                        }
                     }
                 }
                 else
@@ -182,8 +210,8 @@ bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
                         for (const auto& p : masterToProcs)
                         {
                             Info<< '\t' << p[0]
-                                << "\t\t" << p.size()
-                                << "\t\t"
+                                << "\t" << p.size()
+                                << "\t"
                                 << flatOutput(SubList<label>(p, p.size()-1, 1))
                                 << endl;
                         }

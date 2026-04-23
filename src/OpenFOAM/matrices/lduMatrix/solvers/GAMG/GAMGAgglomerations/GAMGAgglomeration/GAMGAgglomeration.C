@@ -316,9 +316,6 @@ const Foam::GAMGAgglomeration& Foam::GAMGAgglomeration::New
     const dictionary& controlDict
 )
 {
-
-
-
     const GAMGAgglomeration* agglomPtr =
         mesh.thisDb().cfindObject<GAMGAgglomeration>
         (

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013 OpenFOAM Foundation
-    Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2022-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,8 +48,15 @@ Description
             // (roughly) 32*nCellsInCoarsestLevel cells.
             nProcessorsPerMaster    32;
 
-            // Alternative : specify number of (equi-distributed) masters
+            // Alternative : specify number of masters
             nMasters                2;
+
+            // Optionally compact masters:
+            // - if true, the master processors are compacted to the lowest
+            //   numbered processors. This can move all masters to the same
+            //   node.
+            // compactMasters          true;
+
 
             // Restart local agglomeration after processor agglomeration. Used
             // as nCellsInCoarsestLevel. Only applicable for pair-wise local
@@ -89,6 +96,8 @@ class masterCoarsestGAMGProcAgglomeration
 
         const label nCellsInMasterLevel_;
 
+        const bool compactMasters_;
+
         DynamicList<label> comms_;
 
 
@@ -121,7 +130,7 @@ public:
 
 
     //- Destructor
-    virtual ~masterCoarsestGAMGProcAgglomeration();
+    virtual ~masterCoarsestGAMGProcAgglomeration() = default;
 
 
     // Member Functions
