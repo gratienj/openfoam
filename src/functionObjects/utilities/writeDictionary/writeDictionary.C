@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2017 OpenFOAM Foundation
     Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -151,6 +152,8 @@ bool Foam::functionObjects::writeDictionary::read(const dictionary& dict)
         Info<< "    none" << nl;
     }
     Info<< endl;
+
+    performCheck();
 
     return true;
 }
