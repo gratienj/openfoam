@@ -46,7 +46,6 @@ namespace Foam
 {
 
 // Forward Declarations
-template<class T, unsigned N> class FixedList;
 template<class T> class SubList;
 
 // Common list types

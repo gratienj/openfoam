@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2025-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -158,27 +158,27 @@ public:
     // Access
 
         //- True if zero-sized
-        bool empty() const noexcept { return !size_; }
+        constexpr bool empty() const noexcept { return !size_; }
 
         //- The size
-        IntType size() const noexcept { return size_; }
+        constexpr IntType size() const noexcept { return size_; }
 
         //- Non-const access to the size
-        IntType& size() noexcept { return size_; }
+        constexpr IntType& size() noexcept { return size_; }
 
         //- The lower value of the range
-        IntType start() const noexcept { return start_; }
+        constexpr IntType start() const noexcept { return start_; }
 
         //- Non-const access to start of the range
-        IntType& start() noexcept { return start_; }
+        constexpr IntType& start() noexcept { return start_; }
 
         //- The total size
-        IntType total() const noexcept { return total_; }
+        constexpr IntType total() const noexcept { return total_; }
 
         //- Non-const access to the total size
-        IntType& total() noexcept { return total_; }
+        constexpr IntType& total() noexcept { return total_; }
 
-        //- The (state,size) range
+        //- The (start,size) range
         IntRange<IntType> range() const noexcept { return { start_, size_ }; }
 
 
@@ -201,11 +201,53 @@ public:
     // Comparison
 
         //- Test equality of start/size/total.
-        inline bool equals(const OffsetRange& b) const noexcept;
+        template<class T2>
+        inline constexpr bool equals(const OffsetRange<T2>&) const noexcept;
 
         //- Compare start/size/total in that order.
         //  \return -1,0,+1
-        inline int compare(const OffsetRange& b) const noexcept;
+        template<class T2>
+        inline constexpr int compare(const OffsetRange<T2>&) const noexcept;
+
+        //- Test for equality of begin/size/total values
+        template<class T2>
+        constexpr bool operator==(const OffsetRange<T2>& other) const noexcept
+        {
+            return this->equals(other);
+        }
+
+        //- Comparison function for sorting, compares the start.
+        //  If the start values are equal, also compares the size, etc
+        template<class T2>
+        constexpr bool operator<(const OffsetRange<T2>& other) const noexcept
+        {
+            return (this->compare(other) < 0);
+        }
+
+        // Derived comparisons
+        template<class T2>
+        constexpr bool operator!=(const OffsetRange<T2>& other) const noexcept
+        {
+            return !(*this == other);
+        }
+
+        template<class T2>
+        constexpr bool operator<=(const OffsetRange<T2>& other) const noexcept
+        {
+            return !(other < *this);
+        }
+
+        template<class T2>
+        constexpr bool operator>(const OffsetRange<T2>& other) const noexcept
+        {
+            return (other < *this);
+        }
+
+        template<class T2>
+        constexpr bool operator>=(const OffsetRange<T2>& other) const noexcept
+        {
+            return !(*this < other);
+        }
 
 
     // Operators
@@ -240,28 +282,31 @@ public:
 
         //- True if the value is between the start and size range.
         //  Behaviour identical to contains() - usable as a predicate
-        bool operator()(IntType i) const noexcept { return contains(i); }
+        constexpr bool operator()(IntType i) const noexcept
+        {
+            return contains(i);
+        }
 
 
     // Search
 
         //- True if the value is between the start and size range range.
-        inline bool contains(IntType value) const noexcept;
+        inline constexpr bool contains(IntType value) const noexcept;
 
 
     // Iterator range values
 
         //- The value at the beginning of the start/size range - same as start()
-        inline IntType begin_value() const noexcept;
+        inline constexpr IntType begin_value() const noexcept;
 
         //- The value 1 beyond the end of the start/size range.
-        inline IntType end_value() const noexcept;
+        inline constexpr IntType end_value() const noexcept;
 
         //- The max value of the start/size range.
-        inline IntType rbegin_value() const noexcept;
+        inline constexpr IntType rbegin_value() const noexcept;
 
         //- The value 1 before the begin of start/size range
-        inline IntType rend_value() const noexcept;
+        inline constexpr IntType rend_value() const noexcept;
 
 
     // Bidirectional input iterators (const)
@@ -295,76 +340,6 @@ public:
         //- A const_reverse_iterator set to 1 before the begin of range
         const_reverse_iterator crend() const noexcept { return rend_value(); }
 };
-
-// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
-
-//- Test for equality of begin/size/total values
-template<class IntType>
-inline bool operator==
-(
-    const OffsetRange<IntType>& a,
-    const OffsetRange<IntType>& b
-) noexcept
-{
-    return a.equals(b);
-}
-
-
-//- Comparison function for sorting, compares the start.
-//  If the start values are equal, also compares the size, etc
-template<class IntType>
-inline bool operator<
-(
-    const OffsetRange<IntType>& a,
-    const OffsetRange<IntType>& b
-) noexcept
-{
-    return (a.compare(b) < 0);
-}
-
-
-// Derived comparisons
-
-template<class IntType>
-inline bool operator!=
-(
-    const OffsetRange<IntType>& a,
-    const OffsetRange<IntType>& b
-) noexcept
-{
-    return !a.equals(b);
-}
-
-template<class IntType>
-inline bool operator<=
-(
-    const OffsetRange<IntType>& a,
-    const OffsetRange<IntType>& b
-) noexcept
-{
-    return (a.compare(b) <= 0);
-}
-
-template<class IntType>
-inline bool operator>
-(
-    const OffsetRange<IntType>& a,
-    const OffsetRange<IntType>& b
-) noexcept
-{
-    return (a.compare(b) > 0);
-}
-
-template<class IntType>
-inline bool operator>=
-(
-    const OffsetRange<IntType>& a,
-    const OffsetRange<IntType>& b
-) noexcept
-{
-    return (a.compare(b) >= 0);
-}
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2017-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -100,7 +100,7 @@ Foam::FixedList<T, N>::clone() const
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class T, unsigned N>
-inline const T*
+inline constexpr const T*
 Foam::FixedList<T, N>::cdata() const noexcept
 {
     return v_;
@@ -108,7 +108,7 @@ Foam::FixedList<T, N>::cdata() const noexcept
 
 
 template<class T, unsigned N>
-inline T*
+inline constexpr T*
 Foam::FixedList<T, N>::data() noexcept
 {
     return v_;
@@ -116,7 +116,7 @@ Foam::FixedList<T, N>::data() noexcept
 
 
 template<class T, unsigned N>
-inline const char*
+inline constexpr const char*
 Foam::FixedList<T, N>::cdata_bytes() const noexcept
 {
     return reinterpret_cast<const char*>(v_);
@@ -124,7 +124,7 @@ Foam::FixedList<T, N>::cdata_bytes() const noexcept
 
 
 template<class T, unsigned N>
-inline char*
+inline constexpr char*
 Foam::FixedList<T, N>::data_bytes() noexcept
 {
     return reinterpret_cast<char*>(v_);
@@ -139,88 +139,90 @@ inline std::streamsize Foam::FixedList<T, N>::size_bytes() noexcept
 
 
 template<class T, unsigned N>
-template<unsigned Index>
-inline T& Foam::FixedList<T, N>::get() noexcept
+template<unsigned I>
+inline constexpr T& Foam::FixedList<T, N>::get() noexcept
 {
-    static_assert(Index < N, "Address outside FixedList range");
-    return v_[Index];
+    static_assert(I < N, "Address outside FixedList range");
+    return v_[I];
 }
 
 
 template<class T, unsigned N>
-template<unsigned Index>
-inline const T& Foam::FixedList<T, N>::get() const noexcept
+template<unsigned I>
+inline constexpr const T& Foam::FixedList<T, N>::get() const noexcept
 {
-    static_assert(Index < N, "Address outside FixedList range");
-    return v_[Index];
+    static_assert(I < N, "Address outside FixedList range");
+    return v_[I];
 }
 
 
 template<class T, unsigned N>
-inline T& Foam::FixedList<T, N>::front() noexcept
-{
-    return v_[0];
-}
-
-
-template<class T, unsigned N>
-inline const T& Foam::FixedList<T, N>::front() const noexcept
+inline constexpr T& Foam::FixedList<T, N>::front() noexcept
 {
     return v_[0];
 }
 
 
 template<class T, unsigned N>
-inline T& Foam::FixedList<T, N>::back() noexcept
+inline constexpr const T& Foam::FixedList<T, N>::front() const noexcept
+{
+    return v_[0];
+}
+
+
+template<class T, unsigned N>
+inline constexpr T& Foam::FixedList<T, N>::back() noexcept
 {
     return v_[N-1];
 }
 
 
 template<class T, unsigned N>
-inline const T& Foam::FixedList<T, N>::back() const noexcept
+inline constexpr const T& Foam::FixedList<T, N>::back() const noexcept
 {
     return v_[N-1];
 }
 
 
 template<class T, unsigned N>
-inline Foam::label Foam::FixedList<T, N>::fcIndex(const label i) const noexcept
+inline constexpr Foam::label
+Foam::FixedList<T, N>::fcIndex(label i) const noexcept
 {
     return (i == N-1 ? 0 : i+1);
 }
 
 
 template<class T, unsigned N>
-inline const T& Foam::FixedList<T, N>::fcValue(const label i) const
+inline const T& Foam::FixedList<T, N>::fcValue(label i) const
 {
     return this->operator[](this->fcIndex(i));
 }
 
 
 template<class T, unsigned N>
-inline T& Foam::FixedList<T, N>::fcValue(const label i)
+inline T& Foam::FixedList<T, N>::fcValue(label i)
 {
     return this->operator[](this->fcIndex(i));
 }
 
 
 template<class T, unsigned N>
-inline Foam::label Foam::FixedList<T, N>::rcIndex(const label i) const noexcept
+inline constexpr Foam::label
+Foam::FixedList<T, N>::rcIndex(label i) const noexcept
 {
     return (i ? i-1 : N-1);
 }
 
 
 template<class T, unsigned N>
-inline const T& Foam::FixedList<T, N>::rcValue(const label i) const
+inline const T& Foam::FixedList<T, N>::rcValue(label i) const
 {
     return this->operator[](this->rcIndex(i));
 }
 
 
 template<class T, unsigned N>
-inline T& Foam::FixedList<T, N>::rcValue(const label i)
+inline T& Foam::FixedList<T, N>::rcValue(label i)
 {
     return this->operator[](this->rcIndex(i));
 }

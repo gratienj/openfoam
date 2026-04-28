@@ -67,6 +67,7 @@ namespace Foam
 template<class T> class List;
 template<class T> class SubList;
 template<class T> class UList;
+template<class T, unsigned N> class FixedList;
 template<class T> class IndirectList;
 template<class T> class UIndirectList;
 template<class T, class Addr> class IndirectListBase;
@@ -247,7 +248,7 @@ public:
         inline constexpr UList() noexcept;
 
         //- Construct from components
-        inline UList(T* __restrict__ ptr, const label len) noexcept;
+        inline constexpr UList(T* __restrict__ ptr, label len) noexcept;
 
         //- Move construct from a SubList, shallow copy
         UList(SubList<T>&&) noexcept;

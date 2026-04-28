@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2025 OpenCFD Ltd.
+    Copyright (C) 2020-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -165,36 +165,36 @@ public:
     // Access
 
         //- True if range is empty (zero-sized)
-        bool empty() const noexcept { return !size_; }
+        constexpr bool empty() const noexcept { return !size_; }
 
         //- True if range has size greater than zero
-        bool good() const noexcept { return (size_ > 0); }
+        constexpr bool good() const noexcept { return (size_ > 0); }
 
         //- The size of the range
-        IntType size() const noexcept { return size_; }
+        constexpr IntType size() const noexcept { return size_; }
 
         //- Non-const access to size of the range
-        IntType& size() noexcept { return size_; }
+        constexpr IntType& size() noexcept { return size_; }
 
         //- The (inclusive) lower value of the range
-        IntType start() const noexcept { return start_; }
+        constexpr IntType start() const noexcept { return start_; }
 
         //- Non-const access to start of the range
-        IntType& start() noexcept { return start_; }
+        constexpr IntType& start() noexcept { return start_; }
 
         //- The (inclusive) lower value of the range,
         //- same as start(), begin_value()
-        IntType min() const noexcept { return start_; }
+        constexpr IntType min() const noexcept { return start_; }
 
         //- The (inclusive) upper value of the range,
         //- same as rbegin_value(). Ill-defined for an empty range
-        IntType max() const noexcept { return (start_ + (size_ - 1)); }
+        constexpr IntType max() const noexcept { return (start_ + (size_-1)); }
 
 
     // Edit
 
         //- Reset to (0,0)
-        inline void clear() noexcept ;
+        inline void clear() noexcept;
 
         //- Reset to (0,0)
         inline void reset() noexcept;
@@ -218,10 +218,7 @@ public:
     // Search
 
         //- True if the (global) value is within the range
-        inline bool contains(IntType value) const noexcept;
-
-        //- True if the (global) value is within the range
-        bool found(IntType val) const noexcept { return contains(val); }
+        inline constexpr bool contains(IntType value) const noexcept;
 
 
     // Member Operators
@@ -237,7 +234,10 @@ public:
 
         //- True if the global value is located within the range.
         //  Behaviour identical to contains() - usable as a predicate
-        bool operator()(IntType i) const noexcept { return contains(i); }
+        constexpr bool operator()(IntType i) const noexcept
+        {
+            return contains(i);
+        }
 
         //- Increase the size by 1.
         inline IntType operator++() noexcept;
@@ -257,19 +257,65 @@ public:
         explicit operator bool() const noexcept { return (size_ > 0); }
 
 
+    // Comparison
+
+        //- Test for equality of start/size values
+        template<class IntT2>
+        constexpr bool operator==(const IntRange<IntT2>& other) const noexcept
+        {
+            return (start() == other.start() && size() == other.size());
+        }
+
+        //- Compare lexicographically: compares start first, then size
+        template<class IntT2>
+        constexpr bool operator<(const IntRange<IntT2>& other) const noexcept
+        {
+            return
+            (
+                (start() < other.start())
+             || (start() == other.start() && size() < other.size())
+            );
+        }
+
+        // Derived comparisons
+        template<class IntT2>
+        constexpr bool operator!=(const IntRange<IntT2>& other) const noexcept
+        {
+            return !(*this == other);
+        }
+
+        template<class IntT2>
+        constexpr bool operator<=(const IntRange<IntT2>& other) const noexcept
+        {
+            return !(other < *this);
+        }
+
+        template<class IntT2>
+        constexpr bool operator>(const IntRange<IntT2>& other) const noexcept
+        {
+            return (other < *this);
+        }
+
+        template<class IntT2>
+        constexpr bool operator>=(const IntRange<IntT2>& other) const noexcept
+        {
+            return !(*this < other);
+        }
+
+
     // Iterator ranges
 
         //- The value at the beginning of the range - same as min(), start()
-        inline IntType begin_value() const noexcept;
+        inline constexpr IntType begin_value() const noexcept;
 
         //- The value 1 beyond the end of the range.
-        inline IntType end_value() const noexcept;
+        inline constexpr IntType end_value() const noexcept;
 
         //- The max value of the range.
-        inline IntType rbegin_value() const noexcept;
+        inline constexpr IntType rbegin_value() const noexcept;
 
         //- The value 1 before the begin of range
-        inline IntType rend_value() const noexcept;
+        inline constexpr IntType rend_value() const noexcept;
 
 
     // Bidirectional input iterators (const)
@@ -302,86 +348,13 @@ public:
 
         //- A const_reverse_iterator set to 1 before the begin of range
         const_reverse_iterator crend() const noexcept { return rend_value(); }
+
+
+    // Housekeeping
+
+        //- True if the (global) value is within the range
+        bool found(IntType val) const noexcept { return contains(val); }
 };
-
-
-// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
-
-//- Test for equality of begin/size values
-template<class IntType>
-inline constexpr bool operator==
-(
-    const IntRange<IntType>& a,
-    const IntRange<IntType>& b
-) noexcept
-{
-    return (a.start() == b.start() && a.size() == b.size());
-}
-
-
-//- Comparison function for sorting, compares the start.
-//  If the start values are equal, also compares the size.
-template<class IntType>
-inline constexpr bool operator<
-(
-    const IntRange<IntType>& a,
-    const IntRange<IntType>& b
-) noexcept
-{
-    return
-    (
-        a.start() < b.start()
-     ||
-        (
-            !(b.start() < a.start())
-         && a.size() < b.size()
-        )
-    );
-}
-
-
-// Derived comparisons
-
-template<class IntType>
-inline constexpr bool operator!=
-(
-    const IntRange<IntType>& a,
-    const IntRange<IntType>& b
-) noexcept
-{
-    return !(a == b);
-}
-
-template<class IntType>
-inline constexpr bool operator<=
-(
-    const IntRange<IntType>& a,
-    const IntRange<IntType>& b
-) noexcept
-{
-    return !(b < a);
-}
-
-template<class IntType>
-inline constexpr bool operator>
-(
-    const IntRange<IntType>& a,
-    const IntRange<IntType>& b
-) noexcept
-{
-    return (b < a);
-}
-
-template<class IntType>
-inline constexpr bool operator>=
-(
-    const IntRange<IntType>& a,
-    const IntRange<IntType>& b
-) noexcept
-
-{
-    return !(a < b);
-}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -135,16 +135,16 @@ public:
     // Member Functions
 
         //- Access the first element
-        const T1& first() const noexcept { return tuple_.first; }
+        constexpr const T1& first() const noexcept { return tuple_.first; }
 
         //- Access the first element
-        T1& first() noexcept { return tuple_.first; }
+        constexpr T1& first() noexcept { return tuple_.first; }
 
         //- Access the second element
-        const T2& second() const noexcept { return tuple_.second; }
+        constexpr const T2& second() const noexcept { return tuple_.second; }
 
         //- Access the second element
-        T2& second() noexcept { return tuple_.second; }
+        constexpr T2& second() noexcept { return tuple_.second; }
 
 
     // Member Operators
@@ -330,7 +330,7 @@ inline Ostream& operator<<(Ostream& os, const Tuple2<T1,T2>& t)
 // * * * * * * * * * * * * * * * ADL Lookups * * * * * * * * * * * * * * * * //
 
 template<std::size_t I, class T1, class T2>
-decltype(auto) get(Tuple2<T1, T2>& t) noexcept
+constexpr decltype(auto) get(Tuple2<T1, T2>& t) noexcept
 {
     static_assert(I < 2, "Index out-of-bounds for Tuple2");
     if constexpr (I == 0) { return t.first(); }
@@ -338,7 +338,7 @@ decltype(auto) get(Tuple2<T1, T2>& t) noexcept
 }
 
 template<std::size_t I, class T1, class T2>
-decltype(auto) get(const Tuple2<T1, T2>& t) noexcept
+constexpr decltype(auto) get(const Tuple2<T1, T2>& t) noexcept
 {
     static_assert(I < 2, "Index out-of-bounds for Tuple2");
     if constexpr (I == 0) { return t.first(); }
@@ -346,7 +346,7 @@ decltype(auto) get(const Tuple2<T1, T2>& t) noexcept
 }
 
 template<std::size_t I, class T1, class T2>
-decltype(auto) get(Tuple2<T1, T2>&& t) noexcept
+constexpr decltype(auto) get(Tuple2<T1, T2>&& t) noexcept
 {
     static_assert(I < 2, "Index out-of-bounds for Tuple2");
     if constexpr (I == 0) { return std::move(t.first()); }
@@ -354,7 +354,7 @@ decltype(auto) get(Tuple2<T1, T2>&& t) noexcept
 }
 
 template<std::size_t I, class T1, class T2>
-decltype(auto) get(const Tuple2<T1, T2>&& t) noexcept
+constexpr decltype(auto) get(const Tuple2<T1, T2>&& t) noexcept
 {
     static_assert(I < 2, "Index out-of-bounds for Tuple2");
     if constexpr (I == 0) { return std::move(t.first()); }

@@ -40,7 +40,7 @@ inline constexpr Foam::UList<T>::UList() noexcept
 
 
 template<class T>
-inline Foam::UList<T>::UList(T* __restrict__ ptr, const label len) noexcept
+inline constexpr Foam::UList<T>::UList(T* __restrict__ ptr, label len) noexcept
 :
     size_(len),
     v_(ptr)

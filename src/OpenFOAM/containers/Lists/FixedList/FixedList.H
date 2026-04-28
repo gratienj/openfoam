@@ -200,20 +200,20 @@ public:
     // Access
 
         //- Return pointer to the underlying array serving as data storage.
-        inline const T* cdata() const noexcept;
+        inline constexpr const T* cdata() const noexcept;
 
         //- Return pointer to the underlying array serving as data storage.
-        inline T* data() noexcept;
+        inline constexpr T* data() noexcept;
 
         //- Return pointer to the underlying array serving as data storage,
         //  reinterpreted as byte data
         //  \note Only meaningful for contiguous data
-        inline const char* cdata_bytes() const noexcept;
+        inline constexpr const char* cdata_bytes() const noexcept;
 
         //- Return pointer to the underlying array serving as data storage,
         //  reinterpreted as byte data
         //  \note Only meaningful for contiguous data
-        inline char* data_bytes() noexcept;
+        inline constexpr char* data_bytes() noexcept;
 
         //- Number of contiguous bytes for the list data,
         //  \note Only meaningful for contiguous data
@@ -224,44 +224,44 @@ public:
         static std::streamsize byteSize();
 
         //- Element access using compile-time indexing
-        template<unsigned Index>
-        inline T& get() noexcept;
+        template<unsigned I>
+        inline constexpr T& get() noexcept;
 
         //- Element access using compile-time indexing
-        template<unsigned Index>
-        inline const T& get() const noexcept;
+        template<unsigned I>
+        inline constexpr const T& get() const noexcept;
 
         //- Access first element of the list, position [0]
-        inline T& front() noexcept;
+        inline constexpr T& front() noexcept;
 
         //- Access first element of the list, position [0]
-        inline const T& front() const noexcept;
+        inline constexpr const T& front() const noexcept;
 
         //- Access last element of the list, position [N-1]
-        inline T& back() noexcept;
+        inline constexpr T& back() noexcept;
 
         //- Access last element of the list, position [N-1]
-        inline const T& back() const noexcept;
+        inline constexpr const T& back() const noexcept;
 
         //- Return the forward circular index, i.e. next index
         //- which returns to the first at the end of the list
-        inline label fcIndex(const label i) const noexcept;
+        inline constexpr label fcIndex(label i) const noexcept;
 
         //- Return forward circular value (ie, next value in the list)
-        inline const T& fcValue(const label i) const;
+        inline const T& fcValue(label i) const;
 
         //- Return forward circular value (ie, next value in the list)
-        inline T& fcValue(const label i);
+        inline T& fcValue(label i);
 
         //- Return the reverse circular index, i.e. previous index
         //- which returns to the last at the beginning of the list
-        inline label rcIndex(const label i) const noexcept;
+        inline constexpr label rcIndex(label i) const noexcept;
 
         //- Return reverse circular value (ie, previous value in the list)
-        inline const T& rcValue(const label i) const;
+        inline const T& rcValue(label i) const;
 
         //- Return reverse circular value (ie, previous value in the list)
-        inline T& rcValue(const label i);
+        inline T& rcValue(label i);
 
 
     // Check
@@ -687,6 +687,16 @@ struct tuple_element<I, Foam::FixedList<T, N>> { using type = T; };
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #include "FixedListI.H"
+
+// * * * * * * * * * * * * * * * Implementations * * * * * * * * * * * * * * //
+
+// FUTURE?
+// template<class T, unsigned N>
+// constexpr Foam::UList<T>::UList(const FixedList<T>& list) noexcept
+// :
+//     UList<T>(const_cast<T*>(list.cdata()), list.size())
+// {}
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

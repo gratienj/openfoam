@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2025-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,28 +69,32 @@ inline IntType Foam::OffsetRange<IntType>::at_value(IntType i) const noexcept
 
 
 template<class IntType>
-inline IntType Foam::OffsetRange<IntType>::begin_value() const noexcept
+inline constexpr IntType
+Foam::OffsetRange<IntType>::begin_value() const noexcept
 {
     return (start_);
 }
 
 
 template<class IntType>
-inline IntType Foam::OffsetRange<IntType>::end_value() const noexcept
+inline constexpr IntType
+Foam::OffsetRange<IntType>::end_value() const noexcept
 {
     return (start_ + size_);
 }
 
 
 template<class IntType>
-inline IntType Foam::OffsetRange<IntType>::rbegin_value() const noexcept
+inline constexpr IntType
+Foam::OffsetRange<IntType>::rbegin_value() const noexcept
 {
     return (start_ + (size_ - 1));
 }
 
 
 template<class IntType>
-inline IntType Foam::OffsetRange<IntType>::rend_value() const noexcept
+inline constexpr IntType
+Foam::OffsetRange<IntType>::rend_value() const noexcept
 {
     return (start_ - 1);
 }
@@ -129,7 +133,8 @@ inline void Foam::OffsetRange<IntType>::reset
 
 
 template<class IntType>
-inline bool Foam::OffsetRange<IntType>::contains(IntType value) const noexcept
+inline constexpr bool
+Foam::OffsetRange<IntType>::contains(IntType value) const noexcept
 {
     // This check is non-overflowing...
     return (size_ && start_ <= value && (value - start_) < size_);
@@ -137,10 +142,9 @@ inline bool Foam::OffsetRange<IntType>::contains(IntType value) const noexcept
 
 
 template<class IntType>
-inline bool Foam::OffsetRange<IntType>::equals
-(
-    const OffsetRange<IntType>& b
-) const noexcept
+template<class IntT2>
+inline constexpr bool
+Foam::OffsetRange<IntType>::equals(const OffsetRange<IntT2>& b) const noexcept
 {
     const auto& a = *this;
 
@@ -154,10 +158,9 @@ inline bool Foam::OffsetRange<IntType>::equals
 
 
 template<class IntType>
-inline int Foam::OffsetRange<IntType>::compare
-(
-    const OffsetRange<IntType>& b
-) const noexcept
+template<class IntT2>
+inline constexpr int
+Foam::OffsetRange<IntType>::compare(const OffsetRange<IntT2>& b) const noexcept
 {
     const auto& a = *this;
 

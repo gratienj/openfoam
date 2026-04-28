@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2025 OpenCFD Ltd.
+    Copyright (C) 2020-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,28 +65,28 @@ inline IntType Foam::IntRange<IntType>::at_value(IntType i) const noexcept
 
 
 template<class IntType>
-inline IntType Foam::IntRange<IntType>::begin_value() const noexcept
+inline constexpr IntType Foam::IntRange<IntType>::begin_value() const noexcept
 {
     return (start_);
 }
 
 
 template<class IntType>
-inline IntType Foam::IntRange<IntType>::end_value() const noexcept
+inline constexpr IntType Foam::IntRange<IntType>::end_value() const noexcept
 {
     return (start_ + size_);
 }
 
 
 template<class IntType>
-inline IntType Foam::IntRange<IntType>::rbegin_value() const noexcept
+inline constexpr IntType Foam::IntRange<IntType>::rbegin_value() const noexcept
 {
     return (start_ + (size_ - 1));
 }
 
 
 template<class IntType>
-inline IntType Foam::IntRange<IntType>::rend_value() const noexcept
+inline constexpr IntType Foam::IntRange<IntType>::rend_value() const noexcept
 {
     return (start_ - 1);
 }
@@ -147,7 +147,7 @@ inline void Foam::IntRange<IntType>::clampSize() noexcept
 
 
 template<class IntType>
-inline bool Foam::IntRange<IntType>::contains(IntType value)
+inline constexpr bool Foam::IntRange<IntType>::contains(IntType value)
 const noexcept
 {
     // This check is non-overflowing...

@@ -30,8 +30,7 @@ License
 #include "List.H"
 #include "MinMax.H"
 #include "Pair.H"
-#include "Istream.H"
-#include "Ostream.H"
+#include "IntRangeIO.H"  // For IO operations
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -182,36 +181,23 @@ Foam::labelRange Foam::labelRange::subset
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
-// Format is identical to IntRange, Tuple2
 Foam::Istream& Foam::operator>>
 (
     Foam::Istream& is,
     Foam::labelRange& range
 )
 {
-    is.readBegin("labelRange");
-    is >> range.start() >> range.size();
-    is.readEnd("labelRange");
-
-    is.check(FUNCTION_NAME);
-    return is;
+    return is >> static_cast<IntRange<label>&>(range);
 }
 
 
-// Format is identical to IntRange, Tuple2
 Foam::Ostream& Foam::operator<<
 (
     Foam::Ostream& os,
     const Foam::labelRange& range
 )
 {
-    os  << Foam::token::BEGIN_LIST
-        << range.start() << Foam::token::SPACE
-        << range.size()
-        << Foam::token::END_LIST;
-
-    os.check(FUNCTION_NAME);
-    return os;
+    return os << static_cast<const IntRange<label>&>(range);
 }
 
 

@@ -111,14 +111,16 @@ inline bool Foam::IndirectListBase<T, Addr>::contains
 
 
 template<class T, class Addr>
-inline Foam::label Foam::IndirectListBase<T, Addr>::fcIndex(const label i) const
+inline Foam::label
+Foam::IndirectListBase<T, Addr>::fcIndex(const label i) const noexcept
 {
     return (i == addr_.size()-1 ? 0 : i+1);
 }
 
 
 template<class T, class Addr>
-inline Foam::label Foam::IndirectListBase<T, Addr>::rcIndex(const label i) const
+inline Foam::label
+Foam::IndirectListBase<T, Addr>::rcIndex(const label i) const noexcept
 {
     return (i ? i-1 : addr_.size()-1);
 }

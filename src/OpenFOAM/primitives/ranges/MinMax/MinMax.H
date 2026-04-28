@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2019-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -177,16 +177,16 @@ public:
     // Access
 
         //- The min value
-        const T& min() const noexcept { return min_; }
+        constexpr const T& min() const noexcept { return min_; }
 
         //- The min value
-        T& min() noexcept { return min_; }
+        constexpr T& min() noexcept { return min_; }
 
         //- The max value
-        const T& max() const noexcept { return max_; }
+        constexpr const T& max() const noexcept { return max_; }
 
         //- The max value
-        T& max() noexcept { return max_; }
+        constexpr T& max() noexcept { return max_; }
 
         //- The min/max average value
         inline T centre() const;
@@ -335,9 +335,58 @@ inline Ostream& operator<<(Ostream& os, const MinMax<T>& range)
 }
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * ADL Lookups * * * * * * * * * * * * * * * * //
+
+template<std::size_t I, class T>
+constexpr decltype(auto) get(MinMax<T>& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for MinMax");
+    if constexpr (I == 0) { return t.min(); }
+    else { return t.max(); }
+}
+
+template<std::size_t I, class T>
+constexpr decltype(auto) get(const MinMax<T>& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for MinMax");
+    if constexpr (I == 0) { return t.min(); }
+    else { return t.max(); }
+}
+
+template<std::size_t I, class T>
+constexpr decltype(auto) get(MinMax<T>&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for MinMax");
+    if constexpr (I == 0) { return std::move(t.min()); }
+    else { return std::move(t.max()); }
+}
+
+template<std::size_t I, class T>
+constexpr decltype(auto) get(const MinMax<T>&& t) noexcept
+{
+    static_assert(I < 2, "Index out-of-bounds for MinMax");
+    if constexpr (I == 0) { return std::move(t.min()); }
+    else { return std::move(t.max()); }
+}
 
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Specializations (structured binding)
+namespace std
+{
+
+//- The tuple_size of MinMax == 2
+template<class T>
+struct tuple_size<Foam::MinMax<T>> : std::integral_constant<std::size_t, 2> {};
+
+//- Identical type for all elements of MinMax
+template<std::size_t I, class T>
+struct tuple_element<I, Foam::MinMax<T>> { using type = T; };
+
+} // End namespace std
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

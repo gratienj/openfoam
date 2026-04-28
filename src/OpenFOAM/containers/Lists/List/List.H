@@ -54,7 +54,6 @@ namespace Foam
 
 // Forward Declarations
 template<class T> class List;
-template<class T, unsigned N> class FixedList;
 template<class T, int SizeMin> class DynamicList;
 
 template<class T> class UPtrList;
