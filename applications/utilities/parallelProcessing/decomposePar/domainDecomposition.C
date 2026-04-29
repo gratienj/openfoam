@@ -235,16 +235,12 @@ bool Foam::domainDecomposition::writeDecomposition(const bool decomposeSets)
         // Create processor points
         const labelList& curPointLabels = procPointAddressing_[proci];
 
-        const pointField& meshPoints = points();
+        pointField procPoints(points(), curPointLabels);
 
         labelList pointLookup(nPoints(), -1);
 
-        pointField procPoints(curPointLabels.size());
-
         forAll(curPointLabels, pointi)
         {
-            procPoints[pointi] = meshPoints[curPointLabels[pointi]];
-
             pointLookup[curPointLabels[pointi]] = pointi;
         }
 

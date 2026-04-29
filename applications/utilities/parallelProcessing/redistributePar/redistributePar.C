@@ -49,7 +49,7 @@ Usage
         mesh. Equivalent to running without processor subdirectories.
 
       - \par -reconstruct
-        Reconstruct mesh and fields (like reconstructParMesh+reconstructPar).
+        Reconstruct mesh and fields (like reconstructParMesh/reconstructPar).
 
       - \par -newTimes
         (in combination with -reconstruct) reconstruct only new times.
@@ -542,7 +542,9 @@ void writeDecomposition
 }
 
 
-void determineDecomposition
+// Returns the top-level number of output ranks and not the number actually
+// used for decomposing a region, which might be different.
+label determineDecomposition
 (
     const refPtr<fileOperation>& readHandler,
     const Time& baseRunTime,
@@ -552,7 +554,7 @@ void determineDecomposition
     const fvMesh& mesh,
     const bool writeCellDist,
 
-    label& nDestProcs,
+    // [out] the cell decomposition
     labelList& decomp
 )
 {
@@ -562,9 +564,13 @@ void determineDecomposition
     oldHandler = fileOperation::fileHandler(oldHandler);
 
     // Read decomposeParDict (on all processors)
-    const auto& method = decompositionModel::New(mesh, decompDictFile);
+    const auto& model = decompositionModel::New(mesh, decompDictFile);
 
-    decompositionMethod& decomposer = method.decomposer();
+    // The top-level target number of ranks and not the number actually used
+    // for decomposing a region, which might be different.
+    const label nDestProcs = decompositionMethod::nDomains(model);
+
+    const auto& decomposer = model.decomposer();
 
     if (!decomposer.parallelAware())
     {
@@ -590,7 +596,7 @@ void determineDecomposition
     }
 
     scalarField cellWeights;
-    if (word name; method.readIfPresent("weightField", name))
+    if (word name; model.readIfPresent("weightField", name))
     {
         volScalarField weights
         (
@@ -608,7 +614,6 @@ void determineDecomposition
         cellWeights = std::move(weights.primitiveFieldRef(false));
     }
 
-    nDestProcs = decomposer.nDomains();
     decomp = decomposer.decompose(mesh, cellWeights);
 
     // Restore
@@ -655,6 +660,8 @@ void determineDecomposition
 
         fileHandler().constCast().nProcs(oldNumProcs);
     }
+
+    return nDestProcs;
 }
 
 
@@ -670,6 +677,14 @@ void correctCoupledBoundaryConditions(fvMesh& mesh)
 }
 
 
+// Handling for time increment and overwrite etc.
+enum class timeIncrementType : char
+{
+    OVERWRITE,      // overwrite
+    INCREMENT,      // increment time before writing
+    NO_INCREMENT    // write without incrementing time
+};
+
 // Inplace redistribute mesh and any fields
 autoPtr<mapDistributePolyMesh> redistributeAndWrite
 (
@@ -682,14 +697,14 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     const bool doReadFields,
     const bool decompose,       // decompose, i.e. read from undecomposed case
     const bool reconstruct,
-    const bool overwrite,
+    timeIncrementType incrTime, // (overwrite|increment|no_increment)
 
     // Decomposition information
     const label nDestProcs,
-    const labelList& decomp,
+    const labelUList& decomp,
 
     // Mesh information
-    const boolList& volMeshOnProc,
+    const UList<bool>& volMeshOnProc,
     const fileName& volMeshInstance,
     fvMesh& mesh
 )
@@ -1012,17 +1027,18 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
     // More precision (for points data)
     IOstream::minPrecision(10);
 
-
-    if (!overwrite)
-    {
-        ++runTime;
-        mesh.setInstance(runTime.timeName());
-    }
-    else
+    if (incrTime == timeIncrementType::OVERWRITE)
     {
         mesh.setInstance(volMeshInstance);
     }
-
+    else
+    {
+        if (incrTime == timeIncrementType::INCREMENT)
+        {
+            ++runTime;
+        }
+        mesh.setInstance(runTime.timeName());
+    }
 
     // Register mapDistributePolyMesh for automatic writing...
     IOmapDistributePolyMeshRef distMapRef
@@ -1097,7 +1113,7 @@ autoPtr<mapDistributePolyMesh> redistributeAndWrite
         topoSet::removeFiles(mesh);
     }
     InfoOrPout
-        << "Written redistributed mesh to "
+        << "Written redistributed mesh [" << mesh.regionName() << "] to "
         << mesh.facesInstance() << nl << endl;
 
 
@@ -1684,11 +1700,19 @@ int main(int argc, char *argv[])
             << nl
             << "Reconstructing mesh and addressing" << nl << endl;
 
-        for (const word& regionName : regionNames)
+        forAll(regionNames, regioni)
         {
-            const fileName volMeshSubDir
+            const auto& regionName = regionNames[regioni];
+            const fileName volMeshSubDir(polyMesh::meshDir(regionName));
+
+            // NB: only increment Time for the first of multi-region
+            const timeIncrementType incrementTime =
             (
-                polyMesh::meshDir(regionName)
+                overwrite
+              ? timeIncrementType::OVERWRITE
+              : (regioni == 0)
+              ? timeIncrementType::INCREMENT
+              : timeIncrementType::NO_INCREMENT
             );
 
             InfoOrPout
@@ -2035,7 +2059,7 @@ int main(int argc, char *argv[])
                         false,      // do not read fields
                         false,      // do not read undecomposed case on proc0
                         true,       // write redistributed files to proc0
-                        overwrite,
+                        incrementTime,  // (overwrite|increment|no_increment)
 
                         // Decomposition information
                         nDestProcs,
@@ -2638,11 +2662,19 @@ int main(int argc, char *argv[])
         // Save old time name (since might be incremented)
         const word oldTimeName(runTime.timeName());
 
-        for (const word& regionName : regionNames)
+        forAll(regionNames, regioni)
         {
-            const fileName volMeshSubDir
+            const auto& regionName = regionNames[regioni];
+            const fileName volMeshSubDir(polyMesh::meshDir(regionName));
+
+            // NB: only increment Time for the first of multi-region
+            const timeIncrementType incrementTime =
             (
-                polyMesh::meshDir(regionName)
+                overwrite
+              ? timeIncrementType::OVERWRITE
+              : (regioni == 0)
+              ? timeIncrementType::INCREMENT
+              : timeIncrementType::NO_INCREMENT
             );
 
             InfoOrPout
@@ -3008,9 +3040,8 @@ int main(int argc, char *argv[])
             // Determine decomposition
             // ~~~~~~~~~~~~~~~~~~~~~~~
 
-            label nDestProcs;
             labelList finalDecomp;
-            determineDecomposition
+            label nDestProcs = determineDecomposition
             (
                 volMeshReadHandler,         // how to read decomposeParDict
                 baseRunTime,
@@ -3019,8 +3050,6 @@ int main(int argc, char *argv[])
                 proc0CaseName,
                 mesh,
                 writeCellDist,
-
-                nDestProcs,
                 finalDecomp
             );
 
@@ -3126,7 +3155,7 @@ int main(int argc, char *argv[])
                 true,           // read fields
                 decompose,      // decompose, i.e. read from undecomposed case
                 false,          // no reconstruction
-                overwrite,
+                incrementTime,  // (overwrite|increment|no_increment)
 
                 // Decomposition information
                 nDestProcs,

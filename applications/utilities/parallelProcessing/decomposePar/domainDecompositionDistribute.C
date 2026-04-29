@@ -38,33 +38,30 @@ void Foam::domainDecomposition::distributeCells()
 
     cpuTime decompositionTime;
 
-    const decompositionModel& method = decompositionModel::New
-    (
-        *this,
-        decompDictFile_
-    );
+    const auto& model = decompositionModel::New(*this, decompDictFile_);
 
-    word weightName;
+    const auto& decomposer = model.decomposer();
+
     scalarField cellWeights;
-
-    if (method.readIfPresent("weightField", weightName))
+    if (word name; model.readIfPresent("weightField", name))
     {
         volScalarField weights
         (
             IOobject
             (
-                weightName,
+                name,
                 time().timeName(),
                 *this,
-                IOobject::MUST_READ,
-                IOobject::NO_WRITE
+                IOobjectOption::MUST_READ,
+                IOobjectOption::NO_WRITE,
+                IOobjectOption::NO_REGISTER
             ),
             *this
         );
-        cellWeights = weights.primitiveField();
+        cellWeights = std::move(weights.primitiveFieldRef(false));
     }
 
-    cellToProc_ = method.decomposer().decompose(*this, cellWeights);
+    cellToProc_ = decomposer.decompose(*this, cellWeights);
 
     Info<< "\nFinished decomposition in "
         << decompositionTime.elapsedCpuTime()

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2023 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -179,6 +179,14 @@ public:
         (
             const dictionary& decompDict,
             const word& regionName = ""
+        );
+
+        //- Return an optional region-specific dictionary
+        //- from "regions" sub-dictionary, or nullptr if not found
+        static const dictionary* cfindRegionDict
+        (
+            const dictionary& decompDict,
+            const word& regionName
         );
 
         //- Return an optional region-specific dictionary

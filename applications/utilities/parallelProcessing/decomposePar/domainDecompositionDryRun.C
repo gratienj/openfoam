@@ -61,14 +61,9 @@ void Foam::domainDecompositionDryRun::execute
     Info<< "\nCalculating distribution of cells. nCells = "
         << mesh_.nCells() << endl;
 
-    const decompositionModel& model = decompositionModel::New
-    (
-        mesh_,
-        decompDictFile_
-    );
+    const auto& model = decompositionModel::New(mesh_, decompDictFile_);
 
     // Allow overrides for testing
-
     dictionary& modelDict = const_cast<decompositionModel&>(model);
 
     if (nDomainsOverride_ > 0)
@@ -92,41 +87,41 @@ void Foam::domainDecompositionDryRun::execute
     }
 
     scalarField cellWeights;
-    word weightName;
-    if (model.readIfPresent("weightField", weightName))
+    if (word name; model.readIfPresent("weightField", name))
     {
         volScalarField weights
         (
             IOobject
             (
-                weightName,
+                name,
                 mesh_.time().timeName(),
                 mesh_,
-                IOobject::MUST_READ,
-                IOobject::NO_WRITE
+                IOobjectOption::MUST_READ,
+                IOobjectOption::NO_WRITE,
+                IOobjectOption::NO_REGISTER
             ),
             mesh_
         );
-        cellWeights = weights.primitiveField();
+        cellWeights = std::move(weights.primitiveFieldRef(false));
     }
 
-    decompositionMethod& method = model.decomposer();
+    const auto& decomposer = model.decomposer();
 
     // Local mesh connectivity
     CompactListList<label> cellCells;
     globalMeshData::calcCellCells(mesh_, cellCells);
 
-    labelList cellToProc = method.decompose(mesh_, cellWeights);
+    labelList cellToProc = decomposer.decompose(mesh_, cellWeights);
 
     Info<< "\nFinished decomposition into "
-        << method.nDomains() << " domains in "
+        << decomposer.nDomains() << " domains in "
         << decompositionTime.elapsedCpuTime() << " s" << nl << nl;
 
     decompositionInformation info
     (
         cellCells,
         cellToProc,
-        method.nDomains()
+        decomposer.nDomains()
     );
 
     if (writeCellDist)

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2023 OpenCFD Ltd.
+    Copyright (C) 2015-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,7 +66,7 @@ static inline const dictionary* cfindCoeffsDict
     const bool allowDefault
 )
 {
-    const dictionary* dictptr = dict.findDict(coeffsName);
+    const auto* dictptr = dict.findDict(coeffsName);
     if (!dictptr && allowDefault)
     {
         dictptr = dict.findDict("coeffs");
@@ -99,18 +99,19 @@ Foam::label Foam::decompositionMethod::nDomains
         (UPstream::parRun() ? IOobject::LAZY_READ : IOobject::MUST_READ)
     );
 
-    if (!regionName.empty())
+    if
+    (
+        const auto* regionDict = cfindRegionDict(decompDict, regionName);
+        regionDict != nullptr
+     && regionDict->readIfPresent("numberOfSubdomains", nDomainsRegion)
+    )
     {
-        const dictionary& regionDict =
-            optionalRegionDict(decompDict, regionName);
-
-        if (regionDict.readIfPresent("numberOfSubdomains", nDomainsRegion))
+        if (nDomainsRegion >= 1 && nDomainsRegion <= nDomainsGlobal)
         {
-            if (nDomainsRegion >= 1 && nDomainsRegion <= nDomainsGlobal)
-            {
-                return nDomainsRegion;
-            }
-
+            return nDomainsRegion;
+        }
+        else
+        {
             WarningInFunction
                 << "Ignoring region [" << regionName
                 << "] numberOfSubdomains: " << nDomainsRegion
@@ -123,7 +124,7 @@ Foam::label Foam::decompositionMethod::nDomains
 }
 
 
-const Foam::dictionary& Foam::decompositionMethod::optionalRegionDict
+const Foam::dictionary* Foam::decompositionMethod::cfindRegionDict
 (
     const dictionary& decompDict,
     const word& regionName
@@ -138,6 +139,17 @@ const Foam::dictionary& Foam::decompositionMethod::optionalRegionDict
     {
         dictptr = dictptr->findDict(regionName);
     }
+    return dictptr;
+}
+
+
+const Foam::dictionary& Foam::decompositionMethod::optionalRegionDict
+(
+    const dictionary& decompDict,
+    const word& regionName
+)
+{
+    const auto* dictptr = cfindRegionDict(decompDict, regionName);
     return (dictptr ? *dictptr : dictionary::null);
 }
 
@@ -249,6 +261,7 @@ void Foam::decompositionMethod::readConstraints()
     }
 }
 
+
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 const Foam::dictionary& Foam::decompositionMethod::findCoeffsDict
@@ -260,8 +273,7 @@ const Foam::dictionary& Foam::decompositionMethod::findCoeffsDict
 {
     const bool allowDefault = !(select & selectionType::EXACT);
 
-    const dictionary* dictptr =
-        cfindCoeffsDict(dict, coeffsName, allowDefault);
+    const auto* dictptr = cfindCoeffsDict(dict, coeffsName, allowDefault);
 
     if (dictptr)
     {
@@ -367,8 +379,10 @@ Foam::autoPtr<Foam::decompositionMethod> Foam::decompositionMethod::New
 {
     word methodType(decompDict.get<word>("method"));
 
-    const dictionary& regionDict = optionalRegionDict(decompDict, regionName);
-    regionDict.readIfPresent("method", methodType);
+    if (const auto* regionDict = cfindRegionDict(decompDict, regionName))
+    {
+        regionDict->readIfPresent("method", methodType);
+    }
 
     auto* ctorPtr = dictionaryConstructorTable(methodType);
 
@@ -843,7 +857,7 @@ void Foam::decompositionMethod::setConstraints
     specifiedProcessorFaces.clear();
     explicitConnections.clear();
 
-    for (const decompositionConstraint& decompConstraint : constraints_)
+    for (const auto& decompConstraint : constraints_)
     {
         decompConstraint.add
         (
@@ -867,7 +881,7 @@ void Foam::decompositionMethod::applyConstraints
     labelList& decomposition
 ) const
 {
-    for (const decompositionConstraint& decompConstraint : constraints_)
+    for (const auto& decompConstraint : constraints_)
     {
         decompConstraint.apply
         (
