@@ -499,12 +499,7 @@ int main(int argc, char *argv[])
         // This mirrors the behaviour of createPatch / createBaffles and
         // removes the need for a follow-up createPatch run.
         {
-            const polyBoundaryMesh& pbmBefore = mesh.boundaryMesh();
-            wordList oldPatchNames(pbmBefore.size());
-            forAll(pbmBefore, patchi)
-            {
-                oldPatchNames[patchi] = pbmBefore[patchi].name();
-            }
+            const wordList oldPatchNames(mesh.boundaryMesh().names());
 
             const labelList newToOld
             (
@@ -513,19 +508,14 @@ int main(int argc, char *argv[])
 
             if (newToOld.size() != oldPatchNames.size())
             {
-                bitSet kept(oldPatchNames.size());
-                forAll(newToOld, i)
-                {
-                    kept.set(newToOld[i]);
-                }
-
                 Info<< "Removing zero-sized patches:" << nl << incrIndent;
                 forAll(oldPatchNames, patchi)
                 {
-                    if (!kept.test(patchi))
+                    if (!newToOld.found(patchi))
                     {
                         Info<< indent << oldPatchNames[patchi]
-                            << " at position " << patchi << endl;
+                            << " at position " << patchi
+                            << endl;
                     }
                 }
                 Info<< decrIndent << endl;
