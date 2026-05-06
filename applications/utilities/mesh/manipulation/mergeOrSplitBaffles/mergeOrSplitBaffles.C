@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2016-2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,6 +38,8 @@ Description
 Usage
     \b mergeOrSplitBaffles [OPTION]
 
+    With no action option, baffles are merged into internal faces (default).
+
     Options:
       - \par -detectOnly
         Detect baffles and write to faceSet duplicateFaces.
@@ -46,7 +49,18 @@ Usage
         can move independently)
 
       - \par -dict \<dictionary\>
-        Specify a dictionary to read actions from.
+        Specify a dictionary to read actions from. The dictionary may
+        contain \c detect, \c merge and \c split sub-dictionaries, each
+        with a \c patches entry restricting the action to a list of
+        patches. Note that \c merge is only available via \c -dict; on
+        the command line, merging is the default action and there is
+        therefore no \c -merge flag.
+
+      - \par -overwrite
+        Overwrite the existing mesh instead of writing to a new time.
+
+      - \par -region \<name\>
+        Specify a non-default mesh region.
 
 Note
     - can only handle pairwise boundary faces. So three faces using
@@ -59,6 +73,10 @@ Note
     - Parallel operation (where duplicate face is perpendicular to a coupled
     boundary) is supported but not really tested.
     (Note that coupled faces themselves are not seen as duplicate faces)
+
+    - After merging, any patches that no longer hold any face are
+    automatically removed from the boundary file (coupled patches are
+    preserved). This avoids the need for a follow-up \c createPatch run.
 
 \*---------------------------------------------------------------------------*/
 
@@ -79,6 +97,7 @@ Note
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "processorMeshes.H"
+#include "fvMeshTools.H"
 
 using namespace Foam;
 
@@ -473,6 +492,34 @@ int main(int argc, char *argv[])
         if (map().hasMotionPoints())
         {
             mesh.movePoints(map().preMotionPoints());
+        }
+
+        // Remove patches that no longer have any face after the merge
+        // (coupled and processor patches are preserved by the helper).
+        // This mirrors the behaviour of createPatch / createBaffles and
+        // removes the need for a follow-up createPatch run.
+        {
+            const wordList oldPatchNames(mesh.boundaryMesh().names());
+
+            const labelList newToOld
+            (
+                fvMeshTools::removeEmptyPatches(mesh, true)
+            );
+
+            if (newToOld.size() != oldPatchNames.size())
+            {
+                Info<< "Removing zero-sized patches:" << nl << incrIndent;
+                forAll(oldPatchNames, patchi)
+                {
+                    if (!newToOld.found(patchi))
+                    {
+                        Info<< indent << oldPatchNames[patchi]
+                            << " at position " << patchi
+                            << endl;
+                    }
+                }
+                Info<< decrIndent << endl;
+            }
         }
 
         if (overwrite)
