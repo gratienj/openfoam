@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
     Copyright (C) 2019 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,7 +38,7 @@ Description
 Usage
     \table
         Property     | Description             | Required    | Default value
-        phi          | Flux field name         | no          | phi
+        phi          | Flux field name         | no          | phis
         inletValue   | Inlet value for reverse flow | yes    |
         value        | initial field value          | optional |
     \endtable
@@ -47,7 +48,7 @@ Usage
     <patchName>
     {
         type            inletOutlet;
-        phi             phi;
+        phi             phis;
         inletValue      uniform 0;
         value           uniform 0;
     }

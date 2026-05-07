@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
     Copyright (C) 2020-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,7 +39,7 @@ Foam::inletOutletFaPatchField<Type>::inletOutletFaPatchField
 )
 :
     parent_bctype(p, iF),
-    phiName_("phi")
+    phiName_("phis")
 {
     this->refValue() = Zero;
     this->refGrad() = Zero;
@@ -70,7 +71,7 @@ Foam::inletOutletFaPatchField<Type>::inletOutletFaPatchField
 :
     // No reading of refValue, refGradient, valueFraction entries
     parent_bctype(p, iF, dict, IOobjectOption::NO_READ),
-    phiName_(dict.getOrDefault<word>("phi", "phi"))
+    phiName_(dict.getOrDefault<word>("phi", "phis"))
 {
     // Require inletValue (MUST_READ)
     this->refValue().assign("inletValue", dict, p.size());
@@ -119,7 +120,7 @@ template<class Type>
 void Foam::inletOutletFaPatchField<Type>::write(Ostream& os) const
 {
     faPatchField<Type>::write(os);
-    os.writeEntryIfDifferent<word>("phi", "phi", phiName_);
+    os.writeEntryIfDifferent<word>("phi", "phis", phiName_);
     this->refValue().writeEntry("inletValue", os);
     faPatchField<Type>::writeValueEntry(os);
 }
