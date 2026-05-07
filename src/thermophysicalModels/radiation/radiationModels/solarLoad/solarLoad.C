@@ -234,7 +234,7 @@ void Foam::radiation::solarLoad::updateDirectHitRadiation
             const vectorField& n = pp.faceNormals();
 
             {
-                qprimaryBf[patchID][localFaceI] +=
+                qprimaryBf[patchID][localFaceI] -=
                     (qPrim & n[localFaceI])
                     * spectralDistribution_[bandi]
                     * absorptivity_[patchID][bandi]()[localFaceI];
@@ -249,7 +249,7 @@ void Foam::radiation::solarLoad::updateDirectHitRadiation
                 const vectorField& sf = mesh_.Sf().boundaryField()[patchID];
                 const label celli = pp.faceCells()[localFaceI];
 
-                Ru_[celli] +=
+                Ru_[celli] -=
                     (qPrim & sf[localFaceI])
                   * spectralDistribution_[bandi]
                   * absorptivity_[patchID][bandi]()[localFaceI]
