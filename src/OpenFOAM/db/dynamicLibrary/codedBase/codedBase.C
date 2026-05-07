@@ -221,11 +221,21 @@ void Foam::codedBase::createLibrary
     // Indicates NFS filesystem
     const bool isNFS = (IOobject::fileModificationSkew > 0);
 
-    if
-    (
-        (UPstream::master() || !isNFS)
-     && !dynCode.upToDate(context)
-    )
+    // Default: compile master only
+    bool isCompileNode = UPstream::master(UPstream::worldComm);
+    // If on same root and same node : assume same filing system
+    if (fileHandler().distributed())
+    {
+        // Distributed case, so only world master compiles (and broadcast later)
+    }
+    else if (!isNFS)
+    {
+        // Not distributed but not NFS either, so likely single node with
+        // shared filesystem
+        isCompileNode = UPstream::master(UPstream::commLocalNode());
+    }
+
+    if (isCompileNode && !dynCode.upToDate(context))
     {
         // Filter with this context
         dynCode.reset(context);
@@ -248,11 +258,8 @@ void Foam::codedBase::createLibrary
         }
     }
 
-    if (isNFS)
-    {
-        // Wait for compile to finish before attempting filesystem polling
-        UPstream::barrier(UPstream::worldComm);
-    }
+    // Wait for compile to finish before attempting filesystem polling
+    UPstream::barrier(UPstream::worldComm);
 
     const fileName libPath = dynCode.libPath();
 
