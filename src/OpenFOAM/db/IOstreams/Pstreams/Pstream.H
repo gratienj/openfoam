@@ -35,6 +35,7 @@ SourceFiles
     PstreamBroadcast.txx
     PstreamGather.txx
     PstreamGatherList.txx
+    PstreamGatherValues.txx
     PstreamExchange.txx
     PstreamExchangeConsensus.txx
 
@@ -145,32 +146,6 @@ public:
 
     // Gather/scatter : single value
 
-        //- Implementation: gather (reduce) single element data onto
-        //- UPstream::masterNo()
-        template<class T, class BinaryOp, bool InplaceMode>
-        static void gather_algorithm
-        (
-            const UPstream::commsStructList& comms,  //!< Communication order
-            //! [in,out]
-            T& value,
-            BinaryOp bop,
-            const int tag,
-            const int communicator
-        );
-
-        //- Implementation: gather (reduce) single element data onto
-        //- UPstream::masterNo() using a topo algorithm.
-        //  \returns True if topo algorithm was applied
-        template<class T, class BinaryOp, bool InplaceMode>
-        static bool gather_topo_algorithm
-        (
-            //! [in,out]
-            T& value,
-            BinaryOp bop,
-            const int tag,
-            const int communicator
-        );
-
         //- Gather (reduce) data, applying \c bop to combine \c value
         //- from different processors. The basis for Foam::reduce().
         //  A no-op for non-parallel.
@@ -259,32 +234,6 @@ public:
 
     // Gather/combine variants working on entire List
 
-        //- Implementation: gather (reduce) list element data onto
-        //- UPstream::masterNo()
-        template<class T, class BinaryOp, bool InplaceMode>
-        static void listGather_algorithm
-        (
-            const UPstream::commsStructList& comms,  //!< Communication order
-            //! [in,out]
-            UList<T>& values,
-            BinaryOp bop,
-            const int tag,
-            const int communicator
-        );
-
-        //- Implementation: gather (reduce) list element data onto
-        //- UPstream::masterNo() using a topo algorithm.
-        //  \returns True if topo algorithm was applied
-        template<class T, class BinaryOp, bool InplaceMode>
-        static bool listGather_topo_algorithm
-        (
-            //! [in,out]
-            UList<T>& values,
-            BinaryOp bop,
-            const int tag,
-            const int communicator
-        );
-
         //- Gather (reduce) list elements,
         //- applying \c bop to each list element
         //
@@ -353,30 +302,6 @@ public:
 
 
     // Gather/combine variants working on Map/HashTable containers
-
-        //- Implementation: gather (reduce) Map/HashTable containers onto
-        //- UPstream::masterNo()
-        template<class Container, class BinaryOp, bool InplaceMode>
-        static void mapGather_algorithm
-        (
-            const UPstream::commsStructList& comms,  //!< Communication order
-            Container& values,
-            BinaryOp bop,
-            const int tag,
-            const int communicator
-        );
-
-        //- Implementation: gather (reduce) Map/HashTable containers onto
-        //- UPstream::masterNo() using a topo algorithm.
-        //  \returns True if topo algorithm was applied
-        template<class Container, class BinaryOp, bool InplaceMode>
-        static bool mapGather_topo_algorithm
-        (
-            Container& values,
-            BinaryOp bop,
-            const int tag,
-            const int communicator
-        );
 
         //- Gather (reduce) Map/HashTable containers,
         //- applying \c bop to combine entries from different processors.
@@ -449,40 +374,6 @@ public:
     // Gather/scatter keeping the individual processor data separate.
     // The values is a List of size UPstream::nProcs() where
     // values[UPstream::myProcNo()] is the data for the current processor.
-
-        //- Implementation: gather data, keeping individual values separate.
-        //- Output is only valid (consistent) on UPstream::masterNo()
-        template<class T>
-        static void gatherList_algorithm
-        (
-            const UPstream::commsStructList& comms,  //!< Communication order
-            //! [in,out]
-            UList<T>& values,
-            const int tag,
-            const int communicator
-        );
-
-        //- Gather data, keeping individual values separate.
-        //  \returns True if topo algorithm was applied
-        template<class T>
-        static bool gatherList_topo_algorithm
-        (
-            //! [in,out]
-            UList<T>& values,
-            const int tag,
-            const int communicator
-        );
-
-        //- Implementation: inverse of gatherList_algorithm
-        template<class T>
-        static void scatterList_algorithm
-        (
-            const UPstream::commsStructList& comms,  //!< Communication order
-            //! [in,out]
-            UList<T>& values,
-            const int tag,
-            const int communicator
-        );
 
         //- Gather data, but keep individual values separate.
         template<class T>
@@ -751,19 +642,7 @@ public:
             UList<T>& values,
             const int tag = UPstream::msgType(),
             const int communicator = UPstream::worldComm
-        )
-        {
-            if (UPstream::is_parallel(communicator))
-            {
-                Pstream::scatterList_algorithm
-                (
-                    UPstream::whichCommunication(communicator),
-                    values,
-                    tag,
-                    communicator
-                );
-            }
-        }
+        );
 };
 
 
@@ -777,6 +656,7 @@ public:
     #include "PstreamBroadcast.txx"
     #include "PstreamGather.txx"
     #include "PstreamGatherList.txx"
+    #include "PstreamGatherValues.txx"
     #include "PstreamExchange.txx"
 #endif
 

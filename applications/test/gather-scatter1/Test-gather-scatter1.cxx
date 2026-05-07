@@ -78,7 +78,13 @@ void real_scatterList
         // Communication order
         const auto& commOrder = UPstream::whichCommunication(communicator);
 
-        Pstream::scatterList_algorithm(commOrder, values, tag, communicator);
+        PstreamDetail::scatterList_algorithm
+        (
+            commOrder,
+            values,
+            tag,
+            communicator
+        );
     }
 }
 
@@ -96,7 +102,7 @@ void gatherList_algo
 {
     if (UPstream::is_parallel(communicator))
     {
-        Pstream::gatherList_algorithm
+        PstreamDetail::gatherList_algorithm
         (
             UPstream::whichCommunication(communicator, linear),
             values,
@@ -120,7 +126,7 @@ void scatterList_algo
 {
     if (UPstream::is_parallel(communicator))
     {
-        Pstream::scatterList_algorithm
+        PstreamDetail::scatterList_algorithm
         (
             UPstream::whichCommunication(communicator, linear),
             values,

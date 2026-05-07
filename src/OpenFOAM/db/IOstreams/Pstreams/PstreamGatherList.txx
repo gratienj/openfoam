@@ -40,10 +40,17 @@ Description
 #include "IPstream.H"
 #include "OPstream.H"
 
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * Details * * * * * * * * * * * * * * * * //
 
+namespace Foam
+{
+namespace PstreamDetail
+{
+
+// Implementation: gather data, keeping individual values separate.
+// Output is only valid (consistent) on master
 template<class T>
-void Foam::Pstream::gatherList_algorithm
+void gatherList_algorithm
 (
     const UPstream::commsStructList& comms,  // Communication order
     UList<T>& values,
@@ -51,6 +58,8 @@ void Foam::Pstream::gatherList_algorithm
     const int communicator
 )
 {
+    const bool printDebug = (Pstream::debug & 2);
+
     if (FOAM_UNLIKELY(!UPstream::is_parallel(communicator)))
     {
         // Nothing to do
@@ -67,7 +76,7 @@ void Foam::Pstream::gatherList_algorithm
         }
 
         // if (comms.empty()) return;  // extra safety?
-        const label myProci = UPstream::myProcNo(communicator);
+        const auto myProci = UPstream::myProcNo(communicator);
         const auto& myComm = comms[myProci];
 
 
@@ -140,17 +149,10 @@ void Foam::Pstream::gatherList_algorithm
             }
             else
             {
-                IPstream fromBelow
-                (
-                    UPstream::commsTypes::scheduled,
-                    belowID,
-                    0,  // bufsize
-                    tag,
-                    communicator
-                );
+                IPstream fromBelow(belowID, tag, communicator);
                 fromBelow >> values[belowID];
 
-                if (debug & 2)
+                if (printDebug)
                 {
                     Perr<< " received through "
                         << belowID << " data from:" << belowID
@@ -162,7 +164,7 @@ void Foam::Pstream::gatherList_algorithm
                 {
                     fromBelow >> values[leafID];
 
-                    if (debug & 2)
+                    if (printDebug)
                     {
                         Perr<< " received through "
                             << belowID << " data from:" << leafID
@@ -175,13 +177,13 @@ void Foam::Pstream::gatherList_algorithm
         // Send up from values:
         // - my own value first
         // - all belowLeaves next
-        if (myComm.above() >= 0)
+        if (const auto above = myComm.above(); above >= 0)
         {
             const auto& leaves = myComm.allBelow();
 
-            if (debug & 2)
+            if (printDebug)
             {
-                Perr<< " sending to " << myComm.above()
+                Perr<< " sending to " << above
                     << " data from me:" << myProci
                     << " data:" << values[myProci] << endl;
             }
@@ -194,7 +196,7 @@ void Foam::Pstream::gatherList_algorithm
                     UOPstream::write
                     (
                         UPstream::commsTypes::scheduled,
-                        myComm.above(),
+                        above,
                        &(values[myProci]),
                         1,
                         tag,
@@ -217,7 +219,7 @@ void Foam::Pstream::gatherList_algorithm
                     UOPstream::write
                     (
                         UPstream::commsTypes::scheduled,
-                        myComm.above(),
+                        above,
                         buffer,
                         tag,
                         communicator
@@ -226,22 +228,15 @@ void Foam::Pstream::gatherList_algorithm
             }
             else
             {
-                OPstream toAbove
-                (
-                    UPstream::commsTypes::scheduled,
-                    myComm.above(),
-                    0,  // bufsize
-                    tag,
-                    communicator
-                );
+                OPstream toAbove(above, tag, communicator);
                 toAbove << values[myProci];
 
                 for (const auto leafID : leaves)
                 {
-                    if (debug & 2)
+                    if (printDebug)
                     {
                         Perr<< " sending to "
-                            << myComm.above() << " data from:" << leafID
+                            << above << " data from:" << leafID
                             << " data:" << values[leafID] << endl;
                     }
                     toAbove << values[leafID];
@@ -252,8 +247,11 @@ void Foam::Pstream::gatherList_algorithm
 }
 
 
+// Implementation: gather data, keeping individual values separate
+// using topo algorithm
+// Return: True if topo algorithm was applied
 template<class T>
-bool Foam::Pstream::gatherList_topo_algorithm
+bool gatherList_topo_algorithm
 (
     UList<T>& values,
     const int tag,
@@ -291,12 +289,15 @@ bool Foam::Pstream::gatherList_topo_algorithm
         // Stage 1: gather values within a node
         // - linear for local-node (assume communication is fast)
 
-        if (UPstream::is_parallel(UPstream::commLocalNode()))
-        {
+        if
+        (
             const auto subComm = UPstream::commLocalNode();
+            UPstream::is_parallel(subComm)
+        )
+        {
             constexpr bool linear(true);
 
-            Pstream::gatherList_algorithm<T>
+            PstreamDetail::gatherList_algorithm<T>
             (
                 UPstream::whichCommunication(subComm, linear),
                 nodeValues,
@@ -310,13 +311,15 @@ bool Foam::Pstream::gatherList_topo_algorithm
         //   (number of cores per node is not identical)
         // - code strongly resembles globalIndex::gather
 
-        if (UPstream::is_parallel(UPstream::commInterNode()))
-        {
+        if
+        (
             const auto subComm = UPstream::commInterNode();
-
+            UPstream::is_parallel(subComm)
+        )
+        {
             if (UPstream::master(subComm))
             {
-                for (const int proci : UPstream::subProcs(subComm))
+                for (auto proci : UPstream::subProcs(subComm))
                 {
                     auto slot =
                         values.slice(off[proci], off[proci+1]-off[proci]);
@@ -373,8 +376,9 @@ bool Foam::Pstream::gatherList_topo_algorithm
 }
 
 
+// Implementation: inverse of gatherList_algorithm
 template<class T>
-void Foam::Pstream::scatterList_algorithm
+void scatterList_algorithm
 (
     const UPstream::commsStructList& comms,  // Communication order
     UList<T>& values,
@@ -382,6 +386,8 @@ void Foam::Pstream::scatterList_algorithm
     const int communicator
 )
 {
+    const bool printDebug = (Pstream::debug & 2);
+
     if (FOAM_UNLIKELY(!UPstream::is_parallel(communicator)))
     {
         // Nothing to do
@@ -402,7 +408,7 @@ void Foam::Pstream::scatterList_algorithm
         }
 
         // if (comms.empty()) return;  // extra safety?
-        const label myProci = UPstream::myProcNo(communicator);
+        const auto myProci = UPstream::myProcNo(communicator);
         const auto& myComm = comms[myProci];
 
 
@@ -431,7 +437,7 @@ void Foam::Pstream::scatterList_algorithm
 
 
         // Receive from up
-        if (myComm.above() >= 0)
+        if (const auto above = myComm.above(); above >= 0)
         {
             const auto& leaves = myComm.allNotBelow();
 
@@ -442,7 +448,7 @@ void Foam::Pstream::scatterList_algorithm
                 UIPstream::read
                 (
                     UPstream::commsTypes::scheduled,
-                    myComm.above(),
+                    above,
                     buffer,
                     tag,
                     communicator
@@ -456,23 +462,16 @@ void Foam::Pstream::scatterList_algorithm
             }
             else
             {
-                IPstream fromAbove
-                (
-                    UPstream::commsTypes::scheduled,
-                    myComm.above(),
-                    0,  // bufsize
-                    tag,
-                    communicator
-                );
+                IPstream fromAbove(above, tag, communicator);
 
                 for (const auto leafID : leaves)
                 {
                     fromAbove >> values[leafID];
 
-                    if (debug & 2)
+                    if (printDebug)
                     {
                         Perr<< " received through "
-                            << myComm.above() << " data for:" << leafID
+                            << above << " data for:" << leafID
                             << " data:" << values[leafID] << endl;
                     }
                 }
@@ -506,21 +505,14 @@ void Foam::Pstream::scatterList_algorithm
             }
             else
             {
-                OPstream toBelow
-                (
-                    UPstream::commsTypes::scheduled,
-                    belowID,
-                    0,  // bufsize
-                    tag,
-                    communicator
-                );
+                OPstream toBelow(belowID, tag, communicator);
 
                 // Send data destined for all other processors below belowID
                 for (const auto leafID : leaves)
                 {
                     toBelow << values[leafID];
 
-                    if (debug & 2)
+                    if (printDebug)
                     {
                         Perr<< " sent through "
                             << belowID << " data for:" << leafID
@@ -532,6 +524,11 @@ void Foam::Pstream::scatterList_algorithm
     }
 }
 
+} // End namespace PstreamDetail
+} // End namespace Foam
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class T>
 void Foam::Pstream::gatherList
@@ -571,7 +568,7 @@ void Foam::Pstream::gatherList
     }
     else if
     (
-        !Pstream::gatherList_topo_algorithm
+        !PstreamDetail::gatherList_topo_algorithm
         (
             values,
             tag,
@@ -582,7 +579,10 @@ void Foam::Pstream::gatherList
         // Communication order
         const auto& commOrder = UPstream::whichCommunication(communicator);
 
-        Pstream::gatherList_algorithm(commOrder, values, tag, communicator);
+        PstreamDetail::gatherList_algorithm
+        (
+            commOrder, values, tag, communicator
+        );
     }
 }
 
@@ -627,8 +627,38 @@ void Foam::Pstream::allGatherList
         // Communication order
         const auto& commOrder = UPstream::whichCommunication(communicator);
 
-        Pstream::gatherList_algorithm(commOrder, values, tag, communicator);
-        Pstream::scatterList_algorithm(commOrder, values, tag, communicator);
+        PstreamDetail::gatherList_algorithm
+        (
+            commOrder, values, tag, communicator
+        );
+        PstreamDetail::scatterList_algorithm
+        (
+            commOrder, values, tag, communicator
+        );
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Housekeeping
+
+template<class T>
+void Foam::Pstream::scatterList
+(
+    UList<T>& values,
+    const int tag,
+    const int communicator
+)
+{
+    if (UPstream::is_parallel(communicator))
+    {
+        // Communication order
+        const auto& commOrder = UPstream::whichCommunication(communicator);
+
+        PstreamDetail::scatterList_algorithm
+        (
+            commOrder, values, tag, communicator
+        );
     }
 }
 

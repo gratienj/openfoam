@@ -44,12 +44,16 @@ Note
 #include "IPstream.H"
 #include "OPstream.H"
 
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * Details * * * * * * * * * * * * * * * * //
 
-// Single value variants
+namespace Foam
+{
+namespace PstreamDetail
+{
 
+// Implementation: gather (reduce) single element data onto master
 template<class T, class BinaryOp, bool InplaceMode>
-void Foam::Pstream::gather_algorithm
+void gather_algorithm
 (
     const UPstream::commsStructList& comms,  // Communication order
     T& value,
@@ -58,6 +62,8 @@ void Foam::Pstream::gather_algorithm
     const int communicator
 )
 {
+    const bool printDebug = (Pstream::debug & 2);
+
     if (!UPstream::is_parallel(communicator))
     {
         // Nothing to do
@@ -66,7 +72,7 @@ void Foam::Pstream::gather_algorithm
     else
     {
         // if (comms.empty()) return;  // extra safety?
-        const label myProci = UPstream::myProcNo(communicator);
+        const auto myProci = UPstream::myProcNo(communicator);
         const auto& myComm = comms[myProci];
         const auto& below = myComm.below();
 
@@ -95,7 +101,7 @@ void Foam::Pstream::gather_algorithm
 
             if constexpr (InplaceMode)
             {
-                if (debug & 2)
+                if (printDebug)
                 {
                     Perr<< " received from "
                         << proci << " data:" << received << endl;
@@ -115,13 +121,13 @@ void Foam::Pstream::gather_algorithm
         }
 
         // Send up value
-        if (myComm.above() >= 0)
+        if (const auto above = myComm.above(); above >= 0)
         {
             if constexpr (InplaceMode)
             {
-                if (debug & 2)
+                if (printDebug)
                 {
-                    Perr<< " sending to " << myComm.above()
+                    Perr<< " sending to " << above
                         << " data:" << value << endl;
                 }
             }
@@ -131,7 +137,7 @@ void Foam::Pstream::gather_algorithm
                 UOPstream::write
                 (
                     UPstream::commsTypes::scheduled,
-                    myComm.above(),
+                    above,
                     reinterpret_cast<const char*>(&value),
                     sizeof(T),
                     tag,
@@ -140,15 +146,18 @@ void Foam::Pstream::gather_algorithm
             }
             else
             {
-                OPstream::send(value, myComm.above(), tag, communicator);
+                OPstream::send(value, above, tag, communicator);
             }
         }
     }
 }
 
 
+// Implementation: gather (reduce) single element data onto :masterNo
+// using a topo algorithm.
+// Return: True if topo algorithm was applied
 template<class T, class BinaryOp, bool InplaceMode>
-bool Foam::Pstream::gather_topo_algorithm
+bool gather_topo_algorithm
 (
     T& value,
     BinaryOp bop,
@@ -184,7 +193,7 @@ bool Foam::Pstream::gather_topo_algorithm
         {
             if (UPstream::is_parallel(subComm))
             {
-                Pstream::gather_algorithm<T, BinaryOp, InplaceMode>
+                PstreamDetail::gather_algorithm<T, BinaryOp, InplaceMode>
                 (
                     UPstream::whichCommunication(subComm, linear),
                     value,
@@ -199,6 +208,11 @@ bool Foam::Pstream::gather_topo_algorithm
     return withTopo;
 }
 
+} // End namespace PstreamDetail
+} // End namespace Foam
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class T, class BinaryOp, bool InplaceMode>
 void Foam::Pstream::gather
@@ -227,7 +241,7 @@ void Foam::Pstream::gather
     }
     else if
     (
-        !Pstream::gather_topo_algorithm<T, BinaryOp, InplaceMode>
+        !PstreamDetail::gather_topo_algorithm<T, BinaryOp, InplaceMode>
         (
             value,
             bop,
@@ -239,7 +253,7 @@ void Foam::Pstream::gather
         // Communication order
         const auto& commOrder = UPstream::whichCommunication(communicator);
 
-        Pstream::gather_algorithm<T, BinaryOp, InplaceMode>
+        PstreamDetail::gather_algorithm<T, BinaryOp, InplaceMode>
         (
             commOrder,
             value,
@@ -283,12 +297,17 @@ void Foam::Pstream::combineReduce
 }
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * Details * * * * * * * * * * * * * * * * //
 
-// List variants
+namespace Foam
+{
+namespace PstreamDetail
+{
+
+// Implementation: gather (reduce) list element data onto master
 
 template<class T, class BinaryOp, bool InplaceMode>
-void Foam::Pstream::listGather_algorithm
+void listGather_algorithm
 (
     const UPstream::commsStructList& comms,  // Communication order
     UList<T>& values,
@@ -297,6 +316,8 @@ void Foam::Pstream::listGather_algorithm
     const int communicator
 )
 {
+    const bool printDebug = (Pstream::debug & 2);
+
     if (!UPstream::is_parallel(communicator) || values.empty())
     {
         // Nothing to do
@@ -305,7 +326,7 @@ void Foam::Pstream::listGather_algorithm
     else
     {
         // if (comms.empty()) return;  // extra safety?
-        const label myProci = UPstream::myProcNo(communicator);
+        const auto myProci = UPstream::myProcNo(communicator);
         const auto& myComm = comms[myProci];
         const auto& below = myComm.below();
 
@@ -345,7 +366,7 @@ void Foam::Pstream::listGather_algorithm
 
             if constexpr (InplaceMode)
             {
-                if (debug & 2)
+                if (printDebug)
                 {
                     Perr<< " received from "
                         << proci << " data:" << received << endl;
@@ -368,13 +389,13 @@ void Foam::Pstream::listGather_algorithm
         }
 
         // Send up values
-        if (myComm.above() >= 0)
+        if (const auto above = myComm.above(); above >= 0)
         {
             if constexpr (InplaceMode)
             {
-                if (debug & 2)
+                if (printDebug)
                 {
-                    Perr<< " sending to " << myComm.above()
+                    Perr<< " sending to " << above
                         << " data:" << values << endl;
                 }
             }
@@ -384,7 +405,7 @@ void Foam::Pstream::listGather_algorithm
                 UOPstream::write
                 (
                     UPstream::commsTypes::scheduled,
-                    myComm.above(),
+                    above,
                     values,
                     tag,
                     communicator
@@ -392,15 +413,18 @@ void Foam::Pstream::listGather_algorithm
             }
             else
             {
-                OPstream::send(values, myComm.above(), tag, communicator);
+                OPstream::send(values, above, tag, communicator);
             }
         }
     }
 }
 
 
+// Implementation: gather (reduce) list element data onto master
+// using a topo algorithm.
+// Return: True if topo algorithm was applied
 template<class T, class BinaryOp, bool InplaceMode>
-bool Foam::Pstream::listGather_topo_algorithm
+bool listGather_topo_algorithm
 (
     UList<T>& values,
     BinaryOp bop,
@@ -436,7 +460,7 @@ bool Foam::Pstream::listGather_topo_algorithm
         {
             if (UPstream::is_parallel(subComm))
             {
-                Pstream::listGather_algorithm<T, BinaryOp, InplaceMode>
+                PstreamDetail::listGather_algorithm<T, BinaryOp, InplaceMode>
                 (
                     UPstream::whichCommunication(subComm, linear),
                     values,
@@ -451,6 +475,11 @@ bool Foam::Pstream::listGather_topo_algorithm
     return withTopo;
 }
 
+} // End namespace PstreamDetail
+} // End namespace Foam
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class T, class BinaryOp, bool InplaceMode>
 void Foam::Pstream::listGather
@@ -490,7 +519,7 @@ void Foam::Pstream::listGather
     }
     else if
     (
-        !Pstream::listGather_topo_algorithm<T, BinaryOp, InplaceMode>
+        !PstreamDetail::listGather_topo_algorithm<T, BinaryOp, InplaceMode>
         (
             values,
             bop,
@@ -502,7 +531,7 @@ void Foam::Pstream::listGather
         // Communication order
         const auto& commOrder = UPstream::whichCommunication(communicator);
 
-        Pstream::listGather_algorithm<T, BinaryOp, InplaceMode>
+        PstreamDetail::listGather_algorithm<T, BinaryOp, InplaceMode>
         (
             commOrder,
             values,
@@ -581,12 +610,17 @@ void Foam::Pstream::listCombineReduce
 }
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * Details * * * * * * * * * * * * * * * * //
 
-// Map variants
+namespace Foam
+{
+namespace PstreamDetail
+{
+
+// Implementation: gather (reduce) Map/HashTable containers onto master
 
 template<class Container, class BinaryOp, bool InplaceMode>
-void Foam::Pstream::mapGather_algorithm
+void mapGather_algorithm
 (
     const UPstream::commsStructList& comms,  // Communication order
     Container& values,
@@ -595,6 +629,8 @@ void Foam::Pstream::mapGather_algorithm
     const int communicator
 )
 {
+    const bool printDebug = (Pstream::debug & 2);
+
     if (!UPstream::is_parallel(communicator))
     {
         // Nothing to do
@@ -603,7 +639,7 @@ void Foam::Pstream::mapGather_algorithm
     else
     {
         // if (comms.empty()) return;  // extra safety?
-        const label myProci = UPstream::myProcNo(communicator);
+        const auto myProci = UPstream::myProcNo(communicator);
         const auto& myComm = comms[myProci];
         const auto& below = myComm.below();
 
@@ -617,7 +653,7 @@ void Foam::Pstream::mapGather_algorithm
 
             if constexpr (InplaceMode)
             {
-                if (debug & 2)
+                if (printDebug)
                 {
                     Perr<< " received from "
                         << proci << " data:" << received << endl;
@@ -655,25 +691,28 @@ void Foam::Pstream::mapGather_algorithm
         }
 
         // Send up values
-        if (myComm.above() >= 0)
+        if (const auto above = myComm.above(); above >= 0)
         {
             if constexpr (InplaceMode)
             {
-                if (debug & 2)
+                if (printDebug)
                 {
-                    Perr<< " sending to " << myComm.above()
+                    Perr<< " sending to " << above
                         << " data:" << values << endl;
                 }
             }
 
-            OPstream::send(values, myComm.above(), tag, communicator);
+            OPstream::send(values, above, tag, communicator);
         }
     }
 }
 
 
+// Implementation gather (reduce) Map/HashTable containers onto master
+// using a topo algorithm.
+// Return: True if topo algorithm was applied
 template<class Container, class BinaryOp, bool InplaceMode>
-bool Foam::Pstream::mapGather_topo_algorithm
+bool mapGather_topo_algorithm
 (
     Container& values,
     BinaryOp bop,
@@ -709,7 +748,8 @@ bool Foam::Pstream::mapGather_topo_algorithm
         {
             if (UPstream::is_parallel(subComm))
             {
-                Pstream::mapGather_algorithm<Container, BinaryOp, InplaceMode>
+                PstreamDetail::mapGather_algorithm
+                <Container, BinaryOp, InplaceMode>
                 (
                     UPstream::whichCommunication(subComm, linear),
                     values,
@@ -724,6 +764,11 @@ bool Foam::Pstream::mapGather_topo_algorithm
     return withTopo;
 }
 
+} // End namespace PstreamDetail
+} // End namespace Foam
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Container, class BinaryOp, bool InplaceMode>
 void Foam::Pstream::mapGather
@@ -741,7 +786,8 @@ void Foam::Pstream::mapGather
     }
     else if
     (
-        !Pstream::mapGather_topo_algorithm<Container, BinaryOp, InplaceMode>
+        !PstreamDetail::mapGather_topo_algorithm
+        <Container, BinaryOp, InplaceMode>
         (
             values,
             bop,
@@ -753,7 +799,8 @@ void Foam::Pstream::mapGather
         // Communication order
         const auto& commOrder = UPstream::whichCommunication(communicator);
 
-        Pstream::mapGather_algorithm<Container, BinaryOp, InplaceMode>
+        PstreamDetail::mapGather_algorithm
+        <Container, BinaryOp, InplaceMode>
         (
             commOrder,
             values,
@@ -813,138 +860,6 @@ void Foam::Pstream::mapCombineReduce
     (
         values, cop, tag, comm
     );
-}
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-// Single values to/from a list
-
-template<class T>
-Foam::List<T> Foam::Pstream::listGatherValues
-(
-    const T& localValue,
-    const int communicator,
-    [[maybe_unused]] const int tag
-)
-{
-    if (!UPstream::is_parallel(communicator))
-    {
-        // non-parallel: return own value
-        // TBD: only when UPstream::is_rank(communicator) as well?
-        List<T> allValues(1);
-        allValues[0] = localValue;
-        return allValues;
-    }
-    else if constexpr (is_contiguous_v<T>)
-    {
-        // UPstream version is contiguous only
-        return UPstream::listGatherValues(localValue, communicator);
-    }
-    else
-    {
-        // Standard gather (all to one)
-
-        // The data are non-contiguous!
-        //
-        // Non-trivial to manage non-blocking gather without a
-        // PEX/NBX approach (eg, PstreamBuffers).
-        // Leave with simple exchange for now
-
-        List<T> allValues;
-        if (UPstream::master(communicator))
-        {
-            allValues.resize(UPstream::nProcs(communicator));
-
-            for (const int proci : UPstream::subProcs(communicator))
-            {
-                IPstream::recv(allValues[proci], proci, tag, communicator);
-            }
-
-            allValues[0] = localValue;
-        }
-        else if (UPstream::is_rank(communicator))
-        {
-            OPstream::send(localValue, UPstream::masterNo(), tag, communicator);
-        }
-
-        return allValues;
-    }
-}
-
-
-template<class T>
-T Foam::Pstream::listScatterValues
-(
-    const UList<T>& allValues,
-    const int communicator,
-    [[maybe_unused]] const int tag
-)
-{
-    if (!UPstream::is_parallel(communicator))
-    {
-        // non-parallel: return first value
-        // TBD: only when UPstream::is_rank(communicator) as well?
-
-        if (!allValues.empty())
-        {
-            return allValues[0];
-        }
-
-        return T{};  // Fallback value
-    }
-    else if constexpr (is_contiguous_v<T>)
-    {
-        // UPstream version is contiguous only
-        return UPstream::listScatterValues(allValues, communicator);
-    }
-    else
-    {
-        // Standard scatter (one to all)
-
-        T localValue{};
-
-        if (UPstream::master(communicator))
-        {
-            const label numProc = UPstream::nProcs(communicator);
-
-            if (allValues.size() < numProc)
-            {
-                FatalErrorInFunction
-                    << "Attempting to send " << allValues.size()
-                    << " values to " << numProc << " processors" << endl
-                    << Foam::abort(FatalError);
-            }
-
-            const label startOfRequests = UPstream::nRequests();
-
-            List<DynamicList<char>> sendBuffers(numProc);
-
-            for (const int proci : UPstream::subProcs(communicator))
-            {
-                UOPstream toProc
-                (
-                    UPstream::commsTypes::nonBlocking,
-                    proci,
-                    sendBuffers[proci],
-                    tag,
-                    communicator
-                );
-                toProc << allValues[proci];
-            }
-
-            // Wait for outstanding requests
-            UPstream::waitRequests(startOfRequests);
-
-            return allValues[0];
-        }
-        else if (UPstream::is_rank(communicator))
-        {
-            IPstream::recv(localValue, UPstream::masterNo(), tag, communicator);
-        }
-
-        return localValue;
-    }
 }
 
 
