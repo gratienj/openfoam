@@ -68,17 +68,25 @@ Foam::inverseDistanceDiffusivity::inverseDistanceDiffusivity
 
 void Foam::inverseDistanceDiffusivity::correct()
 {
-    faceDiffusivity_ =
-        dimensionedScalar("one", dimLength, 1)
-       /fvc::interpolate
+    auto tyfield = volScalarField::New
+    (
+        "y",
+        mesh(),
+        dimLength,
+        fvPatchFieldBase::zeroGradientType()
+    );
+    auto& y_ = tyfield.ref();
+
+    y_.primitiveFieldRef() =
+        wallDist::New
         (
-            wallDist::New
-            (
-                mesh(),
-                patchDistMethods::meshWave::typeName,
-                mesh().boundaryMesh().patchSet(patchNames_)
-            ).y()
-        );
+            mesh(),
+            patchDistMethods::meshWave::typeName,
+            mesh().boundaryMesh().patchSet(patchNames_)
+        ).y();
+    y_.correctBoundaryConditions();
+
+    faceDiffusivity_ = dimensionedScalar(dimLength, 1)/fvc::interpolate(y_);
 }
 
 
