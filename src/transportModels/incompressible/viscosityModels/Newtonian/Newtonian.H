@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2017-2019 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,17 +58,27 @@ class Newtonian
 :
     public viscosityModel
 {
-    // Private data
+    // Private Data
 
+        //- Initial laminar viscosity
         dimensionedScalar nu0_;
 
 
-public:
+protected:
 
-    // Protected data
+    // Protected Data
 
+        //- Laminar viscosity field
         volScalarField nu_;
 
+
+    // Protected Member Functions
+
+        //- Calculate and return the laminar viscosity
+        tmp<volScalarField> calcNu() const;
+
+
+public:
 
     //- Runtime type information
     TypeName("Newtonian");
