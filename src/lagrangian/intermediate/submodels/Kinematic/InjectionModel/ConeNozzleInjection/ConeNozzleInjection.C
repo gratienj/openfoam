@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2015-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -470,7 +471,7 @@ void Foam::ConeNozzleInjection<CloudType>::setPositionAndCell
         }
         case injectionMethod::imDisc:
         {
-            scalar frac = rndGen.globalSample01<scalar>();
+            scalar frac = Foam::sqrt(rndGen.globalSample01<scalar>());
             scalar dr = outerDiameter_ - innerDiameter_;
             scalar r = 0.5*(innerDiameter_ + frac*dr);
 
@@ -517,7 +518,7 @@ void Foam::ConeNozzleInjection<CloudType>::setPositionAndCell
             );
 
             // Compute a random radius between innerDiameter_ and outerDiameter_
-            const scalar fraction = rndGen.globalSample01<scalar>();
+            const scalar fraction = Foam::sqrt(rndGen.globalSample01<scalar>());
             const scalar dr = outerDiameter_ - innerDiameter_;
             const scalar radius = 0.5*(innerDiameter_ + fraction*dr);
 
