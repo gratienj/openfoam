@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -93,7 +94,8 @@ Foam::volScalarField&
 Foam::humidityTemperatureCoupledMixedFvPatchScalarField::thicknessField
 (
     const word& fieldName,
-    const fvMesh& mesh
+    const fvMesh& mesh,
+    const dimensionSet& dims
 )
 {
     volScalarField* ptr = mesh.getObjectPtr<volScalarField>(fieldName);
@@ -112,7 +114,7 @@ Foam::humidityTemperatureCoupledMixedFvPatchScalarField::thicknessField
                 IOobject::REGISTER
             ),
             mesh,
-            dimensionedScalar(dimless, Zero)
+            dimensionedScalar(dims, Zero)
         );
 
         ptr->store();
@@ -638,7 +640,8 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::updateCoeffs()
                 thicknessField
                 (
                     fieldName,
-                    refCast<const fvMesh>(mesh)
+                    refCast<const fvMesh>(mesh),
+                    dimLength
                 ).boundaryFieldRef()[patch().index()];
 
 
@@ -667,7 +670,8 @@ void Foam::humidityTemperatureCoupledMixedFvPatchScalarField::updateCoeffs()
                     thicknessField
                     (
                         "Tdew",
-                        refCast<const fvMesh>(mesh)
+                        refCast<const fvMesh>(mesh),
+                        dimTemperature
                     ).boundaryFieldRef()[patch().index()];
                 bTdew = Tdew;
             }

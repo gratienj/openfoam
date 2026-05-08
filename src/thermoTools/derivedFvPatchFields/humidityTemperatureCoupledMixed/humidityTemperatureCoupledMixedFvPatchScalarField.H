@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -297,7 +298,12 @@ private:
         scalar htcCondensation(const scalar TSat, const scalar Re) const;
 
         //- Lookup (or create) thickness field for output
-        volScalarField& thicknessField(const word&, const fvMesh&);
+        volScalarField& thicknessField
+        (
+            const word& fieldName,
+            const fvMesh& mesh,
+            const dimensionSet& dims = dimless
+        );
 
 
 public:
