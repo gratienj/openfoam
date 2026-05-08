@@ -1,3 +1,5 @@
+Info<< "\nSolving for fluid region " << fluidRegions[i].name() << endl;
+
 if (finalIter)
 {
     mesh.data().setFinalIteration(true);
@@ -20,8 +22,6 @@ else
 
     if (!coupled)
     {
-        Info<< "\nSolving for fluid region " << fluidRegions[i].name() << endl;
-
         // --- PISO loop
         for (int corr=0; corr<nCorr; corr++)
         {

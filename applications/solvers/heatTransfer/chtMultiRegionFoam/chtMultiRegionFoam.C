@@ -174,8 +174,6 @@ int main(int argc, char *argv[])
                     {
                         fvMesh& mesh = fluidRegions[i];
 
-                        Info<< "\nSolving for fluid region "
-                            << fluidRegions[i].name() << endl;
                         #include "readFluidMultiRegionPIMPLEControls.H"
                         #include "setRegionFluidFields.H"
                         frozenFlow = true;
