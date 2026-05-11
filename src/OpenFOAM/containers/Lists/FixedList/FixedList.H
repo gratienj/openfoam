@@ -595,6 +595,11 @@ struct is_contiguous_scalar<FixedList<T, N>> : is_contiguous_scalar<T> {};
 template<class T, unsigned N>
 struct Hash<FixedList<T, N>> : FixedList<T, N>::hasher {};
 
+//- Test if FixedList is the base class
+template<class T>
+inline constexpr bool is_fixedlist_v
+    = stdFoam::is_template_nttp_base_of_v<Foam::FixedList, T>;
+
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 

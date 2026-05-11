@@ -416,6 +416,13 @@ public:
         }
 };
 
+// * * * * * * * * * * * * * * * * * Traits  * * * * * * * * * * * * * * * * //
+
+//- Test if List is the base class
+template<class T>
+inline constexpr bool is_list_v
+    = stdFoam::is_template_base_of_v<Foam::List, T>;
+
 
 // * * * * * * * * * * * * Template Specializations  * * * * * * * * * * * * //
 

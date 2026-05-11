@@ -450,6 +450,14 @@ public:
 };
 
 
+// * * * * * * * * * * * * * * * * * Traits  * * * * * * * * * * * * * * * * //
+
+//- Test if DynamicList is the base class
+template<class T>
+inline constexpr bool is_dynamiclist_v
+    = stdFoam::is_template_nttp_base_of_v<Foam::DynamicList, T>;
+
+
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
 //- Read List contents from Istream

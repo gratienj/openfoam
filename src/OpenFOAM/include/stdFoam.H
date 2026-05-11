@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -176,6 +177,88 @@ inline constexpr bool is_bool_v
 template<typename T>
 inline constexpr bool is_char_v
     = std::is_same<char, std::remove_cv_t<T>>::value;
+
+#if defined(__cpp_lib_remove_cvref) && (__cpp_lib_remove_cvref >= 201711L)
+//- Forward to c++20 std::remove_cvref_t
+template<class T>
+using remove_cvref_t = std::remove_cvref_t<T>;
+#else
+//- C++17 fallback for std::remove_cvref_t (c++20)
+template<class T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+#endif
+
+//- Provides the member typedef type that names T
+//- (i.e., the identity transformation).
+//  Available as C++20 std::type_identity
+//  (__cpp_lib_type_identity >= 201806L)
+template<class T>
+struct type_identity
+{
+    using type = T;
+};
+
+//- The \c type from type_identity
+//  Available as C++20 std::type_identity_t
+//  (__cpp_lib_type_identity >= 201806L)
+template<class T>
+using type_identity_t = typename type_identity<T>::type;
+
+
+//- Test for a \c is_base_of relationship for templated base classes
+template<template<class...> class Base, class Derived>
+struct is_template_base_of
+{
+private:
+
+    // Derived from Base => true
+    template<class... Args>
+    static std::true_type test(const Base<Args...>*);
+
+    // Fallback => false
+    static std::false_type test(...);
+
+    using decayed = std::remove_cv_t<std::remove_reference_t<Derived>>;
+
+public:
+
+    // OR: decltype(test(std::declval<decayed*>()))::value
+    static constexpr bool value
+        = decltype(test(static_cast<decayed*>(nullptr)))::value;
+};
+
+//- Test for a \c is_base_of relationship for templated base classes
+//- with one non-type template parameter
+template<template<class, auto> class Base, class Derived>
+struct is_template_nttp_base_of
+{
+private:
+
+    // Derived from Base => true
+    template<class T, auto N>
+    static std::true_type test(const Base<T, N>*);
+
+    // Fallback => false
+    static std::false_type test(...);
+
+    using decayed = std::remove_cv_t<std::remove_reference_t<Derived>>;
+
+public:
+
+    static constexpr bool value
+        = decltype(test(static_cast<decayed*>(nullptr)))::value;
+};
+
+//- Test for \c is_base_of relationship for templated base classes
+template<template<class...> class Base, class Derived>
+inline constexpr bool
+is_template_base_of_v = is_template_base_of<Base, Derived>::value;
+
+//- Test for \c is_base_of relationship for templated base classes
+//- with one non-type template parameter (NNTP)
+template<template<class, auto> class Base, class Derived>
+inline constexpr bool
+is_template_nttp_base_of_v = is_template_nttp_base_of<Base, Derived>::value;
 
 } // End namespace stdFoam
 

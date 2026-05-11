@@ -476,6 +476,14 @@ public:
 };
 
 
+// * * * * * * * * * * * * * * * * * Traits  * * * * * * * * * * * * * * * * //
+
+//- Test if IndirectListBase is the base class
+template<class T>
+inline constexpr bool is_indirectlist_v
+    = stdFoam::is_template_base_of_v<Foam::IndirectListBase, T>;
+
+
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
 //- Write List to Ostream, as per UList::writeList() with default length.
