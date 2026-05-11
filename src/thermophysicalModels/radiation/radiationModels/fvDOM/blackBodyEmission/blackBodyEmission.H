@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2018 OpenFOAM Foundation
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -116,13 +117,20 @@ public:
             }
 
             //- Spectral emission for the black body at T and lambda
+            //  Returns Planck spectral emissive power [W/m³]
             inline dimensionedScalar EblambdaT
             (
                 const dimensionedScalar& T,
                 const scalar lambda
             ) const
             {
-                return (C1_/(pow5(lambda)*(exp(C2_/(lambda*T)) - 1.0)));
+                return dimensionedScalar
+                (
+                    "EblambdaT",
+                    C1_.dimensions()/pow5(dimLength),
+                    C1_.value()
+                   /(pow5(lambda)*(exp(C2_.value()/(lambda*T.value())) - 1.0))
+                );
             }
 
             //- Proportion of total energy at T from lambda1 to lambda2

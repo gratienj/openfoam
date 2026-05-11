@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2018 OpenFOAM Foundation
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -149,8 +150,8 @@ Foam::radiation::blackBodyEmission::blackBodyEmission
         bounds::repeatableBounding::CLAMP,
         "blackBodyEmissivePower"
     ),
-    C1_("C1", dimensionSet(1, 4, 3, 0, 0, 0, 0), 3.7419e-16),
-    C2_("C2", dimensionSet(0, 1, 0, 1, 0, 0, 0), 14.388e-6),
+    C1_("C1", dimensionSet(1, 4, -3, 0, 0, 0, 0), 3.7419e-16),
+    C2_("C2", dimensionSet(0, 1, 0, 1, 0, 0, 0), 14.388e-3),
     bLambda_(nLambda),
     T_(T)
 {
