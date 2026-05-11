@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2016 OpenFOAM Foundation
     Copyright (C) 2017-2019 OpenCFD Ltd
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -82,9 +83,16 @@ class strainRateFunction
 
 protected:
 
-    // Protected data
+    // Protected Data
 
+        //- Laminar viscosity field
         volScalarField nu_;
+
+
+    // Protected Member Functions
+
+        //- Calculate and return the laminar viscosity
+        tmp<volScalarField> calcNu() const;
 
 
 public:

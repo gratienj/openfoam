@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 OpenFOAM Foundation
     Copyright (C) 2017-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,6 +46,36 @@ namespace viscosityModels
         dictionary
     );
 }
+}
+
+
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * * //
+
+Foam::tmp<Foam::volScalarField>
+Foam::viscosityModels::strainRateFunction::calcNu() const
+{
+    tmp<volScalarField> tsigma = strainRate();
+    const volScalarField& sigma = tsigma();
+
+    auto tnu = tmp<volScalarField>::New
+    (
+        U_.mesh().newIOobject("nu"),
+        U_.mesh(),
+        dimensionedScalar(dimViscosity, Zero)
+    );
+    scalarField& nu = tnu.ref().primitiveFieldRef();
+
+    nu = strainRateFunction_->value(sigma());
+
+    volScalarField::Boundary& nuBf = tnu.ref().boundaryFieldRef();
+    const volScalarField::Boundary& sigmaBf = sigma.boundaryField();
+
+    forAll(nuBf, patchi)
+    {
+        nuBf[patchi] = strainRateFunction_->value(sigmaBf[patchi]);
+    }
+
+    return tnu;
 }
 
 
@@ -108,18 +139,7 @@ Foam::viscosityModels::strainRateFunction::nu(const label patchi) const
 
 void Foam::viscosityModels::strainRateFunction::correct()
 {
-    tmp<volScalarField> tsigma = strainRate();
-    const volScalarField& sigma = tsigma();
-
-    nu_.primitiveFieldRef() = strainRateFunction_->value(sigma());
-
-    volScalarField::Boundary& nuBf = nu_.boundaryFieldRef();
-    const volScalarField::Boundary& sigmaBf = sigma.boundaryField();
-
-    forAll(nuBf, patchi)
-    {
-        nuBf[patchi] = strainRateFunction_->value(sigmaBf[patchi]);
-    }
+    nu_ = calcNu();
 }
 
 
