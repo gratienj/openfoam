@@ -146,9 +146,6 @@ private:
         //- Wave angle
         scalar waveAngle_;
 
-        //- Wave length
-        scalar waveLength_;
-
         //- Start time
         scalar startTime_;
 
@@ -156,16 +153,10 @@ private:
         scalar rampTime_;
 
         //- On/off second order calculation switch
-        scalar secondOrder_;
+        bool secondOrder_;
 
         //- Number of wave paddles
         label nPaddle_;
-
-        //- Rotation tensor from global to local system
-        tensor Rgl_;
-
-        //- Rotation tensor from local to global system
-        tensor Rlg_;
 
         //- Paddle x co-ordinates / [m]
         scalarField xPaddle_;

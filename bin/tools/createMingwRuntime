@@ -7,6 +7,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2020-2021 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -174,6 +175,14 @@ compOptions="${WM_OPTIONS#$buildPlatform}"
 targetPlatform="win64$WM_COMPILER"  # <- x86_64-w64-mingw32
 expectedBuildPlatform="linux64Mingw"
 
+# Adjustments for cross-compile on ARM64
+case "$buildPlatform" in
+(linuxARM64*)
+    targetPlatform="winARM64$WM_COMPILER"   # <- aarch64-w64-mingw32-clang
+    expectedBuildPlatform="linuxARM64Mingw"
+    ;;
+esac
+
 if [ "$buildPlatform" != "$expectedBuildPlatform" ]
 then
     die "Requires <$expectedBuildPlatform> environment: found <$buildPlatform>"
@@ -224,7 +233,15 @@ then
         tarName="${tarName}${versionSeparator}${patch}"
     fi
 
-    tarName="${tarName}-win64"
+    # With target name:
+    case "$targetPlatform" in
+    (*ARM64*)
+        tarName="${tarName}-winARM64"
+        ;;
+    (*)
+        tarName="${tarName}-win64"
+        ;;
+    esac
 fi
 
 echo 1>&2
@@ -291,6 +308,12 @@ mkdir -p "$binDir"
 
 # Mingw installation libs
 other=/usr/x86_64-w64-mingw32/sys-root/mingw
+case "$buildPlatform" in
+(linuxARM64*)
+    # Assuming llvm-mingw for arm64
+    other=/opt/llvm-mingw/aarch64-w64-mingw32
+    ;;
+esac
 if [ -d "$other" ] && [ -d "$other"/bin ]
 then
     echo "Copy mingw sys-root .dll files -> platforms bin/" 1>&2

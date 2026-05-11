@@ -307,7 +307,7 @@ Foam::faMeshDistributor::distributeField
         // Slight hack - copy the mapped internalField values to the
         // processor patches. These are otherwise not initialized.
 
-        if (const auto* ppp = isA<processorFaPatch>(tgtPatch))
+        if (isA<processorFaPatch>(tgtPatch))
         {
             pfld = flatBoundary.slice(boundaryStart, pfld.size());
         }

@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 #     Copyright (C) 2011-2016 OpenFOAM Foundation
 #     Copyright (C) 2017-2022 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -559,13 +560,31 @@ MSMPI | MSMPI-[1-9]* )
             fi
         done
     fi
-    unset _foamFoundDir
 
+    unset _foamFoundDir
     if [ -d "$MPI_ARCH_PATH" ]
     then
-        # _foamAddPath    "$MPI_ARCH_PATH"/bin
-        _foamAddLib     "$MPI_ARCH_PATH"/lib/x64
+        # Verify arch-specific library paths
+        case "$(uname -m)" in
+        (aarch64 | arm64)
+            _foamFoundDir="$MPI_ARCH_PATH"/lib/arm64
+            ;;
+        (*)  # default: x86
+            _foamFoundDir="$MPI_ARCH_PATH"/lib/x64
+            ;;
+        esac
     fi
+    if [ -d "$_foamFoundDir" ]
+    then
+        # _foamAddPath    "$MPI_ARCH_PATH"/bin
+        _foamAddLib  "$_foamFoundDir"
+    else
+        FOAM_MPI=dummy
+        WM_MPLIB=none
+        unset MPI_ARCH_PATH  # Empty
+        echo "Failed to resolve ms-mpi. Using mpi type : $WM_MPLIB" 1>&2
+    fi
+    unset _foamFoundDir
     ;;
 
 esac

@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2022 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -212,7 +213,7 @@ _foamEtc -config  FFTW
 # Finalize library paths
 # ~~~~~~~~~~~~~~~~~~~~~~
 
-# ThirdParty serial and mpi-specific libraries
+# ThirdParty libraries (serial and mpi-specific)
 if [ -n "$FOAM_EXT_LIBBIN" ]
 then
     _foamAddLib "$FOAM_EXT_LIBBIN"
@@ -222,15 +223,22 @@ then
     fi
 fi
 
-# OpenFOAM serial and mpi-specific libraries
+# OpenFOAM libraries (serial and mpi-specific)
 _foamAddLib "$FOAM_LIBBIN"
 if [ "${FOAM_MPI:-dummy}" != dummy ]
 then
     _foamAddLib "$FOAM_LIBBIN/$FOAM_MPI"
 fi
 
-_foamAddLib  "$FOAM_SITE_LIBBIN"  # OpenFOAM group libraries
-_foamAddLib  "$FOAM_USER_LIBBIN"  # OpenFOAM user  libraries
+# OpenFOAM group libraries (serial)
+_foamAddLib  "$FOAM_SITE_LIBBIN"
+
+# OpenFOAM user libraries (serial and mpi-specific)
+_foamAddLib "$FOAM_USER_LIBBIN"
+if [ "${FOAM_MPI:-dummy}" != dummy ]
+then
+    _foamAddLib "$FOAM_USER_LIBBIN/$FOAM_MPI"
+fi
 
 if [ -d "$WM_PROJECT_DIR/doc/man1" ]
 then

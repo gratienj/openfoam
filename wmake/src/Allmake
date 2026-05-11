@@ -22,19 +22,30 @@ then
 fi
 
 
-if [ "${WM_COMPILER%Mingw}" != "$WM_COMPILER" ] && [ "$WM_ARCH" != win64 ]
+# Mingw cross-compilation if using Mingw and not windows
+unset crossTarget
+if [ "${WM_COMPILER%Mingw}" != "$WM_COMPILER" ]
+then
+    case "$WM_ARCH" in
+    (linux64*)     crossTarget=win64 ;;
+    (linuxARM64*)  crossTarget=winARM64 ;;
+    esac
+fi
+
+if [ -n "$crossTarget" ]
 then
     # Mingw cross-compilation
+    outputDir="${WM_PROJECT_DIR}/platforms/tools"
 
     # Toolchain for build (system gcc)
     make \
         WM_COMPILER=Gcc WM_COMPILER_TYPE=system \
-        WMAKE_BIN="${WM_PROJECT_DIR}/platforms/tools/${WM_ARCH}${WM_COMPILER}" \
+        WMAKE_BIN="${outputDir}/${WM_ARCH}${WM_COMPILER}" \
         "$@"
 
     # Toolchain for target (mingw)
     make \
-        WMAKE_BIN="${WM_PROJECT_DIR}/platforms/tools/win64${WM_COMPILER}" \
+        WMAKE_BIN="${outputDir}/${crossTarget}${WM_COMPILER}" \
         "$@"
 else
 

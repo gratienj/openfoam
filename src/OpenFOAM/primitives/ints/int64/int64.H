@@ -74,7 +74,7 @@ struct nameOp<int64_t>
 
 inline int64_t mag(const int64_t val)
 {
-    return ::labs(val);
+    return std::abs(val);
 }
 
 

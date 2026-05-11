@@ -54,10 +54,12 @@ static Foam::Time const* runTimePtr_ = nullptr;
 namespace Foam
 {
 // Register re-reader
-struct addstopAtWriteNowSignalToOpt
+class addstopAtWriteNowSignalToOpt
 :
     public ::Foam::simpleRegIOobject
 {
+public:
+
     addstopAtWriteNowSignalToOpt(const addstopAtWriteNowSignalToOpt&) = delete;
 
     void operator=(const addstopAtWriteNowSignalToOpt&) = delete;

@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2023 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -187,6 +188,13 @@ have_cgal()
     local warn # warn="==> skip cgal"
     local config="config.sh/CGAL"
     local file
+
+    # Too much to expect cgal/... for windows cross-compilation
+    if isWindows
+    then
+        [ -n "$warn" ] && echo "$warn (disabled for windows cross-compilation)"
+        return 1
+    fi
 
     # Setup - current environment if set
     if [ -z "$CGAL_ARCH_PATH" ]

@@ -74,7 +74,7 @@ struct nameOp<int32_t>
 
 inline int32_t mag(const int32_t val)
 {
-    return ::abs(val);
+    return std::abs(val);
 }
 
 

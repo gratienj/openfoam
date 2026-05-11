@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 #     Copyright (C) 2011-2016 OpenFOAM Foundation
 #     Copyright (C) 2016-2025 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -44,7 +45,7 @@ Linux)
         fi
         ;;
 
-    aarch64)
+    (aarch64 | arm64)
         WM_ARCH=linuxARM64
         export WM_COMPILER_LIB_ARCH=64  # Use lib64
         ;;
@@ -88,12 +89,22 @@ Darwin)
     fi
     ;;
 
-# Presume x86_64, with mingw cross-compiled
+# With mingw cross-compiled : presume x86_64 (unless aarch64)
 MINGW* | MSYS*)
+    export WM_COMPILER_LIB_ARCH=64  # Use lib64 (consistent with build platform)
     WM_ARCH=win64
-    [ "$WM_COMPILER" = Gcc ] && WM_COMPILER=Mingw
-    export WM_COMPILER_LIB_ARCH=64  # Consistent with linux64Mingw
-    echo "openfoam: windows support (mingw64) is runtime only" 1>&2
+    case "$(uname -m)" in
+    (aarch64 | arm64)
+        WM_ARCH=winARM64
+        ;;
+    esac
+    # Default compiler should be 'Mingw'
+    case "$WM_COMPILER" in
+    (Clang* | Gcc*)
+        WM_COMPILER=Mingw
+        ;;
+    esac
+    echo "openfoam: windows support ($WM_ARCH) is runtime only" 1>&2
     ;;
 
 SunOS*)

@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2020 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -66,6 +67,13 @@ search_readline()
 
     local prefix="${1:-system}"
     local header library
+
+    # Too much to expect readline for windows cross-compilation
+    if isWindows
+    then
+        [ -n "$warn" ] && echo "$warn (disabled for windows cross-compilation)"
+        return 1
+    fi
 
     # ----------------------------------
     if isNone "$prefix"

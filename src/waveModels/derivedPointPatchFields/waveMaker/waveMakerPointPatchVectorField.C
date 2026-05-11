@@ -155,7 +155,7 @@ Foam::waveMakerPointPatchVectorField::waveMakerPointPatchVectorField
     startTime_(0),
     rampTime_(1),
     secondOrder_(false),
-    nPaddle_(0)
+    nPaddle_(1)
 {}
 
 
