@@ -41,7 +41,7 @@ bool Foam::PstreamDetail::broadcast
     int count,
     MPI_Datatype datatype,
     const int communicator,
-    const int root
+    int root
 )
 {
     if (!UPstream::is_parallel(communicator))
@@ -50,6 +50,12 @@ bool Foam::PstreamDetail::broadcast
     }
 
     int returnCode(MPI_SUCCESS);
+
+    if (root < 0)
+    {
+        // Use last rank as the root
+        root = static_cast<int>(UPstream::nProcs(communicator)-1);
+    }
 
     profilingPstream::beginTiming();
 

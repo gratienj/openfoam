@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2013 OpenFOAM Foundation
     Copyright (C) 2021-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -63,6 +64,7 @@ public:
         //- Construct for given process index to send to
         OPstream
         (
+            //! buffered or scheduled only!
             const UPstream::commsTypes commsType,
             const int toProcNo,
             const int bufferSize = 0,  //!< optional buffer size
@@ -71,10 +73,31 @@ public:
             IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
         );
 
+        //- Construct for given process index to send to.
+        //- Uses standard send mode: MPI_Send().
+        explicit OPstream
+        (
+            const int toProcNo,
+            const int tag = UPstream::msgType(),
+            const int communicator = UPstream::worldComm,
+            IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
+        )
+        :
+            OPstream
+            (
+                UPstream::commsTypes::scheduled,  // ie, MPI_Send()
+                toProcNo,
+                0,  // bufferSize
+                tag,
+                communicator,
+                fmt
+            )
+        {}
+
 
     // Static Functions
 
-        //- Serialize a value and send (buffered/blocking or standard mode).
+        //- Serialize a value and send (buffered or standard mode).
         //- Uses \c operator<< for serialization
         template<class Type>
         static void send

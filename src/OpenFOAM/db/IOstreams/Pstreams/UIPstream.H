@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2013,2024 OpenFOAM Foundation
     Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -88,7 +89,7 @@ protected:
     // Protected Data
 
         //- Source rank for the data
-        const int fromProcNo_;
+        int fromProcNo_;
 
         //- Message tag for communication
         const int tag_;
@@ -99,7 +100,7 @@ protected:
         //- The message size, read on bufferIPCrecv or set directly
         label messageSize_;
 
-        //- Receive position in buffer data, if ony
+        //- Receive position in buffer data.
         //- If there is no external location for recvBufPos_
         label storedRecvBufPos_;
 
@@ -121,6 +122,7 @@ protected:
         UIPstreamBase
         (
             const UPstream::commsTypes commsType,
+            //! The source rank (negative == ANY_SOURCE)
             const int fromProcNo,
             DynamicList<char>& receiveBuf,
             label& receiveBufPosition,
@@ -150,6 +152,10 @@ public:
 
     // Member Functions
 
+        //- The source rank
+        int source() const noexcept { return fromProcNo_; }
+
+
     // Stream State Functions
 
         //- Return current stream flags.
@@ -165,9 +171,6 @@ public:
         {
             return std::ios_base::fmtflags(0);
         }
-
-        //- The number of characters remaining in the get buffer
-        label remaining() const noexcept;
 
 
     // Read Functions
@@ -202,14 +205,16 @@ public:
         //- Read a double
         virtual Istream& read(double& val) override;
 
-        //- Read binary block with 8-byte alignment.
-        //- Reading into a null pointer behaves like a forward seek of
-        //- count characters.
+        //- Read binary block with 8-byte alignment,
+        //- a no-op (also no alignment) if the \p count == 0.
+        //- If \p data is a null pointer:
+        //- an aligned forward seek of \p count characters.
         virtual Istream& read(char* data, std::streamsize count) override;
 
-        //- Low-level raw binary read.
-        //- Reading into a null pointer behaves like a forward seek of
-        //- count characters.
+        //- Low-level raw binary read (without alignment),
+        //- a no-op if the \p count == 0.
+        //- If \p data is a null pointer:
+        //- forward seek of \p count characters.
         virtual Istream& readRaw(char* data, std::streamsize count) override;
 
         //- Start of low-level raw binary read
@@ -218,8 +223,42 @@ public:
         //- End of low-level raw binary read
         virtual bool endRawRead() override { return true; }
 
+        //- Read contiguous content as raw binary with 8-byte alignment,
+        //- a no-op (also no alignment) if the \p count == 0.
+        //- If \p buffer a null pointer:
+        //- an aligned forward seek of \p count items.
+        template<class T>
+        Istream& read_binary(T* buffer, std::streamsize count);
+
+        //- Read single contiguous value as raw binary with 8-byte alignment.
+        template<class T>
+        Istream& read_binary(T& value);
+
 
     // Positioning
+
+        //- Align the input position (byte boundary) to specified amount.
+        //- Does not modify the buffer content. [ADVANCED USAGE]
+        void aligng(size_t alignment);
+
+        //- Align the input position (byte boundary) for the data type.
+        //- [ADVANCED USAGE]
+        template<class T>
+        void aligng() { aligng(sizeof(T)); }
+
+        //- Set input position pointer to the absolute location, without
+        //- any EOF checks.
+        //- Does not modify the buffer content. [ADVANCED USAGE]
+        void seekg(int64_t pos);
+
+        //- The current input position (in the buffer).
+        int64_t tellg() const noexcept { return recvBufPos_; }
+
+        //- The number of characters remaining in the input buffer
+        int64_t remaining() const noexcept;
+
+        //- The total number of characters in the input buffer
+        int64_t size() const noexcept;
 
         //- Rewind the receive stream position so that it may be read again
         virtual void rewind() override;
@@ -258,6 +297,7 @@ public:
         UIPstream
         (
             const UPstream::commsTypes commsType,
+            //! The source rank (negative == ANY_SOURCE)
             const int fromProcNo,
             DynamicList<char>& receiveBuf,
             label& receiveBufPosition,

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
     Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -83,7 +84,18 @@ Foam::OPstream::OPstream
         true,  // sendAtDestruct
         fmt
     )
-{}
+{
+    // NOTE: nonBlocking with sendAtDestruct is a bad combination.
+    // The transfer buffer will be destroyed before the send completes!
+
+    if (UPstream::commsTypes::nonBlocking == commsType && sendAtDestruct_)
+    {
+        FatalErrorInFunction
+            << "Constructed with non-blocking and send-at-destruct.\n"
+            << "This is an error - results in undefined behaviour!\n"
+            << Foam::abort(FatalError);
+    }
+}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -99,14 +111,11 @@ bool Foam::UOPstream::send()
 
 Foam::UOPstream::~UOPstream()
 {
+    // Already flagged (nonBlocking + sendAtDestruct) as an error in
+    // the constructor...
+
     if (sendAtDestruct_)
     {
-        // Note: sendAtDestruct_ and nonBlocking is a questionable combination
-        // since the transfer buffer will be destroyed before
-        // the non-blocking send completes!
-        //
-        // Could flag as an error, but not actually used anywhere.
-
         if (!bufferIPCsend())
         {
             FatalErrorInFunction

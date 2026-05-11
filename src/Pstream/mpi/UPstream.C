@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1383,7 +1384,7 @@ Foam::UPstream::probeMessage
 (
     const UPstream::commsTypes commsType,
     const int fromProcNo,
-    const int tag,
+    const int tag,  // Message tag
     const int communicator
 )
 {
@@ -1398,59 +1399,43 @@ Foam::UPstream::probeMessage
     const int source = (fromProcNo < 0) ? MPI_ANY_SOURCE : fromProcNo;
     // Supporting MPI_ANY_TAG is not particularly useful...
 
-    int flag = 0;
+    int flag(1);  // Flag only modified by MPI_Iprobe() version
+    int returnCode = MPI_SUCCESS;
     MPI_Status status;
 
+    profilingPstream::beginTiming();
     if (UPstream::commsTypes::nonBlocking == commsType)
     {
         // Non-blocking
-        profilingPstream::beginTiming();
-
-        if
+        returnCode = MPI_Iprobe
         (
-            MPI_Iprobe
-            (
-                source,
-                tag,
-                PstreamGlobals::MPICommunicators_[communicator],
-               &flag,
-               &status
-            )
-        )
-        {
-            FatalErrorInFunction
-                << "MPI_Iprobe returned with error"
-                << Foam::abort(FatalError);
-        }
-
-        profilingPstream::addRequestTime();
+            source,
+            tag,
+            PstreamGlobals::MPICommunicators_[communicator],
+           &flag,
+           &status
+        );
     }
     else
     {
-        // Blocking
-        profilingPstream::beginTiming();
-
-        if
+        // Standard
+        returnCode = MPI_Probe
         (
-            MPI_Probe
-            (
-                source,
-                tag,
-                PstreamGlobals::MPICommunicators_[communicator],
-               &status
-            )
-        )
-        {
-            FatalErrorInFunction
-                << "MPI_Probe returned with error"
-                << Foam::abort(FatalError);
-        }
-
-        profilingPstream::addProbeTime();
-        flag = 1;
+            source,
+            tag,
+            PstreamGlobals::MPICommunicators_[communicator],
+           &status
+        );
     }
+    profilingPstream::addProbeTime();
 
-    if (flag)
+    if (FOAM_UNLIKELY(MPI_SUCCESS != returnCode))
+    {
+        FatalErrorInFunction
+            << "[mpi_probe] : returned with error"
+            << Foam::abort(FatalError);
+    }
+    else if (flag)
     {
         // Unlikely to be used with large amounts of data,
         // but use MPI_Get_elements_x() instead of MPI_Count() anyhow
@@ -1480,6 +1465,100 @@ Foam::UPstream::probeMessage
     }
 
     return result;
+}
+
+
+// Probe for messages coming from multiple sources.
+//
+// MPI_Probe will locally block (but no communication) until the
+// corresponding message information arrives, which means that
+// sequential probing also sequentially blocks. However, since blocking is
+// just until message envelopes arrive and it does not transfer the
+// contents, it should be reasonable. Using MPI_Iprobe isn't really much
+// of an alternative, since that would move all of the looping, bookkeeping
+// and polling to the caller!
+//
+void Foam::UPstream::probeMessages
+(
+    DynamicList<int64_t>& messageSizes,
+    const UList<int>& fromProcs,
+    const int tag,  // Message tag: assumed to be identical for all sources
+    const int communicator
+)
+{
+    messageSizes.clear();
+
+    // No-op for non-parallel, not on communicator or no sources to probe
+    if (!UPstream::is_parallel(communicator) || fromProcs.empty())
+    {
+        return;
+    }
+
+    // Reserve one larger: the caller may wish to create an offsets
+    // array from the size information
+    messageSizes.reserve_exact(fromProcs.size()+1);
+
+    MPI_Status status;
+
+    profilingPstream::beginTiming();
+    for (const int source : fromProcs)
+    {
+        #ifdef FULLDEBUG
+        if (FOAM_UNLIKELY(source < 0))
+        {
+            // Cannot use MPI_ANY_SOURCE at all here.
+            FatalErrorInFunction
+                << "Cannot use MPI_ANY_SOURCE when probing multiple sources!\n"
+                << Foam::abort(FatalError);
+        }
+        #endif
+
+        int returnCode = MPI_Probe
+        (
+            source,
+            tag,
+            PstreamGlobals::MPICommunicators_[communicator],
+           &status
+        );
+
+        if (FOAM_UNLIKELY(MPI_SUCCESS != returnCode))
+        {
+            FatalErrorInFunction
+                << "[mpi_probe] : returned with error"
+                << Foam::abort(FatalError);
+        }
+        else
+        {
+            // Unlikely to be used with large amounts of data,
+            // but use MPI_Get_elements_x() instead of MPI_Count() anyhow
+
+            MPI_Count num_recv(0);
+            MPI_Get_elements_x(&status, MPI_BYTE, &num_recv);
+
+            // Errors
+            if
+            (
+                FOAM_UNLIKELY
+                (num_recv == MPI_UNDEFINED || int64_t(num_recv) < 0)
+            )
+            {
+                FatalErrorInFunction
+                    << "MPI_Get_elements_x() : "
+                       "returned undefined or negative value"
+                    << Foam::abort(FatalError);
+            }
+            else if (FOAM_UNLIKELY(int64_t(num_recv) > int64_t(INT_MAX)))
+            {
+                FatalErrorInFunction
+                    << "MPI_Get_elements_x() : "
+                       "count is larger than INT_MAX bytes"
+                    << Foam::abort(FatalError);
+            }
+
+            messageSizes.push_back(int64_t(num_recv));
+        }
+    }
+    profilingPstream::addProbeTime();
 }
 
 

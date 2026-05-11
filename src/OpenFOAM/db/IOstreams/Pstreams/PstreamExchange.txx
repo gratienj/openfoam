@@ -515,6 +515,18 @@ void exchangeContainer
     const label startOfRequests = UPstream::nRequests();
     const label myProci = UPstream::myProcNo(comm);
 
+    // Sorted processor order
+    const auto sort_by_rank = [](const auto& a, const auto& b)
+    {
+        return (a.first < b.first);
+    };
+
+    // OR: Shorter messages first
+    // const auto sort_by_length = [](const auto& a, const auto& b)
+    // {
+    //     return (a.second.size() < b.second.size());
+    // };
+
     // Serialize recv sequences
     DynamicList<recvTuple> recvs(recvBufs.size());
     {
@@ -536,19 +548,7 @@ void exchangeContainer
             }
         }
 
-        std::sort
-        (
-            recvs.begin(),
-            recvs.end(),
-            [=](const recvTuple& a, const recvTuple& b)
-            {
-                // Sorted processor order
-                return (a.first < b.first);
-
-                // OR: // Shorter messages first
-                // return (a.second.size() < b.second.size());
-            }
-        );
+        std::sort(recvs.begin(), recvs.end(), sort_by_rank);
     }
 
     // Serialize send sequences
@@ -572,19 +572,7 @@ void exchangeContainer
             }
         }
 
-        std::sort
-        (
-            sends.begin(),
-            sends.end(),
-            [=](const sendTuple& a, const sendTuple& b)
-            {
-                // Sorted processor order
-                return (a.first < b.first);
-
-                // OR: // Shorter messages first
-                // return (a.second.size() < b.second.size());
-            }
-        );
+        std::sort(sends.begin(), sends.end(), sort_by_rank);
     }
 
     // Exchange buffers in chunk-wise transfers

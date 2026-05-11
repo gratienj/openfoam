@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -270,15 +271,24 @@ void Foam::UIPstream::bufferIPCrecv()
         // No buffer size allocated/specified - probe size of incoming message
         profilingPstream::beginTiming();
 
+        const int source = (fromProcNo_ < 0) ? MPI_ANY_SOURCE : fromProcNo_;
+        // Supporting MPI_ANY_TAG is not particularly useful...
+
         MPI_Status status;
 
         MPI_Probe
         (
-            fromProcNo_,
+            source,
             tag_,
             PstreamGlobals::MPICommunicators_[comm_],
            &status
         );
+
+        if (fromProcNo_ < 0)
+        {
+            // Use the correct (probed) source
+            fromProcNo_ = status.MPI_SOURCE;
+        }
 
         profilingPstream::addProbeTime();
 
@@ -313,6 +323,15 @@ void Foam::UIPstream::bufferIPCrecv()
 
         recvBuf_.resize(label(num_recv));
         messageSize_ = label(num_recv);
+    }
+
+    // Errors
+    if (FOAM_UNLIKELY(fromProcNo_ < 0))
+    {
+        FatalErrorInFunction
+            << "UIPstream IPC failed with ANY_SOURCE probing?"
+            << " cannot have proc=" << fromProcNo_
+            << Foam::abort(FatalError);
     }
 
     std::streamsize count = UPstream::mpi_receive

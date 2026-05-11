@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -181,6 +182,26 @@ std::streamsize Foam::UIPstream::read
         communicator,
        &req
     );
+}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class T>
+Foam::Istream& Foam::UIPstreamBase::read_binary
+(
+    T* buffer,
+    std::streamsize count
+)
+{
+    return this->read(reinterpret_cast<char*>(buffer), count*sizeof(T));
+}
+
+
+template<class T>
+Foam::Istream& Foam::UIPstreamBase::read_binary(T& value)
+{
+    return this->read(reinterpret_cast<char*>(&value), sizeof(T));
 }
 
 

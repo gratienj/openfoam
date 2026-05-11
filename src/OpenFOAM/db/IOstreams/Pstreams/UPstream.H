@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -202,14 +203,14 @@ public:
         {
             // Private Data
 
-                //- The procID of the processor \em directly above
+                //- The rank id \em directly above (-1 for master)
                 int above_;
 
-                //- The procIDs of processors \em directly below
+                //- The rank ids \em directly below (ie, leaders)
                 List<int> below_;
 
-                //- The procIDs of all processors below myProcNo,
-                //- not just directly below
+                //- The ids of \em all ranks below (not just directly below).
+                //  Corresponds to a depth-first order of nodes.
                 List<int> allBelow_;
 
                 //- The procIDs of all processors not below myProcNo
@@ -246,20 +247,34 @@ public:
 
             // Member Functions
 
+                //- Root of the tree (ie, nothing above)
+                bool is_root() const noexcept { return (above_ < 0); }
+
+                //- Internal node in the tree
+                bool is_inode() const noexcept
+                {
+                    return (above_ >= 0 && !below_.empty());
+                }
+
+                //- Leaf/terminal in the tree (ie, nothing below)
+                bool is_leaf() const noexcept { return below_.empty(); }
+
+
             // Access
 
-                //- The procID of the processor \em directly above
+                //- The rank id \em directly above (-1 for master)
                 int above() const noexcept { return above_; }
 
-                //- The procIDs of the processors \em directly below
+                //- The rank ids \em directly below (ie, leaders)
                 const List<int>& below() const noexcept { return below_; }
 
-                //- The procIDs of \em all processors below
-                //- (so not just directly below)
+                //- The ids of \em all ranks below (not just directly below).
+                //  Corresponds to a depth-first order of nodes.
                 const List<int>& allBelow() const noexcept { return allBelow_; }
 
                 //- The procIDs of all processors not below myProcNo.
                 //- The inverse set of allBelow without myProcNo.
+                //  No particular guarantee on the ordering.
                 const List<int>& allNotBelow() const noexcept
                 {
                     return allNotBelow_;
@@ -602,7 +617,8 @@ protected:
             std::streamsize count,
             const UPstream::dataTypes dataTypeId,
             const int communicator,
-            const int root = 0  //!< The broadcast root (usually 0 == master)
+            //! The broadcast root (0 == master, -1 = last rank)
+            int root = 0
         );
 
         //- In-place reduction of \c values with result on rank 0.
@@ -862,7 +878,7 @@ public:
 
         //- Set world communicator. Negative values are a no-op.
         //  \returns old world communicator index
-        static label commWorld(const label communicator) noexcept
+        static label commWorld(label communicator) noexcept
         {
             label old(worldComm);
             if (communicator >= 0) worldComm = communicator;
@@ -873,7 +889,7 @@ public:
         //- Warns for use of any communicator differing from specified.
         //- Negative values disable.
         //  \returns the previous warn index
-        static label commWarn(const label communicator) noexcept
+        static label commWarn(label communicator) noexcept
         {
             label old(warnComm);
             warnComm = communicator;
@@ -1056,20 +1072,55 @@ public:
             const int tag = UPstream::msgType()+1970
         );
 
-        //- Probe for an incoming message.
-        //
-        //  \param commsType    Non-blocking or not
-        //  \param fromProcNo   The source rank (negative == ANY_SOURCE)
-        //  \param tag          The source message tag
-        //  \param communicator The communicator index
+        //- A standard or non-blocking probe for an incoming message.
         //
         //  \returns source rank and message size (bytes)
         //      and (-1, 0) on failure
         static std::pair<int,int64_t> probeMessage
         (
+            //! Non-blocking or otherwise
             const UPstream::commsTypes commsType,
+            //! The source rank (negative == ANY_SOURCE)
             const int fromProcNo,
+            //! The source message tag
             const int tag = UPstream::msgType(),
+            //! The communicator index
+            const int communicator = worldComm
+        );
+
+        //- A standard probe for an incoming message.
+        //
+        //  \returns source rank and message size (bytes)
+        //      and (-1, 0) on failure
+        static std::pair<int,int64_t> probeMessage
+        (
+            //! The source rank (negative == ANY_SOURCE)
+            const int fromProcNo,
+            //! The source message tag
+            const int tag = UPstream::msgType(),
+            //! The communicator index
+            const int communicator = worldComm
+        )
+        {
+            return probeMessage
+            (
+                UPstream::commsTypes::scheduled,  // A standard probe
+                fromProcNo,
+                tag,
+                communicator
+            );
+        }
+
+        //- Probe incoming message sizes from specified ranks.
+        static void probeMessages
+        (
+            //! [out] Message sizes (bytes)
+            DynamicList<int64_t>& messageSizes,
+            //! The source ranks (must be non-negative)
+            const UList<int>& fromProcs,
+            //! The source message tag: assumed to be identical for all sources
+            const int tag = UPstream::msgType(),
+            //! The communicator index
             const int communicator = worldComm
         );
 
@@ -1165,12 +1216,34 @@ public:
         //  if the position is out-of-range [0 to nRequests()],
         //  or the internal list of requests is empty.
         //
-        //  \returns true if any pending request completed.
-        //  \returns false if all requests have already been handled.
-        //
         //  \param pos starting position within the internal list of requests
         //  \param len length of slice to check (negative = until the end)
+        //
+        //  \returns true if any pending request completed.
+        //  \returns false if all requests have already been handled.
         static bool waitAnyRequest(label pos, label len = -1);
+
+        //- Wait until some requests (from position onwards) have finished.
+        //- Corresponds to MPI_Waitsome()
+        //  A no-op and returns false if parRun() == false,
+        //  if the position is out-of-range [0 to nRequests],
+        //  or the internal list of requests is empty.
+        //
+        //  \param[out] indices the completed request indices relative to the
+        //      starting position. This is an optional parameter that can be
+        //      used to recover the indices or simply to avoid reallocations
+        //      when calling within a loop.
+        //
+        //  \returns true if some pending requests completed.
+        //  \returns false if all requests have already been handled
+        static bool waitSomeRequests
+        (
+            //! starting position within the internal list of requests
+            label pos,
+            //! length of slice to check (negative = until the end)
+            label len = -1,
+            DynamicList<int>* indices = nullptr
+        );
 
         //- Wait until some requests (from position onwards) have finished.
         //- Corresponds to MPI_Waitsome()
@@ -1180,19 +1253,16 @@ public:
         //
         //  \returns true if some pending requests completed.
         //  \returns false if all requests have already been handled
-        //
-        //  \param pos starting position within the internal list of requests
-        //  \param len length of slice to check (negative = until the end)
-        //  \param[out] indices the completed request indices relative to the
-        //      starting position. This is an optional parameter that can be
-        //      used to recover the indices or simply to avoid reallocations
-        //      when calling within a loop.
         static bool waitSomeRequests
         (
+            //! starting position within the internal list of requests
             label pos,
-            label len = -1,
-            DynamicList<int>* indices = nullptr
-        );
+            //! [out] completed request indices relative to \p pos
+            DynamicList<int>& indices
+        )
+        {
+            return waitSomeRequests(pos, -1, &indices);
+        }
 
         //- Wait until some requests have finished.
         //- Corresponds to MPI_Waitsome()
@@ -1200,13 +1270,13 @@ public:
         //  the list is empty,
         //  or if all the requests have already been handled.
         //
-        //  \param requests the requests
         //  \param[out] indices the completed request indices relative to the
         //      starting position. This is an optional parameter that can be
         //      used to recover the indices or simply to avoid reallocations
         //      when calling within a loop.
         static bool waitSomeRequests
         (
+            //! The requests
             UList<UPstream::Request>& requests,
             DynamicList<int>* indices = nullptr
         );
@@ -1288,7 +1358,7 @@ public:
 
         //- Set as parallel run on/off.
         //  \return the previous value
-        static bool parRun(const bool on) noexcept
+        static bool parRun(bool on) noexcept
         {
             bool old(parRun_);
             parRun_ = on;
@@ -1307,33 +1377,33 @@ public:
 
         //- Number of ranks in parallel run (for given communicator).
         //- It is 1 for serial run
-        static label nProcs(const label communicator = worldComm)
+        static label nProcs(label communicator = worldComm)
         {
             return procIDs_[communicator].size();
         }
 
         //- Rank of this process in the communicator (starting from masterNo()).
         //- Negative if the process is not a rank in the communicator.
-        static int myProcNo(const label communicator = worldComm)
+        static int myProcNo(label communicator = worldComm)
         {
             return myProcNo_[communicator];
         }
 
         //- True if process corresponds to the master rank in the communicator
-        static bool master(const label communicator = worldComm)
+        static bool master(label communicator = worldComm)
         {
             return myProcNo_[communicator] == masterNo();
         }
 
         //- True if process corresponds to \b any rank (master or sub-rank)
         //- in the given communicator
-        static bool is_rank(const label communicator = worldComm)
+        static bool is_rank(label communicator = worldComm)
         {
             return myProcNo_[communicator] >= masterNo();
         }
 
         //- True if process corresponds to a sub-rank in the given communicator
-        static bool is_subrank(const label communicator = worldComm)
+        static bool is_subrank(label communicator = worldComm)
         {
             return myProcNo_[communicator] > masterNo();
         }
@@ -1342,7 +1412,7 @@ public:
         //  This is when parRun() == true, the process corresponds to a rank
         //  in the communicator and there is more than one rank in the
         //  communicator
-        static bool is_parallel(const label communicator = worldComm)
+        static bool is_parallel(label communicator = worldComm)
         {
             return
             (
@@ -1433,14 +1503,14 @@ public:
     // Rank addressing
 
         //- Range of process indices for all processes
-        static rangeType allProcs(const label communicator = worldComm)
+        static rangeType allProcs(label communicator = worldComm)
         {
             // Proc 0 -> nProcs (int value)
             return rangeType(static_cast<int>(nProcs(communicator)));
         }
 
         //- Range of process indices for sub-processes
-        static rangeType subProcs(const label communicator = worldComm)
+        static rangeType subProcs(label communicator = worldComm)
         {
             // Proc 1 -> nProcs (int value)
             return rangeType(1, static_cast<int>(nProcs(communicator)-1));
@@ -1724,7 +1794,8 @@ public:
             Type* buffer,
             std::streamsize count,
             const int communicator,
-            const int root = UPstream::masterNo()  //!< The broadcast root
+            //! The broadcast root (0 == master, -1 = last rank)
+            const int root = UPstream::masterNo()
         );
 
         //- Broadcast fixed-list content (contiguous types) to all ranks
@@ -1736,7 +1807,8 @@ public:
         (
             FixedList<Type, N>& list,
             const int communicator,
-            const int root = UPstream::masterNo()  //!< The broadcast root
+            //! The broadcast root (0 == master, -1 = last rank)
+            const int root = UPstream::masterNo()
         );
 
 

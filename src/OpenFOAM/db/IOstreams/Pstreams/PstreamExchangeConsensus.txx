@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2023-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -175,7 +176,7 @@ void exchangeConsensus
 
     for (bool barrier_active = false, done = false; !done; /*nil*/)
     {
-        std::pair<int, int64_t> probed =
+        auto [proci, num_bytes] =
             UPstream::probeMessage
             (
                 UPstream::commsTypes::nonBlocking,
@@ -184,13 +185,10 @@ void exchangeConsensus
                 comm
             );
 
-        if (probed.second > 0)
+        if (proci >= 0)
         {
-            // Message found and had size.
-            // - receive into dest buffer location
-
-            const label proci(probed.first);
-            const label count(probed.second / sizeof(Type));
+            // Found message - receive it
+            const label count(num_bytes / sizeof(Type));
 
             auto& recvData = recvBufs[proci];
             recvData.resize(count);  // OK with resize() instead of _nocopy()
@@ -352,7 +350,7 @@ void exchangeConsensus
 
     for (bool barrier_active = false, done = false; !done; /*nil*/)
     {
-        std::pair<int, int64_t> probed =
+        auto [proci, num_bytes] =
             UPstream::probeMessage
             (
                 UPstream::commsTypes::nonBlocking,
@@ -361,13 +359,10 @@ void exchangeConsensus
                 comm
             );
 
-        if (probed.second > 0)
+        if (proci >= 0)
         {
-            // Message found and had size.
-            // - receive into dest buffer location
-
-            const label proci(probed.first);
-            const label count(probed.second / sizeof(Type));
+            // Found message - receive it
+            const label count(num_bytes / sizeof(Type));
 
             auto& recvData = recvBufs(proci);
             recvData.resize(count);  // OK with resize() instead of _nocopy()

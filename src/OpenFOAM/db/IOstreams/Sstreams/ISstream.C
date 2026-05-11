@@ -59,8 +59,7 @@ inline bool validVariableChar(char c)
 
 inline void inplaceTrimRight(std::string& s)
 {
-    auto end = s.length();
-    if (end)
+    if (auto end = s.size(); end > 0)
     {
         while (end && Foam::isspace(s[end-1]))
         {
