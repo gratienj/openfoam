@@ -41,8 +41,7 @@ License
 #ifdef __APPLE__
 #include <sys/sysctl.h>
 #include <sys/types.h>
-#include <mach/mach.h>
-#include <mach/task.h>
+#include <sys/resource.h>  // For getrusage()
 #endif
 
 
@@ -259,25 +258,35 @@ void Foam::memInfo::populate()
     // Get system free memory - platform dependent
     #ifdef __APPLE__
     {
-        // MacOS: use mach API to get memory information
-        mach_port_t host = mach_host_self();
-        mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
-        vm_statistics64_data_t vm_stat;
+        // // MacOS: use mach API to get memory information
+        // mach_port_t host = mach_host_self();
+        // mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+        // vm_statistics64_data_t vm_stat;
 
-        if
-        (
-            host_statistics64
-            (
-                host,
-                HOST_VM_INFO64,
-                reinterpret_cast<host_info64_t>(&vm_stat),
-               &count
-            ) == KERN_SUCCESS
-        )
-        {
-            // vm_page_size is in bytes, convert to kB
-            free_ = (vm_stat.free_count * vm_page_size) / 1024;
-        }
+        //- Tends to break with Mach include headers inside c++. Might be
+        //- fixed maybe in updates.
+        // if
+        // (
+        //     host_statistics64
+        //     (
+        //         host,
+        //         HOST_VM_INFO64,
+        //         reinterpret_cast<host_info64_t>(&vm_stat),
+        //        &count
+        //     ) == KERN_SUCCESS
+        // )
+        // {
+        //     vm_page_size is in bytes, convert to kB
+        //     free_ = (vm_stat.free_count * vm_page_size) / 1024;
+        // }
+
+        // Use sysctlbyname() to get the page size and free page count
+        int64_t vm_page_size = 0;
+        size_t len = sizeof(vm_page_size);
+        sysctlbyname("hw.pagesize", &vm_page_size, &len, NULL, 0);
+        len = sizeof(free_);
+        sysctlbyname("vm.page_free_count", &free_, &len, NULL, 0);
+        free_ = (free_ * vm_page_size) / 1024;
     }
     #endif  /* __APPLE__ */
     #endif  /* __linux__ */
