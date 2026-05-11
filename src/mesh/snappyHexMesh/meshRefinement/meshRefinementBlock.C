@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -961,6 +962,23 @@ Foam::label Foam::meshRefinement::markFakeGapRefinement
             // - small gap
             // - coplanar normals
 
+            // The findNearestIntersection calls above scan against all
+            // refinement surfaces, not just blockedSurfaces, so surf1[i]
+            // and surf2[i] may refer to surfaces that have no block-level
+            // entry in regionToBlockSize. Guard against an out-of-range access
+            const scalarList& bSize1 = regionToBlockSize[surf1[i]];
+            const scalarList& bSize2 = regionToBlockSize[surf2[i]];
+            if
+            (
+                region1[i] >= bSize1.size()
+             || region2[i] >= bSize2.size()
+             || bSize1[region1[i]] < 0
+             || bSize2[region2[i]] < 0
+            )
+            {
+                continue;
+            }
+
             const label celli = cellMap[i];
             if (celli != -1 && refineCell[celli] == -1)
             {
@@ -970,8 +988,8 @@ Foam::label Foam::meshRefinement::markFakeGapRefinement
                 (
                     max
                     (
-                        regionToBlockSize[surf1[i]][region1[i]],
-                        regionToBlockSize[surf2[i]][region2[i]]
+                        bSize1[region1[i]],
+                        bSize2[region2[i]]
                     )
                 );
 
