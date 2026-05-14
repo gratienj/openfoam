@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,6 +38,8 @@ Description
 
 #include "fvCFD.H"
 #include "dynamicFvMesh.H"
+#include "faMesh.H"
+#include "regionFaModel.H"
 #include "singlePhaseTransportModel.H"
 #include "turbulentTransportModel.H"
 #include "surfaceFilmModel.H"
@@ -82,6 +85,10 @@ int main(int argc, char *argv[])
     while (runTime.run())
     {
         #include "readDyMControls.H"
+
+        solvePrimaryRegion = true;
+        pimple.dict().readIfPresent("solvePrimaryRegion", solvePrimaryRegion);
+
         #include "CourantNo.H"
         #include "setMultiRegionDeltaT.H"
 
@@ -137,6 +144,18 @@ int main(int argc, char *argv[])
                 {
                     laminarTransport.correct();
                     turbulence->correct();
+                }
+            }
+        }
+        else
+        {
+            // Evolve finite-area region models
+            // (when solving, these are triggered by boundary conditions)
+            if (auto* obr = const_cast<objectRegistry*>(faMesh::registry(mesh)))
+            {
+                for (auto& model : obr->sorted<regionModels::regionFaModel>())
+                {
+                    model.evolve();
                 }
             }
         }

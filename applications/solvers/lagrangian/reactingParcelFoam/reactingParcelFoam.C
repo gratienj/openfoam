@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2020 OpenFOAM Foundation
     Copyright (C) 2018-2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,6 +39,8 @@ Description
 
 #include "fvCFD.H"
 #include "dynamicFvMesh.H"
+#include "faMesh.H"
+#include "regionFaModel.H"
 #include "turbulentFluidThermoModel.H"
 #include "surfaceFilmModel.H"
 #include "rhoReactionThermo.H"
@@ -100,6 +103,9 @@ int main(int argc, char *argv[])
     while (runTime.run())
     {
         #include "readDyMControls.H"
+
+        solvePrimaryRegion = true;
+        pimple.dict().readIfPresent("solvePrimaryRegion", solvePrimaryRegion);
 
         // Store divrhoU from the previous mesh
         // so that it can be mapped and used in correctPhi
@@ -199,6 +205,18 @@ int main(int argc, char *argv[])
             }
 
             rho = thermo.rho();
+        }
+        else
+        {
+            // Evolve finite-area region models
+            // (when solving, these are triggered by boundary conditions)
+            if (auto* obr = const_cast<objectRegistry*>(faMesh::registry(mesh)))
+            {
+                for (auto& model : obr->sorted<regionModels::regionFaModel>())
+                {
+                    model.evolve();
+                }
+            }
         }
 
         runTime.write();
