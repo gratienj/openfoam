@@ -36,7 +36,7 @@ solvers
     }
 
 
-   "(U|k|h|epsilon|)"
+   "(U|k|h|epsilon)"
     {
         solver           PBiCGStab;
         preconditioner   DILU;
