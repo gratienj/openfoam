@@ -62,6 +62,7 @@ void gather_algorithm
     const int communicator
 )
 {
+    [[maybe_unused]]
     const bool printDebug = (Pstream::debug & 2);
 
     if (!UPstream::is_parallel(communicator))
@@ -316,6 +317,7 @@ void listGather_algorithm
     const int communicator
 )
 {
+    [[maybe_unused]]
     const bool printDebug = (Pstream::debug & 2);
 
     if (!UPstream::is_parallel(communicator) || values.empty())
@@ -629,6 +631,7 @@ void mapGather_algorithm
     const int communicator
 )
 {
+    [[maybe_unused]]
     const bool printDebug = (Pstream::debug & 2);
 
     if (!UPstream::is_parallel(communicator))

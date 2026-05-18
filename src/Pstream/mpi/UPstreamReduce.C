@@ -197,12 +197,12 @@ void Foam::UPstream::mpi_reduce
     static std::unique_ptr<char[]> work;
     static int work_len(0);
 
-    const int num_bytes = [=](int n)
+    const int num_bytes = [datatype,count]()
     {
         int size = 1;
         MPI_Type_size(datatype, &size);
-        return (size * n);
-    }(count);
+        return (size * count);
+    }();
 
     if (work_len < num_bytes)
     {
@@ -479,12 +479,12 @@ void Foam::UPstream::mpi_scan_reduce
     static std::unique_ptr<char[]> work;
     static int work_len(0);
 
-    const int num_bytes = [=](int n)
+    const int num_bytes = [datatype,count]()
     {
         int size = 1;
         MPI_Type_size(datatype, &size);
-        return (size * n);
-    }(count);
+        return (size * count);
+    }();
 
     if (work_len < num_bytes)
     {
