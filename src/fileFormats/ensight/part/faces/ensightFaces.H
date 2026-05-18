@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -82,6 +83,8 @@ public:
         //  Must be zero-based since they are also for internal bookkeeping.
         enum elemType
         {
+            BAR2 = -2,  //!< "bar2"  (special purpose : not a face)
+            POINT = -1, //!< "point" (special purpose : not a face)
             TRIA3 = 0,  //!< "tria3"
             QUAD4,      //!< "quad4"
             NSIDED      //!< "nsided"
@@ -96,8 +99,14 @@ public:
 
     // Static Functions
 
-        //- The ensight element name for the specified 'Face' type
+        //- The ensight name for the specified 'Face' element type
         static inline const char* key(const elemType etype) noexcept;
+
+        //- The ensight name for 1D line elements
+        static constexpr const char* kw_line() noexcept { return "bar2"; }
+
+        //- The ensight name for 1D vertex/point elements
+        static constexpr const char* kw_vertex() noexcept { return "point"; }
 
 
 private:
@@ -173,13 +182,13 @@ public:
 
         //- The global sizes for each element type.
         //  This value is only meaningful after a reduce operation.
-        inline const FixedList<label, nTypes>& totals() const;
+        inline const FixedList<label, nTypes>& totals() const noexcept;
 
         //- Processor-local sizes per element type.
         FixedList<label, nTypes> sizes() const;
 
         //- Processor-local face ids of all elements
-        inline const labelList& faceIds() const noexcept;
+        inline const labelUList& faceIds() const noexcept;
 
         //- Processor-local face ids of the specified element type
         inline const labelUList faceIds(const elemType etype) const;
@@ -192,7 +201,7 @@ public:
 
         //- Processor-local face order
         //- (where applicable)
-        inline const labelList& faceOrder() const noexcept;
+        inline const labelUList& faceOrder() const noexcept;
 
         //- Processor-local face order of specified element type
         //- (where applicable)

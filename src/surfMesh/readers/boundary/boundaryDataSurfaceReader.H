@@ -54,7 +54,7 @@ Description
     \endtable
 
 SourceFiles
-    boundaryDataSurfaceReader.C
+    boundaryDataSurfaceReader.cxx
     boundaryDataSurfaceReader.txx
 
 \*---------------------------------------------------------------------------*/
@@ -96,6 +96,9 @@ class boundaryDataSurfaceReader
 
         //- Pointer to the surface
         autoPtr<meshedSurface> surfPtr_;
+
+        //- Number of 1D vertex/point elements
+        label nVertexElements_;
 
 
     // Private Member Functions
@@ -186,6 +189,11 @@ public:
 
         //- Return a reference to the surface geometry
         virtual const meshedSurface& geometry(const label timeIndex);
+
+        //- The number of 1D vertex/point elements for the last geometry read.
+        //- Non-zero when the surface reader is used/misused to read
+        //- vertex/point elements instead of faces (advanced option)
+        virtual label nVertexElements() const;
 
         //- Return a list of the available times
         virtual instantList times() const;

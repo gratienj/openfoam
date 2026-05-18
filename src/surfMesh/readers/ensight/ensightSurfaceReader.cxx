@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,8 +42,44 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 
-namespace Foam
+namespace
 {
+
+// Helper function to return Type from std::string_view
+template<class Type>
+void readFrom(std::string_view buffer, Type& value)
+{
+    using namespace Foam;
+
+    ISpanStream is(buffer.data(), buffer.size());
+    is  >> value;
+}
+
+
+// Helper function to return Type from std::string
+template<class Type>
+void readFrom(const std::string& buffer, Type& value)
+{
+    using namespace Foam;
+
+    ISpanStream is(buffer.data(), buffer.size());
+    is  >> value;
+}
+
+
+// Helper function to return Type from std::ssub_match (regex match)
+template<class Type>
+void readFrom(const std::ssub_match& m, Type& value)
+{
+    using namespace Foam;
+
+    if (const auto len = m.length(); len > 0)
+    {
+        ISpanStream is(std::addressof(*(m.first)), len);
+        is  >> value;
+    }
+}
+
 
 // Extract timeset and fileset from split line information
 // when the minElements has been satisfied.
@@ -58,31 +95,30 @@ namespace Foam
 //
 // thus call extractTimeset with minElements == 2
 //
-static inline labelPair extractTimeset
+inline Foam::labelPair extractTimeset
 (
-    const SubStrings& split,
+    const Foam::SubStrings& split,
     const std::size_t minElements
 )
 {
-    ISpanStream is;
+    using namespace Foam;
 
     labelPair result(-1, -1);
-    if (split.size() >= minElements)
+    if (minElements <= split.size())
     {
-        is.reset(split[0]);
-        is >> result.first();
+        readFrom(split[0], result.first());
 
-        if (split.size() > minElements)
+        if (minElements < split.size())
         {
-            is.reset(split[1]);
-            is >> result.second();
+            readFrom(split[1], result.second());
         }
     }
 
     return result;
 }
 
-} // End namespace Foam
+
+} // End anonymous namespace
 
 
 // * * * * * * * * * * Protected Static Member Functions * * * * * * * * * * //
@@ -94,8 +130,7 @@ bool Foam::ensightSurfaceReader::readLine(ISstream& is, std::string& line)
         is.getLine(line);
 
         // Trim out any '#' comments (trailing or otherwise)
-        const auto pos = line.find('#');
-        if (pos != std::string::npos)
+        if (const auto pos = line.find('#'); pos != std::string::npos)
         {
             line.erase(pos);
         }
@@ -238,7 +273,6 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
     }
 
     string buffer;
-    SubStrings split;
 
     ParseSection parseState = ParseSection::UNKNOWN;
 
@@ -289,15 +323,17 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
         {
             FatalIOErrorInFunction(is)
                 << "Error reading geometry 'model:'" << nl
+                << ">>>> " << buffer << " <<<<"
                 << exit(FatalIOError);
         }
 
-        split = stringOps::splitSpace(buffer, pos_colon+1);
+        auto split = stringOps::splitSpace(buffer, pos_colon+1);
 
         if (split.empty())
         {
             FatalIOErrorInFunction(is)
                 << "Error reading geometry 'model:'" << nl
+                << ">>>> " << buffer << " <<<<"
                 << exit(FatalIOError);
         }
 
@@ -317,9 +353,9 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
     }
 
     // Read the field description
-    DynamicList<labelPair> dynFieldTimesets(16);
-    DynamicList<word> dynFieldNames(16);
-    DynamicList<string> dynFieldFileNames(16);
+    DynamicList<labelPair> dynFieldTimesets;
+    DynamicList<word> dynFieldNames;
+    DynamicList<string> dynFieldFileNames;
 
     // VARIABLE
     // ~~~~~~~~
@@ -350,7 +386,7 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
 
         // TODO? handle variable descriptions with spaces (they are quoted)
 
-        split = stringOps::splitSpace(buffer, pos_colon+1);
+        auto split = stringOps::splitSpace(buffer, pos_colon+1);
 
         if (split.size() < 2)
         {
@@ -418,12 +454,18 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
 
     // TIME
     // ~~~~
+    // style 0:
+    // ====
+    // time set:              <int>  [description]
+    // number of steps:       <int>
+    // time values: time_1 .. time_N
+    // ====
+    //
     // style 1:
     // ====
     // time set:              <int>  [description]
     // number of steps:       <int>
-    // filename start number: <int>
-    // filename increment:    <int>
+    // filename numbers:      int_1 .. int_N
     // time values: time_1 .. time_N
     // ====
     //
@@ -431,7 +473,8 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
     // ====
     // time set:              <int>  [description]
     // number of steps:       <int>
-    // filename numbers:      int_1 .. int_N
+    // filename start number: <int>
+    // filename increment:    <int>
     // time values: time_1 .. time_N
     // ====
     //
@@ -443,14 +486,14 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
     // time values file:      <filename>
     // ====
 
-
-    // Currently only handling style 1, style 2
+    // Currently only handling style [0, 1, 2]
     // and only a single time set
 
     // time set = 1
     {
         // time set: <int>
         {
+            // read and discard
             readLine(is, buffer);
         }
 
@@ -458,23 +501,41 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
         label nTimes = 0;
         {
             readLine(is, buffer);
-            split = stringOps::splitSpace(buffer);
+            auto split = stringOps::splitSpace(buffer);
             readFrom(split.back(), nTimes);
         }
 
+        // Next line(s) are one of these:
+
+        // ----
+        // time values: time_1 .. time_N
+        // ----
+        //
+        // ----
         // filename start number: <int>
         // filename increment: <int>
+        // time values: time_1 .. time_N
+        // ----
         //
-        // OR:
-        // filename numbers: ...
+        // ----
+        // filename numbers: <int>
+        // time values: time_1 .. time_N
+        // ----
+        //
+        // filename numbers file: <filename>
+        // time values file:      <filename>
+        // ----
 
         readLine(is, buffer);
-        auto pos_colon = buffer.find(':');
 
-        if (buffer.contains("numbers:"))
+        // Has timeset filename information
+        const bool has_ts_filename = buffer.contains("filename");
+
+        if (has_ts_filename && buffer.contains("numbers:"))
         {
             // Split out trailing values...
-            split = stringOps::splitSpace(buffer, pos_colon+1);
+            auto pos_colon = buffer.find(':');
+            auto split = stringOps::splitSpace(buffer, pos_colon+1);
 
             fileNumbers_.resize_nocopy(nTimes);
 
@@ -510,11 +571,14 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
             timeStartIndex_ = 0;
             timeIncrement_ = 0;
             fileNumbers_.resize(numRead);
+
+            // Get the next line: time values: ...
+            readLine(is, buffer);
         }
-        else
+        else if (has_ts_filename)
         {
             // filename start number: <int>
-            split = stringOps::splitSpace(buffer);
+            auto split = stringOps::splitSpace(buffer);
             readFrom(split.back(), timeStartIndex_);
 
             // filename increment: <int>
@@ -523,6 +587,9 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
             readFrom(split.back(), timeIncrement_);
 
             fileNumbers_.clear();
+
+            // Get the next line: time values: ...
+            readLine(is, buffer);
         }
 
         DebugInfo
@@ -532,27 +599,32 @@ void Foam::ensightSurfaceReader::readCase(ISstream& is)
             << " file numbers: " << flatOutput(fileNumbers_) << nl;
 
 
+        // buffer should current contain
+        // -----------
         // time values: time_1 .. time_N
-        readLine(is, buffer);
+        // -----------
 
         // Split out trailing values...
-        {
-            const auto pos_colon = buffer.find(':');
-            const auto pos_key = buffer.find("values");
 
+        auto split = [](const std::string& s)
+        {
             if
             (
-                (pos_colon == std::string::npos)
-             || (pos_key == std::string::npos) || (pos_colon < pos_key)
+                auto pos_colon = s.find(':'), pos_key = s.find("values:");
+                (
+                    (pos_colon != std::string::npos)
+                 && (pos_key != std::string::npos)
+                 && (pos_key < pos_colon)
+                )
             )
             {
-                split.clear();
+                return stringOps::splitSpace(s, pos_colon+1);
             }
             else
             {
-                split = stringOps::splitSpace(buffer, pos_colon+1);
+                return stringOps::splitSpace(s, std::string::npos);
             }
-        }
+        }(buffer);
 
         timeValues_.resize_nocopy(nTimes);
 
@@ -615,6 +687,10 @@ Foam::ensightSurfaceReader::ensightSurfaceReader
         UPstream::parRun()
      && options.getOrDefault("masterOnly", false)
     ),
+    vertexOnly_
+    (
+        options.getOrDefault("vertexOnly", false)
+    ),
     readFormat_(IOstreamOption::ASCII),  // Placeholder value
     baseDir_(fName.path()),
     meshTimeset_(-1,-1),
@@ -660,6 +736,7 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
 )
 {
     DebugInFunction << endl;
+    vertexElements_.clear();
 
     {
         // Auto-detect ascii/binary format
@@ -678,7 +755,7 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
 
         Pair<idTypes> idHandling = readGeometryHeader(is);
 
-        label nPoints;
+        label nPoints(0);
         is.read(nPoints);
 
         DebugInfo
@@ -703,13 +780,29 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
             is.skip<label>(nPoints);
         }
 
+
+        // Have element ids in the input file
+        const bool skip_element_ids =
+        (
+            idHandling.second() == idTypes::IGNORE
+         || idHandling.second() == idTypes::GIVEN
+        );
+
+
         pointField points;
         is.readPoints(nPoints, points);
 
+        // List of (element-type, count) tuples
+        DynamicList<labelPair> dynTypeInfo(8);
 
-        // Read faces - may be a mix of tria3, quad4, nsided
-        DynamicList<face> dynFaces(nPoints/3);
-        DynamicList<faceInfoTuple> faceTypeInfo(16);
+        // Faces read - may be a mix of tria3, quad4, nsided
+        DynamicList<face> dynFaces;
+
+        if (!vertexOnly_)
+        {
+            // sizing for the worse case
+            dynFaces.reserve(nPoints/3);
+        }
 
         string buffer;
 
@@ -735,149 +828,256 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
 
             if
             (
-                buffer
-             == ensightFaces::elemNames[ensightFaces::elemType::TRIA3]
+                const auto elemType = ensightFaces::elemType::TRIA3;
+                (buffer == ensightFaces::elemNames[elemType])
             )
             {
-                label elemCount;
+                // tria3 has 3 nodes
+                constexpr int element_size = 3;
+                const bool discard = (vertexOnly_);
+
+                label elemCount(0);
                 is.read(elemCount);
 
-                faceTypeInfo.emplace_back
-                (
-                    ensightFaces::elemType::TRIA3,
-                    elemCount
-                );
+                // Record the type/count (-ve = discarded)
+                dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
-                DebugInfo
-                    << "faceType <"
-                    << ensightFaces::elemNames[ensightFaces::elemType::TRIA3]
-                    << "> count: "
-                    << elemCount << nl;
-
-                if
-                (
-                    idHandling.second() == idTypes::IGNORE
-                 || idHandling.second() == idTypes::GIVEN
-                )
+                if (debug)
                 {
-                    DebugInfo
-                        << "Ignore " << elemCount << " element ids" << nl;
+                    Info<< "element <" << buffer.c_str()
+                        << "> count: " << elemCount;
+                    if (skip_element_ids) Info<< " (ignore element ids)";
+                    Info<< nl;
+                }
 
-                    // Read and discard labels
+                if (skip_element_ids)
+                {
+                    // Read and discard element id labels
                     is.skip<label>(elemCount);
                 }
 
-                // Extend and fill the new trailing portion
-                const label startElemi = dynFaces.size();
-                dynFaces.resize(startElemi+elemCount, face(3));  // tria3
-                faceList::subList myElements = dynFaces.slice(startElemi);
-
-                for (auto& f : myElements)
+                if (discard)
                 {
-                    for (label& fp : f)
+                    // Ignore these elements entirely
+                    is.skip<label>(element_size*elemCount);
+                }
+                else
+                {
+                    // Extend and fill the new trailing portion
+                    const auto begElem = dynFaces.size();
+                    dynFaces.resize(begElem+elemCount, face(element_size));
+                    auto elems = dynFaces.slice(begElem);
+
+                    for (auto& f : elems)
                     {
-                        is.read(fp);
+                        for (label& fp : f)
+                        {
+                            is.read(fp);
+                        }
                     }
                 }
             }
             else if
             (
-                buffer
-             == ensightFaces::elemNames[ensightFaces::elemType::QUAD4]
+                const auto elemType = ensightFaces::elemType::QUAD4;
+                buffer == ensightFaces::elemNames[elemType]
             )
             {
-                label elemCount;
+                // quad4 has 4 nodes
+                constexpr int element_size = 4;
+                const bool discard = (vertexOnly_);
+
+                label elemCount(0);
                 is.read(elemCount);
 
-                faceTypeInfo.emplace_back
-                (
-                    ensightFaces::elemType::QUAD4,
-                    elemCount
-                );
+                // Record the type/count (-ve = discarded)
+                dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
-                DebugInfo
-                    << "faceType <"
-                    << ensightFaces::elemNames[ensightFaces::elemType::QUAD4]
-                    << "> count: "
-                    << elemCount << nl;
-
-                if
-                (
-                    idHandling.second() == idTypes::IGNORE
-                 || idHandling.second() == idTypes::GIVEN
-                )
+                if (debug)
                 {
-                    DebugInfo
-                        << "Ignore " << elemCount << " element ids" << nl;
+                    Info<< "element <" << buffer.c_str()
+                        << "> count: " << elemCount;
+                    if (skip_element_ids) Info<< " (ignore element ids)";
+                    Info<< nl;
+                }
 
-                    // Read and discard labels
+                if (skip_element_ids)
+                {
+                    // Read and discard element id labels
                     is.skip<label>(elemCount);
                 }
 
-                // Extend and fill the new trailing portion
-                const label startElemi = dynFaces.size();
-                dynFaces.resize(startElemi + elemCount, face(4));  // quad4
-                faceList::subList myElements = dynFaces.slice(startElemi);
-
-                for (auto& f : myElements)
+                if (discard)
                 {
-                    for (label& fp : f)
+                    // Ignore these elements entirely
+                    is.skip<label>(element_size*elemCount);
+                }
+                else
+                {
+                    // Extend and fill the new trailing portion
+                    const auto begElem = dynFaces.size();
+                    dynFaces.resize(begElem+elemCount, face(element_size));
+                    auto elems = dynFaces.slice(begElem);
+
+                    for (auto& f : elems)
                     {
-                        is.read(fp);
+                        for (label& fp : f)
+                        {
+                            is.read(fp);
+                        }
                     }
                 }
             }
             else if
             (
-                buffer
-             == ensightFaces::elemNames[ensightFaces::elemType::NSIDED]
+                const auto elemType = ensightFaces::elemType::NSIDED;
+                (buffer == ensightFaces::elemNames[elemType])
             )
             {
-                label elemCount;
+                // nsided (polygon) has variable number of nodes
+                const bool discard = (vertexOnly_);
+
+                label elemCount(0);
                 is.read(elemCount);
 
-                faceTypeInfo.emplace_back
-                (
-                    ensightFaces::elemType::NSIDED,
-                    elemCount
-                );
+                // Record the type/count (-ve = discarded)
+                dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
-                DebugInfo
-                    << "faceType <"
-                    << ensightFaces::elemNames[ensightFaces::elemType::NSIDED]
-                    << "> count: " << elemCount << nl;
-
-                if
-                (
-                    idHandling.second() == idTypes::IGNORE
-                 || idHandling.second() == idTypes::GIVEN
-                )
+                if (debug)
                 {
-                    DebugInfo
-                        << "Ignore " << elemCount << " element ids" << nl;
+                    Info<< "element <" << buffer.c_str()
+                        << "> count: " << elemCount;
+                    if (skip_element_ids) Info<< " (ignore element ids)";
+                    Info<< nl;
+                }
 
-                    // Read and discard labels
+                if (skip_element_ids)
+                {
+                    // Read and discard element id labels
                     is.skip<label>(elemCount);
                 }
 
-                // Extend and fill the new trailing portion
-                const label startElemi = dynFaces.size();
-                dynFaces.resize(startElemi + elemCount);
-                faceList::subList myElements = dynFaces.slice(startElemi);
-
-                for (auto& f : myElements)
+                if (discard)
                 {
-                    label nVerts;
-                    is.read(nVerts);
+                    // Ignore these elements entirely
 
-                    f.resize(nVerts);
+                    label nVertsTotal = 0;
+                    for (label i = 0; i < elemCount; ++i)
+                    {
+                        label nVerts(0);
+                        is.read(nVerts);
+                        if (nVerts > 0)
+                        {
+                            nVertsTotal += nVerts;
+                        }
+                    }
+
+                    is.skip<label>(nVertsTotal);
+                }
+                else
+                {
+                    // Extend and fill the new trailing portion
+                    const auto begElem = dynFaces.size();
+                    dynFaces.resize(begElem + elemCount);
+                    auto elems = dynFaces.slice(begElem);
+
+                    for (auto& f : elems)
+                    {
+                        label nVerts(0);
+                        is.read(nVerts);
+
+                        f.resize(nVerts);
+                    }
+
+                    for (auto& f : elems)
+                    {
+                        for (label& fp : f)
+                        {
+                            is.read(fp);
+                        }
+                    }
+                }
+            }
+            else if
+            (
+                const auto elemType = ensightFaces::elemType::BAR2;
+                (buffer == ensightFaces::kw_line())
+            )
+            {
+                // bar2 (line) has 2 nodes per segment
+                constexpr int element_size = 2;
+                constexpr bool discard = true;  // always discard
+
+                label elemCount(0);
+                is.read(elemCount);
+
+                // Record the type/count (-ve = discarded)
+                dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
+
+                if (debug)
+                {
+                    Info<< "ignore: element <" << buffer.c_str()
+                        << "> count: " << elemCount;
+                    if (skip_element_ids) Info<< " (ignore element ids)";
+                    Info<< nl;
                 }
 
-                for (auto& f : myElements)
+                if (skip_element_ids)
                 {
-                    for (label& fp : f)
+                    // Read and discard element id labels
+                    is.skip<label>(elemCount);
+                }
+
+                if constexpr (discard)
+                {
+                    // Ignore these elements entirely
+                    is.skip<label>(element_size*elemCount);
+                }
+            }
+            else if
+            (
+                const auto elemType = ensightFaces::elemType::POINT;
+                (buffer == ensightFaces::kw_vertex())
+            )
+            {
+                // point (vertex) has 1 node
+                constexpr int element_size = 1;
+                const bool discard = (!vertexOnly_);
+
+                label elemCount(0);
+                is.read(elemCount);
+
+                // Record the type/count (-ve = discarded)
+                dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
+
+                if (debug)
+                {
+                    Info<< "element <" << buffer.c_str()
+                        << "> count: " << elemCount;
+                    if (skip_element_ids) Info<< " (ignore element ids)";
+                    Info<< nl;
+                }
+
+                if (skip_element_ids)
+                {
+                    // Read and discard element id labels
+                    is.skip<label>(elemCount);
+                }
+
+                if (discard)
+                {
+                    // Ignore these elements entirely
+                    is.skip<label>(element_size*elemCount);
+                }
+                else
+                {
+                    // The <point> elements are not faces - handle separately
+                    vertexElements_.resize_nocopy(element_size*elemCount);
+                    for (auto& n : vertexElements_)
                     {
-                        is.read(fp);
+                        is.read(n);
+                        // From 1-based (Ensight) -> 0-based (OpenFOAM)
+                        --n;
                     }
                 }
             }
@@ -894,21 +1094,22 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
             }
         }
 
-        // From 1-based Ensight addressing to 0-based OF addressing
+        // From 1-based Ensight addressing to 0-based (OpenFOAM) addressing
         for (auto& f : dynFaces)
         {
-            for (label& fp : f)
+            for (auto& fp : f)
             {
                 --fp;
             }
         }
 
-        faceTypeInfo_.transfer(faceTypeInfo);
+        elemTypeInfo_ = std::move(dynTypeInfo);
         faceList faces(std::move(dynFaces));
 
         DebugInfo
-            << "read nFaces: " << faces.size() << nl
-            << "file schema: " << faceTypeInfo_ << nl;
+            << "read nFaces: " << faces.size()
+            << " (vertex elements: " << vertexElements_.size() << ")" << nl
+            << "file schema: " << elemTypeInfo_ << nl;
 
         return meshedSurface(std::move(points), std::move(faces));
     }
@@ -933,19 +1134,30 @@ const Foam::meshedSurface& Foam::ensightSurfaceReader::geometry
           / ensightCase::expand_mask(meshFileName_, timeIndex)
         );
 
-        if (!masterOnly_ || UPstream::master(UPstream::worldComm))
+        const bool readOnProc =
+        (
+            !masterOnly_ || UPstream::master(UPstream::worldComm)
+        );
+
+        if (readOnProc)
         {
             surf = readGeometry(geomFile, timeIndex);
         }
 
-        if (masterOnly_ && UPstream::parRun())
+        if (masterOnly_)
         {
-            // Note: don't need faceTypeInfo_ on (non-reading) ranks
-            Pstream::broadcast(surf, UPstream::worldComm);
+            // Note: don't need elemTypeInfo_ on (non-reading) ranks
+            Pstream::broadcasts(UPstream::worldComm, surf, vertexElements_);
         }
     }
 
     return *surfPtr_;
+}
+
+
+Foam::label Foam::ensightSurfaceReader::nVertexElements() const
+{
+    return vertexElements_.size();
 }
 
 

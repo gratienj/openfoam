@@ -52,7 +52,8 @@ inline const char* Foam::ensightFaces::key(const elemType etype) noexcept
 }
 
 
-inline const Foam::FixedList<Foam::label,3>& Foam::ensightFaces::totals() const
+inline const Foam::FixedList<Foam::label,3>&
+Foam::ensightFaces::totals() const noexcept
 {
     return sizes_;
 }
@@ -76,7 +77,8 @@ inline Foam::labelRange Foam::ensightFaces::range(const elemType etype) const
 }
 
 
-inline const Foam::labelList& Foam::ensightFaces::faceIds() const noexcept
+inline const Foam::labelUList&
+Foam::ensightFaces::faceIds() const noexcept
 {
     return addressing();
 }
@@ -101,7 +103,7 @@ inline bool Foam::ensightFaces::usesFlipMap() const
 }
 
 
-inline const Foam::labelList&
+inline const Foam::labelUList&
 Foam::ensightFaces::faceOrder() const noexcept
 {
     return faceOrder_;

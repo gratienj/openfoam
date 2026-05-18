@@ -75,17 +75,20 @@ class ensightReadFile
         //- and scan for transient single-file format.
         void init(bool detectFormat);
 
-        //- No copy construct
-        ensightReadFile(const ensightReadFile&) = delete;
-
-        //- No copy assignment
-        void operator=(const ensightReadFile&) = delete;
-
 
 public:
 
     //- Debug switch
     static int debug;
+
+
+    // Generated Methods
+
+        //- No copy construct
+        ensightReadFile(const ensightReadFile&) = delete;
+
+        //- No copy assignment
+        void operator=(const ensightReadFile&) = delete;
 
 
     // Constructors
@@ -202,19 +205,6 @@ public:
         //- Transient single-file:
         //- seek to the file position corresponding to the given time index.
         bool seekTime(const label timeIndex);
-
-
-    // Housekeeping
-
-        //- Detect if the file is \em binary by testing for initial
-        //- "(C|Fortran) Binary"
-        FOAM_DEPRECATED_FOR(2024-05, "detected on construct")
-        static IOstreamOption::streamFormat
-        detectBinaryHeader(const fileName& pathname)
-        {
-            ensightReadFile reader(pathname);
-            return reader.format();
-        }
 };
 
 

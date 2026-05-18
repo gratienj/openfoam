@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -163,9 +164,7 @@ Foam::boundaryDataSurfaceReader::boundaryDataSurfaceReader
     surfaceReader(fName, options),
     baseDir_(fName.path()),
     pointsName_(pointsName),
-    timeValues_(),
-    fieldNames_(),
-    surfPtr_(nullptr)
+    nVertexElements_(0)
 {
     options.readIfPresent("points", pointsName_);
 
@@ -191,9 +190,20 @@ const Foam::meshedSurface& Foam::boundaryDataSurfaceReader::geometry
     {
         surfPtr_.reset(new meshedSurface);
         readGeometry(*surfPtr_, timeIndex);
+
+        // Update information.
+        // NB: use points().size() NOT nPoints(), since that would count the
+        // number of mesh points used by the faces (ie, == 0)
+        nVertexElements_ = surfPtr_->points().size();
     }
 
     return *surfPtr_;
+}
+
+
+Foam::label Foam::boundaryDataSurfaceReader::nVertexElements() const
+{
+    return nVertexElements_;
 }
 
 
