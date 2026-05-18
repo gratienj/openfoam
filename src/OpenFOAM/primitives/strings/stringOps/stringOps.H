@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2012 OpenFOAM Foundation
     Copyright (C) 2016-2026 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -375,28 +376,30 @@ namespace stringOps
     //  Behaviour is ill-defined if delim is a NUL character.
     Foam::SubStrings split
     (
-        //! The string to split
+        //! The string to split (no splitting if it is an empty string)
         const std::string& str,
         //! The delimiter for splitting. Ill-defined if NUL character
         const char delim,
-        //! Offset within string to start splitting
+        //! Offset within \p str to start splitting.
+        //! No splitting if \c npos or beyond the end of \p str
         std::string::size_type pos = 0,
-        //! Retain empty fields
-        const bool keepEmpty = false
+        //! Do not prune empty sub-strings
+        const bool keep_empty = false
     );
 
     //- Split string into sub-strings using delimiter string.
     //  Empty sub-strings are normally suppressed.
     Foam::SubStrings split
     (
-        //! The string to split
+        //! The string to split (no splitting if it is an empty string)
         const std::string& str,
         //! The delimiters for splitting. Ill-defined if empty
         const std::string& delim,
-        //! Offset within string to start splitting
+        //! Offset within \p str to start splitting.
+        //! No splitting if \c npos or beyond the end of \p str
         std::string::size_type pos = 0,
-        //! Retain empty fields
-        const bool keepEmpty = false
+        //! Do not prune empty sub-strings
+        const bool keep_empty = false
     );
 
     //- Split string into sub-strings using any characters in delimiter.
@@ -404,11 +407,12 @@ namespace stringOps
     //  Behaviour is ill-defined if delim is an empty string.
     Foam::SubStrings splitAny
     (
-        //! The string to split
+        //! The string to split (no splitting if it is an empty string)
         const std::string& str,
         //! The delimiters for splitting. Ill-defined if empty!
         const std::string& delim,
-        //! Offset within string to start splitting
+        //! Offset within \p str to start splitting.
+        //! No splitting if \c npos or beyond the end of \p str
         std::string::size_type pos = 0
     );
 
@@ -416,11 +420,12 @@ namespace stringOps
     //  Behaviour is ill-defined if width is zero.
     Foam::SubStrings splitFixed
     (
-        //! The string to split
+        //! The string to split (no splitting if it is an empty string)
         const std::string& str,
         //! Fixed field width for each sub-string
         const std::string::size_type width,
-        //! Offset within string to start splitting
+        //! Offset within \p str to start splitting.
+        //! No splitting if \c npos or beyond the end of \p str
         std::string::size_type pos = 0
     );
 
@@ -428,9 +433,10 @@ namespace stringOps
     //  Empty sub-strings are suppressed.
     Foam::SubStrings splitSpace
     (
-        //! The string to split
+        //! The string to split (no splitting if it is an empty string)
         const std::string& str,
-        //! Offset within string to start splitting
+        //! Offset within \p str to start splitting.
+        //! No splitting if \c npos or beyond the end of \p str
         std::string::size_type pos = 0
     );
 

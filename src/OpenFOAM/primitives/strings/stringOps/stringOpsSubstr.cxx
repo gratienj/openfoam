@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,14 +35,14 @@ Foam::SubStrings Foam::stringOps::split
     const std::string& str,
     const char delim,
     std::string::size_type pos,
-    const bool keepEmpty
+    const bool keep_empty
 )
 {
     Foam::SubStrings list;
 
     if
     (
-        !delim
+        !delim || str.empty()
      || (pos == std::string::npos || pos >= str.size())
     )
     {
@@ -53,7 +54,7 @@ Foam::SubStrings Foam::stringOps::split
     std::string::size_type end;
     while ((end = str.find(delim, pos)) != std::string::npos)
     {
-        if (keepEmpty || (pos < end))
+        if (keep_empty || (pos < end))
         {
             list.append(str.cbegin() + pos, str.cbegin() + end);
         }
@@ -61,7 +62,7 @@ Foam::SubStrings Foam::stringOps::split
     }
 
     // Trailing element
-    if (keepEmpty ? (pos <= str.size()) : (pos < str.size()))
+    if (keep_empty ? (pos <= str.size()) : (pos < str.size()))
     {
         list.append(str.cbegin() + pos, str.cend());
     }
@@ -75,14 +76,14 @@ Foam::SubStrings Foam::stringOps::split
     const std::string& str,
     const std::string& delim,
     std::string::size_type pos,
-    const bool keepEmpty
+    const bool keep_empty
 )
 {
     Foam::SubStrings list;
 
     if
     (
-        delim.empty()
+        delim.empty() || str.empty()
      || (pos == std::string::npos || pos >= str.size())
     )
     {
@@ -94,7 +95,7 @@ Foam::SubStrings Foam::stringOps::split
     std::string::size_type end;
     while ((end = str.find(delim, pos)) != std::string::npos)
     {
-        if (keepEmpty || (pos < end))
+        if (keep_empty || (pos < end))
         {
             list.append(str.cbegin() + pos, str.cbegin() + end);
         }
@@ -102,7 +103,7 @@ Foam::SubStrings Foam::stringOps::split
     }
 
     // Trailing element
-    if (keepEmpty ? (pos <= str.size()) : (pos < str.size()))
+    if (keep_empty ? (pos <= str.size()) : (pos < str.size()))
     {
         list.append(str.cbegin() + pos, str.cend());
     }
@@ -122,7 +123,7 @@ Foam::SubStrings Foam::stringOps::splitAny
 
     if
     (
-        delim.empty()
+        delim.empty() || str.empty()
      || (pos == std::string::npos || pos >= str.size())
     )
     {
@@ -163,7 +164,7 @@ Foam::SubStrings Foam::stringOps::splitFixed
 
     if
     (
-        !width
+        !width || str.empty()
      || (pos == std::string::npos || pos >= str.size())
     )
     {
