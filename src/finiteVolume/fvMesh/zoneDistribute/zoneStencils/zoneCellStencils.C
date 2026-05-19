@@ -75,7 +75,7 @@ Foam::zoneCellStencils::nonEmptyFacesPatch() const
         IndirectList<face>
         (
             meshRef_.faces(),
-            nonEmptyFaces
+            std::move(nonEmptyFaces)
         ),
         meshRef_.points()
     );
@@ -117,7 +117,7 @@ Foam::zoneCellStencils::allCoupledFacesPatch() const
         IndirectList<face>
         (
             meshRef_.faces(),
-            coupledFaces
+            std::move(coupledFaces)
         ),
         meshRef_.points()
     );

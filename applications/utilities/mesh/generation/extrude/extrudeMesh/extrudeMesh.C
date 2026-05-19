@@ -458,11 +458,7 @@ int main(int argc, char *argv[])
 
         indirectPrimitivePatch extrudePatch
         (
-            IndirectList<face>
-            (
-                mesh.faces(),
-                meshFaces
-            ),
+            IndirectList<face>(mesh.faces(), std::move(meshFaces)),
             mesh.points()
         );
 

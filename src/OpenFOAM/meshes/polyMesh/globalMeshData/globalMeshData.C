@@ -2115,11 +2115,7 @@ const Foam::indirectPrimitivePatch& Foam::globalMeshData::coupledPatch() const
         (
             new indirectPrimitivePatch
             (
-                IndirectList<face>
-                (
-                    mesh_.faces(),
-                    coupledFaces
-                ),
+                IndirectList<face>(mesh_.faces(), std::move(coupledFaces)),
                 mesh_.points()
             )
         );

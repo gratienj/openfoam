@@ -2300,15 +2300,19 @@ Foam::label Foam::polyMeshAdder::procPatchPairs
 
 
     // Check that all processors have the same globalPatches
+    if (meshes.size() > 1)
     {
-        const polyBoundaryMesh& pbm = meshes[0].boundaryMesh();
-        const wordList names0(SubList<word>(pbm.names(), pbm.nNonProcessor()));
+        const auto& pbm0 = meshes[0].boundaryMesh();
+        DynamicList<word> names0(pbm0.names());
+        names0.resize(pbm0.nNonProcessor());
+
         for (label proci = 1; proci < meshes.size(); proci++)
         {
-            const polyBoundaryMesh& pbm = meshes[proci].boundaryMesh();
-            const wordList names(pbm.names());
+            const auto& pbm = meshes[proci].boundaryMesh();
+            DynamicList<word> names(pbm.names());
+            names.resize(pbm.nNonProcessor());
 
-            if (SubList<word>(names, pbm.nNonProcessor()) != names0)
+            if (names != names0)
             {
                 FatalErrorInFunction
                     << "Patch names should be identical on all processors."

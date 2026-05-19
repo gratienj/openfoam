@@ -104,7 +104,7 @@ Foam::externalDisplacementMeshMover::getPatch
 
     return autoPtr<indirectPrimitivePatch>::New
     (
-        IndirectList<face>(mesh.faces(), addressing),
+        IndirectList<face>(mesh.faces(), std::move(addressing)),
         mesh.points()
     );
 }

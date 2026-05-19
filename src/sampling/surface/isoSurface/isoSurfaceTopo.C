@@ -1533,7 +1533,7 @@ Foam::isoSurfaceTopo::isoSurfaceTopo
         while (true)
         {
             // Shadow the surface for the purposes of erosion
-            uindirectPrimitivePatch erosion
+            const uindirectPrimitivePatch erosion
             (
                 UIndirectList<face>(surf, faceAddr),
                 surf.points()

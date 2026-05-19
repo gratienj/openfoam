@@ -239,7 +239,7 @@ void Foam::functionObjects::cellDecomposer::makeMesh
             OBJstream os(mesh_.time().path()/"orig_faces.obj");
             os.write
             (
-                UIndirectList<face>
+                IndirectList<face>
                 (
                     mesh_.faces(),
                     decomposeFacePtr().sortedToc()

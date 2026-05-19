@@ -154,9 +154,7 @@ bool Foam::sampledFaceZone::update()
     faceId_.resize_nocopy(numFaces);
     facePatchId_.resize_nocopy(numFaces);
 
-    IndirectList<face> selectedFaces(mesh().faces(), labelList());
-    labelList& meshFaceIds = selectedFaces.addressing();
-    meshFaceIds.resize_nocopy(numFaces);
+    labelList meshFaceIds(numFaces);
 
     numFaces = 0;
 
@@ -207,7 +205,11 @@ bool Foam::sampledFaceZone::update()
     facePatchId_.resize(numFaces);
     meshFaceIds.resize(numFaces);
 
-    uindirectPrimitivePatch zoneFaces(selectedFaces, mesh().points());
+    uindirectPrimitivePatch zoneFaces
+    (
+        UIndirectList<face>(mesh().faces(), meshFaceIds),
+        mesh().points()
+    );
 
     this->storedPoints() = zoneFaces.localPoints();
     this->storedFaces()  = zoneFaces.localFaces();

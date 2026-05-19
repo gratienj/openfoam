@@ -862,10 +862,9 @@ Foam::label Foam::shortestPathSet::erodeFaceSet
 
         // Get number of edges
 
-        const labelList meshFaceIDs(isLeakFace.toc());
-        const uindirectPrimitivePatch pp
+        const indirectPrimitivePatch pp
         (
-            UIndirectList<face>(mesh.faces(), meshFaceIDs),
+            IndirectList<face>(mesh.faces(), isLeakFace.sortedToc()),
             mesh.points()
         );
 

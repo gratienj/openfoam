@@ -222,7 +222,7 @@ Foam::cellToCellStencil::allCoupledFacesPatch() const
         IndirectList<face>
         (
             mesh().faces(),
-            coupledFaces
+            std::move(coupledFaces)
         ),
         mesh().points()
     );

@@ -134,7 +134,7 @@ Foam::sampledPatchInternalField::sampleOnPoints
 
     indirectPrimitivePatch allPatches
     (
-        IndirectList<face>(mesh().faces(), meshFaceLabels),
+        IndirectList<face>(mesh().faces(), std::move(meshFaceLabels)),
         mesh().points()
     );
 

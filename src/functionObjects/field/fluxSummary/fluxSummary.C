@@ -485,9 +485,9 @@ void Foam::functionObjects::fluxSummary::initialiseCellZoneAndDirection
     }
 
     // Convert into primitivePatch for convenience
-    indirectPrimitivePatch patch
+    const indirectPrimitivePatch patch
     (
-        IndirectList<face>(mesh_.faces(), faceIDs),
+        IndirectList<face>(mesh_.faces(), std::move(faceIDs)),
         mesh_.points()
     );
 
