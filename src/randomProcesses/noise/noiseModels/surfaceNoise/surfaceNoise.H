@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -101,6 +102,8 @@ Description
       Property     | Description                           | Type | Req'd | Dflt
       commsType    | Communication type for send/receive field | word | no  | scheduled
       broadcast    | (Experimental) broadcast all fields   | bool | no | false
+      readOptions  | Reader options                        | dict | no | -
+      writeOptions | Writer and writing options            | dict | no | -
     \endtable
 
 SourceFiles
@@ -116,6 +119,7 @@ SeeAlso
 
 #include "noiseModel.H"
 #include "scalarField.H"
+#include "MeshedSurfacesFwd.H"
 #include "UPstream.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -164,6 +168,9 @@ protected:
         //- Global number of surface faces
         label nFaces_;
 
+        //- Global number of surface face centres (alternative to nFaces_)
+        label nFaceCentres_;
+
         //- Frequency data output interval, default = 1
         //  nSamples/2 data points are returned from the FFT, which can
         //  result in a very large number of output files (1 per frequency)
@@ -182,6 +189,9 @@ protected:
         //- Reader type
         word readerType_;
 
+        //- Reader options
+        dictionary readerOptions_;
+
         //- Pointer to the surface reader
         mutable autoPtr<surfaceReader> readerPtr_;
 
@@ -197,27 +207,30 @@ protected:
         //- Read surface data
         void readSurfaceData
         (
-            const globalIndex& procFaceAddr,
+            const globalIndex& procElemAddr,
             List<scalarField>& pData
         );
 
         //- Calculate the area average value
         scalar surfaceAverage
         (
+            //! The surface reference (eg, for magSf etc)
+            const meshedSurface& surf,
             const scalarField& data,
-            const globalIndex& procFaceAddr
+            const globalIndex& procElemAddr
         ) const;
 
-        //- Write surface data to file
+        //- Write surface data using the current writerPtr_,
+        //- which must already be associated with the \p surf surface.
         //  Returns the area average value
         scalar writeSurfaceData
         (
-            const fileName& outDirBase,
-            const word& fName,
+            //! The surface reference (eg, for magSf etc)
+            const meshedSurface& surf,
             const word& title,
             const scalar freq,
             const scalarField& data,
-            const globalIndex& procFaceAddr,
+            const globalIndex& procElemAddr,
             const bool writeSurface
         ) const;
 
@@ -238,7 +251,7 @@ public:
     );
 
     //- Destructor
-    virtual ~surfaceNoise() = default;
+    virtual ~surfaceNoise();
 
 
     // Public Member Functions
