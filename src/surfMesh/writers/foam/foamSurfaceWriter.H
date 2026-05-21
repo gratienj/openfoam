@@ -89,7 +89,7 @@ Description
     \endverbatim
 
 SourceFiles
-    foamSurfaceWriter.C
+    foamSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

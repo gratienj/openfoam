@@ -117,16 +117,20 @@ Foam::fileName Foam::surfaceWriters::rawWriter::writeTemplate
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
 
+    const bool withFaceNormal =
+    (
+        writeNormal_ && (!this->isPointData() && !this->vertexOutput())
+    );
+
     if (UPstream::master() || !parallel_)
     {
         const auto& values = tfield();
         const pointField& points = surf.points();
         const faceList& faces = surf.faces();
-        const bool withFaceNormal = (writeNormal_ && !this->isPointData());
 
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         OFstream os(outputFile, streamOpt_);
@@ -155,9 +159,9 @@ Foam::fileName Foam::surfaceWriters::rawWriter::writeTemplate
         }
 
 
-        if (this->isPointData())
+        if (this->isPointData() || this->vertexOutput())
         {
-            // Node values
+            // Node or faceCentre values
             forAll(values, elemi)
             {
                 writePoint(os, points[elemi]);

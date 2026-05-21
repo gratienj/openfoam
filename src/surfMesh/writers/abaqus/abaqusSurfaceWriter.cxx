@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,7 +49,7 @@ namespace surfaceWriters
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // Field writing implementation
-#include "abaqusSurfaceWriterImpl.C"
+#include "abaqusSurfaceWriter_impl.cxx"
 
 // Field writing methods
 defineSurfaceWriterWriteFields(Foam::surfaceWriters::abaqusWriter);
@@ -121,6 +122,13 @@ void Foam::surfaceWriters::abaqusWriter::writeGeometry
     const faceList&    faces = surf.faces();
     const labelList&   zones = surf.zoneIds();
     const labelList& elemIds = surf.faceIds();
+
+    if (this->vertexOutput())
+    {
+        Warning
+            << "No vertexOutput() support for <"
+            << this->type() << "> surface output" << endl;
+    }
 
     // Possible to use faceIds?
     bool useOrigFaceIds =
@@ -331,9 +339,9 @@ Foam::fileName Foam::surfaceWriters::abaqusWriter::write()
 
     if (UPstream::master() || !parallel_)
     {
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         OFstream os(outputFile);

@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018-2026 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,7 +41,8 @@ Foam::vtk::surfaceWriter::surfaceWriter
 
     points_(std::cref<pointField>(points)),
     faces_(std::cref<faceList>(faces)),
-    instant_()
+    instant_(),
+    vertexOutput_(false)
 {}
 
 
@@ -103,7 +105,14 @@ bool Foam::vtk::surfaceWriter::beginFile(std::string title)
 
 bool Foam::vtk::surfaceWriter::writeGeometry()
 {
-    return writePolyGeometry(points_.get(), faces_.get());
+    if (vertexOutput_)
+    {
+        return writeVertGeometry(points_.get());
+    }
+    else
+    {
+        return writePolyGeometry(points_.get(), faces_.get());
+    }
 }
 
 

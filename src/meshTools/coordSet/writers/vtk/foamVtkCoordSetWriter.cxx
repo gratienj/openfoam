@@ -67,7 +67,7 @@ void Foam::vtk::coordSetWriter::beginPiece()
             }
             break;
         }
-        case elemOutputType::POINT_ELEMENTS:
+        case elemOutputType::VERTEX_ELEMENTS:
         {
             // Vertex cells instead of lines
             cellSlab_ = pointSlab_;
@@ -104,7 +104,7 @@ void Foam::vtk::coordSetWriter::beginPiece()
 
         if (nTotalCells())
         {
-            if (elemOutput_ == elemOutputType::POINT_ELEMENTS)
+            if (elemOutput_ == elemOutputType::VERTEX_ELEMENTS)
             {
                 format().xmlAttr(vtk::fileAttr::NUMBER_OF_VERTS, nTotalCells());
             }
@@ -137,7 +137,7 @@ void Foam::vtk::coordSetWriter::writeLines_legacy()
 {
     if
     (
-        (elemOutput_ == elemOutputType::POINT_ELEMENTS)
+        (elemOutput_ == elemOutputType::VERTEX_ELEMENTS)
      || (cellSlab_.total() == 0)
     )
     {
@@ -181,7 +181,7 @@ void Foam::vtk::coordSetWriter::writeLines()
 {
     if
     (
-        (elemOutput_ == elemOutputType::POINT_ELEMENTS)
+        (elemOutput_ == elemOutputType::VERTEX_ELEMENTS)
      || (cellSlab_.total() == 0)
     )
     {
@@ -401,7 +401,7 @@ bool Foam::vtk::coordSetWriter::writeGeometry()
 
     writePoints();
 
-    if (elemOutput_ == elemOutputType::POINT_ELEMENTS)
+    if (elemOutput_ == elemOutputType::VERTEX_ELEMENTS)
     {
         if (label nTotalVerts = cellSlab_.total(); nTotalVerts > 0)
         {

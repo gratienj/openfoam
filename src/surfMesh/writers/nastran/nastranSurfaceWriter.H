@@ -107,8 +107,7 @@ Note
     Output variable scaling does not apply to integer types such as Ids.
 
 SourceFiles
-    nastranSurfaceWriter.C
-    nastranSurfaceWriterImpl.C
+    nastranSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

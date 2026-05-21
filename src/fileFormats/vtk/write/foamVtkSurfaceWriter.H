@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018-2026 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -79,8 +80,12 @@ class surfaceWriter
         //- Time name/value
         instant instant_;
 
+        //- Output as 1D vertex/point elements instead of faces
+        bool vertexOutput_;
 
-    // Private Member Functions
+public:
+
+    // Generated Methods
 
         //- No copy construct
         surfaceWriter(const surfaceWriter&) = delete;
@@ -88,8 +93,6 @@ class surfaceWriter
         //- No copy assignment
         void operator=(const surfaceWriter&) = delete;
 
-
-public:
 
     // Constructors
 
@@ -129,6 +132,17 @@ public:
 
 
     // Member Functions
+
+        //- Output as 1D vertex/point elements instead of faces
+        bool vertexOutput() const noexcept { return vertexOutput_; }
+
+        //- Output as 1D vertex/point elements instead of faces
+        bool vertexOutput(bool on) noexcept
+        {
+            bool old(vertexOutput_);
+            vertexOutput_ = on;
+            return old;
+        }
 
         //- Define a time name/value for the output
         virtual void setTime(const instant& inst);

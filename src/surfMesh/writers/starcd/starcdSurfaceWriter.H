@@ -75,7 +75,7 @@ Description
     \endverbatim
 
 SourceFiles
-    starcdSurfaceWriter.C
+    starcdSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

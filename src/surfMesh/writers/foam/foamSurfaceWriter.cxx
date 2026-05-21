@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -118,6 +119,12 @@ Foam::fileName Foam::surfaceWriters::foamWriter::write()
         Info<< "Writing geometry to " << surfaceDir << endl;
     }
 
+    if (this->vertexOutput())
+    {
+        Warning
+            << "No vertexOutput() support for <"
+            << this->type() << "> surface output" << endl;
+    }
 
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
@@ -127,9 +134,9 @@ Foam::fileName Foam::surfaceWriters::foamWriter::write()
         const pointField& points = surf.points();
         const faceList& faces = surf.faces();
 
-        if (!isDir(surfaceDir))
+        if (!Foam::isDir(surfaceDir))
         {
-            mkDir(surfaceDir);
+            Foam::mkDir(surfaceDir);
         }
 
         // Points
@@ -205,9 +212,9 @@ Foam::fileName Foam::surfaceWriters::foamWriter::writeTemplate
 
     if (UPstream::master())
     {
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         // Write field

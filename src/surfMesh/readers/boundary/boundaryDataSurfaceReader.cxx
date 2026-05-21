@@ -234,7 +234,7 @@ Foam::wordList Foam::boundaryDataSurfaceReader::fieldNames
         items.begin(),
         items.end(),
         fieldNames_.begin(),
-        [](const fileName& f) { return word(f); }
+        [](const auto& f) { return word(f); }
     );
 
     Foam::sort(fieldNames_);

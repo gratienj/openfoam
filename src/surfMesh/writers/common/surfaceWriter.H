@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2012 OpenFOAM Foundation
     Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -102,7 +103,7 @@ Note
     or be removed in the future!
 
 SourceFiles
-    surfaceWriter.C
+    surfaceWriter.cxx
     surfaceWriterI.H
 
 \*---------------------------------------------------------------------------*/
@@ -122,9 +123,6 @@ SourceFiles
 #include "UPstream.H"
 #include "InfoProxy.H"
 #include "runTimeSelectionTables.H"
-
-// Deprecated methods
-// #define Foam_surfaceWriter_directAccess
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -188,6 +186,9 @@ protected:
 
         //- Is point vs cell data
         bool isPointData_;
+
+        //- Output as 1D vertex/point elements instead of faces
+        bool vertexOutput_;
 
         //- Additional output verbosity
         bool verbose_;
@@ -483,7 +484,13 @@ public:
 
         //- Set handling of field data to face/point data
         //  \return old value
-        inline bool isPointData(const bool on) noexcept;
+        inline bool isPointData(bool on) noexcept;
+
+        //- Output as 1D vertex/point elements instead of faces
+        inline bool vertexOutput() const noexcept;
+
+        //- Output as 1D vertex/point elements instead of faces
+        inline bool vertexOutput(bool on) noexcept;
 
         //- Should a time directory be spliced into the output path?
         inline bool useTimeDir() const noexcept;
@@ -642,28 +649,6 @@ public:
             Ostream& os,
             const InfoProxy<surfaceWriter>& iproxy
         );
-
-
-    // Housekeeping
-
-        #ifdef Foam_surfaceWriter_directAccess
-
-        //- Access number of expected output fields.
-        label& nFields() { return nFields_; }
-
-        //- Access handling of face/point data
-        bool& isPointData() { return isPointData_; }
-
-        //- Access handling of spliced output path
-        bool& useTimeDir() { return useTimeDir_; }
-
-        //- Access output verbosity
-        bool& verbose() { return verbose_; }
-
-        //- Access value of the point merge dimension
-        scalar& mergeDim() { return mergeDim_; }
-
-        #endif
 };
 
 

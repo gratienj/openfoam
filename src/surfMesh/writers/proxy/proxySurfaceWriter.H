@@ -57,7 +57,7 @@ Note
     \endtable
 
 SourceFiles
-    proxySurfaceWriter.C
+    proxySurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

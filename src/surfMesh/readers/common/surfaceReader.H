@@ -31,7 +31,8 @@ Description
     Abstract base class for surface readers with fields.
 
     Some readers support different input options, these are typically
-    specified as 'readOptions' in the containing dictionary.
+    specified as 'formatOptions' (or 'readOptions') in the containing
+    dictionary.
 
     \verbatim
     readOptions
@@ -44,6 +45,7 @@ Description
         ensight
         {
             masterOnly  false;
+            vertexOnly  false;
         }
     }
     \endverbatim

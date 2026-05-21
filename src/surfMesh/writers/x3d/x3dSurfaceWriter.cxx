@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -214,14 +215,22 @@ Foam::fileName Foam::surfaceWriters::x3dWriter::write()
         Info<< "Writing geometry to " << outputFile << endl;
     }
 
+    if (this->vertexOutput())
+    {
+        Warning
+            << "No vertexOutput() support for <"
+            << this->type()
+            << "> surface output" << endl;
+    }
+
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
 
     if (UPstream::master() || !parallel_)
     {
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         MeshedSurfaceProxy<face>(surf.points(), surf.faces()).write
@@ -302,9 +311,9 @@ Foam::fileName Foam::surfaceWriters::x3dWriter::writeTemplate
         range.min() -= VSMALL;
         range.max() += VSMALL;
 
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         OFstream os(outputFile, streamOpt_);
@@ -315,7 +324,7 @@ Foam::fileName Foam::surfaceWriters::x3dWriter::writeTemplate
 
         // For point field: "colorPerVetex=true"
         os  << "  <IndexedFaceSet"
-            << " colorPerVertex='" << Switch(this->isPointData()) << "'"
+            << " colorPerVertex='" << Switch::name(this->isPointData()) << "'"
             << " coordIndex='" << nl;
 
         for (const auto& f : surf.faces())

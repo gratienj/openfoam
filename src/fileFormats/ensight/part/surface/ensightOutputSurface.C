@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,7 +40,8 @@ Foam::ensightOutputSurface::ensightOutputSurface
 :
     ensightFaces(description),
     points_(points),
-    faces_(faces)
+    faces_(faces),
+    vertexOutput_(false)
 {
     // Classify face types
     classify(faces);
@@ -50,7 +52,12 @@ Foam::ensightOutputSurface::ensightOutputSurface
 
 void Foam::ensightOutputSurface::write(ensightGeoFile& os) const
 {
-    if (!total())
+    const bool hasGeometry =
+    (
+        vertexOutput_ ? !points_.empty() : (total() > 0)
+    );
+
+    if (!hasGeometry)
     {
         return;
     }
@@ -66,14 +73,36 @@ void Foam::ensightOutputSurface::write(ensightGeoFile& os) const
         false // serial
     );
 
-    // Faces
-    ensightOutput::writeFaceConnectivity
-    (
-        os,
-        *this,
-        faces_,
-        false  // serial
-    );
+    if (vertexOutput_)
+    {
+        if
+        (
+            const label nTotalVerts = points_.size();
+            (nTotalVerts && UPstream::master()) // serial only
+        )
+        {
+            os.writeKeyword(ensightFaces::kw_vertex());
+            os.write(nTotalVerts);
+            os.newline();
+
+            for (label pointi = 0; pointi < nTotalVerts; ++pointi)
+            {
+                os.write(pointi+1);  // From 0-based to 1-based index
+                os.newline();
+            }
+        }
+    }
+    else
+    {
+        // Faces
+        ensightOutput::writeFaceConnectivity
+        (
+            os,
+            *this,
+            faces_,
+            false  // serial
+        );
+    }
 }
 
 

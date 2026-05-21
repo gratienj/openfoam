@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -228,13 +229,13 @@ Foam::ensightOutput::Detail::getPolysFacePoints
 (
     const polyMesh& mesh,
     const labelUList& addr,
-    const labelList& pointMap
+    const labelUList& pointMap
 )
 {
     ///const cellList& meshCells = mesh.cells();
     const cellList& meshCells = manifoldCellsMeshObject::New(mesh).cells();
     const faceList& meshFaces = mesh.faces();
-    const labelList& owner = mesh.faceOwner();
+    const auto& owner = mesh.faceOwner();
 
 
     // The caller should have already checked for possible overflow,
@@ -304,13 +305,13 @@ void Foam::ensightOutput::writePolysPoints
     ensightGeoFile& os,
     const polyMesh& mesh,
     const labelUList& addr,
-    const labelList& pointMap
+    const labelUList& pointMap
 )
 {
     ///const cellList& meshCells = mesh.cells();
     const cellList& meshCells = manifoldCellsMeshObject::New(mesh).cells();
     const faceList& meshFaces = mesh.faces();
-    const labelList& owner = mesh.faceOwner();
+    const auto& owner = mesh.faceOwner();
 
     const label off = (1);  // 1-based for Ensight
 
@@ -401,16 +402,14 @@ void Foam::ensightOutput::writeFaceConnectivity
         return;
     }
 
-    parallel = parallel && Pstream::parRun();
-
     const IntRange<int> senders =
     (
-        parallel
-      ? Pstream::subProcs()
+        (parallel && UPstream::parRun())
+      ? UPstream::subProcs()
       : IntRange<int>()
     );
 
-    if (Pstream::master())
+    if (UPstream::master())
     {
         os.writeKeyword(ensightFaces::key(etype));
         os.write(nTotal);
@@ -421,59 +420,47 @@ void Foam::ensightOutput::writeFaceConnectivity
     {
         // Face sizes (number of points per face)
 
-        labelList send(ensightOutput::Detail::getFaceSizes(faces));
+        labelList sizes(ensightOutput::Detail::getFaceSizes(faces));
 
-        if (Pstream::master())
+        if (UPstream::master())
         {
             // Main
-            os.writeLabels(send);
+            os.writeLabels(sizes);
 
             // Others
-            for (const int proci : senders)
+            for (int proci : senders)
             {
-                IPstream fromOther(Pstream::commsTypes::scheduled, proci);
-                labelList recv(fromOther);
+                labelList values;
+                IPstream::recv(values, proci);
 
-                os.writeLabels(recv);
+                os.writeLabels(values);
             }
         }
         else if (senders)
         {
-            OPstream toMaster
-            (
-                Pstream::commsTypes::scheduled,
-                Pstream::masterNo()
-            );
-
-            toMaster << send;
+            OPstream::send(sizes, UPstream::masterNo());
         }
     }
 
 
     // List of points id for each face
-    if (Pstream::master())
+    if (UPstream::master())
     {
         // Main
         writeFaceList(os, faces);
 
         // Others
-        for (const int proci : senders)
+        for (int proci : senders)
         {
-            IPstream fromOther(Pstream::commsTypes::scheduled, proci);
-            List<face> recv(fromOther);
+            List<face> values;
+            IPstream::recv(values, proci);
 
-            writeFaceList(os, recv);
+            writeFaceList(os, values);
         }
     }
     else if (senders)
     {
-        OPstream toMaster
-        (
-            Pstream::commsTypes::scheduled,
-            Pstream::masterNo()
-        );
-
-        toMaster << faces;
+        OPstream::send(faces, UPstream::masterNo());
     }
 }
 
@@ -492,17 +479,14 @@ void Foam::ensightOutput::writeFaceConnectivity
         return;
     }
 
-    parallel = parallel && Pstream::parRun();
-
     const IntRange<int> senders =
     (
-        parallel
-      ? Pstream::subProcs()
+        (parallel && UPstream::parRun())
+      ? UPstream::subProcs()
       : IntRange<int>()
     );
 
-
-    if (Pstream::master())
+    if (UPstream::master())
     {
         os.writeKeyword(ensightFaces::key(etype));
         os.write(nTotal);
@@ -515,58 +499,46 @@ void Foam::ensightOutput::writeFaceConnectivity
 
         labelList send(ensightOutput::Detail::getFaceSizes(faces));
 
-        if (Pstream::master())
+        if (UPstream::master())
         {
             // Main
             os.writeLabels(send);
 
             // Others
-            for (const int proci : senders)
+            for (int proci : senders)
             {
-                IPstream fromOther(Pstream::commsTypes::scheduled, proci);
-                labelList recv(fromOther);
+                labelList values;
+                IPstream::recv(values, proci);
 
-                os.writeLabels(recv);
+                os.writeLabels(values);
             }
         }
         else if (senders)
         {
-            OPstream toMaster
-            (
-                Pstream::commsTypes::scheduled,
-                Pstream::masterNo()
-            );
-
-            toMaster << send;
+            OPstream::send(send, UPstream::masterNo());
         }
     }
 
 
     // List of points id per face
 
-    if (Pstream::master())
+    if (UPstream::master())
     {
         // Main
         writeFaceList(os, faces);
 
         // Others
-        for (const int proci : senders)
+        for (int proci : senders)
         {
-            IPstream fromOther(Pstream::commsTypes::scheduled, proci);
-            List<face> recv(fromOther);
+            List<face> values;
+            IPstream::recv(values, proci);
 
-            writeFaceList(os, recv);
+            writeFaceList(os, values);
         }
     }
     else if (senders)
     {
-        OPstream toMaster
-        (
-            Pstream::commsTypes::scheduled,
-            Pstream::masterNo()
-        );
-
-        toMaster << faces;
+        OPstream::send(faces, UPstream::masterNo());
     }
 }
 
@@ -579,7 +551,7 @@ void Foam::ensightOutput::writeFaceConnectivity
     bool parallel
 )
 {
-    for (label typei=0; typei < ensightFaces::nTypes; ++typei)
+    for (int typei = 0; typei < ensightFaces::nTypes; ++typei)
     {
         const auto etype = ensightFaces::elemType(typei);
 
@@ -603,7 +575,7 @@ void Foam::ensightOutput::writeFaceConnectivityPresorted
     bool parallel
 )
 {
-    for (label typei=0; typei < ensightFaces::nTypes; ++typei)
+    for (int typei = 0; typei < ensightFaces::nTypes; ++typei)
     {
         const auto etype = ensightFaces::elemType(typei);
 

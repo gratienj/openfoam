@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -199,6 +200,7 @@ Foam::surfaceWriter::surfaceWriter()
     parallel_(true),
     useTimeDir_(false),
     isPointData_(false),
+    vertexOutput_(false),
     verbose_(false),
     commType_(UPstream::commsTypes::scheduled),
     gatherv_(false),
@@ -245,10 +247,13 @@ Foam::surfaceWriter::surfaceWriter(const dictionary& options)
 
     if (verbose_)
     {
-        Info<< "Create surfaceWriter ("
-            << (this->isPointData() ? "point" : "face") << " data):"
-            << " commsType=";
+        Info<< "Create surfaceWriter (" <<
+        (
+            this->isPointData()  ? "point" :
+            this->vertexOutput() ? "vertex" : "face"
+        ) << " data):";
 
+        Info<< " commsType=";
         if (UPstream::parRun())
         {
             if (gatherv_) Info<< "gatherv+";
@@ -615,7 +620,7 @@ Foam::tmp<Foam::Field<Type>> Foam::surfaceWriter::mergeFieldTemplate
 
         const globalIndex& globIndex =
         (
-            this->isPointData()
+            (this->isPointData() || this->vertexOutput())
           ? mergedSurf_.pointGlobalIndex()
           : mergedSurf_.faceGlobalIndex()
         );
@@ -645,10 +650,12 @@ Foam::tmp<Foam::Field<Type>> Foam::surfaceWriter::mergeFieldTemplate
         }
 
         // Renumber (point data) to correspond to merged points
+        // For vertexOutput the points will usually be disjoint
+        // (eg faceCentres) and thus merging will not have any affect
         if
         (
             UPstream::master()
-         && this->isPointData()
+         && (this->isPointData() || this->vertexOutput())
          && mergedSurf_.pointsMap().size()
         )
         {
@@ -697,7 +704,7 @@ Foam::tmp<Foam::Field<Type>> Foam::surfaceWriter::adjustFieldTemplate
     }
     else
     {
-        scalar value;
+        scalar value(0);
 
         // Remove *uniform* reference level
         if
@@ -822,6 +829,7 @@ Foam::Ostream& Foam::operator<<
     os  << "surfaceWriter:"
         << " upToDate: " << w.upToDate_
         << " PointData: " << w.isPointData_
+        << " vertexOutput: " << w.vertexOutput_
         << " nFields: " << w.nFields_
         << " time: " << w.currTime_
         << " path: " << w.outputPath_ << endl;

@@ -140,7 +140,7 @@ protected:
 
         //- List of (element-type, count) tuples.
         //  Element-type is typically (tria3, quad4, nsided).
-        //  A negative count means 'skip' this content.
+        //  A negative count means a discarded (ignored) element type.
         List<labelPair> elemTypeInfo_;
 
 

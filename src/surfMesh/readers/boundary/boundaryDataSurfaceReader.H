@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,7 +30,7 @@ Class
 Description
     A boundaryData format surface reader.
     However, the "surface" represented by boundaryData is actually only
-    point data!
+    vertex/point data!
 
     // Points
     <case>/constant/region0/"boundaryData"/patchName/points
@@ -95,7 +96,7 @@ class boundaryDataSurfaceReader
         mutable List<word> fieldNames_;
 
         //- Pointer to the surface
-        autoPtr<meshedSurface> surfPtr_;
+        std::unique_ptr<meshedSurface> surfPtr_;
 
         //- Number of 1D vertex/point elements
         label nVertexElements_;

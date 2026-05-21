@@ -189,46 +189,49 @@ Foam::ensightSurfaceReader::readGeometryHeader
 {
     string buffer;
 
+    #undef  debugPrintBuffer
+    #define debugPrintBuffer \
+    if (debug) { Info<< "buffer [" << buffer.size() << "] " << buffer << nl; }
+
     Pair<idTypes> idHandling(idTypes::NONE, idTypes::NONE);
 
     // Ensight Geometry File
-    is.read(buffer);
-    DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
+    is.read(buffer); debugPrintBuffer;
 
     // Description - 1
-    is.read(buffer);
-    DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
+    is.read(buffer); debugPrintBuffer;
 
     // "node id (off|assign|given|ignore)" - "given" is not actually supported
-    is.read(buffer);
-    DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
-
-    if (buffer.contains("ignore"))
+    is.read(buffer); debugPrintBuffer;
     {
-        idHandling.first() = idTypes::IGNORE;
-    }
-    else if (buffer.contains("given"))
-    {
-        idHandling.first() = idTypes::GIVEN;
+        auto& ids = idHandling.first();
+        if (buffer.contains("ignore"))
+        {
+            ids = idTypes::IGNORE;
+        }
+        else if (buffer.contains("given"))
+        {
+            ids = idTypes::GIVEN;
+        }
     }
 
     // "element id (off|assign|given|ignore)"
-    is.read(buffer);
-    DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
-
-    if (buffer.contains("ignore"))
+    is.read(buffer); debugPrintBuffer;
     {
-        idHandling.second() = idTypes::IGNORE;
-    }
-    else if (buffer.contains("given"))
-    {
-        idHandling.second() = idTypes::GIVEN;
+        auto& ids = idHandling.second();
+        if (buffer.contains("ignore"))
+        {
+            ids = idTypes::IGNORE;
+        }
+        else if (buffer.contains("given"))
+        {
+            ids = idTypes::GIVEN;
+        }
     }
 
 
     // "part" - but could also be an optional "extents"
-    is.read(buffer);
-    DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
+    is.read(buffer); debugPrintBuffer;
 
     if (buffer.contains("extents"))
     {
@@ -238,8 +241,7 @@ Foam::ensightSurfaceReader::readGeometryHeader
         is.skip<scalar>(6);
 
         // "part"
-        is.read(buffer);
-        DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
+        is.read(buffer); debugPrintBuffer;
     }
 
     // The part number
@@ -248,13 +250,12 @@ Foam::ensightSurfaceReader::readGeometryHeader
     DebugInfo<< "part number: " << intValue << nl;
 
     // Part description / name
-    is.read(buffer);
-    DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
+    is.read(buffer); debugPrintBuffer;
 
     // "coordinates"
-    is.read(buffer);
-    DebugInfo<< "buffer [" << buffer.length() << "] " << buffer << nl;
+    is.read(buffer); debugPrintBuffer;
 
+    #undef debugPrintBuffer
     return idHandling;
 }
 
@@ -839,7 +840,7 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
                 label elemCount(0);
                 is.read(elemCount);
 
-                // Record the type/count (-ve = discarded)
+                // Record the type/count (negative count means discarded)
                 dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
                 if (debug)
@@ -890,7 +891,7 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
                 label elemCount(0);
                 is.read(elemCount);
 
-                // Record the type/count (-ve = discarded)
+                // Record the type/count (negative count means discarded)
                 dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
                 if (debug)
@@ -940,7 +941,7 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
                 label elemCount(0);
                 is.read(elemCount);
 
-                // Record the type/count (-ve = discarded)
+                // Record the type/count (negative count means discarded)
                 dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
                 if (debug)
@@ -1011,7 +1012,7 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
                 label elemCount(0);
                 is.read(elemCount);
 
-                // Record the type/count (-ve = discarded)
+                // Record the type/count (negative count means discarded)
                 dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
                 if (debug)
@@ -1047,7 +1048,7 @@ Foam::meshedSurface Foam::ensightSurfaceReader::readGeometry
                 label elemCount(0);
                 is.read(elemCount);
 
-                // Record the type/count (-ve = discarded)
+                // Record the type/count (negative count means discarded)
                 dynTypeInfo.emplace_back(elemType, elemCount*(discard ? -1:1));
 
                 if (debug)
@@ -1176,7 +1177,8 @@ Foam::wordList Foam::ensightSurfaceReader::fieldNames
 }
 
 
-Foam::tmp<Foam::Field<Foam::scalar>> Foam::ensightSurfaceReader::field
+Foam::tmp<Foam::Field<Foam::scalar>>
+Foam::ensightSurfaceReader::field
 (
     const label timeIndex,
     const label fieldIndex,
@@ -1187,7 +1189,8 @@ Foam::tmp<Foam::Field<Foam::scalar>> Foam::ensightSurfaceReader::field
 }
 
 
-Foam::tmp<Foam::Field<Foam::vector>> Foam::ensightSurfaceReader::field
+Foam::tmp<Foam::Field<Foam::vector>>
+Foam::ensightSurfaceReader::field
 (
     const label timeIndex,
     const label fieldIndex,
@@ -1210,7 +1213,8 @@ Foam::ensightSurfaceReader::field
 }
 
 
-Foam::tmp<Foam::Field<Foam::symmTensor>> Foam::ensightSurfaceReader::field
+Foam::tmp<Foam::Field<Foam::symmTensor>>
+Foam::ensightSurfaceReader::field
 (
     const label timeIndex,
     const label fieldIndex,
@@ -1221,7 +1225,8 @@ Foam::tmp<Foam::Field<Foam::symmTensor>> Foam::ensightSurfaceReader::field
 }
 
 
-Foam::tmp<Foam::Field<Foam::tensor>> Foam::ensightSurfaceReader::field
+Foam::tmp<Foam::Field<Foam::tensor>>
+Foam::ensightSurfaceReader::field
 (
     const label timeIndex,
     const label fieldIndex,

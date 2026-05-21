@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
     Copyright (C) 2015-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -131,7 +132,7 @@ void Foam::surfaceWriters::boundaryDataWriter::serialWriteGeometry
     // Like regIOobject::writeObject without instance() adaptation
     // since this would write to e.g. 0/ instead of postProcessing/
 
-    autoPtr<primitivePatch> ppPtr;
+    std::unique_ptr<primitivePatch> ppPtr;
 
     {
         OFstream os(iopts.objectPath(), streamOpt_);
@@ -141,17 +142,21 @@ void Foam::surfaceWriters::boundaryDataWriter::serialWriteGeometry
             iopts.writeHeader(os);
         }
 
-        if (this->isPointData())
+        if (this->isPointData() || (this->vertexOutput() && faces.empty()))
         {
             // Just like writeData, but without copying beforehand
             os << points;
         }
         else
         {
-            ppPtr.reset(new primitivePatch(SubList<face>(faces), points));
+            ppPtr = std::make_unique<primitivePatch>
+            (
+                SubList<face>(faces),
+                points
+            );
 
             // Just like writeData, but without copying beforehand
-            os << ppPtr().faceCentres();
+            os << ppPtr->faceCentres();
         }
 
         if (header_)
@@ -160,8 +165,10 @@ void Foam::surfaceWriters::boundaryDataWriter::serialWriteGeometry
         }
     }
 
-    if (writeNormal_ && !this->isPointData())
+    if (writeNormal_ && bool(ppPtr))
     {
+        const auto& pp = *ppPtr;
+
         vectorIOField iofld
         (
             IOobject
@@ -182,7 +189,7 @@ void Foam::surfaceWriters::boundaryDataWriter::serialWriteGeometry
             iofld.writeHeader(os);
         }
 
-        os << ppPtr().faceNormals();
+        os << pp.faceNormals();
 
         if (header_)
         {
@@ -207,11 +214,35 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::write()
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
 
+    const bool withPointData = this->isPointData();
+    const bool withVertexData =
+    (
+        // If vertexOutput enabled and no surface faces
+        this->vertexOutput() && surf.faces().empty()
+    );
+
+    // Return "(point|vertex|face) data" for the IOobject note
+    const auto add_note = [withPointData,withVertexData]() -> std::string
+    {
+        if (withPointData)
+        {
+            return "point data";
+        }
+        else if (withVertexData)
+        {
+            return "vertex data";
+        }
+        else
+        {
+            return "face data";
+        }
+    };
+
     if (UPstream::master() || !parallel_)
     {
-        if (!isDir(surfaceDir))
+        if (!Foam::isDir(surfaceDir))
         {
-            mkDir(surfaceDir);
+            Foam::mkDir(surfaceDir);
         }
 
         // Write sample locations
@@ -226,7 +257,7 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::write()
                 IOobjectOption::NO_REGISTER
             )
         );
-        iopts.note() = (this->isPointData() ? "point data" : "face data");
+        iopts.note() = add_note();
 
         serialWriteGeometry(iopts, surf);
     }
@@ -269,11 +300,35 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::writeTemplate
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
 
+    const bool withPointData = this->isPointData();
+    const bool withVertexData =
+    (
+        // If vertexOutput enabled and no surface faces
+        this->vertexOutput() && surf.faces().empty()
+    );
+
+    // Return "(point|vertex|face) data" for the IOobject note
+    const auto add_note = [withPointData,withVertexData]() -> std::string
+    {
+        if (withPointData)
+        {
+            return "point data";
+        }
+        else if (withVertexData)
+        {
+            return "vertex data";
+        }
+        else
+        {
+            return "face data";
+        }
+    };
+
     if (UPstream::master() || !parallel_)
     {
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         // Write sample locations
@@ -289,7 +344,7 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::writeTemplate
                     IOobjectOption::NO_REGISTER
                 )
             );
-            iopts.note() = (this->isPointData() ? "point data" : "face data");
+            iopts.note() = add_note();
 
             serialWriteGeometry(iopts, surf);
         }
@@ -307,7 +362,7 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::writeTemplate
                     IOobjectOption::NO_REGISTER
                 )
             );
-            iofld.note() = (this->isPointData() ? "point data" : "face data");
+            iofld.note() = add_note();
 
             OFstream os(iofld.objectPath(), streamOpt_);
 

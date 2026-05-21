@@ -131,7 +131,7 @@ Description
     \endverbatim
 
 SourceFiles
-    boundaryDataSurfaceWriter.C
+    boundaryDataSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

@@ -74,8 +74,11 @@ public:
         {
             NO_ELEMENTS = 0,
             DEFAULT_ELEMENTS = 1, //!< lines for CellData, trim for single set
-            POINT_ELEMENTS = 2,   //!< vertices for CellData
-            LINE_ELEMENTS = 3     //!< lines for CellData
+            VERTEX_ELEMENTS = 2,  //!< vertices for CellData
+            LINE_ELEMENTS = 3,    //!< lines for CellData
+
+            // Compatibility (older names)
+            POINT_ELEMENTS = VERTEX_ELEMENTS
         };
 
 private:

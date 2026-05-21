@@ -137,14 +137,22 @@ Foam::fileName Foam::surfaceWriters::starcdWriter::write()
         Info<< "Writing geometry to " << outputFile << endl;
     }
 
+    if (this->vertexOutput())
+    {
+        Warning
+            << "No vertexOutput() support for <"
+            << this->type()
+            << "> surface output" << endl;
+    }
+
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
 
     if (UPstream::master() || !parallel_)
     {
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         const labelUList& origFaceIds = surf.faceIds();
@@ -223,9 +231,9 @@ Foam::fileName Foam::surfaceWriters::starcdWriter::writeTemplate
     {
         const auto& values = tfield();
 
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         OFstream os(outputFile, streamOpt_);

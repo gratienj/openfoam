@@ -88,8 +88,12 @@ class ensightWriter
         enum elemOutputType
         {
             NO_ELEMENTS = 0,
-            WRITE_POINTS = 1,
-            WRITE_LINES = 2
+            VERTEX_ELEMENTS = 2,    //!< vertices for CellData
+            LINE_ELEMENTS = 3,      //!< lines for CellData
+
+            // Compatibility (older names)
+            WRITE_POINTS = VERTEX_ELEMENTS,
+            WRITE_LINES = LINE_ELEMENTS
         };
 
 
