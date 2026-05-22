@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,6 +28,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "LocalInteraction.H"
+#include "BeiGosman.C"
+#include "fvMesh.H"
+#include "volFields.H"
 
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
 
@@ -46,6 +50,14 @@ void Foam::LocalInteraction<CloudType>::writeFileHeader(Ostream& os)
             this->writeTabbed(os, patchName + "_massEscape_" + suffix);
             this->writeTabbed(os, patchName + "_nStick_" + suffix);
             this->writeTabbed(os, patchName + "_massStick_" + suffix);
+
+            if (hasBeiGosman_)
+            {
+                this->writeTabbed(os, patchName + "_nRebound_" + suffix);
+                this->writeTabbed(os, patchName + "_massRebound_" + suffix);
+                this->writeTabbed(os, patchName + "_nSplash_" + suffix);
+                this->writeTabbed(os, patchName + "_massSplash_" + suffix);
+            }
         }
     }
 }
@@ -64,7 +76,13 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
     massEscape_(nEscape_.size()),
     nStick_(nEscape_.size()),
     massStick_(nEscape_.size()),
+    nRebound_(nEscape_.size()),
+    massRebound_(nEscape_.size()),
+    nSplash_(nEscape_.size()),
+    massSplash_(nEscape_.size()),
     writeFields_(this->coeffDict().getOrDefault("writeFields", false)),
+    hasBeiGosman_(false),
+    beiGosman_(*this),
     injIdToIndex_(),
     massEscapePtr_(nullptr),
     massStickPtr_(nullptr)
@@ -103,29 +121,55 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
         nInjectors = 1;
     }
 
+    hasBeiGosman_ = hasBeiGosmanPatch();
+
+    if (hasBeiGosman_)
+    {
+        beiGosman_.initialise
+        (
+            localInteractionModels::parcelHasThermo
+            <
+                typename CloudType::parcelType
+            >()
+        );
+    }
+
     // Check that interactions are valid/specified
     forAll(patchData_, patchi)
     {
         const word& interactionTypeName =
             patchData_[patchi].interactionTypeName();
-        const typename PatchInteractionModel<CloudType>::interactionType& it =
-            this->wordToInteractionType(interactionTypeName);
 
-        if (it == PatchInteractionModel<CloudType>::itOther)
+        if (!patchData_[patchi].isBeiGosman())
         {
-            const word& patchName = patchData_[patchi].patchName();
-            FatalErrorInFunction
-                << "Unknown patch interaction type "
-                << interactionTypeName << " for patch " << patchName
-                << ". Valid selections are:"
-                << this->PatchInteractionModel<CloudType>::interactionTypeNames_
-                << nl << exit(FatalError);
+            const typename PatchInteractionModel<CloudType>::interactionType& it =
+                this->wordToInteractionType(interactionTypeName);
+
+            if (it == PatchInteractionModel<CloudType>::itOther)
+            {
+                const word& patchName = patchData_[patchi].patchName();
+                FatalErrorInFunction
+                    << "Unknown patch interaction type "
+                    << interactionTypeName << " for patch " << patchName
+                    << ". Valid selections are:"
+                    << this->PatchInteractionModel<CloudType>::interactionTypeNames_
+                    << " and " << patchInteractionData::beiGosmanTypeName
+                    << nl << exit(FatalError);
+            }
         }
 
         nEscape_[patchi].setSize(nInjectors, Zero);
         massEscape_[patchi].setSize(nInjectors, Zero);
         nStick_[patchi].setSize(nInjectors, Zero);
         massStick_[patchi].setSize(nInjectors, Zero);
+
+        if (hasBeiGosman_)
+        {
+            nRebound_[patchi].setSize(nInjectors, Zero);
+            massRebound_[patchi].setSize(nInjectors, Zero);
+            nSplash_[patchi].setSize(nInjectors, Zero);
+            massSplash_[patchi].setSize(nInjectors, Zero);
+        }
     }
 }
 
@@ -142,11 +186,106 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
     massEscape_(pim.massEscape_),
     nStick_(pim.nStick_),
     massStick_(pim.massStick_),
+    nRebound_(pim.nRebound_),
+    massRebound_(pim.massRebound_),
+    nSplash_(pim.nSplash_),
+    massSplash_(pim.massSplash_),
     writeFields_(pim.writeFields_),
+    hasBeiGosman_(pim.hasBeiGosman_),
+    beiGosman_(pim.beiGosman_, *this),
     injIdToIndex_(pim.injIdToIndex_),
     massEscapePtr_(nullptr),
     massStickPtr_(nullptr)
 {}
+
+
+// * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
+
+template<class CloudType>
+bool Foam::LocalInteraction<CloudType>::hasBeiGosmanPatch() const
+{
+    forAll(patchData_, patchi)
+    {
+        if (patchData_[patchi].isBeiGosman())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+template<class CloudType>
+void Foam::LocalInteraction<CloudType>::addEscapeCounters
+(
+    const label patchi,
+    const label idx,
+    const scalar mass,
+    const polyPatch& pp,
+    const label facei
+)
+{
+    nEscape_[patchi][idx]++;
+    massEscape_[patchi][idx] += mass;
+    this->addToEscapedParcels(mass);
+
+    if (writeFields_ && facei >= 0)
+    {
+        massEscape().boundaryFieldRef()[pp.index()][facei] += mass;
+    }
+}
+
+
+template<class CloudType>
+void Foam::LocalInteraction<CloudType>::addStickCounters
+(
+    const label patchi,
+    const label idx,
+    const scalar mass,
+    const polyPatch& pp,
+    const label facei,
+    const bool incrementCount
+)
+{
+    if (incrementCount)
+    {
+        nStick_[patchi][idx]++;
+    }
+
+    massStick_[patchi][idx] += mass;
+
+    if (writeFields_ && facei >= 0)
+    {
+        massStick().boundaryFieldRef()[pp.index()][facei] += mass;
+    }
+}
+
+
+template<class CloudType>
+void Foam::LocalInteraction<CloudType>::addReboundCounters
+(
+    const label patchi,
+    const label idx,
+    const scalar mass
+)
+{
+    nRebound_[patchi][idx]++;
+    massRebound_[patchi][idx] += mass;
+}
+
+
+template<class CloudType>
+void Foam::LocalInteraction<CloudType>::addSplashCounters
+(
+    const label patchi,
+    const label idx,
+    const scalar mass
+)
+{
+    nSplash_[patchi][idx]++;
+    massSplash_[patchi][idx] += mass;
+}
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -233,6 +372,22 @@ bool Foam::LocalInteraction<CloudType>::correct
           : 0
         );
 
+        if (patchData_[patchi].isBeiGosman())
+        {
+            return beiGosman_.correct
+            (
+                p,
+                pp,
+                patchi,
+                idx,
+                keepParticle,
+                localInteractionModels::parcelHasThermo
+                <
+                    typename CloudType::parcelType
+                >()
+            );
+        }
+
         typename PatchInteractionModel<CloudType>::interactionType it =
             this->wordToInteractionType
             (
@@ -253,14 +408,28 @@ bool Foam::LocalInteraction<CloudType>::correct
 
                 const scalar dm = p.mass()*p.nParticle();
 
-                nEscape_[patchi][idx]++;
-                massEscape_[patchi][idx] += dm;
-
-                if (writeFields_)
+                if (hasBeiGosman_)
                 {
-                    const label pI = pp.index();
-                    const label fI = pp.whichFace(p.face());
-                    massEscape().boundaryFieldRef()[pI][fI] += dm;
+                    addEscapeCounters
+                    (
+                        patchi,
+                        idx,
+                        dm,
+                        pp,
+                        pp.whichFace(p.face())
+                    );
+                }
+                else
+                {
+                    nEscape_[patchi][idx]++;
+                    massEscape_[patchi][idx] += dm;
+
+                    if (writeFields_)
+                    {
+                        const label pI = pp.index();
+                        const label fI = pp.whichFace(p.face());
+                        massEscape().boundaryFieldRef()[pI][fI] += dm;
+                    }
                 }
                 break;
             }
@@ -272,14 +441,28 @@ bool Foam::LocalInteraction<CloudType>::correct
 
                 const scalar dm = p.mass()*p.nParticle();
 
-                nStick_[patchi][idx]++;
-                massStick_[patchi][idx] += dm;
-
-                if (writeFields_)
+                if (hasBeiGosman_)
                 {
-                    const label pI = pp.index();
-                    const label fI = pp.whichFace(p.face());
-                    massStick().boundaryFieldRef()[pI][fI] += dm;
+                    addStickCounters
+                    (
+                        patchi,
+                        idx,
+                        dm,
+                        pp,
+                        pp.whichFace(p.face())
+                    );
+                }
+                else
+                {
+                    nStick_[patchi][idx]++;
+                    massStick_[patchi][idx] += dm;
+
+                    if (writeFields_)
+                    {
+                        const label pI = pp.index();
+                        const label fI = pp.whichFace(p.face());
+                        massStick().boundaryFieldRef()[pI][fI] += dm;
+                    }
                 }
                 break;
             }
@@ -321,6 +504,16 @@ bool Foam::LocalInteraction<CloudType>::correct
                 // Return velocity to global space
                 U += Up;
 
+                if (hasBeiGosman_)
+                {
+                    addReboundCounters
+                    (
+                        patchi,
+                        idx,
+                        p.mass()*p.nParticle()
+                    );
+                }
+
                 break;
             }
             default:
@@ -331,6 +524,7 @@ bool Foam::LocalInteraction<CloudType>::correct
                     << "(" << it << ") for patch "
                     << patchData_[patchi].patchName()
                     << ". Valid selections are:" << this->interactionTypeNames_
+                    << " and " << patchInteractionData::beiGosmanTypeName
                     << endl << abort(FatalError);
             }
         }
@@ -347,11 +541,61 @@ void Foam::LocalInteraction<CloudType>::info()
 {
     PatchInteractionModel<CloudType>::info();
 
+    if (Pstream::parRun())
+    {
+        const bool anyBeiGosman = returnReduceOr(hasBeiGosman_);
+        const bool allBeiGosman = returnReduceAnd(hasBeiGosman_);
+
+        if (anyBeiGosman != allBeiGosman)
+        {
+            FatalErrorInFunction
+                << "Inconsistent BeiGosman configuration across processors."
+                << exit(FatalError);
+        }
+
+        const label nPatches = patchData_.size();
+        const label minPatches = returnReduce(nPatches, minOp<label>());
+        const label maxPatches = returnReduce(nPatches, maxOp<label>());
+
+        if (minPatches != maxPatches)
+        {
+            FatalErrorInFunction
+                << "Inconsistent localInteraction patch counter dimensions "
+                << "across processors: min = " << minPatches
+                << ", max = " << maxPatches
+                << exit(FatalError);
+        }
+
+        forAll(nEscape_, patchi)
+        {
+            const label nInjectors = nEscape_[patchi].size();
+            const label minInjectors =
+                returnReduce(nInjectors, minOp<label>());
+            const label maxInjectors =
+                returnReduce(nInjectors, maxOp<label>());
+
+            if (minInjectors != maxInjectors)
+            {
+                FatalErrorInFunction
+                    << "Inconsistent localInteraction injector counter "
+                    << "dimensions across processors for patch entry "
+                    << patchData_[patchi].patchName()
+                    << ": min = " << minInjectors
+                    << ", max = " << maxInjectors
+                    << exit(FatalError);
+            }
+        }
+    }
+
     // retrieve any stored data
     labelListList npe0(patchData_.size());
     scalarListList mpe0(patchData_.size());
     labelListList nps0(patchData_.size());
     scalarListList mps0(patchData_.size());
+    labelListList nRebound0(patchData_.size());
+    scalarListList massRebound0(patchData_.size());
+    labelListList nSplash0(patchData_.size());
+    scalarListList massSplash0(patchData_.size());
 
     forAll(patchData_, patchi)
     {
@@ -360,6 +604,14 @@ void Foam::LocalInteraction<CloudType>::info()
         mpe0[patchi].setSize(lsd, Zero);
         nps0[patchi].setSize(lsd, Zero);
         mps0[patchi].setSize(lsd, Zero);
+
+        if (hasBeiGosman_)
+        {
+            nRebound0[patchi].setSize(lsd, Zero);
+            massRebound0[patchi].setSize(lsd, Zero);
+            nSplash0[patchi].setSize(lsd, Zero);
+            massSplash0[patchi].setSize(lsd, Zero);
+        }
     }
 
 
@@ -367,6 +619,14 @@ void Foam::LocalInteraction<CloudType>::info()
     this->getModelProperty("massEscape", mpe0);
     this->getModelProperty("nStick", nps0);
     this->getModelProperty("massStick", mps0);
+
+    if (hasBeiGosman_)
+    {
+        this->getModelProperty("nRebound", nRebound0);
+        this->getModelProperty("massRebound", massRebound0);
+        this->getModelProperty("nSplash", nSplash0);
+        this->getModelProperty("massSplash", massSplash0);
+    }
 
     // accumulate current data
     labelListList npe(nEscape_);
@@ -397,6 +657,38 @@ void Foam::LocalInteraction<CloudType>::info()
         mps[i] = mps[i] + mps0[i];
     }
 
+    labelListList nRebound(nRebound_);
+    scalarListList massRebound(massRebound_);
+    labelListList nSplash(nSplash_);
+    scalarListList massSplash(massSplash_);
+
+    if (hasBeiGosman_)
+    {
+        forAll(nRebound, i)
+        {
+            Pstream::listGather(nRebound[i], sumOp<label>());
+            nRebound[i] = nRebound[i] + nRebound0[i];
+        }
+
+        forAll(massRebound, i)
+        {
+            Pstream::listGather(massRebound[i], sumOp<scalar>());
+            massRebound[i] = massRebound[i] + massRebound0[i];
+        }
+
+        forAll(nSplash, i)
+        {
+            Pstream::listGather(nSplash[i], sumOp<label>());
+            nSplash[i] = nSplash[i] + nSplash0[i];
+        }
+
+        forAll(massSplash, i)
+        {
+            Pstream::listGather(massSplash[i], sumOp<scalar>());
+            massSplash[i] = massSplash[i] + massSplash0[i];
+        }
+    }
+
     if (injIdToIndex_.size())
     {
         // Since injIdToIndex_ is a one-to-one mapping (starting at zero),
@@ -421,6 +713,18 @@ void Foam::LocalInteraction<CloudType>::info()
                     << "      - stick   (injector " << indexToInjector[indexi]
                     << " )  = " << nps[patchi][indexi]
                     << ", " << mps[patchi][indexi] << nl;
+
+                if (hasBeiGosman_)
+                {
+                    Log_<< "      - rebound (injector "
+                        << indexToInjector[indexi]
+                        << " )  = " << nRebound[patchi][indexi]
+                        << ", " << massRebound[patchi][indexi] << nl
+                        << "      - splash  (injector "
+                        << indexToInjector[indexi]
+                        << " )  = " << nSplash[patchi][indexi]
+                        << ", " << massSplash[patchi][indexi] << nl;
+                }
             }
         }
     }
@@ -436,6 +740,16 @@ void Foam::LocalInteraction<CloudType>::info()
                 << npe[patchi][0] << ", " << mpe[patchi][0] << nl
                 << "      - stick                       = "
                 << nps[patchi][0] << ", " << mps[patchi][0] << nl;
+
+            if (hasBeiGosman_)
+            {
+                Log_<< "      - rebound                     = "
+                    << nRebound[patchi][0] << ", "
+                    << massRebound[patchi][0] << nl
+                    << "      - splash                      = "
+                    << nSplash[patchi][0] << ", "
+                    << massSplash[patchi][0] << nl;
+            }
         }
     }
 
@@ -448,6 +762,15 @@ void Foam::LocalInteraction<CloudType>::info()
                 << tab << mpe[patchi][injectori]
                 << tab << nps[patchi][injectori]
                 << tab << mps[patchi][injectori];
+
+            if (hasBeiGosman_)
+            {
+                this->file()
+                    << tab << nRebound[patchi][injectori]
+                    << tab << massRebound[patchi][injectori]
+                    << tab << nSplash[patchi][injectori]
+                    << tab << massSplash[patchi][injectori];
+            }
         }
     }
 
@@ -460,10 +783,26 @@ void Foam::LocalInteraction<CloudType>::info()
         this->setModelProperty("nStick", nps);
         this->setModelProperty("massStick", mps);
 
+        if (hasBeiGosman_)
+        {
+            this->setModelProperty("nRebound", nRebound);
+            this->setModelProperty("massRebound", massRebound);
+            this->setModelProperty("nSplash", nSplash);
+            this->setModelProperty("massSplash", massSplash);
+        }
+
         nEscape_ = Zero;
         massEscape_ = Zero;
         nStick_ = Zero;
         massStick_ = Zero;
+
+        if (hasBeiGosman_)
+        {
+            nRebound_ = Zero;
+            massRebound_ = Zero;
+            nSplash_ = Zero;
+            massSplash_ = Zero;
+        }
     }
 }
 

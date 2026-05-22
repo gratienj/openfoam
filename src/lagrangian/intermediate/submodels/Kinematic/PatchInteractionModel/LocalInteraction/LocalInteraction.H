@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2018-2019 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,6 +39,7 @@ Description
 #ifndef LocalInteraction_H
 #define LocalInteraction_H
 
+#include "BeiGosman.H"
 #include "PatchInteractionModel.H"
 #include "patchInteractionDataList.H"
 #include "Switch.H"
@@ -56,6 +58,11 @@ class LocalInteraction
 :
     public PatchInteractionModel<CloudType>
 {
+    // Friends
+
+        friend class localInteractionModels::BeiGosman<CloudType>;
+
+
     // Private data
 
         //- List of participating patches
@@ -76,9 +83,27 @@ class LocalInteraction
             //- Mass of parcels stuck to patches
             List<List<scalar>> massStick_;
 
+            //- Number of parcels rebounded from patches
+            List<List<label>> nRebound_;
+
+            //- Mass of parcels rebounded from patches
+            List<List<scalar>> massRebound_;
+
+            //- Number of parcels splashed from patches
+            List<List<label>> nSplash_;
+
+            //- Mass of parcels splashed from patches
+            List<List<scalar>> massSplash_;
+
 
         //- Flag to output data as fields
         bool writeFields_;
+
+        //- True if any patch entry uses the BeiGosman interaction type
+        bool hasBeiGosman_;
+
+        //- Internal BeiGosman thermo patch interaction
+        localInteractionModels::BeiGosman<CloudType> beiGosman_;
 
         //- InjectorId to index map, when outputting escaped/stick/...
         //  particles sorted by injectorID
@@ -89,6 +114,49 @@ class LocalInteraction
 
         //- Mass stick field
         autoPtr<volScalarField> massStickPtr_;
+
+
+    // Private Member Functions
+
+        //- True if any patch data entry is a BeiGosman interaction
+        bool hasBeiGosmanPatch() const;
+
+        //- Add escape stats and optional field output
+        void addEscapeCounters
+        (
+            const label patchi,
+            const label idx,
+            const scalar mass,
+            const polyPatch& pp,
+            const label facei
+        );
+
+        //- Add stick stats and optional field output
+        void addStickCounters
+        (
+            const label patchi,
+            const label idx,
+            const scalar mass,
+            const polyPatch& pp,
+            const label facei,
+            const bool incrementCount = true
+        );
+
+        //- Add rebound stats
+        void addReboundCounters
+        (
+            const label patchi,
+            const label idx,
+            const scalar mass
+        );
+
+        //- Add splash stats
+        void addSplashCounters
+        (
+            const label patchi,
+            const label idx,
+            const scalar mass
+        );
 
 
 protected:
