@@ -120,7 +120,9 @@ void surfaceNoise::initialise(const fileName& fName)
         const meshedSurface& surf = readerPtr_->geometry(0);
 
         nFaces_ = surf.nFaces();
-        nFaceCentres_ = 0;
+
+        // Or a surface with centres only (no faces):
+        nFaceCentres_ = (nFaces_ ? 0 : readerPtr_->nVertexElements());
     }
 
     Pstream::broadcasts
@@ -341,6 +343,9 @@ scalar surfaceNoise::writeSurfaceData
         return surfaceAverage(surf, data, procElemAddr);
     }
 
+    // Using face centres instead of face geometry
+    const bool withVertexData = (nFaceCentres_ > 0);
+
     scalar areaAverage = 0;
 
     if (UPstream::parRun())
@@ -373,6 +378,9 @@ scalar surfaceNoise::writeSurfaceData
 
             // (writerPtr_) && (writeSurface == true)
             {
+                // Keep vertex handling properly synchronized
+                writerPtr_->vertexOutput(withVertexData);
+
                 // Time-aware, with time spliced into the output path
                 writerPtr_->beginTime(freqInst);
 
@@ -402,6 +410,9 @@ scalar surfaceNoise::writeSurfaceData
 
         // (writerPtr_) && (writeSurface == true)
         {
+            // Keep vertex handling properly synchronized
+            writerPtr_->vertexOutput(withVertexData);
+
             // Time-aware, with time spliced into the output path
             writerPtr_->beginTime(freqInst);
 
@@ -544,6 +555,12 @@ void surfaceNoise::calculate()
         initialise(fName);
 
         const label nElements = (nFaces_ ? nFaces_ : nFaceCentres_);
+
+        if (!nElements)
+        {
+            WarningInFunction
+                << "No elements (face or vertex) for input: " << fName << endl;
+        }
 
         // Processor face (or faceCentre) addressing
         globalIndex procElemAddr;
