@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2020 OpenCFD Ltd.
+    Copyright (C) 2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,52 +23,57 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Implementation of IO operators for Foam::StrideRange
+
 \*---------------------------------------------------------------------------*/
 
-#include "sliceRange.H"
+#ifndef Foam_StrideRangeIO_H
+#define Foam_StrideRangeIO_H
+
+#include "StrideRange.H"
 #include "token.H"
-#include "FixedList.H"
 #include "Istream.H"
 #include "Ostream.H"
-#include <numeric>
-
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::sliceRange::sliceRange(const FixedList<label,3>& coeffs)
-:
-    start_(coeffs[0]),
-    size_(std::max(label(0),coeffs[1])),   // No negative size
-    stride_(std::max(label(0),coeffs[2]))  // No negative stride
-{}
-
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
-Foam::Istream& Foam::operator>>(Istream& is, sliceRange& range)
+template<class T>
+Foam::Istream& Foam::operator>>
+(
+    Foam::Istream& is,
+    Foam::StrideRange<T>& range
+)
 {
-    label beg, len, stride;
-
-    is.readBegin("sliceRange");
-    is >> beg >> len >> stride;
-    is.readEnd("sliceRange");
-
-    range = sliceRange(beg, len, stride);
+    is.readBegin("StrideRange");
+    is >> range.start() >> range.size() >> range.stride();
+    is.readEnd("StrideRange");
 
     is.check(FUNCTION_NAME);
     return is;
 }
 
 
-Foam::Ostream& Foam::operator<<(Ostream& os, const sliceRange& range)
+template<class T>
+Foam::Ostream& Foam::operator<<
+(
+    Foam::Ostream& os,
+    const Foam::StrideRange<T>& range
+)
 {
-    os  << token::BEGIN_LIST
-        << range.start() << token::SPACE
-        << range.size() << token::SPACE
-        << range.stride() << token::END_LIST;
+    os  << Foam::token::BEGIN_LIST
+        << range.start() << Foam::token::SPACE
+        << range.size() << Foam::token::SPACE
+        << range.stride()
+        << Foam::token::END_LIST;
 
     os.check(FUNCTION_NAME);
     return os;
 }
 
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
 
 // ************************************************************************* //

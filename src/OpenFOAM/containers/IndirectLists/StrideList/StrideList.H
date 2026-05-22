@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,23 +24,18 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::SortList
+    Foam::StrideList
 
 Description
-    An indirect list with addressing based on sorting.
-    The list is sorted upon construction or when explicitly requested.
-
-    Uses the std::stable_sort() algorithm.
-
-SourceFiles
-    SortListI.H
+    A List with indirect stride addressing.
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_SortList_H
-#define Foam_SortList_H
+#ifndef Foam_StrideList_H
+#define Foam_StrideList_H
 
-#include "IndirectList.H"
+#include "IndirectListBase.H"
+#include "StrideRange.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -48,67 +43,45 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                          Class SortList Declaration
+                         Class StrideList Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class T>
-class SortList
+class StrideList
 :
-    public IndirectList<T>
+    private IndirectListAddressing<StrideRange<label>>,
+    public  IndirectListBase<T, StrideRange<label>>
 {
-    typedef IndirectList<T> parent_type;
+    typedef IndirectListAddressing<StrideRange<label>> storage_type;
+    typedef IndirectListBase<T, StrideRange<label>> parent_type;
 
 public:
 
     // Constructors
 
-        //- Shallow copy values list reference, sort immediately
-        inline explicit SortList(const UList<T>& values);
-
-        //- Shallow copy values list reference,
-        //- sort with given \b value comparator.
-        //  \note The comparator is not stored in the class.
-        template<class Compare>
-        inline SortList(const UList<T>& values, const Compare& comp);
+        //- Copy construct from values list and striding
+        StrideList
+        (
+            const UList<T>& values,
+            const StrideRange<label>& addr
+        ) noexcept
+        :
+            storage_type(addr),
+            parent_type(values, storage_type::addressing())
+        {}
 
 
     // Safety
 
         //- The values list (reference) cannot be an rvalue!
         template<class... Args>
-        SortList(UList<T>&&, Args&&...) = delete;
+        StrideList(UList<T>&&, Args&&...) = delete;
 
 
     // Member Functions
 
-        //- Return the list of sorted indices (updated every sort).
-        //  Same as addressing()
-        inline const labelUList& indices() const noexcept;
-
-        //- Return the list of indices (updated every sort).
-        //  Same as addressing()
-        inline labelList& indices() noexcept;
-
-        //- Reverse the indices
-        inline void reverse();
-
-        //- Reset list indices to identity
-        inline void reset();
-
-        //- Sort the list using the given \b value comparator
-        template<class Compare>
-        inline void sort(const Compare& comp);
-
-        //- Forward (stable) sort the list.
-        //- Functionally identical to sort with std::less\<T\>()
-        inline void sort();
-
-        //- Reverse (stable) sort the list.
-        //- Functionally identical to sort with std::greater\<T\>()
-        inline void reverseSort();
-
-        //- Sort the list, only retaining unique entries
-        inline void uniqueSort();
+        //- The list addressing
+        using IndirectListAddressing::addressing;
 
 
     // Member Operators
@@ -121,10 +94,6 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "SortListI.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

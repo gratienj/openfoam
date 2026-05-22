@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,12 +37,8 @@ inline Foam::IndirectList<T>::IndirectList
 )
 :
     // Copy addressing
-    IndirectListAddressing<labelList>(labelList(addr)),
-    UIndirectList<T>
-    (
-        values,
-        IndirectListAddressing<labelList>::addressing()
-    )
+    storage_type(labelList(addr)),
+    parent_type(values, storage_type::addressing())
 {}
 
 
@@ -50,15 +47,11 @@ inline Foam::IndirectList<T>::IndirectList
 (
     const UList<T>& values,
     labelList&& addr
-)
+) noexcept
 :
     // Move addressing
-    IndirectListAddressing<labelList>(std::move(addr)),
-    UIndirectList<T>
-    (
-        values,
-        IndirectListAddressing<labelList>::addressing()
-    )
+    storage_type(std::move(addr)),
+    parent_type(values, storage_type::addressing())
 {}
 
 
@@ -67,40 +60,29 @@ inline Foam::IndirectList<T>::IndirectList
 (
     const UList<T>& values,
     Foam::zero
-)
+) noexcept
 :
-    IndirectListAddressing<labelList>(labelList()),  // zero-size addressing
-    UIndirectList<T>
-    (
-        values,
-        IndirectListAddressing<labelList>::addressing()
-    )
+    // Empty addressing
+    storage_type(labelList()),
+    parent_type(values, storage_type::addressing())
 {}
 
 
 template<class T>
-inline Foam::IndirectList<T>::IndirectList(const IndirectList<T>& list)
+inline Foam::IndirectList<T>::IndirectList(const IndirectList& list)
 :
     // Copy addressing
-    IndirectListAddressing<labelList>(list.addressing()),
-    UIndirectList<T>
-    (
-        list.values(),
-        IndirectListAddressing<labelList>::addressing()
-    )
+    storage_type(list.addressing()),
+    parent_type(list.values(), storage_type::addressing())
 {}
 
 
 template<class T>
-inline Foam::IndirectList<T>::IndirectList(IndirectList<T>&& list)
+inline Foam::IndirectList<T>::IndirectList(IndirectList&& list) noexcept
 :
     // Move addressing
-    IndirectListAddressing<labelList>(std::move(list.addressing())),
-    UIndirectList<T>
-    (
-        list.values(),
-        IndirectListAddressing<labelList>::addressing()
-    )
+    storage_type(std::move(list.addressing())),
+    parent_type(list.values(), storage_type::addressing())
 {}
 
 
@@ -108,12 +90,8 @@ template<class T>
 inline Foam::IndirectList<T>::IndirectList(const UIndirectList<T>& list)
 :
     // Copy addressing
-    IndirectListAddressing<labelList>(list.addressing()),
-    UIndirectList<T>
-    (
-        list.values(),
-        IndirectListAddressing<labelList>::addressing()
-    )
+    storage_type(list.addressing()),
+    parent_type(list.values(), storage_type::addressing())
 {}
 
 
@@ -124,7 +102,7 @@ template<class UnaryCondition>
 Foam::IndirectList<T> Foam::IndirectList<T>::subset
 (
     const UList<T>& values,
-    const UnaryCondition& select,
+    UnaryCondition&& select,
     const bool invert
 )
 {
@@ -156,7 +134,7 @@ template<class UnaryPredicate>
 Foam::IndirectList<T> Foam::IndirectList<T>::subset_if
 (
     const UList<T>& values,
-    const UnaryPredicate& pred,
+    UnaryPredicate&& pred,
     const bool invert
 )
 {

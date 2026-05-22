@@ -40,7 +40,7 @@ Description
 #include "ensightFileName.H"
 #include "ensightVarName.H"
 #include "DynamicList.H"
-#include "IndirectListBase.H"
+#include "IndirectList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

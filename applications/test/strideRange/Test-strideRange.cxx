@@ -31,23 +31,24 @@ Description
 #include "argList.H"
 #include "labelList.H"
 #include "FixedList.H"
-#include "sliceRange.H"
 #include "IndirectList.H"
 #include "IndirectSubList.H"
-#include "SliceList.H"
+#include "StrideList.H"
+#include "StrideRangeIO.H"
+#include "sliceRange.H"
 #include "Random.H"
 
 using namespace Foam;
 
 
-typedef FixedList<label, 3> sliceCoeffs;
+// typedef FixedList<label, 3> sliceCoeffs;
 
-void printInfo(const sliceCoeffs& coeffs)
+void printInfo(const sliceRange& range)
 {
-    sliceRange range(coeffs);
+    // sliceRange range(coeffs[0], coeffs[1], coeffs[2]);
 
     Info<< nl
-        << "coeffs: " << coeffs << nl
+        // << "coeffs: " << coeffs << nl
         << "range:  " << range << nl
         << "min:    " << range.min() << nl
         << "*begin  " << *range.begin() << nl
@@ -141,18 +142,17 @@ int main(int argc, char *argv[])
 
     argList args(argc, argv, false, true);
 
-
     for
     (
-        sliceCoeffs coeffs :
+        sliceRange range :
         {
-            sliceCoeffs{25, 8, 2},
-            sliceCoeffs{15, 5, 3},
-            sliceCoeffs{15, -5, 2},
+            sliceRange{25, 8, 2},
+            sliceRange{15, 5, 3},
+            sliceRange{15, 0, 2},
         }
     )
     {
-        printInfo(coeffs);
+        printInfo(range);
     }
 
     // Some iterator tests
@@ -231,14 +231,14 @@ int main(int argc, char *argv[])
             sublist1.addressing().reset(5, 8);
 
             // This should resolve as a no-op
-            sublist1 = sublist1;
+            // Deleted:  sublist1 = sublist1;
 
             Info<< "SubList: " << sublist1.addressing() << " = "
                 << flatOutput(sublist1) << nl;
         }
 
 
-        SliceList<scalar> slice1(list1, sliceRange(0, 15, 3));
+        StrideList<scalar> slice1(list1, {0, 15, 3});
 
         Info<< nl << "slicing with: " << slice1.addressing() << nl;
 

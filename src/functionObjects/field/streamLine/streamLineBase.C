@@ -129,11 +129,7 @@ Foam::functionObjects::streamLineBase::wallPatch() const
 
     return autoPtr<indirectPrimitivePatch>::New
     (
-        IndirectList<face>
-        (
-            mesh_.faces(),
-            addressing
-        ),
+        IndirectList<face>(mesh_.faces(), std::move(addressing)),
         mesh_.points()
     );
 }

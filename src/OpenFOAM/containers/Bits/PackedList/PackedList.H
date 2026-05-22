@@ -95,8 +95,8 @@ SourceFiles
 
 #include "className.H"
 #include "BitOps.H"
-#include "labelList.H"
-#include "IndirectListBase.H"
+#include "List.H"
+#include "IndirectList.H"
 #include "InfoProxy.H"
 
 #include <type_traits>

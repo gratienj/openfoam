@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2017-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,6 +24,14 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+
+Class
+    Foam::IndirectListAddressing
+
+Description
+    A class for storing list addressing (labels, strides etc),
+    which is normally used by IndirectList.
+    Preferable to use with private inheritance by inheriting classes.
 
 Class
     Foam::IndirectListBase
@@ -42,12 +51,56 @@ SourceFiles
 #ifndef Foam_IndirectListBase_H
 #define Foam_IndirectListBase_H
 
-#include "List.H"
+#include "UList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
+// // Forward Declarations
+// template<class T> class List;
+
+/*---------------------------------------------------------------------------*\
+                   Class IndirectListAddressing Declaration
+\*---------------------------------------------------------------------------*/
+
+template<class Addr>
+class IndirectListAddressing
+{
+    // Private Data
+
+        //- Storage for addressing
+        Addr addr_;
+
+public:
+
+    // Constructors
+
+        //- Construct addressing from arguments
+        template<typename... Args>
+        explicit IndirectListAddressing(Args&&... args)
+        :
+            addr_(std::forward<Args>(args)...)
+        {}
+
+        //- Move construct addressing
+        IndirectListAddressing(Addr&& addr)
+        noexcept(std::is_nothrow_move_constructible_v<Addr>)
+        :
+            addr_(std::move(addr))
+        {}
+
+
+    // Member Functions
+
+        //- Const access to the addressing
+        const Addr& addressing() const noexcept { return addr_; }
+
+        //- Non-const access to the addressing
+        Addr& addressing() noexcept { return addr_; }
+};
+
 
 /*---------------------------------------------------------------------------*\
                       Class IndirectListBase Declaration
@@ -65,13 +118,12 @@ class IndirectListBase
         const Addr& addr_;
 
 
-protected:
+    // Private Member Functions
 
-    // Protected Member Functions
-
-        //- Deep copy values from the list
+        //- Deep copy values from input into this list.
+        //- Fatal if sizes do not match!
         template<class ListType>
-        inline void copyList(const ListType& rhs);
+        inline void copyList(const ListType& input);
 
 
 public:
@@ -109,13 +161,30 @@ public:
         typedef Addr addressing_type;
 
 
-    // Constructors
+    // Generated Methods
 
         //- No default construct
         IndirectListBase() = delete;
 
+
+    // Constructors
+
         //- Store references to the values list and the addressing array
-        inline IndirectListBase(const UList<T>& values, const Addr& addr);
+        inline IndirectListBase
+        (
+            const UList<T>& values,
+            const Addr& addr
+        ) noexcept;
+
+
+    // Safety
+
+        //- The values list (reference) cannot be an rvalue!
+        template<class... Args>
+        IndirectListBase(UList<T>&&, Args&&...) = delete;
+
+        //- The addressing (reference) cannot be an rvalue!
+        IndirectListBase(const UList<T>&, Addr&&) = delete;
 
 
     // Member Functions
@@ -173,8 +242,18 @@ public:
         //- Return reverse circular value (ie, previous value in the list)
         inline T& rcValue(const label i);
 
-        //- Return the addressed elements as a List
+        //- Extract the addressed elements. Sizes must match!
+        inline void extract(UList<T>& result) const;
+
+        //- Extract and return the addressed elements as a List
         inline List<T> list() const;
+
+
+    // Check
+
+        //- Check that addressing is within valid range of values(),
+        //- otherwise Fatal
+        inline void checkAddressing() const;
 
 
     // Search
@@ -202,8 +281,9 @@ public:
 
     // Member Operators
 
-        //- Return the addressed elements as a List
-        List<T> operator()() const { return this->list(); }
+        //- Extract and return the addressed elements as a List.
+        //- Same as the list() method.
+        inline List<T> operator()() const;
 
         //- Non-const access to an element in the list
         inline T& operator[](const label i);
@@ -223,7 +303,7 @@ public:
 
         //- Deep copy values from a list of the addressed elements
         //  Fatal if list sizes are not identical
-        inline void operator=(const IndirectListBase<T, Addr>& rhs);
+        inline void operator=(const IndirectListBase& rhs);
 
         //- Deep copy values from a list of the addressed elements
         //  Fatal if list sizes are not identical
@@ -238,7 +318,7 @@ public:
         //  may/may not support postfix or decrement.
         class iterator
         {
-            T* begin_;
+            T* data_;
             typename addressing_type::const_iterator iter_;
 
         public:
@@ -249,17 +329,18 @@ public:
             using reference = T&;
             using iterator_category = std::forward_iterator_tag;
 
+            //- Construct from list and addressing iterator
             iterator
             (
                 UList<T>& list,
                 typename addressing_type::const_iterator addrIter
             )
             :
-                begin_(list.data()),
+                data_(list.data()),
                 iter_(addrIter)
             {}
 
-            reference operator*() const { return *(begin_ + *iter_); }
+            reference operator*() const { return *(data_ + *iter_); }
 
             iterator& operator++()
             {
@@ -284,7 +365,7 @@ public:
         //  may/may not support postfix or decrement.
         class const_iterator
         {
-            const T* begin_;
+            const T* data_;
             typename addressing_type::const_iterator iter_;
 
         public:
@@ -295,17 +376,18 @@ public:
             using reference = const T&;
             using iterator_category = std::forward_iterator_tag;
 
+            //- Construct from list and addressing iterator
             const_iterator
             (
                 const UList<T>& list,
                 typename addressing_type::const_iterator addrIter
             )
             :
-                begin_(list.cdata()),
+                data_(list.cdata()),
                 iter_(addrIter)
             {}
 
-            reference operator*() const { return *(begin_ + *iter_); }
+            reference operator*() const { return *(data_ + *iter_); }
 
             const_iterator& operator++()
             {
@@ -392,6 +474,14 @@ public:
             return this->contains(val, pos);
         }
 };
+
+
+// * * * * * * * * * * * * * * * * * Traits  * * * * * * * * * * * * * * * * //
+
+//- Test if IndirectListBase is the base class
+template<class T>
+inline constexpr bool is_indirectlist_v
+    = stdFoam::is_template_base_of_v<Foam::IndirectListBase, T>;
 
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //

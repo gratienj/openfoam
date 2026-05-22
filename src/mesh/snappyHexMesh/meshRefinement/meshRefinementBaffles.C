@@ -3296,9 +3296,9 @@ void Foam::meshRefinement::zonify
                 << returnReduce(unnamedClosureFaces.size(), sumOp<label>())
                 << " unnamedClosureFaces to " << outputName << endl;
 
-            const indirectPrimitivePatch setPatch
+            const uindirectPrimitivePatch setPatch
             (
-                IndirectList<face>(mesh_.faces(), unnamedClosureFaces),
+                UIndirectList<face>(mesh_.faces(), unnamedClosureFaces),
                 mesh_.points()
             );
 
@@ -3326,9 +3326,9 @@ void Foam::meshRefinement::zonify
                 << returnReduce(namedClosureFaces.size(), sumOp<label>())
                 << " namedClosureFaces to " << outputName << endl;
 
-            const indirectPrimitivePatch setPatch
+            const uindirectPrimitivePatch setPatch
             (
-                IndirectList<face>(mesh_.faces(), namedClosureFaces),
+                UIndirectList<face>(mesh_.faces(), namedClosureFaces),
                 mesh_.points()
             );
 

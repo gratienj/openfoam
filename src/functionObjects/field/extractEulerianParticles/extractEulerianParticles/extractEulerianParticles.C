@@ -105,9 +105,9 @@ void Foam::functionObjects::extractEulerianParticles::initialiseBins()
     const faceZone& fz = mesh_.faceZones()[zoneID_];
 
     // Agglomerate faceZone faces into nInjectorLocations_ global locations
-    const indirectPrimitivePatch patch
+    const uindirectPrimitivePatch patch
     (
-        IndirectList<face>(mesh_.faces(), fz),
+        UIndirectList<face>(mesh_.faces(), fz),
         mesh_.points()
     );
 

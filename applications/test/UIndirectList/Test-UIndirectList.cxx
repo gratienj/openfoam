@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
     Copyright (C) 2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,6 +40,10 @@ using namespace Foam;
 template<class ListType>
 void printInfo(const ListType& lst)
 {
+    Info<< "self: " << Foam::name(std::addressof(lst))
+        << " values: " << Foam::name(lst.values().cdata())
+        << " addr: "  << Foam::name(std::addressof(lst.addressing())) << nl;
+
     Info<< "addr: " << flatOutput(lst.addressing()) << nl
         << "list: " << flatOutput(lst) << nl
         << endl;
@@ -107,7 +112,10 @@ int main(int argc, char *argv[])
 
     Info<< "idl1 changed: " << flatOutput(idl1) << endl;
 
+    // Shallow copy
     labelUIndList idl2(idl1);
+
+    printInfo(idl2);
 
     Info<< "idl2: " << flatOutput(idl2) << endl;
 
@@ -120,6 +128,19 @@ int main(int argc, char *argv[])
         }
         idl1 = ident;
     }
+
+    // Bad assignment (aborts)
+    #if 0
+    {
+        List<label> ident(idl1.size()/2);
+
+        forAll(ident, i)
+        {
+            ident[i] = ident.size() - i;
+        }
+        idl1 = ident;
+    }
+    #endif
 
     Info<< "idl1 assigned from UList: " << flatOutput(idl1) << endl;
 

@@ -87,7 +87,7 @@ SourceFiles
 #include "surfaceInterpolationScheme.H"
 #include "blendedSchemeBase.H"
 #include "surfaceInterpolate.H"
-#include "UIndirectList.H"
+#include "IndirectList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

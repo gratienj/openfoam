@@ -191,10 +191,7 @@ bool Foam::sampledPatch::update()
     // The originating patch and local face in the patch.
     patchIndex_.resize(numFaces);
     patchFaceLabels_.resize(numFaces);
-
-    IndirectList<face> selectedFaces(mesh().faces(), labelList());
-    labelList& meshFaceIds = selectedFaces.addressing();
-    meshFaceIds.resize(numFaces);
+    labelList meshFaceIds(numFaces);
 
     numFaces = 0;
 
@@ -216,7 +213,11 @@ bool Foam::sampledPatch::update()
     }
 
 
-    uindirectPrimitivePatch allPatches(selectedFaces, mesh().points());
+    uindirectPrimitivePatch allPatches
+    (
+        UIndirectList<face>(mesh().faces(), meshFaceIds),
+        mesh().points()
+    );
 
     this->storedPoints() = allPatches.localPoints();
     this->storedFaces()  = allPatches.localFaces();

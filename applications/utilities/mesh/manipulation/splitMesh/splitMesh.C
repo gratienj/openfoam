@@ -176,14 +176,7 @@ int main(int argc, char *argv[])
     // Addressing on faces only in mesh vertices.
     primitiveFacePatch fPatch
     (
-        faceList
-        (
-            UIndirectList<face>
-            (
-                mesh.faces(),
-                faces
-            )
-        ),
+        faceList(mesh.faces(), faces),
         mesh.points()
     );
 

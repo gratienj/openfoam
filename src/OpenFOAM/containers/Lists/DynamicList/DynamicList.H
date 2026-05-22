@@ -84,9 +84,6 @@ class DynamicList
         //- Remove elements in range
         label removeElements(const labelRange& slice);
 
-        //- Subset elements in range
-        label subsetElements(const labelRange& slice);
-
         //- Copy assignment from another list
         template<class ListType>
         inline void doAssignDynList(const ListType& list);
@@ -326,17 +323,6 @@ public:
             //  Remaining elements are moved down.
             inline label remove(const labelRange& range);
 
-            //- Remove a (start,size) subset from the list.
-            inline label remove(std::initializer_list<label> start_size);
-
-            //- Retain a (start,size) subset from the list.
-            //  The range is subsetted with the list size itself to ensure
-            //  result always addresses a valid section of the list.
-            inline label subset(const labelRange& range);
-
-            //- Retain a (start,size) subset from List.
-            inline label subset(std::initializer_list<label> start_size);
-
 
         // Member Operators
 
@@ -462,6 +448,14 @@ public:
         FOAM_DEPRECATED_FOR(2022-10, "push_uniq()")
         label appendUniq(const T& val) { return this->push_uniq(val); }
 };
+
+
+// * * * * * * * * * * * * * * * * * Traits  * * * * * * * * * * * * * * * * //
+
+//- Test if DynamicList is the base class
+template<class T>
+inline constexpr bool is_dynamiclist_v
+    = stdFoam::is_template_nttp_base_of_v<Foam::DynamicList, T>;
 
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //

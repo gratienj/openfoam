@@ -50,7 +50,7 @@ See also
 #include "ListOps.H"
 #include "IndirectList.H"
 #include "SubList.H"
-#include "SliceList.H"
+#include "StrideList.H"
 #include "SubField.H"
 #include "ListPolicy.H"
 
@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
             labelList someList(identity(24));
 
             longLabelList.slice(subset) =
-                SliceList<label>(someList, sliceRange(8, subset.size(), 2));
+                StrideList<label>(someList, {8, subset.size(), 2});
 
             Info<<"assigned sliced/stride in range:" << subset
                 << "=> " << flatOutput(longLabelList) << nl;

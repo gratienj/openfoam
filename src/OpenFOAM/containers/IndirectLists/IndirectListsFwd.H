@@ -45,7 +45,7 @@ template<class T, class Addr> class IndirectListBase;
 template<class T> class UIndirectList;
 template<class T> class IndirectList;
 template<class T> class IndirectSubList;
-template<class T> class SliceList;
+template<class T> class StrideList;
 
 //Not common enough: template<class T> class SortList;
 

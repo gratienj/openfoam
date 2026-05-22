@@ -824,21 +824,21 @@ int main(int argc, char *argv[])
 
     // Subset wantedPatch. Note that might also include boundary faces
     // that have been exposed by subsetting.
-    wantedPatch = IndirectList<label>(wantedPatch, subsetter.faceMap())();
+    wantedPatch = UIndirectList<label>(wantedPatch, subsetter.faceMap())();
 
-    coupledWantedPatch = IndirectList<label>
+    coupledWantedPatch = UIndirectList<label>
     (
         coupledWantedPatch,
         subsetter.faceMap()
     )();
 
-    cyclicWantedPatch_half0 = IndirectList<label>
+    cyclicWantedPatch_half0 = UIndirectList<label>
     (
         cyclicWantedPatch_half0,
         subsetter.faceMap()
     )();
 
-    cyclicWantedPatch_half1 = IndirectList<label>
+    cyclicWantedPatch_half1 = UIndirectList<label>
     (
         cyclicWantedPatch_half1,
         subsetter.faceMap()

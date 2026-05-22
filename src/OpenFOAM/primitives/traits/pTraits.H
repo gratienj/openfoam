@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
     Copyright (C) 2020-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,6 +41,7 @@ Description
 #define Foam_pTraits_H
 
 #include "direction.H"
+#include <memory>       // For addressof
 #include <type_traits>  // For std::integral_constant, std::void_t
 #include <utility>      // For declval
 
@@ -219,6 +221,35 @@ inline constexpr bool is_vectorspace_v
 template<class T>
 inline constexpr bool is_rotational_vectorspace_v
     = is_rotational_vectorspace<T>::value;
+
+
+//- Pointer to component data (VectorSpace) or the address (regular types)
+template<class T>
+inline constexpr const auto* vectorspace_cdata(const T& obj) noexcept
+{
+    if constexpr (is_vectorspace_v<T>)
+    {
+        return obj.cdata();
+    }
+    else
+    {
+        return std::addressof(obj);
+    }
+}
+
+//- Pointer to component data (VectorSpace) or the address (regular types)
+template<class T>
+inline constexpr auto* vectorspace_data(T& obj) noexcept
+{
+    if constexpr (is_vectorspace_v<T>)
+    {
+        return obj.data();
+    }
+    else
+    {
+        return std::addressof(obj);
+    }
+}
 
 
 /*---------------------------------------------------------------------------*\

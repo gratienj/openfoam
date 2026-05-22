@@ -2208,7 +2208,7 @@ Foam::autoPtr<Foam::indirectPrimitivePatch> Foam::meshRefinement::makePatch
 
     return autoPtr<indirectPrimitivePatch>::New
     (
-        IndirectList<face>(mesh.faces(), addressing),
+        IndirectList<face>(mesh.faces(), std::move(addressing)),
         mesh.points()
     );
 }

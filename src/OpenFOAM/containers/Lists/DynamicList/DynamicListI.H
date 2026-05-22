@@ -848,36 +848,6 @@ inline Foam::label Foam::DynamicList<T, SizeMin>::remove
 }
 
 
-template<class T, int SizeMin>
-inline Foam::label Foam::DynamicList<T, SizeMin>::remove
-(
-    std::initializer_list<label> start_size
-)
-{
-    return this->removeElements(this->validateRange(start_size));
-}
-
-
-template<class T, int SizeMin>
-inline Foam::label Foam::DynamicList<T, SizeMin>::subset
-(
-    const labelRange& range
-)
-{
-    return this->subsetElements(this->validateRange(range));
-}
-
-
-template<class T, int SizeMin>
-inline Foam::label Foam::DynamicList<T, SizeMin>::subset
-(
-    std::initializer_list<label> start_size
-)
-{
-    return this->subsetElements(this->validateRange(start_size));
-}
-
-
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
 template<class T, int SizeMin>

@@ -745,6 +745,14 @@ public:
 };
 
 
+// * * * * * * * * * * * * * * * * * Traits  * * * * * * * * * * * * * * * * //
+
+//- Test if UList is the base class
+template<class T>
+inline constexpr bool is_ulist_v
+    = stdFoam::is_template_base_of_v<Foam::UList, T>;
+
+
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
 //- Read List contents from Istream, list must have the proper size!

@@ -37,7 +37,8 @@ Description
 #include "IOstreams.H"
 #include "Random.H"
 #include "IndirectList.H"
-#include "SliceList.H"
+#include "StrideList.H"
+#include "StrideRangeIO.H"
 
 using namespace Foam;
 
@@ -74,9 +75,9 @@ int main(int argc, char *argv[])
     {
         // Some sizes
         labelList rawSizes(25);
-        forAll(rawSizes, i)
+        for (auto& val : rawSizes)
         {
-            rawSizes[i] = rnd.position<label>(0, 100);
+            val = rnd.position<label>(0, 100);
         }
 
         Info<< nl
@@ -87,11 +88,12 @@ int main(int argc, char *argv[])
             << nl;
 
 
-        sliceRange slice(0, 5, 5);
-        Info<< nl
-            << "range min/max " << slice.min() << '/' << slice.max() << nl;
+        StrideList<label> sliceSizes(rawSizes, {0, 5, 5});
 
-        SliceList<label> sliceSizes(rawSizes, slice);
+        const auto& striding = sliceSizes.addressing();
+        Info<< nl
+            << "stride min/max "
+            << striding.min() << '/' << striding.max() << nl;
 
         Info<< nl
             << "indirect addr: " << sliceSizes.addressing() << nl

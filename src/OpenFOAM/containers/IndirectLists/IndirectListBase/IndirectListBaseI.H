@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,35 +26,45 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class T, class Addr>
 template<class ListType>
-inline void Foam::IndirectListBase<T, Addr>::copyList(const ListType& rhs)
+inline void Foam::IndirectListBase<T, Addr>::copyList(const ListType& input)
 {
-    if
-    (
-        this
-     == reinterpret_cast<IndirectListBase<T,Addr>*>(const_cast<ListType*>(&rhs))
-    )
+    using input_type = std::remove_cv_t<std::remove_reference_t<ListType>>;
+
+    if constexpr (std::is_same_v<IndirectListBase<T, Addr>, input_type>)
     {
-        return;  // Self-assignment is a no-op
+        if
+        (
+            FOAM_UNLIKELY
+            (
+                values_.cdata() == input.values().cdata()
+             && std::addressof(addr_) == std::addressof(input.addressing())
+            )
+        )
+        {
+            // No self-assignment, including between shallow copies
+            return;
+        }
     }
 
     const label len = addr_.size();
 
-    if (len != rhs.size())
+    if (len != input.size())
     {
         FatalErrorInFunction
-            << "Addressing and list of addressed elements "
-               "have different sizes: " << len << " " << rhs.size()
-            << abort(FatalError);
+            << "Size mismatch!" << nl
+            << "Indirect list has " << len << " entries, but input has "
+            << input.size() << " entries [input is "
+            << error::demangle<input_type>() << "]"
+            << Foam::abort(FatalError);
     }
 
-    // Or std::copy(rhs.cbegin(), rhs.cend(), this->begin());
     for (label i = 0; i < len; ++i)
     {
-        values_[addr_[i]] = rhs[i];
+        values_[addr_[i]] = input[i];
     }
 }
 
@@ -65,7 +76,7 @@ inline Foam::IndirectListBase<T, Addr>::IndirectListBase
 (
     const UList<T>& values,
     const Addr& addr
-)
+) noexcept
 :
     values_(const_cast<UList<T>&>(values)),
     addr_(addr)
@@ -179,20 +190,70 @@ inline T& Foam::IndirectListBase<T, Addr>::rcValue(const label i)
     return values_[this->rcIndex(i)];
 }
 
+
 template<class T, class Addr>
-inline Foam::List<T> Foam::IndirectListBase<T, Addr>::list() const
+inline void Foam::IndirectListBase<T, Addr>::extract(UList<T>& result) const
 {
-    const label len = addr_.size();
+    // TBD:
+    // #ifdef FULLDEBUG
+    // if (values_.cdata() == result.cdata())
+    // {
+    //     FatalErrorInFunction
+    //         << "Extraction with aliasing effects!" << nl
+    //         << abort(FatalError);
+    // }
+    // #endif
+    #ifdef FULLDEBUG
+    if (FOAM_UNLIKELY(addr_.size() < result.size()))
+    {
+        FatalErrorInFunction
+            << "result size = " << result.size()
+            << " but addressing size = " << addr_.size() << nl
+            << abort(FatalError);
+    }
+    #endif
 
-    List<T> result(len);
+    const label len = std::min(addr_.size(), result.size());
 
-    // Or std::copy(this->cbegin(), this->cend(), result.begin());
     for (label i = 0; i < len; ++i)
     {
         result[i] = values_[addr_[i]];
     }
+}
 
-    return result;
+
+template<class T, class Addr>
+inline void Foam::IndirectListBase<T, Addr>::checkAddressing() const
+{
+    const label num_values = values_.size();
+
+    label min_idx = num_values;
+    label max_idx = 0;
+
+    const label len = addr_.size();
+
+    for (label i = 0; i < len; ++i)
+    {
+        const auto idx = addr_[i];
+
+        if (min_idx > idx)
+        {
+            min_idx = idx;
+        }
+        if (max_idx < idx)
+        {
+            max_idx = idx;
+        }
+    }
+
+    if (min_idx < 0 || max_idx >= num_values)
+    {
+        FatalErrorInFunction
+            << "Addressing range ["
+            << min_idx << "," << max_idx
+            << "] out of range [0," << num_values << ")\n"
+            << Foam::abort(FatalError);
+    }
 }
 
 
@@ -216,7 +277,6 @@ Foam::IndirectListBase<T, Addr>::operator[](const label i) const
 template<class T, class Addr>
 inline void Foam::IndirectListBase<T, Addr>::operator=(const T& val)
 {
-    // Or std::fill(this->begin(), this->end(), val);
     for (const label idx : addr_)
     {
         values_[idx] = val;
@@ -227,10 +287,9 @@ inline void Foam::IndirectListBase<T, Addr>::operator=(const T& val)
 template<class T, class Addr>
 inline void Foam::IndirectListBase<T, Addr>::operator=(Foam::zero)
 {
-    // Or std::fill(this->begin(), this->end(), Zero);
     for (const label idx : addr_)
     {
-        values_[idx] = Zero;
+        values_[idx] = Foam::zero{};
     }
 }
 
@@ -241,6 +300,16 @@ inline void Foam::IndirectListBase<T, Addr>::operator=
     const UList<T>& rhs
 )
 {
+    // TBD:
+    // #ifdef FULLDEBUG
+    // if (values_.cdata() == rhs.cdata())
+    // {
+    //     FatalErrorInFunction
+    //         << "Assignment with aliasing effects!" << nl
+    //         << abort(FatalError);
+    // }
+    // #endif
+
     this->copyList(rhs);
 }
 
@@ -248,9 +317,19 @@ inline void Foam::IndirectListBase<T, Addr>::operator=
 template<class T, class Addr>
 inline void Foam::IndirectListBase<T, Addr>::operator=
 (
-    const IndirectListBase<T, Addr>& rhs
+    const IndirectListBase& rhs
 )
 {
+    // TBD:
+    // #ifdef FULLDEBUG
+    // if (values_.cdata() == rhs.values().cdata())
+    // {
+    //     FatalErrorInFunction
+    //         << "Assignment with aliasing effects!" << nl
+    //         << abort(FatalError);
+    // }
+    // #endif
+
     this->copyList(rhs);
 }
 
@@ -262,7 +341,41 @@ inline void Foam::IndirectListBase<T, Addr>::operator=
     const IndirectListBase<T, AnyAddr>& rhs
 )
 {
+    // TBD:
+    // #ifdef FULLDEBUG
+    // if (values_.cdata() == rhs.values().cdata())
+    // {
+    //     FatalErrorInFunction
+    //         << "Assignment with aliasing effects!" << nl
+    //         << abort(FatalError);
+    // }
+    // #endif
+
     this->copyList(rhs);
+}
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Late inclusion of List.H which is needed for the list() method.
+
+#include "List.H"
+
+template<class T, class Addr>
+inline Foam::List<T> Foam::IndirectListBase<T, Addr>::list() const
+{
+    List<T> result(addr_.size());
+    this->extract(result);
+    return result;
+}
+
+
+template<class T, class Addr>
+inline Foam::List<T> Foam::IndirectListBase<T, Addr>::operator()() const
+{
+    List<T> result(addr_.size());
+    this->extract(result);
+    return result;
 }
 
 

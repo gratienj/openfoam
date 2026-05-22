@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,73 +23,61 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Class
-    Foam::SliceList
-
 Description
-    A List with indirect slice addressing.
-
-SourceFiles
+    Basic tests for List traits
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef SliceList_H
-#define SliceList_H
+#include "IOstreams.H"
+#include "pTraits.H"
+#include "contiguous.H"
+#include "DynamicList.H"
+#include "FixedList.H"
+#include "IndirectList.H"
+#include "error.H"
+#include "face.H"
+#include "triFace.H"
 
-#include "IndirectListAddressing.H"
-#include "IndirectListBase.H"
-#include "sliceRange.H"
+using namespace Foam;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-namespace Foam
-{
-
-/*---------------------------------------------------------------------------*\
-                          Class SliceList Declaration
-\*---------------------------------------------------------------------------*/
+// Main program:
 
 template<class T>
-class SliceList
-:
-    private IndirectListAddressing<sliceRange>,
-    public IndirectListBase<T, sliceRange>
+void printListTraits()
 {
-public:
+    Info<< error::demangle<T>() << " =>";
+    Info<< " range:" << Foam::is_range<T>::value;
+    Info<< " indirect:" << is_indirectlist_v<T>;
+    Info<< " ulist:" << is_ulist_v<T>;
+    Info<< " list:" << is_list_v<T>;
+    Info<< " fixedlist:" << is_fixedlist_v<T>;
+    Info<< " dynlist:" << is_dynamiclist_v<T>;
+    Info<< endl;
+}
 
-    // Constructors
+template<class T>
+void printListTraits(T&&)
+{
+    printListTraits<T>();
+}
 
-        //- Copy construct from values list and slicing
-        SliceList(const UList<T>& values, const sliceRange& addr)
-        :
-            IndirectListAddressing<sliceRange>(addr),
-            IndirectListBase<T, sliceRange>
-            (
-                values,
-                IndirectListAddressing<sliceRange>::addressing()
-            )
-        {}
+int main()
+{
+    printListTraits<word>();
+    printListTraits<labelRange>();
+    printListTraits<triFace>();
+    printListTraits<face>();
+    printListTraits<IndirectList<face>>();
+    printListTraits<DynamicList<word>>();
 
+    // With argument based dispatch:
+    printListTraits(face());
 
-    // Member Functions
+    Info<< "End\n" << endl;
 
-        //- The list addressing
-        using IndirectListAddressing::addressing;
+    return 0;
+}
 
-
-    // Member Operators
-
-        //- Use standard assignment operations
-        using IndirectListBase<T, sliceRange>::operator=;
-};
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#endif
 
 // ************************************************************************* //

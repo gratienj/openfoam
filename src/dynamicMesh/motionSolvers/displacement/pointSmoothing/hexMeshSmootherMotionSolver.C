@@ -114,11 +114,9 @@ Foam::hexMeshSmootherMotionSolver::makePatch
 
     syncTools::syncFaceList(mesh, isPatchFace, orEqOp<unsigned int>());
 
-    const labelList patchFaces(isPatchFace.sortedToc());
-
     return autoPtr<indirectPrimitivePatch>::New
     (
-        IndirectList<face>(mesh.faces(), patchFaces),
+        IndirectList<face>(mesh.faces(), isPatchFace.sortedToc()),
         points0
     );
 }

@@ -51,6 +51,7 @@ SourceFiles
 
 #include "bitSet.H"
 #include "boolList.H"
+#include "labelList.H"
 #include "typeInfo.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -58,6 +59,7 @@ SourceFiles
 namespace Foam
 {
 
+// Forward Declarations
 class polyMesh;
 class polyTopoChange;
 
@@ -169,12 +171,6 @@ class meshDualiser
             boolList& donePFaces            // pFaces visited
         ) const;
 
-        //- No copy construct
-        meshDualiser(const meshDualiser&) = delete;
-
-        //- No copy assignment
-        void operator=(const meshDualiser&) = delete;
-
 
 public:
 
@@ -182,10 +178,19 @@ public:
     ClassName("meshDualiser");
 
 
+    // Generated Methods
+
+        //- No copy construct
+        meshDualiser(const meshDualiser&) = delete;
+
+        //- No copy assignment
+        void operator=(const meshDualiser&) = delete;
+
+
     // Constructors
 
         //- Construct from mesh
-        meshDualiser(const polyMesh&);
+        explicit meshDualiser(const polyMesh&);
 
 
     // Member Functions
