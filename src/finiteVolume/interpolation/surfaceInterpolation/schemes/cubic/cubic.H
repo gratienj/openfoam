@@ -128,8 +128,8 @@ public:
                 lambda*(scalar(1) - lambda*(scalar(3) - scalar(2)*lambda))
             );
 
-            const surfaceScalarField kVecP(sqr(scalar(1) - lambda)*lambda);
-            const surfaceScalarField kVecN(sqr(lambda)*(lambda - scalar(1)));
+            const surfaceScalarField kVecP(sqr(lambda)*(scalar(1) - lambda));
+            const surfaceScalarField kVecN(-sqr(scalar(1) - lambda)*lambda);
 
             tmp<GeometricField<Type, fvsPatchField, surfaceMesh>> tsfCorr
             (
@@ -144,7 +144,7 @@ public:
                         IOobject::NO_WRITE,
                         IOobject::NO_REGISTER
                     ),
-                    surfaceInterpolationScheme<Type>::interpolate(vf, kSc, -kSc)
+                    surfaceInterpolationScheme<Type>::interpolate(vf, -kSc, kSc)
                 )
             );
             GeometricField<Type, fvsPatchField, surfaceMesh>& sfCorr =
@@ -171,8 +171,8 @@ public:
                            .grad(vf.component(cmpt)),
                             kVecP,
                             kVecN
-                        ) & mesh.Sf()
-                    )/mesh.magSf()/mesh.surfaceInterpolation::deltaCoeffs()
+                        ) & mesh.delta()
+                    )
                 );
             }
 
