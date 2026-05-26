@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,6 +41,7 @@ SourceFiles
 
 #include "dynamicFvMesh.H"
 #include "motionSolver.H"
+#include "zoneMotion.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -56,14 +58,20 @@ class dynamicMultiMotionSolverFvMesh
 {
     // Private Data
 
-        //- The motion control function
-        PtrList<motionSolver> motionPtr_;
+        //- The motion control functions
+        PtrList<motionSolver> motionSolvers_;
 
-        //- Points to move, per motion solver
-        labelListList pointIDs_;
+        //- Points to move, per motion solver and cellZone selection
+        PtrList<zoneMotion> zoneMotions_;
 
 
-    // Private Member Functions
+public:
+
+    //- Runtime type information
+    TypeName("dynamicMultiMotionSolverFvMesh");
+
+
+    // Generated Methods
 
         //- No copy construct
         dynamicMultiMotionSolverFvMesh
@@ -73,12 +81,6 @@ class dynamicMultiMotionSolverFvMesh
 
         //- No copy assignment
         void operator=(const dynamicMultiMotionSolverFvMesh&) = delete;
-
-
-public:
-
-    //- Runtime type information
-    TypeName("dynamicMultiMotionSolverFvMesh");
 
 
     // Constructors

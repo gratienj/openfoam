@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2018 OpenFOAM Foundation
     Copyright (C) 2021-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,12 +32,13 @@ Description
     List container for MRF zomes
 
 SourceFiles
-    MRFZoneList.C
+    MRFZoneList.cxx
+    MRFZoneList.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef MRFZoneList_H
-#define MRFZoneList_H
+#ifndef Foam_MRFZoneList_H
+#define Foam_MRFZoneList_H
 
 #include "fvMesh.H"
 #include "dictionary.H"
@@ -48,7 +50,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+// Forward Declarations
 class MRFZoneList;
 Ostream& operator<<(Ostream& os, const MRFZoneList& models);
 
@@ -60,7 +62,17 @@ class MRFZoneList
 :
     public PtrList<MRFZone>
 {
-    // Private Member Functions
+protected:
+
+    // Protected Data
+
+        //- Reference to the mesh database
+        const fvMesh& mesh_;
+
+
+public:
+
+    // Generated Methods
 
         //- No copy construct
         MRFZoneList(const MRFZoneList&) = delete;
@@ -68,16 +80,6 @@ class MRFZoneList
         //- No copy assignment
         void operator=(const MRFZoneList&) = delete;
 
-
-protected:
-
-    // Protected data
-
-        //- Reference to the mesh database
-        const fvMesh& mesh_;
-
-
-public:
 
     //- Constructor
     MRFZoneList(const fvMesh& mesh, const dictionary& dict);
@@ -94,7 +96,10 @@ public:
         //- Reset the source list
         void reset(const dictionary& dict);
 
-        //- Return the MRF with a given name
+        //- Find the MRF with the given name, nullptr if not found.
+        const MRFZone* findZone(const word& name) const;
+
+        //- Return the MRF with a given name, Fatal if not found.
         const MRFZone& getFromName(const word& name) const;
 
         //- Add the frame acceleration
@@ -228,7 +233,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "MRFZoneListTemplates.C"
+    #include "MRFZoneList.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

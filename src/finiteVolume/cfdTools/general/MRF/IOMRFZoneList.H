@@ -7,8 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2012 OpenFOAM Foundation
     Copyright (C) 2019 OpenCFD Ltd.
-    Copyright (C) 2020 PCOpt/NTUA
-    Copyright (C) 2020 FOSS GP
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,12 +49,12 @@ Description
     \endverbatim
 
 SourceFiles
-    IOMRFZoneList.C
+    IOMRFZoneList.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef IOMRFZoneList_H
-#define IOMRFZoneList_H
+#ifndef Foam_IOMRFZoneList_H
+#define Foam_IOMRFZoneList_H
 
 #include "IOdictionary.H"
 #include "MRFZoneList.H"
@@ -74,16 +73,15 @@ class IOMRFZoneList
     public IOdictionary,
     public MRFZoneList
 {
-private:
-
     // Private Member Functions
 
-        //- Create IO object if dictionary is present
-        IOobject createIOobject
-        (
-            const fvMesh& mesh,
-            const word& solverName
-        ) const;
+        //- Construct with specified IOobject for the IOdictionary
+        //- (somewhat fragile)
+        IOMRFZoneList(const fvMesh& mesh, const IOobject& io);
+
+public:
+
+    // Generated Methods
 
         //- No copy construct
         IOMRFZoneList(const IOMRFZoneList&) = delete;
@@ -92,12 +90,10 @@ private:
         void operator=(const IOMRFZoneList&) = delete;
 
 
-public:
-
     // Constructors
 
-        //- Construct from mesh
-        IOMRFZoneList
+        //- Construct from mesh, optional for specified solver name
+        explicit IOMRFZoneList
         (
             const fvMesh& mesh,
             const word& solverName = word::null

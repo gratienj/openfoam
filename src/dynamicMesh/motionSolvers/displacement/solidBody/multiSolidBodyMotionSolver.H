@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,6 +41,7 @@ SourceFiles
 
 #include "points0MotionSolver.H"
 #include "solidBodyMotionFunction.H"
+#include "zoneMotion.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -56,26 +58,26 @@ class multiSolidBodyMotionSolver
 {
     // Private Data
 
-        //- The motion control function
-        PtrList<solidBodyMotionFunction> SBMFs_;
+        //- The solid-body motion control functions
+        PtrList<solidBodyMotionFunction> motionControls_;
 
-        //- Points to move per cellZone
-        labelListList pointIDs_;
-
-
-    // Private Member Functions
-
-        //- No copy construct
-        multiSolidBodyMotionSolver(const multiSolidBodyMotionSolver&) = delete;
-
-        //- No copy assignment
-        void operator=(const multiSolidBodyMotionSolver&) = delete;
+        //- Points to move, per motion function and cellZone selection
+        PtrList<zoneMotion> zoneMotions_;
 
 
 public:
 
     //- Runtime type information
     TypeName("multiSolidBodyMotionSolver");
+
+
+    // Generated Methods
+
+        //- No copy construct
+        multiSolidBodyMotionSolver(const multiSolidBodyMotionSolver&) = delete;
+
+        //- No copy assignment
+        void operator=(const multiSolidBodyMotionSolver&) = delete;
 
 
     // Constructors

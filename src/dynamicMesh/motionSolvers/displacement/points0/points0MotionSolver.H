@@ -69,19 +69,18 @@ protected:
         pointIOField points0_;
 
 
-    // Protected Member Functions
+public:
+
+    //- Runtime type information
+    TypeName("points0MotionSolver");
+
+    // Generated Methods
 
         //- No copy construct
         points0MotionSolver(const points0MotionSolver&) = delete;
 
         //- No copy assignment
         void operator=(const points0MotionSolver&) = delete;
-
-
-public:
-
-    //- Runtime type information
-    TypeName("points0MotionSolver");
 
 
     // Constructors
@@ -113,17 +112,11 @@ public:
         //- Return IO object for points0
         static IOobject points0IO(const polyMesh& mesh);
 
-        //- Return reference to the reference ('0') pointField
-        pointField& points0() noexcept
-        {
-            return points0_;
-        }
+        //- The reference ('0') pointField
+        pointField& points0() noexcept { return points0_; }
 
-        //- Return reference to the reference ('0') pointField
-        const pointField& points0() const noexcept
-        {
-            return points0_;
-        }
+        //- The reference ('0') pointField
+        const pointField& points0() const noexcept { return points0_; }
 
         //- Update local data for geometry changes
         virtual void movePoints(const pointField&);

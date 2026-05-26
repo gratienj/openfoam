@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,8 +39,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef rotatingMotion_H
-#define rotatingMotion_H
+#ifndef Foam_rotatingMotion_H
+#define Foam_rotatingMotion_H
 
 #include "solidBodyMotionFunction.H"
 #include "primitiveFields.H"
@@ -74,19 +75,19 @@ class rotatingMotion
         autoPtr<Function1<scalar>> omega_;
 
 
-    // Private Member Functions
+public:
+
+    //- Runtime type information
+    TypeName("rotatingMotion");
+
+
+    // Generated Methods
 
         //- No copy construct
         rotatingMotion(const rotatingMotion&) = delete;
 
         //- No copy assignment
         void operator=(const rotatingMotion&) = delete;
-
-
-public:
-
-    //- Runtime type information
-    TypeName("rotatingMotion");
 
 
     // Constructors
@@ -117,6 +118,18 @@ public:
 
 
     // Member Functions
+
+        //- The rotation origin
+        const vector& origin() const noexcept { return origin_; }
+
+        //- The rotation axis
+        const vector& axis() const noexcept { return axis_; }
+
+        //- The current angular speed (scalar)
+        scalar omega() const;
+
+        //- The current angular velocity (\em vector around the axis)
+        vector Omega() const;
 
         //- Return the solid-body motion transformation septernion
         virtual septernion transformation() const;

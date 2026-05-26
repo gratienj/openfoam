@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2018 OpenFOAM Foundation
     Copyright (C) 2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,12 +36,13 @@ Description
     rotation and an angular speed.
 
 SourceFiles
-    MRFZone.C
+    MRFZone.cxx
+    MRFZone.txx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef MRFZone_H
-#define MRFZone_H
+#ifndef Foam_MRFZone_H
+#define Foam_MRFZone_H
 
 #include "dictionary.H"
 #include "wordList.H"
@@ -59,7 +61,8 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of classes
+// Forward Declarations
+class cellZone;
 class fvMesh;
 
 /*---------------------------------------------------------------------------*\
@@ -68,7 +71,7 @@ class fvMesh;
 
 class MRFZone
 {
-    // Private data
+    // Private Data
 
         //- Reference to the mesh database
         const fvMesh& mesh_;
@@ -151,12 +154,6 @@ class MRFZone
             surfaceScalarField& phi
         ) const;
 
-        //- No copy construct
-        MRFZone(const MRFZone&) = delete;
-
-        //- No copy assignment
-        void operator=(const MRFZone&) = delete;
-
 
 public:
 
@@ -182,22 +179,34 @@ public:
             return nullptr;
         }
 
+        //- No copy construct
+        MRFZone(const MRFZone&) = delete;
+
+        //- No copy assignment
+        void operator=(const MRFZone&) = delete;
+
 
     // Member Functions
 
         //- Return const access to the MRF region name
-        inline const word& name() const;
+        const word& name() const noexcept { return name_; }
 
         //- Return const access to the MRF active flag
-        inline bool active() const;
+        bool active() const noexcept { return active_; }
 
-        //- Return const access to the MRF origin
-        inline const vector& origin() const;
+        //- The MRF origin
+        const vector& origin() const noexcept { return origin_; }
 
-        //- Return const access to the MRF axis
-        inline const vector& axis() const;
+        //- The MRF axis
+        const vector& axis() const noexcept { return axis_; }
 
-        //- Return the current Omega vector
+        //- Return the corresponding cellZone
+        const cellZone* whichZone() const;
+
+        //- The current angular speed (scalar)
+        scalar omega() const;
+
+        //- The current angular velocity (vector : around the axis)
         vector Omega() const;
 
         //- Update the mesh corresponding to given map
@@ -293,12 +302,8 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "MRFZoneTemplates.C"
+    #include "MRFZone.txx"
 #endif
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "MRFZoneI.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

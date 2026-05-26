@@ -105,7 +105,7 @@ void Foam::functionObjects::propellerInfo::setCoordinateSystem
             axis = mrf.axis();
 
             // Convert rad/s to rev/s
-            n_ = (mrf.Omega() & axis)/constant::mathematical::twoPi;
+            n_ = mrf.omega()/constant::mathematical::twoPi;
             break;
         }
         default:
@@ -159,7 +159,7 @@ void Foam::functionObjects::propellerInfo::setRotationalSpeed()
             const auto& mrf = MRFZones->MRFZoneList::getFromName(MRFName_);
 
             // Convert rad/s to revolutions per second
-            n_ = (mrf.Omega() & mrf.axis())/constant::mathematical::twoPi;
+            n_ = mrf.omega()/constant::mathematical::twoPi;
             break;
         }
         default:

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
     Copyright (C) 2021-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,6 +31,7 @@ License
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "fixedValueFvsPatchFields.H"
+#include "PtrListOps.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -53,9 +55,9 @@ Foam::MRFZoneList::MRFZoneList
 bool Foam::MRFZoneList::active(const bool warn) const
 {
     bool a = false;
-    forAll(*this, i)
+    for (const auto& mrf: *this)
     {
-        a = a || this->operator[](i).active();
+        a = a || mrf.active();
     }
 
     if (warn && this->size() && !a)
@@ -86,7 +88,7 @@ void Foam::MRFZoneList::reset(const dictionary& dict)
         if (dEntry.isDict())
         {
             const word& name = dEntry.keyword();
-            const dictionary& modelDict = dEntry.dict();
+            const auto& modelDict = dEntry.dict();
 
             Info<< "    creating MRF zone: " << name << endl;
 
@@ -100,28 +102,37 @@ void Foam::MRFZoneList::reset(const dictionary& dict)
 }
 
 
+const Foam::MRFZone* Foam::MRFZoneList::findZone(const word& name) const
+{
+    const PtrList<MRFZone>& zones = *this;
+
+    if (auto i = PtrListOps::firstMatching(zones, name); i >= 0)
+    {
+        return zones.get(i);
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
+
 const Foam::MRFZone& Foam::MRFZoneList::getFromName
 (
     const word& name
 ) const
 {
-    DynamicList<word> names;
-    for (const auto& mrf: *this)
-    {
-        if (mrf.name() == name)
-        {
-            return mrf;
-        }
+    const auto* ptr = this->findZone(name);
 
-        names.append(mrf.name());
+    if (!ptr)
+    {
+        FatalErrorInFunction
+            << "Unable to find MRFZone " << name
+            << ". Available zones: " << PtrListOps::names(*this)
+            << exit(FatalError);
     }
 
-    FatalErrorInFunction
-        << "Unable to find MRFZone " << name
-        << ". Available zones are: " << names
-        << exit(FatalError);
-
-    return first();
+    return *ptr;
 }
 
 
@@ -426,7 +437,7 @@ void Foam::MRFZoneList::correctBoundaryFlux
         relative(mesh_.Sf().boundaryField() & U.boundaryField())
     );
 
-    surfaceScalarField::Boundary& phibf = phi.boundaryFieldRef();
+    auto& phibf = phi.boundaryFieldRef();
 
     forAll(mesh_.boundary(), patchi)
     {

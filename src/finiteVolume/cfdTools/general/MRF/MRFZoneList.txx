@@ -5,10 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2021 OpenCFD Ltd.
-    Copyright (C) 2020 PCOpt/NTUA
-    Copyright (C) 2020 FOSS GP
+    Copyright (C) 2018 OpenFOAM Foundation
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,66 +25,41 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "IOMRFZoneList.H"
-#include "fvMesh.H"
-#include "Time.H"
+#include "MRFZoneList.H"
 
-// * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::IOobject Foam::IOMRFZoneList::createIOobject
+template<class Type>
+Foam::tmp<Foam::GeometricField<Type, Foam::fvsPatchField, Foam::surfaceMesh>>
+Foam::MRFZoneList::zeroFilter
 (
-    const fvMesh& mesh,
-    const word& solverName
+    const tmp<GeometricField<Type, fvsPatchField, surfaceMesh>>& tphi
 ) const
 {
-    IOobject io
-    (
-        "MRFProperties" + solverName,
-        mesh.time().constant(),
-        mesh,
-        IOobject::MUST_READ,
-        IOobject::NO_WRITE
-    );
-
-    if (io.typeHeaderOk<IOdictionary>(true))
+    if (size())
     {
-        Info<< "Creating MRF zone list from " << io.name() << endl;
+        tmp<surfaceScalarField> zphi
+        (
+            New
+            (
+                tphi,
+                "zeroFilter(" + tphi().name() + ')',
+                tphi().dimensions(),
+                true
+            )
+        );
 
-        io.readOpt(IOobject::MUST_READ_IF_MODIFIED);
+        for (auto& mrf : *this)
+        {
+            mrf.zero(zphi.ref());
+        }
+
+        return zphi;
     }
     else
     {
-        Info<< "No MRF models present" << nl << endl;
-
-        io.readOpt(IOobject::NO_READ);
+        return tmp<surfaceScalarField>(tphi, true);
     }
-
-    return io;
-}
-
-
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::IOMRFZoneList::IOMRFZoneList
-(
-    const fvMesh& mesh,
-    const word& solverName
-)
-:
-    IOdictionary(createIOobject(mesh, solverName)),
-    MRFZoneList(mesh, *this)
-{}
-
-
-bool Foam::IOMRFZoneList::read()
-{
-    if (regIOobject::read())
-    {
-        MRFZoneList::read(*this);
-        return true;
-    }
-
-    return false;
 }
 
 

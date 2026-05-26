@@ -56,23 +56,22 @@ class solidBodyMotionSolver
 {
     // Private Data
 
-        //- The motion control function
+        //- The solid-body motion control function
         autoPtr<solidBodyMotionFunction> SBMFPtr_;
-
-
-    // Private Member Functions
-
-        //- No copy construct
-        solidBodyMotionSolver(const solidBodyMotionSolver&) = delete;
-
-        //- No copy assignment
-        void operator=(const solidBodyMotionSolver&) = delete;
 
 
 public:
 
     //- Runtime type information
     TypeName("solidBody");
+
+    // Generated Methods
+
+        //- No copy construct
+        solidBodyMotionSolver(const solidBodyMotionSolver&) = delete;
+
+        //- No copy assignment
+        void operator=(const solidBodyMotionSolver&) = delete;
 
 
     // Constructors
@@ -90,6 +89,9 @@ public:
 
 
     // Member Functions
+
+        //- The solid-body motion control function
+        const solidBodyMotionFunction& motionControl() const;
 
         //- Return point location obtained from the current motion field
         virtual tmp<pointField> curPoints() const;

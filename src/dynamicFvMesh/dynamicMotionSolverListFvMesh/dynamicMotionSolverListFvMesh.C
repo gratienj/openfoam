@@ -182,9 +182,7 @@ bool Foam::dynamicMotionSolverListFvMesh::update()
 
         fvMesh::movePoints(points() + disp);
 
-        volVectorField* Uptr = getObjectPtr<volVectorField>("U");
-
-        if (Uptr)
+        if (auto* Uptr = getObjectPtr<volVectorField>("U"))
         {
             Uptr->correctBoundaryConditions();
         }

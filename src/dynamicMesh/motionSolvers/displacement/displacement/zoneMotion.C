@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,79 +34,223 @@ License
 #include "cellZoneMesh.H"
 #include "dictionary.H"
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-Foam::zoneMotion::zoneMotion
-(
-    const dictionary& dict,
-    const polyMesh& mesh
-)
-:
-    pointIDs_(),
-    moveAllCells_(true)
+void Foam::zoneMotion::selectZonePoints(const polyMesh& mesh)
 {
-    // Specified cellSet?
-    word cellSetName;
+    const auto& allCellZones = mesh.cellZones();
 
-    if
-    (
-        dict.readIfPresent("cellSet", cellSetName)
-     && cellSetName == "none"  // Compat: ignore 'none' placeholder
-    )
-    {
-        cellSetName.clear();
-    }
-
-    labelList cellIDs;
-    if (!cellSetName.empty())
-    {
-        Info<< "Applying motion to cellSet: " << cellSetName << endl;
-
-        cellIDs = cellSet(mesh, cellSetName).toc();
-    }
-
-
-    // Specified cellZone(s) ?
-    wordRe cellZoneName;
-
-    if
-    (
-        dict.readIfPresent("cellZone", cellZoneName)
-     && cellZoneName == "none"  // Compat: ignore 'none' placeholder
-    )
-    {
-        cellZoneName.clear();
-    }
-
-    labelList zoneIDs;
-    if (!cellZoneName.empty())
-    {
-        Info<< "Applying motion to cellZone: " << cellZoneName << endl;
-
-        // Also handles groups, multiple zones (as wordRe match) ...
-        zoneIDs = mesh.cellZones().indices(cellZoneName);
-
-        if (zoneIDs.empty())
-        {
-            FatalIOErrorInFunction(dict)
-                << "No matching cellZones: " << cellZoneName << nl
-                << "    Valid zones : "
-                << flatOutput(mesh.cellZones().names()) << nl
-                << "    Valid groups: "
-                << flatOutput(mesh.cellZones().groupNames())
-                << nl
-                << exit(FatalIOError);
-        }
-    }
-
-    if (!cellSetName.empty() || !cellZoneName.empty())
+    if (!cellZoneIDs_.empty())
     {
         bitSet movePts(mesh.nPoints());
 
         // Markup points associated with cell zone(s)
-        for (const label zoneID : zoneIDs)
+        for (const label zonei : cellZoneIDs_)
         {
-            for (const label celli : mesh.cellZones()[zoneID])
+            for (const label celli : allCellZones[zonei])
+            {
+                for (const label facei : mesh.cells()[celli])
+                {
+                    movePts.set(mesh.faces()[facei]);
+                }
+            }
+        }
+
+        syncTools::syncPointList(mesh, movePts, orEqOp<unsigned int>(), 0u);
+
+        pointIDs_ = movePts.sortedToc();
+
+        // No cell points selected => move all points
+        if (returnReduceAnd(pointIDs_.empty()))
+        {
+            cellZoneIDs_.clear();  // consistency
+        }
+    }
+
+    selectionMode_ =
+    (
+        cellZoneIDs_.empty()
+      ? selectionModes::smAll
+      : selectionModes::smCellZone
+    );
+}
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::zoneMotion::zoneMotion()
+:
+    pointIDs_(),
+    cellZoneIDs_(),
+    selectionMode_(selectionModes::smAll)
+{}
+
+
+
+Foam::zoneMotion::zoneMotion
+(
+    const polyMesh& mesh,
+    const dictionary& dict
+)
+:
+    zoneMotion()
+{
+    resetZone(mesh, dict);
+}
+
+
+Foam::zoneMotion::zoneMotion(const dictionary& dict, const polyMesh& mesh)
+:
+    zoneMotion()
+{
+    resetZone(mesh, dict);
+}
+
+
+Foam::zoneMotion::zoneMotion
+(
+    const polyMesh& mesh,
+    const labelUList& cellZoneIds
+)
+:
+    zoneMotion()
+{
+    cellZoneIDs_ = cellZoneIds;
+    selectZonePoints(mesh);
+}
+
+
+Foam::zoneMotion::zoneMotion
+(
+    const polyMesh& mesh,
+    const wordRe& cellZoneSelection
+)
+:
+    zoneMotion()
+{
+    resetZone(mesh, cellZoneSelection);
+}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+void Foam::zoneMotion::resetZone()
+{
+    pointIDs_.clear();
+    cellZoneIDs_.clear();
+    selectionMode_ = selectionModes::smAll;
+}
+
+
+void Foam::zoneMotion::resetZone
+(
+    const polyMesh& mesh,
+    const wordRe& cellZoneSelection
+)
+{
+    pointIDs_.clear();
+    cellZoneIDs_.clear();
+    selectionMode_ = selectionModes::smAll;
+
+    if (!cellZoneSelection.empty())
+    {
+        const auto& allCellZones = mesh.cellZones();
+
+        // Also handles groups, multiple zones (as wordRe match) ...
+        cellZoneIDs_ = allCellZones.indices(cellZoneSelection);
+
+        if (cellZoneIDs_.empty())
+        {
+            WarningInFunction
+                << "No matching cellZones: " << cellZoneSelection << nl
+                << "    Valid zones : "
+                << flatOutput(allCellZones.names()) << nl
+                << "    Valid groups: "
+                << flatOutput(allCellZones.groupNames()) << nl;
+        }
+        else
+        {
+            selectZonePoints(mesh);
+        }
+    }
+}
+
+
+void Foam::zoneMotion::resetZone
+(
+    const polyMesh& mesh,
+    const dictionary& dict
+)
+{
+    pointIDs_.clear();
+    cellZoneIDs_.clear();
+    selectionMode_ = selectionModes::smAll;
+
+    int useSubset(0);
+    const auto& allCellZones = mesh.cellZones();
+
+    constexpr bool verbose = true;
+
+    // Specified cellSet?
+    labelHashSet cellIDs;
+    if
+    (
+        word cellSetName;
+        (
+            dict.readIfPresent("cellSet", cellSetName)
+         && !cellSetName.empty()
+         && cellSetName != "none"  // Compat: ignore 'none' placeholder
+        )
+    )
+    {
+        if (verbose)
+        {
+            Info<< "Applying motion to cellSet: " << cellSetName << endl;
+        }
+        useSubset |= int(selectionModes::smCellSet);
+        cellIDs = cellSet::readContents(mesh, cellSetName);
+    }
+
+    // Specified cellZone(s) ?
+    if
+    (
+        wordRe cellZoneSelection;
+        (
+            dict.readIfPresent("cellZone", cellZoneSelection)
+         && !cellZoneSelection.empty()
+         && cellZoneSelection != "none"  // Compat: ignore 'none' placeholder
+        )
+    )
+    {
+        if (verbose)
+        {
+            Info<< "Applying motion to cellZone: " << cellZoneSelection << endl;
+        }
+        useSubset |= int(selectionModes::smCellZone);
+
+        // Also handles groups, multiple zones (as wordRe match) ...
+        cellZoneIDs_ = allCellZones.indices(cellZoneSelection);
+
+        if (cellZoneIDs_.empty())
+        {
+            FatalIOErrorInFunction(dict)
+                << "No matching cellZones: " << cellZoneSelection << nl
+                << "    Valid zones : "
+                << flatOutput(allCellZones.names()) << nl
+                << "    Valid groups: "
+                << flatOutput(allCellZones.groupNames()) << nl
+                << exit(FatalIOError);
+        }
+    }
+
+    if (useSubset)
+    {
+        bitSet movePts(mesh.nPoints());
+
+        // Markup points associated with cell zones
+        for (const label zonei : cellZoneIDs_)
+        {
+            for (const label celli : mesh.cellZones()[zonei])
             {
                 for (const label facei : mesh.cells()[celli])
                 {
@@ -129,14 +274,18 @@ Foam::zoneMotion::zoneMotion
     }
 
 
-    // No cell points selected (as set or zones) => move all points
-
-    moveAllCells_ = returnReduceAnd(pointIDs_.empty());
-
-    if (moveAllCells_)
+    // No cell points selected => move all points
+    if (returnReduceAnd(pointIDs_.empty()))
     {
-        Info<< "Applying motion to entire mesh" << endl;
+        if (verbose)
+        {
+            Info<< "Applying motion to entire mesh" << endl;
+        }
+        useSubset = 0;
+        cellZoneIDs_.clear();  // consistency
     }
+
+    selectionMode_ = selectionModes(useSubset);
 }
 
 
