@@ -667,12 +667,7 @@ void Foam::bitSet::reduceAnd(int communicator, bool syncSizes)
     {
         int64_t common(find_last()+1);  // Size to include last bit
 
-        UPstream::mpiAllReduce<UPstream::opCodes::op_min>
-        (
-            &common,
-            1,
-            communicator
-        );
+        UPstream::mpiAllReduce_min(&common, 1, communicator);
 
         nblocks = num_blocks(common);
 
@@ -731,12 +726,7 @@ void Foam::bitSet::reduceOr(int communicator, bool syncSizes)
             static_cast<int64_t>(size())          // The overall size
         };
 
-        UPstream::mpiAllReduce<UPstream::opCodes::op_max>
-        (
-            sizing,
-            2,
-            communicator
-        );
+        UPstream::mpiAllReduce_max(sizing, 2, communicator);
 
         nblocks = num_blocks(sizing[0]);
 

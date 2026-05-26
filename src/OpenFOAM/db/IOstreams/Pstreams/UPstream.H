@@ -946,6 +946,7 @@ public:
     // Member Functions
 
         //- Create new communicator with sub-ranks on the parent communicator
+        [[nodiscard]]
         static label newCommunicator
         (
             //! The parent communicator
@@ -959,6 +960,7 @@ public:
         );
 
         //- Create new communicator with sub-ranks on the parent communicator
+        [[nodiscard]]
         static label newCommunicator
         (
             //! The parent communicator
@@ -974,6 +976,7 @@ public:
         //- Duplicate the parent communicator
         //
         //  Always calls dupCommunicatorComponents() internally
+        [[nodiscard]]
         static label dupCommunicator
         (
             //! The parent communicator
@@ -983,6 +986,7 @@ public:
         //- Allocate a new communicator by splitting the parent communicator
         //- on the given \em colour.
         //  Always calls splitCommunicatorComponents() internally
+        [[nodiscard]]
         static label splitCommunicator
         (
             //! The parent communicator
@@ -1076,6 +1080,7 @@ public:
         //
         //  \returns source rank and message size (bytes)
         //      and (-1, 0) on failure
+        [[nodiscard]]
         static std::pair<int,int64_t> probeMessage
         (
             //! Non-blocking or otherwise
@@ -1085,13 +1090,14 @@ public:
             //! The source message tag
             const int tag = UPstream::msgType(),
             //! The communicator index
-            const int communicator = worldComm
+            const int communicator = UPstream::worldComm
         );
 
         //- A standard probe for an incoming message.
         //
         //  \returns source rank and message size (bytes)
         //      and (-1, 0) on failure
+        [[nodiscard]]
         static std::pair<int,int64_t> probeMessage
         (
             //! The source rank (negative == ANY_SOURCE)
@@ -1099,7 +1105,7 @@ public:
             //! The source message tag
             const int tag = UPstream::msgType(),
             //! The communicator index
-            const int communicator = worldComm
+            const int communicator = UPstream::worldComm
         )
         {
             return probeMessage
@@ -1121,7 +1127,7 @@ public:
             //! The source message tag: assumed to be identical for all sources
             const int tag = UPstream::msgType(),
             //! The communicator index
-            const int communicator = worldComm
+            const int communicator = UPstream::worldComm
         );
 
 
@@ -1608,8 +1614,8 @@ public:
         static void exit(int errNo = 1);
 
 
-        #undef  Pstream_CommonRoutines
-        #define Pstream_CommonRoutines(Type)                                  \
+        #undef  Pstream_declareMethods
+        #define Pstream_declareMethods(Type)                                  \
                                                                               \
         /*!\brief Exchange \c Type data with all ranks in communicator     */ \
         /*! \em non-parallel : simple copy of \p sendData to \p recvData   */ \
@@ -1659,6 +1665,7 @@ public:
                                                                               \
         /*!\brief Exchange \c Type data between ranks [NBX]                */ \
         /*! \returns any received data as a Map                            */ \
+        [[nodiscard]]                                                         \
         static Map<Type> allToAllConsensus                                    \
         (                                                                     \
             /*! [in] The value at [proci] is sent to proci. */                \
@@ -1673,10 +1680,10 @@ public:
             return recvData;                                                  \
         }
 
-        Pstream_CommonRoutines(int32_t);
-        Pstream_CommonRoutines(int64_t);
+        Pstream_declareMethods(int32_t);
+        Pstream_declareMethods(int64_t);
 
-        #undef Pstream_CommonRoutines
+        #undef Pstream_declareMethods
 
 
     // Low-level gather/scatter routines
@@ -1751,6 +1758,7 @@ public:
         //- Allgather individual values into list locations.
         //  The returned list has size nProcs, identical on all ranks.
         template<class T>
+        [[nodiscard]]
         static List<T> allGatherValues
         (
             const T& localValue,
@@ -1763,6 +1771,7 @@ public:
         //  For \b non-parallel :
         //  the returned list length is 1 with localValue.
         template<class T>
+        [[nodiscard]]
         static List<T> listGatherValues
         (
             const T& localValue,
@@ -1775,6 +1784,7 @@ public:
         //  For \b non-parallel :
         //  returns the first list element (or default initialized).
         template<class T>
+        [[nodiscard]]
         static T listScatterValues
         (
             const UList<T>& allValues,
@@ -1822,7 +1832,7 @@ public:
             T values[],
             int count,
             const UPstream::opCodes opCodeId,
-            const int communicator
+            const int communicator = UPstream::worldComm
         );
 
         //- MPI_Reduce (blocking) for known operators
@@ -1832,7 +1842,7 @@ public:
         (
             T values[],
             int count,
-            const int communicator
+            const int communicator = UPstream::worldComm
         );
 
         //- MPI_Allreduce (blocking) for known operators
@@ -1843,7 +1853,7 @@ public:
             T values[],
             int count,
             const UPstream::opCodes opCodeId,
-            const int communicator
+            const int communicator = UPstream::worldComm
         );
 
         //- MPI_Allreduce (blocking) for known operators
@@ -1853,7 +1863,7 @@ public:
         (
             T values[],
             int count,
-            const int communicator
+            const int communicator = UPstream::worldComm
         );
 
         //- MPI_Iallreduce (non-blocking) for known operators
@@ -1878,6 +1888,38 @@ public:
             const int communicator,
             UPstream::Request& req
         );
+
+        #undef  Pstream_declareMethods
+        #define Pstream_declareMethods(OpName, OpCode)                        \
+                                                                              \
+        /*!\brief MPI Reduce \b \c OpName */                                  \
+        template<class T>                                                     \
+        static void mpiReduce_##OpName                                        \
+        (                                                                     \
+            T values[],                                                       \
+            int count,                                                        \
+            const int communicator = UPstream::worldComm                      \
+        )                                                                     \
+        {                                                                     \
+            UPstream::mpiReduce(values, count, OpCode, communicator);         \
+        }                                                                     \
+                                                                              \
+        /*!\brief MPI Allreduce \b \c OpName */                               \
+        template<class T>                                                     \
+        static void mpiAllReduce_##OpName                                     \
+        (                                                                     \
+            T values[],                                                       \
+            int count,                                                        \
+            const int communicator = UPstream::worldComm                      \
+        )                                                                     \
+        {                                                                     \
+            UPstream::mpiAllReduce(values, count, OpCode, communicator);      \
+        }
+
+        Pstream_declareMethods(min, UPstream::opCodes::op_min);
+        Pstream_declareMethods(max, UPstream::opCodes::op_max);
+        Pstream_declareMethods(sum, UPstream::opCodes::op_sum);
+        #undef Pstream_declareMethods
 
 
     // Partial reductions
@@ -1906,6 +1948,7 @@ public:
         //
         //  \note For \b non-parallel : return own value
         template<Foam::UPstream::opCodes opCode, class T>
+        [[nodiscard]]
         static T mpiScan
         (
             const T& localValue,
@@ -1914,8 +1957,8 @@ public:
             const bool exclusive = false
         );
 
-        #undef  Pstream_ScanRoutines
-        #define Pstream_ScanRoutines(OpName, OpCode)                          \
+        #undef  Pstream_declareMethods
+        #define Pstream_declareMethods(OpName, OpCode)                        \
                                                                               \
         /*!\brief Inclusive/exclusive \b \c OpName scan (in-place) */         \
         /*! See UPstream::mpiScan for notes about the behaviour */            \
@@ -1948,6 +1991,7 @@ public:
         /*!\brief Inclusive/exclusive \b \c OpName scan returning result */   \
         /*! See UPstream::mpiScan for notes about the behaviour */            \
         template<class T>                                                     \
+        [[nodiscard]]                                                         \
         static T mpiScan_##OpName                                             \
         (                                                                     \
             const T& value,                                                   \
@@ -1962,6 +2006,7 @@ public:
         /*!\brief Exclusive \b \c OpName scan returning result */             \
         /*! See UPstream::mpiScan for notes about the behaviour */            \
         template<class T>                                                     \
+        [[nodiscard]]                                                         \
         static T mpiExscan_##OpName                                           \
         (                                                                     \
             const T& value,                                                   \
@@ -1971,10 +2016,10 @@ public:
             return UPstream::mpiScan<OpCode>(value, communicator, true);      \
         }
 
-        Pstream_ScanRoutines(min, UPstream::opCodes::op_min);
-        Pstream_ScanRoutines(max, UPstream::opCodes::op_max);
-        Pstream_ScanRoutines(sum, UPstream::opCodes::op_sum);
-        #undef Pstream_ScanRoutines
+        Pstream_declareMethods(min, UPstream::opCodes::op_min);
+        Pstream_declareMethods(max, UPstream::opCodes::op_max);
+        Pstream_declareMethods(sum, UPstream::opCodes::op_sum);
+        #undef Pstream_declareMethods
 
 
     // Logical reductions
@@ -1984,7 +2029,7 @@ public:
         static void reduceAnd
         (
             bool& value,
-            const int communicator = worldComm
+            const int communicator = UPstream::worldComm
         );
 
         //- Logical (or) reduction (MPI_AllReduce)
@@ -1992,7 +2037,7 @@ public:
         static void reduceOr
         (
             bool& value,
-            const int communicator = worldComm
+            const int communicator = UPstream::worldComm
         );
 
         //- Locate the first rank for which the \p condition is true,
@@ -2029,14 +2074,6 @@ public:
         {
             return newCommunicator(parent, subRanks, withComponents);
         }
-
-        //- Communicator between nodes (respects any local worlds)
-        FOAM_DEPRECATED_FOR(2025-02, "commInterNode()")
-        static label commInterHost() noexcept { return commInterNode(); }
-
-        //- Communicator within the node (respects any local worlds)
-        FOAM_DEPRECATED_FOR(2025-02, "commLocalNode()")
-        static label commIntraHost() noexcept { return commLocalNode(); }
 
         //- Wait for all requests to finish.
         //  \deprecated(2023-01) Probably not what you want.
@@ -2144,6 +2181,7 @@ public:
     // Factory Methods
 
         //- Duplicate the given communicator
+        [[nodiscard]]
         static communicator duplicate(const label parentComm)
         {
             communicator c;
@@ -2153,6 +2191,7 @@ public:
 
         //- Factory Method :
         //- Split the communicator on the given \em colour.
+        [[nodiscard]]
         static communicator split
         (
             //! The parent communicator
