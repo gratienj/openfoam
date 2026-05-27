@@ -173,6 +173,51 @@ actions
         patch   movingWall;
     }
 
+    // patchDistanceToCell: single patch, distance-only
+    {
+        name    patchDist1a;
+        type    cellSet;
+        action  new;
+        source  patchDistanceToCell;
+        patch   movingWall;
+        distance 0.02;
+    }
+
+    // patchDistanceToCell: multiple patches
+    {
+        name    patchDist1b;
+        type    cellSet;
+        action  new;
+        source  patchDistanceToCell;
+        patches
+        (
+            movingWall
+            fixedWalls
+        );
+        distance 0.03;
+    }
+
+    // patchDistanceToCell: annular band [minDistance, distance]
+    {
+        name    patchDist1c;
+        type    cellSet;
+        action  new;
+        source  patchDistanceToCell;
+        patch   fixedWalls;
+        minDistance 0.01;
+        distance 0.04;
+    }
+
+    // patchDistanceToCell: subtract action
+    {
+        name    patchDist1c;
+        type    cellSet;
+        action  subtract;
+        source  patchDistanceToCell;
+        patch   fixedWalls;
+        distance 0.02;
+    }
+
     {
         name    rotatedBox1;
         type    cellSet;

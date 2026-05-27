@@ -174,6 +174,7 @@ $(cellSources)/haloToCell/haloToCell.C
 $(cellSources)/labelToCell/labelToCell.C
 $(cellSources)/nbrToCell/nbrToCell.C
 $(cellSources)/nearestToCell/nearestToCell.C
+$(cellSources)/patchDistanceToCell/patchDistanceToCell.C
 $(cellSources)/patchToCell/patchToCell.C
 $(cellSources)/pointToCell/pointToCell.C
 $(cellSources)/regionToCell/regionToCell.C
