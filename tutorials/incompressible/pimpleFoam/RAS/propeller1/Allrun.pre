@@ -18,6 +18,8 @@ runApplication decomposePar
 
 runParallel snappyHexMesh -overwrite
 
+runParallel topoSet
+
 runParallel checkMesh
 
 runParallel renumberMesh -overwrite

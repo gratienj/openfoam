@@ -10,44 +10,29 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    object      controlDict;
+    object      relativeVelocity;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     simpleFoam;
-
-startFrom       startTime;
-
-startTime       0;
-
-stopAt          endTime;
-
-endTime         500;
-
-deltaT          1;
-
-writeControl    timeStep;
-
-writeInterval   50;
-
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writePrecision  6;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable true;
-
-functions
+relative
 {
-    #include "relativeVelocity"
-}
+    type    relativeVelocity;
+    libs    (fieldFunctionObjects);
 
+    //executeControl  timeStep;
+    executeControl  writeTime;
+    writeControl    writeTime;
+
+    rotationMode    specified;
+
+    specified   // single zone
+    {
+        origin  (0 0 0);    // Rotation around centre line
+        axis    (1 0 0);
+        n       -25;        // [rev/sec]  (-ve: it is a left-hand propeller)
+
+        zone    innerCylinderSmall;
+    }
+}
 
 // ************************************************************************* //
