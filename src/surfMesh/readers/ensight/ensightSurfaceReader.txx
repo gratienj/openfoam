@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,34 +29,42 @@ License
 #include "SpanStream.H"
 #include "ensightPTraits.H"
 
-// * * * * * * * * * * Protected Static Member Functions * * * * * * * * * * //
-
-template<class Type>
-void Foam::ensightSurfaceReader::readFrom
-(
-    const std::string& buffer,
-    Type& value
-)
-{
-    ISpanStream is(buffer.data(), buffer.size());
-    is  >> value;
-}
-
-
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::ensightSurfaceReader::readField
+Foam::tmp<Foam::Field<Type>>
+Foam::ensightSurfaceReader::readField
 (
     const fileName& dataFile,
     const word& fieldName,
     const label timeIndex
 ) const
 {
-    auto tfield = tmp<Field<Type>>::New(surfPtr_->nFaces(), Zero);
+    auto tfield = tmp<Field<Type>>::New();
     auto& field = tfield.ref();
 
-    if (!masterOnly_ || UPstream::master(UPstream::worldComm))
+    // Only ranks where reading occur have elemTypeInfo_ and need to size
+    // the output field. The other ranks simply receive it by broadcast.
+
+    const bool readOnProc =
+    (
+        !masterOnly_ || UPstream::master(UPstream::worldComm)
+    );
+
+    if (readOnProc)
+    {
+        label nElements = 0;
+        for (const auto& tup : elemTypeInfo_)
+        {
+            if (auto count = tup.second(); count > 0)
+            {
+                nElements += count;
+            }
+        }
+        field.resize(nElements, Foam::zero{});
+    }
+
+    if (readOnProc)
     {
         // Use previously detected ascii/binary format
         ensightReadFile is(dataFile, readFormat_);
@@ -77,7 +86,10 @@ Foam::tmp<Foam::Field<Type>> Foam::ensightSurfaceReader::readField
         string primitiveType;
         is.read(primitiveType);
 
-        DebugInfo << "primitiveType: " << primitiveType << endl;
+        DebugInfo
+            << "primitiveType: " << primitiveType
+            << " (time-index:" << timeIndex
+            << ") expecting " << elemTypeInfo_.size() << " elements" << endl;
 
         if
         (
@@ -101,20 +113,36 @@ Foam::tmp<Foam::Field<Type>> Foam::ensightSurfaceReader::readField
         is.read(strValue);
         is.read(intValue);
 
-        label begFace = 0;
+        label begElem = 0;
 
         // Loop through different element types when reading the field values
-        for (const faceInfoTuple& facesInfo : faceTypeInfo_)
+        for (const auto& [elemType, elemCount] : elemTypeInfo_)
         {
-            // [faceType, faceCount]
-            const label endFace = begFace + facesInfo.second();
+            if (debug)
+            {
+                Info<< "Reading <" << pTraits<Type>::typeName
+                    << "> element type <";
 
-            DebugInfo
-                << "Reading <" << pTraits<Type>::typeName << "> face type "
-                << ensightFaces::elemNames[facesInfo.first()]
-                << " data:" << facesInfo.second() << endl;
+                if (elemType >= 0 && elemType < ensightFaces::nTypes)
+                {
+                    Info<< ensightFaces::elemNames[elemType];
+                }
+                else if (elemType == ensightFaces::elemType::BAR2)
+                {
+                    Info<< ensightFaces::kw_line();
+                }
+                else if (elemType == ensightFaces::elemType::POINT)
+                {
+                    Info<< ensightFaces::kw_vertex();
+                }
+                else
+                {
+                    Info<< "other";
+                }
+                Info<< "> data:" << elemCount << endl;
+            }
 
-            if (begFace < endFace)
+            if (elemCount)
             {
                 // The element type, optionally with 'undef'
                 is.read(strValue);
@@ -125,7 +153,23 @@ Foam::tmp<Foam::Field<Type>> Foam::ensightSurfaceReader::readField
                     scalar value;
                     is.read(value);
                 }
+            }
 
+            if (elemCount < 0)
+            {
+                label totalComponents =
+                (
+                    -elemCount * label(pTraits<Type>::nComponents)
+                );
+
+                is.skip<scalar>(totalComponents);
+            }
+            else if
+            (
+                const label endElem = begElem + elemCount;
+                (begElem < endElem)
+            )
+            {
                 // Ensight fields are written component-wise
                 // (can be in different order than OpenFOAM uses)
 
@@ -134,20 +178,21 @@ Foam::tmp<Foam::Field<Type>> Foam::ensightSurfaceReader::readField
                     const direction cmpt =
                         ensightPTraits<Type>::componentOrder[d];
 
-                    for (label facei = begFace; facei < endFace; ++facei)
+                    for (label i = begElem; i < endElem; ++i)
                     {
                         scalar value;
                         is.read(value);
-                        setComponent(field[facei], cmpt) = value;
+
+                        setComponent(field[i], cmpt) = value;
                     }
                 }
 
-                begFace = endFace;
+                begElem = endElem;
             }
         }
     }
 
-    if (masterOnly_ && UPstream::parRun())
+    if (masterOnly_)
     {
         Pstream::broadcast(field, UPstream::worldComm);
     }

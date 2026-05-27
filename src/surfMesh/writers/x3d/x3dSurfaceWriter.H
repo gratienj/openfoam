@@ -65,7 +65,7 @@ Note
     The range is applied after any field scaling.
 
 SourceFiles
-    x3dSurfaceWriter.C
+    x3dSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

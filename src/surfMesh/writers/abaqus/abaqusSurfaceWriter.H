@@ -85,8 +85,7 @@ Note
     Output variable scaling does not apply to integer types such as Ids.
 
 SourceFiles
-    abaqusSurfaceWriter.C
-    abaqusSurfaceWriterImpl.C
+    abaqusSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

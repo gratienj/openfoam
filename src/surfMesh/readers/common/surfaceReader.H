@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,7 +31,8 @@ Description
     Abstract base class for surface readers with fields.
 
     Some readers support different input options, these are typically
-    specified as 'readOptions' in the containing dictionary.
+    specified as 'formatOptions' (or 'readOptions') in the containing
+    dictionary.
 
     \verbatim
     readOptions
@@ -43,12 +45,13 @@ Description
         ensight
         {
             masterOnly  false;
+            vertexOnly  false;
         }
     }
     \endverbatim
 
 SourceFiles
-    surfaceReader.C
+    surfaceReader.cxx
 
 \*---------------------------------------------------------------------------*/
 
@@ -137,6 +140,11 @@ public:
 
         //- Return a reference to the surface geometry
         virtual const meshedSurface& geometry(const label timeIndex) = 0;
+
+        //- The number of 1D vertex/point elements for the last geometry read.
+        //- Non-zero when the surface reader is used/misused to read
+        //- vertex/point elements instead of faces (advanced option)
+        virtual label nVertexElements() const = 0;
 
         //- Return a list of the available times
         virtual instantList times() const = 0;

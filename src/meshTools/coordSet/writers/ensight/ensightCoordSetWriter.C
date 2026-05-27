@@ -81,7 +81,7 @@ static void writeTrackField
         ensightOutput::Detail::writeFieldComponents
         (
             os,
-            ensightFile::coordinates,
+            ensightFile::kw_coordinates(),
             fld,
             false  /* serial only! */
         );
@@ -111,7 +111,7 @@ void Foam::coordSetWriters::ensightWriter::writeGeometry
         const label nPoints = coords.size();
 
         word partName("track" + Foam::name(tracki));
-        if (coords_.size() == 1 && elemOutputType::WRITE_LINES != elemOutput)
+        if (coords_.size() == 1 && elemOutputType::LINE_ELEMENTS != elemOutput)
         {
             partName = "sampled";
         }
@@ -126,11 +126,11 @@ void Foam::coordSetWriters::ensightWriter::writeGeometry
             false     /* serial only! */
         );
 
-        if (elemOutputType::WRITE_POINTS == elemOutput)
+        if (elemOutputType::VERTEX_ELEMENTS == elemOutput)
         {
             if (nPoints)
             {
-                os.writeKeyword("point");
+                os.writeKeyword("point");  // ensightFaces::kw_vertex()
                 os.write(nPoints);
                 os.newline();
                 for (label pointi = 0; pointi < nPoints; ++pointi)
@@ -140,12 +140,11 @@ void Foam::coordSetWriters::ensightWriter::writeGeometry
                 }
             }
         }
-        if (elemOutputType::WRITE_LINES == elemOutput)
+        if (elemOutputType::LINE_ELEMENTS == elemOutput)
         {
-            const label nLines = (nPoints-1);
             if (nPoints == 1)
             {
-                os.writeKeyword("point");
+                os.writeKeyword("point");  // ensightFaces::kw_vertex()
                 os.write(nPoints);
                 os.newline();
                 for (label pointi = 0; pointi < nPoints; ++pointi)
@@ -154,9 +153,9 @@ void Foam::coordSetWriters::ensightWriter::writeGeometry
                     os.newline();
                 }
             }
-            else if (nLines > 0)
+            else if (const label nLines = (nPoints-1); nLines > 0)
             {
-                os.writeKeyword("bar2");
+                os.writeKeyword("bar2");  // ensightFaces::kw_line()
                 os.write(nLines);
                 os.newline();
                 for (label pointi = 0; pointi < nLines; ++pointi)
@@ -259,8 +258,8 @@ void Foam::coordSetWriters::ensightWriter::close(const bool force)
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Field writing implementations
 
-#include "ensightCoordSetWriterCollated.C"
-#include "ensightCoordSetWriterUncollated.C"
+#include "ensightCoordSetWriter_collated.cxx"
+#include "ensightCoordSetWriter_uncollated.cxx"
 
 template<class Type>
 Foam::fileName Foam::coordSetWriters::ensightWriter::writeTemplate
@@ -288,7 +287,7 @@ Foam::fileName Foam::coordSetWriters::ensightWriter::writeTemplate
     elemOutputType elemOutput =
     (
         useTracks_
-      ? elemOutputType::WRITE_LINES
+      ? elemOutputType::LINE_ELEMENTS
       : elemOutputType::NO_ELEMENTS
     );
 
@@ -332,7 +331,7 @@ Foam::fileName Foam::coordSetWriters::ensightWriter::writeTemplate
         (
             fieldName,
             fieldPtrs,
-            elemOutputType::WRITE_LINES
+            elemOutputType::LINE_ELEMENTS
         );
     }
     else
@@ -341,7 +340,7 @@ Foam::fileName Foam::coordSetWriters::ensightWriter::writeTemplate
         (
             fieldName,
             fieldPtrs,
-            elemOutputType::WRITE_LINES
+            elemOutputType::LINE_ELEMENTS
         );
     }
 }

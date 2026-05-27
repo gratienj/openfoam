@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -53,10 +54,24 @@ inline bool Foam::surfaceWriter::isPointData() const noexcept
 }
 
 
-inline bool Foam::surfaceWriter::isPointData(const bool on) noexcept
+inline bool Foam::surfaceWriter::isPointData(bool on) noexcept
 {
     bool old(isPointData_);
     isPointData_ = on;
+    return old;
+}
+
+
+inline bool Foam::surfaceWriter::vertexOutput() const noexcept
+{
+    return vertexOutput_;
+}
+
+
+inline bool Foam::surfaceWriter::vertexOutput(bool on) noexcept
+{
+    bool old(vertexOutput_);
+    vertexOutput_ = on;
     return old;
 }
 

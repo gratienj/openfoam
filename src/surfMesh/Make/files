@@ -59,25 +59,25 @@ triSurface/patches/surfacePatch.C
 
 readers = readers
 
-$(readers)/common/surfaceReader.C
-$(readers)/boundary/boundaryDataSurfaceReader.C
-$(readers)/ensight/ensightSurfaceReader.C
+$(readers)/common/surfaceReader.cxx
+$(readers)/boundary/boundaryDataSurfaceReader.cxx
+$(readers)/ensight/ensightSurfaceReader.cxx
 
 writers = writers
 
-$(writers)/common/surfaceWriter.C
-$(writers)/abaqus/abaqusSurfaceWriter.C
-$(writers)/boundary/boundaryDataSurfaceWriter.C
-$(writers)/debug/debugSurfaceWriter.C
-$(writers)/ensight/ensightSurfaceWriter.C
-$(writers)/foam/foamSurfaceWriter.C
-$(writers)/nastran/nastranSurfaceWriter.C
-$(writers)/null/nullSurfaceWriter.C
-$(writers)/proxy/proxySurfaceWriter.C
-$(writers)/raw/rawSurfaceWriter.C
-$(writers)/starcd/starcdSurfaceWriter.C
-$(writers)/vtk/vtkSurfaceWriter.C
-$(writers)/x3d/x3dSurfaceWriter.C
+$(writers)/common/surfaceWriter.cxx
+$(writers)/abaqus/abaqusSurfaceWriter.cxx
+$(writers)/boundary/boundaryDataSurfaceWriter.cxx
+$(writers)/debug/debugSurfaceWriter.cxx
+$(writers)/ensight/ensightSurfaceWriter.cxx
+$(writers)/foam/foamSurfaceWriter.cxx
+$(writers)/nastran/nastranSurfaceWriter.cxx
+$(writers)/null/nullSurfaceWriter.cxx
+$(writers)/proxy/proxySurfaceWriter.cxx
+$(writers)/raw/rawSurfaceWriter.cxx
+$(writers)/starcd/starcdSurfaceWriter.cxx
+$(writers)/vtk/vtkSurfaceWriter.cxx
+$(writers)/x3d/x3dSurfaceWriter.cxx
 
 
 LIB = $(FOAM_LIBBIN)/libsurfMesh

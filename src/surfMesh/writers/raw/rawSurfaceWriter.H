@@ -82,7 +82,7 @@ Description
     \endverbatim
 
 SourceFiles
-    rawSurfaceWriter.C
+    rawSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

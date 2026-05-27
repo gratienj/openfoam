@@ -133,9 +133,9 @@ Foam::fileName Foam::surfaceWriters::abaqusWriter::writeTemplate
     {
         const auto& values = tfield();
 
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         // const scalar timeValue(0);

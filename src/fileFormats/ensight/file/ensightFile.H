@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
     Copyright (C) 2016-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -107,6 +108,13 @@ public:
 
         //- The keyword "coordinates"
         static const char* const coordinates;
+
+        //- The keyword "coordinates"
+        [[nodiscard]]
+        static constexpr const char* kw_coordinates() noexcept
+        {
+            return "coordinates";
+        }
 
 
     // Static Functions

@@ -142,11 +142,10 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::write()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include "ensightSurfaceWriterCollated.C"
-#include "ensightSurfaceWriterUncollated.C"
-
-
 // Field writing implementations
+
+#include "ensightSurfaceWriter_collated.cxx"
+#include "ensightSurfaceWriter_uncollated.cxx"
 
 template<class Type>
 Foam::fileName Foam::surfaceWriters::ensightWriter::writeTemplate

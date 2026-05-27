@@ -30,7 +30,7 @@ Description
     Suppresses output of geometry and fields
 
 SourceFiles
-    nullSurfaceWriter.C
+    nullSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

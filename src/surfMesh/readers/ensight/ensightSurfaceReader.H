@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,7 +36,8 @@ Description
         ensight
         {
             debug       false;
-            masterOnly  false;
+            masterOnly  true;
+            vertexOnly  false;
         }
     }
     \endverbatim
@@ -45,10 +47,11 @@ Description
         Property | Description                              | Required | Default
         debug    | Add debug flag                           | no  | false
         masterOnly | Read files on master and broadcast values | no  | true
+        vertexOnly | Retain 1D vertex/point elements, no faces | no  | false
     \endtable
 
 SourceFiles
-    ensightSurfaceReader.C
+    ensightSurfaceReader.cxx
     ensightSurfaceReader.txx
 
 \*---------------------------------------------------------------------------*/
@@ -61,7 +64,6 @@ SourceFiles
 #include "ensightFaces.H"
 #include "ensightReadFile.H"
 #include "Pair.H"
-#include "Tuple2.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -89,14 +91,13 @@ protected:
         };
 
 
-        //- Tuple of face type (tria3, quad4, nsided) and count
-        typedef Tuple2<ensightFaces::elemType, label> faceInfoTuple;
-
-
     // Protected Data
 
         //- Read on master and broadcast (in parallel)
         bool masterOnly_;
+
+        //- Retain 1D vertex/point elements, no faces
+        bool vertexOnly_;
 
         //- Format flag
         IOstreamOption::streamFormat readFormat_;
@@ -134,8 +135,13 @@ protected:
         //- Pointer to the surface
         autoPtr<meshedSurface> surfPtr_;
 
-        //- List of face-type/count tuples
-        List<faceInfoTuple> faceTypeInfo_;
+        //- Has these 1D vertex/point elements
+        labelList vertexElements_;
+
+        //- List of (element-type, count) tuples.
+        //  Element-type is typically (tria3, quad4, nsided).
+        //  A negative count means a discarded (ignored) element type.
+        List<labelPair> elemTypeInfo_;
 
 
     // Static Member Functions
@@ -156,10 +162,6 @@ protected:
         //- Read and check a section header
         static void debugSection(const word& expected, ISstream& is);
 
-        //- Helper function to return Type from string
-        template<class Type>
-        static void readFrom(const std::string& buffer, Type& value);
-
 
     // Protected Member Functions
 
@@ -170,7 +172,8 @@ protected:
         //- Read the case file
         void readCase(ISstream& is);
 
-        //- Read and return surface geometry. Updates faceTypeInfo_
+        //- Read and return surface geometry.
+        //  Updates elemTypeInfo_ and vertexElements_
         meshedSurface readGeometry
         (
             const fileName& geometryFile,
@@ -229,6 +232,11 @@ public:
 
         //- Return a reference to the surface geometry
         virtual const meshedSurface& geometry(const label timeIndex);
+
+        //- The number of 1D vertex/point elements for the last geometry read.
+        //- Non-zero when the surface reader is used/misused to read
+        //- vertex/point elements instead of faces (advanced option)
+        virtual label nVertexElements() const;
 
         //- Return a list of the available times
         virtual instantList times() const;

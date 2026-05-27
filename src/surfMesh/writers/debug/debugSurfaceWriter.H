@@ -56,7 +56,7 @@ Note
     Output files (if any) are written as boundaryData (binary + header).
 
 SourceFiles
-    debugSurfaceWriter.C
+    debugSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

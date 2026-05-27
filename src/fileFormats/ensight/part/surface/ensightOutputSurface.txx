@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,25 +45,48 @@ void Foam::ensightOutputSurface::writeData
     }
     else
     {
-        this->writeFaceData(os, fld);
+        this->writeCellData(os, fld);
     }
 }
 
 
 template<class Type>
-void Foam::ensightOutputSurface::writeFaceData
+void Foam::ensightOutputSurface::writeCellData
 (
     ensightFile& os,
     const Field<Type>& fld
 ) const
 {
-    ensightOutput::writeField
-    (
-        os,
-        fld,
-        *this,
-        false  /* serial only! */
-    );
+    const ensightOutputSurface& part = *this;
+
+    if (vertexOutput_)
+    {
+        // No field
+        if (fld.empty())
+        {
+            return;
+        }
+
+        os.beginPart(part.index());
+
+        ensightOutput::Detail::writeFieldComponents
+        (
+            os,
+            ensightFaces::kw_vertex(),
+            fld,
+            false  /* serial only! */
+        );
+    }
+    else
+    {
+        ensightOutput::writeField
+        (
+            os,
+            fld,
+            part,
+            false  /* serial only! */
+        );
+    }
 }
 
 
@@ -75,19 +99,19 @@ void Foam::ensightOutputSurface::writePointData
 {
     const ensightOutputSurface& part = *this;
 
-    // No geometry or field
-    if (part.empty() || fld.empty())
+    // No field or no geometry (faces or vertex)
+    // - the proc-local check is OK since this is called as serial-only
+    if (fld.empty() || part.empty())
     {
         return;
     }
-
 
     os.beginPart(part.index());
 
     ensightOutput::Detail::writeFieldComponents
     (
         os,
-        ensightFile::coordinates,
+        ensightFile::kw_coordinates(),
         fld,
         false  /* serial only! */
     );

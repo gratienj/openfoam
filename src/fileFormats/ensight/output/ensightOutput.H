@@ -120,7 +120,7 @@ void writePolysPoints
     ensightGeoFile& os,
     const polyMesh& mesh,
     const labelUList& addr,     //!< Cell ids to write
-    const labelList& pointMap   //!< Point map to use
+    const labelUList& pointMap  //!< Point map to use
 );
 
 
@@ -294,7 +294,7 @@ CompactListList<label> getPolysFacePoints
 (
     const polyMesh& mesh,
     const labelUList& addr,     //!< Cell ids to write
-    const labelList& pointMap   //!< Point map to use
+    const labelUList& pointMap  //!< Point map to use
 );
 
 

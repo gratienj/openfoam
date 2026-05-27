@@ -59,7 +59,7 @@ Description
     The information is used for restarts.
 
 SourceFiles
-    ensightSurfaceWriter.C
+    ensightSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

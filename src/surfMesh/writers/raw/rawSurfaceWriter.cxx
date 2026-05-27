@@ -5,8 +5,9 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2015-2024 OpenCFD Ltd.
+    Copyright (C) 2011-2016 OpenFOAM Foundation
+    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,10 +27,11 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "proxySurfaceWriter.H"
-#include "MeshedSurfaceProxy.H"
+#include "rawSurfaceWriter.H"
+#include "OFstream.H"
 #include "OSspecific.H"
 #include "surfaceWriterMethods.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -37,39 +39,53 @@ namespace Foam
 {
 namespace surfaceWriters
 {
-    defineTypeName(proxyWriter);
+    defineTypeName(rawWriter);
+    addToRunTimeSelectionTable(surfaceWriter, rawWriter, word);
+    addToRunTimeSelectionTable(surfaceWriter, rawWriter, wordDict);
 }
 }
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Field writing implementation
+#include "rawSurfaceWriter_impl.cxx"
+
+// Field writing methods
+defineSurfaceWriterWriteFields(Foam::surfaceWriters::rawWriter);
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::surfaceWriters::proxyWriter::proxyWriter(const word& fileExt)
+Foam::surfaceWriters::rawWriter::rawWriter()
 :
     surfaceWriter(),
-    fileExtension_(fileExt),
-    streamOpt_()
+    streamOpt_(),
+    precision_(IOstream::defaultPrecision()),
+    writeNormal_(false)
 {}
 
 
-Foam::surfaceWriters::proxyWriter::proxyWriter
+Foam::surfaceWriters::rawWriter::rawWriter
 (
-    const word& fileExt,
     const dictionary& options
 )
 :
     surfaceWriter(options),
-    fileExtension_(fileExt),
     streamOpt_
     (
-        IOstreamOption::formatEnum("format", options, IOstreamOption::ASCII),
+        IOstreamOption::ASCII,
         IOstreamOption::compressionEnum("compression", options)
     ),
-    options_(options)
+    precision_
+    (
+        options.getOrDefault("precision", IOstream::defaultPrecision())
+    ),
+    writeNormal_(options.getOrDefault("normal", false))
 {}
 
 
-Foam::surfaceWriters::proxyWriter::proxyWriter
+Foam::surfaceWriters::rawWriter::rawWriter
 (
     const meshedSurf& surf,
     const fileName& outputPath,
@@ -77,13 +93,13 @@ Foam::surfaceWriters::proxyWriter::proxyWriter
     const dictionary& options
 )
 :
-    proxyWriter(outputPath.ext(), options)
+    rawWriter(options)
 {
-    surfaceWriter::open(surf, outputPath, parallel);
+    open(surf, outputPath, parallel);
 }
 
 
-Foam::surfaceWriters::proxyWriter::proxyWriter
+Foam::surfaceWriters::rawWriter::rawWriter
 (
     const pointField& points,
     const faceList& faces,
@@ -92,55 +108,19 @@ Foam::surfaceWriters::proxyWriter::proxyWriter
     const dictionary& options
 )
 :
-    proxyWriter(outputPath.ext(), options)
+    rawWriter(options)
 {
-    surfaceWriter::open(points, faces, outputPath, parallel);
-}
-
-
-// * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
-
-Foam::autoPtr<Foam::surfaceWriter>
-Foam::surfaceWriters::proxyWriter::TryNew(const word& writeType)
-{
-    if (MeshedSurfaceProxy<face>::canWriteType(writeType))
-    {
-        return autoPtr<surfaceWriter>(new proxyWriter(writeType));
-    }
-
-    return nullptr;
-}
-
-
-Foam::autoPtr<Foam::surfaceWriter>
-Foam::surfaceWriters::proxyWriter::TryNew
-(
-    const word& writeType,
-    const dictionary& writeOpts
-)
-{
-    if (MeshedSurfaceProxy<face>::canWriteType(writeType))
-    {
-        return autoPtr<surfaceWriter>(new proxyWriter(writeType, writeOpts));
-    }
-
-    return nullptr;
+    open(points, faces, outputPath, parallel);
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::fileName Foam::surfaceWriters::proxyWriter::write()
+Foam::fileName Foam::surfaceWriters::rawWriter::write()
 {
     checkOpen();
 
-    // Avoid bad values
-    if (fileExtension_.empty())
-    {
-        return fileName::null;
-    }
-
-    // Geometry:  rootdir/<TIME>/surfaceName.{extension}
+    // Geometry:  rootdir/<TIME>/surfaceName.raw
 
     fileName outputFile = outputPath_;
     if (useTimeDir() && !timeName().empty())
@@ -148,41 +128,75 @@ Foam::fileName Foam::surfaceWriters::proxyWriter::write()
         // Splice in time-directory
         outputFile = outputPath_.path() / timeName() / outputPath_.name();
     }
-    outputFile.ext(fileExtension_);
+    outputFile.ext("raw");
 
     if (verbose_)
     {
         Info<< "Writing geometry to " << outputFile << endl;
     }
 
+
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
 
+    const bool withFaceNormal =
+    (
+        writeNormal_ && (!this->isPointData() && !this->vertexOutput())
+    );
+
     if (UPstream::master() || !parallel_)
     {
-        if (!isDir(outputFile.path()))
+        const pointField& points = surf.points();
+        const faceList& faces = surf.faces();
+
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
-        MeshedSurfaceProxy<face>(surf.points(), surf.faces()).write
-        (
-            outputFile,
-            fileExtension_,
-            streamOpt_,
-            options_
-        );
+        OFstream os(outputFile, streamOpt_);
+        os.precision(precision_);
+
+        // Header
+        {
+            os  << "# geometry NO_DATA " << faces.size() << nl;
+            os  << "# x y z";
+            if (withFaceNormal)
+            {
+                writeHeaderArea(os);
+            }
+            os  << nl;
+        }
+
+        if (this->vertexOutput())
+        {
+            for (const auto& p : points)
+            {
+                writePoint(os, p);
+                os << nl;
+            }
+        }
+        else
+        {
+            // Write faces centres (optionally faceArea normals)
+            for (const auto& f : faces)
+            {
+                writePoint(os, f.centre(points));
+                if (withFaceNormal)
+                {
+                    os << ' ';
+                    writePoint(os, f.areaNormal(points));
+                }
+                os << nl;
+            }
+        }
+
+        os  << nl;
     }
 
     wroteGeom_ = true;
     return outputFile;
 }
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-// Field writing methods
-defineSurfaceWriterWriteFields(Foam::surfaceWriters::proxyWriter);
 
 
 // ************************************************************************* //

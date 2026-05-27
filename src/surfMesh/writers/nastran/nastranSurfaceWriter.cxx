@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
     Copyright (C) 2015-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,7 +50,7 @@ namespace surfaceWriters
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // Field writing implementation
-#include "nastranSurfaceWriterImpl.C"
+#include "nastranSurfaceWriter_impl.cxx"
 
 // Field writing methods
 defineSurfaceWriterWriteFields(Foam::surfaceWriters::nastranWriter);
@@ -166,6 +167,13 @@ void Foam::surfaceWriters::nastranWriter::writeGeometry
     const faceList&    faces = surf.faces();
     const labelList&   zones = surf.zoneIds();
     const labelList& elemIds = surf.faceIds();
+
+    if (this->vertexOutput())
+    {
+        Warning
+            << "No vertexOutput() support for <"
+            << this->type() << "> surface output" << endl;
+    }
 
     // Possible to use faceIds?
     bool useOrigFaceIds =
@@ -346,18 +354,18 @@ Foam::surfaceWriters::nastranWriter::nastranWriter
     List<Pair<word>> fieldPairs;
     options.readIfPresent("fields", fieldPairs);
 
-    for (const Pair<word>& item : fieldPairs)
+    for (const auto& [fld, fmtName] : fieldPairs)
     {
         const loadFormat format =
-            fileFormats::NASCore::loadFormatNames[item.second()];
+            fileFormats::NASCore::loadFormatNames[fmtName];
 
         if (format == loadFormat::PLOAD2)
         {
-            pload2_.push_back(item.first());
+            pload2_.push_back(fld);
         }
         else if (format == loadFormat::PLOAD4)
         {
-            pload4_.push_back(item.first());
+            pload4_.push_back(fld);
         }
     }
 }

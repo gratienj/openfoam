@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
     Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -77,7 +78,7 @@ Description
     \endverbatim
 
 SourceFiles
-    vtkSurfaceWriter.C
+    vtkSurfaceWriter.cxx
 
 \*---------------------------------------------------------------------------*/
 

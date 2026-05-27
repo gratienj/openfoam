@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2014 OpenFOAM Foundation
     Copyright (C) 2015-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,6 +77,8 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated()
             surf.faces(),
             baseName
         );
+        // Propagate through the vertex handling
+        part.vertexOutput(this->vertexOutput());
 
         // Two-argument form for path-name to avoid validating outputDir
         ensightGeoFile osGeom
@@ -189,6 +192,8 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated
             surf.faces(),
             baseName
         );
+        // Propagate through the vertex handling
+        part.vertexOutput(this->vertexOutput());
 
         // Two-argument form for path-name to avoid validating base-dir
         ensightGeoFile osGeom

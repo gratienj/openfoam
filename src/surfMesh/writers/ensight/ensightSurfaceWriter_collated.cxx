@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2014 OpenFOAM Foundation
     Copyright (C) 2015-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -150,6 +151,8 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeCollated
             surf.faces(),
             geomFile.name()
         );
+        // Propagate through the vertex handling
+        part.vertexOutput(this->vertexOutput());
 
         if (!Foam::exists(geomFile))
         {

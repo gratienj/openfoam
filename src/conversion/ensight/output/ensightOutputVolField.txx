@@ -241,7 +241,7 @@ bool Foam::ensightOutput::writePointField
         (
             scratch,
             os,
-            ensightFile::coordinates,
+            ensightFile::kw_coordinates(),
             UIndirectList<Type>(pf.internalField(), uniquePointLabels),
             parallel
         );
@@ -296,7 +296,7 @@ bool Foam::ensightOutput::writePointField
             (
                 scratch,
                 os,
-                ensightFile::coordinates,
+                ensightFile::kw_coordinates(),
                 UIndirectList<Type>(*vpp, uniquePointLabels),
                 parallel
             );
@@ -307,7 +307,7 @@ bool Foam::ensightOutput::writePointField
             (
                 scratch,
                 os,
-                ensightFile::coordinates,
+                ensightFile::kw_coordinates(),
                 UIndirectList<Type>(pf.internalField(), uniquePointLabels),
                 parallel
             );
@@ -347,7 +347,7 @@ bool Foam::ensightOutput::writePointField
         (
             scratch,
             os,
-            ensightFile::coordinates,
+            ensightFile::kw_coordinates(),
             UIndirectList<Type>(pf.internalField(), uniquePointLabels),
             parallel
         );

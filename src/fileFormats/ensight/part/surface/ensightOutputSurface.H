@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -68,6 +69,9 @@ class ensightOutputSurface
         //- The referenced faces
         const faceList& faces_;
 
+        //- Output as 1D vertex/point elements instead of faces
+        bool vertexOutput_;
+
 
 public:
 
@@ -98,11 +102,37 @@ public:
 
     // Member Functions
 
+        //- Output as 1D vertex/point elements instead of faces
+        bool vertexOutput() const noexcept { return vertexOutput_; }
+
+        //- Output as 1D vertex/point elements instead of faces
+        bool vertexOutput(bool on) noexcept
+        {
+            bool old(vertexOutput_);
+            vertexOutput_ = on;
+            return old;
+        }
+
+        //- Processor-local test for any elements
+        bool empty() const noexcept
+        {
+            return (vertexOutput_ ? points_.empty() : ensightFaces::empty());
+        }
+
+        //- Processor-local size of all elements
+        label size() const noexcept
+        {
+            return (vertexOutput_ ? points_.size() : ensightFaces::size());
+        }
+
+
+    // Member Functions
+
         //- Write processor-local geometry (serial-only).
         //- No beginGeometry() marker.
         void write(ensightGeoFile& os) const;
 
-        //- Write a field of face or point values (serial-only)
+        //- Write a field of cell or point values (serial-only)
         template<class Type>
         void writeData
         (
@@ -111,9 +141,9 @@ public:
             const bool isPointData = false
         ) const;
 
-        //- Write a field of face values (serial-only)
+        //- Write a field of cell (face or vertex) values (serial-only)
         template<class Type>
-        void writeFaceData(ensightFile& os, const Field<Type>& fld) const;
+        void writeCellData(ensightFile& os, const Field<Type>& fld) const;
 
         //- Write a field of point values (serial-only)
         template<class Type>

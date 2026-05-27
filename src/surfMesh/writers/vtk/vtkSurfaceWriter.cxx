@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -157,28 +158,28 @@ Foam::surfaceWriters::vtkWriter::~vtkWriter()
 
 void Foam::surfaceWriters::vtkWriter::close()
 {
-    writer_.clear();
+    writer_.reset(nullptr);
     surfaceWriter::close();
 }
 
 
 void Foam::surfaceWriters::vtkWriter::beginTime(const Time& t)
 {
-    writer_.clear();
+    writer_.reset(nullptr);
     surfaceWriter::beginTime(t);
 }
 
 
 void Foam::surfaceWriters::vtkWriter::beginTime(const instant& inst)
 {
-    writer_.clear();
+    writer_.reset(nullptr);
     surfaceWriter::beginTime(inst);
 }
 
 
 void Foam::surfaceWriters::vtkWriter::endTime()
 {
-    writer_.clear();
+    writer_.reset(nullptr);
     surfaceWriter::endTime();
 }
 
@@ -189,7 +190,7 @@ Foam::fileName Foam::surfaceWriters::vtkWriter::write()
 
     if (needsUpdate())
     {
-        writer_.clear();
+        writer_.reset(nullptr);
     }
     merge();
 
@@ -228,6 +229,8 @@ Foam::fileName Foam::surfaceWriters::vtkWriter::write()
                 false  // serial!
             )
         );
+        // Propagate through the vertex handling
+        writer_->vertexOutput(this->vertexOutput());
 
         if (this->hasTime())
         {
@@ -243,6 +246,7 @@ Foam::fileName Foam::surfaceWriters::vtkWriter::write()
 
         writer_->writeGeometry();
 
+        // TBD: special trapping with vertexOutput = true?
         if (writeNormal_)
         {
             const faceList& fcs = surf.faces();
@@ -313,12 +317,17 @@ Foam::fileName Foam::surfaceWriters::vtkWriter::writeTemplate
             Info<< endl;
         }
 
+        // Keep vertex handling properly synchronized
+        writer_->vertexOutput(this->vertexOutput());
+
         if (this->isPointData())
         {
+            // PointData
             writer_->beginPointData(nFields_);
         }
         else
         {
+            // CellData (vertex or face)
             writer_->beginCellData(nFields_);
         }
 

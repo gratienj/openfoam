@@ -40,18 +40,24 @@ namespace Foam
 
 void Foam::ensightPart::incrAddressing(const label off)
 {
-    for (label& val : address_)
+    if (off)
     {
-        val += off;
+        for (auto& val : address_)
+        {
+            val += off;
+        }
     }
 }
 
 
 void Foam::ensightPart::decrAddressing(const label off)
 {
-    for (label& val : address_)
+    if (off)
     {
-        val -= off;
+        for (auto& val : address_)
+        {
+            val -= off;
+        }
     }
 }
 

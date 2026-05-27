@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -121,7 +122,7 @@ Foam::surfaceWriters::mydebugWriter::mergeField
 
         const globalIndex& globIndex =
         (
-            this->isPointData()
+            (this->isPointData() || this->vertexOutput())
           ? mergedSurf_.pointGlobalIndex()
           : mergedSurf_.faceGlobalIndex()
         );
@@ -161,11 +162,13 @@ Foam::surfaceWriters::mydebugWriter::mergeField
         input.clear();
         output.clear();
 
-        // Renumber (point data) to correspond to merged points
+        // Renumber (point data) to correspond to merged points.
+        // For vertexOutput the points will usually be disjoint
+        // (eg faceCentres) and thus merging will not have any affect
         if
         (
             UPstream::master()
-         && this->isPointData()
+         && (this->isPointData() || this->vertexOutput())
          && mergedSurf_.pointsMap().size()
         )
         {
@@ -205,10 +208,13 @@ Foam::surfaceWriters::mydebugWriter::mydebugWriter
     narrowTransfer_(options.getOrDefault("narrow", false)),
     streamOpt_(IOstreamOption::BINARY)
 {
-    Info<< "Using debug surface writer ("
-        << (this->isPointData() ? "point" : "face") << " data):"
-        << " commsType=";
+    Info<< "Using debug surface writer (" <<
+    (
+        this->isPointData()  ? "point" :
+        this->vertexOutput() ? "vertex" : "face"
+    ) << " data):";
 
+    Info<< " commsType=";
     if (UPstream::parRun())
     {
         if (gatherv_) Info<< "gatherv+";
@@ -263,8 +269,8 @@ void Foam::surfaceWriters::mydebugWriter::serialWriteGeometry
     const meshedSurf& surf
 )
 {
-    const pointField& points = surf.points();
-    const faceList& faces = surf.faces();
+    const auto& points = surf.points();
+    const auto& faces = surf.faces();
 
     if (verbose_)
     {
@@ -281,7 +287,7 @@ void Foam::surfaceWriters::mydebugWriter::serialWriteGeometry
     // Like regIOobject::writeObject without instance() adaptation
     // since this would write to e.g. 0/ instead of postProcessing/
 
-    autoPtr<primitivePatch> ppPtr;
+    std::unique_ptr<primitivePatch> ppPtr;
 
     {
         OFstream os(iopts.objectPath(), streamOpt_);
@@ -291,17 +297,21 @@ void Foam::surfaceWriters::mydebugWriter::serialWriteGeometry
             iopts.writeHeader(os);
         }
 
-        if (this->isPointData())
+        if (this->isPointData() || (this->vertexOutput() && faces.empty()))
         {
             // Just like writeData, but without copying beforehand
             os << points;
         }
         else
         {
-            ppPtr.reset(new primitivePatch(SubList<face>(faces), points));
+            ppPtr = std::make_unique<primitivePatch>
+            (
+                SubList<face>(faces),
+                points
+            );
 
             // Just like writeData, but without copying beforehand
-            os << ppPtr().faceCentres();
+            os << ppPtr->faceCentres();
         }
 
         if (header_)
@@ -338,26 +348,46 @@ Foam::fileName Foam::surfaceWriters::mydebugWriter::write()
     // const meshedSurfRef& surf = adjustSurface();
 
     // Dummy Time to use as objectRegistry
-    autoPtr<Time> dummyTimePtr;
+    refPtr<Time> dummyTimePtr;
 
     if (enableWrite_)
     {
-        #if (OPENFOAM <= 2306)
-        dummyTimePtr = Time::New(argList::envGlobalPath());
-        #else
         dummyTimePtr = Time::NewGlobalTime();
-        #endif
     }
     else if (verbose_)
     {
         Info<< "Not writing: " << surf.faces().size() << " faces" << nl;
     }
 
+    const bool withPointData = this->isPointData();
+    const bool withVertexData =
+    (
+        // If vertexOutput enabled and no surface faces
+        this->vertexOutput() && surf.faces().empty()
+    );
+
+    // Return "(point|vertex|face) data" for the IOobject note
+    const auto add_note = [withPointData,withVertexData]() -> std::string
+    {
+        if (withPointData)
+        {
+            return "point data";
+        }
+        else if (withVertexData)
+        {
+            return "vertex data";
+        }
+        else
+        {
+            return "face data";
+        }
+    };
+
     if (enableWrite_ && (UPstream::master() || !parallel_))
     {
-        if (!isDir(surfaceDir))
+        if (!Foam::isDir(surfaceDir))
         {
-            mkDir(surfaceDir);
+            Foam::mkDir(surfaceDir);
         }
 
         // Write sample locations
@@ -372,7 +402,7 @@ Foam::fileName Foam::surfaceWriters::mydebugWriter::write()
                 IOobjectOption::NO_REGISTER
             )
         );
-        iopts.note() = (this->isPointData() ? "point data" : "face data");
+        iopts.note() = add_note();
 
         serialWriteGeometry(iopts, surf);
     }
@@ -417,15 +447,11 @@ Foam::fileName Foam::surfaceWriters::mydebugWriter::writeTemplate
     tmp<Field<Type>> tfield = mergeField(localValues);
 
     // Dummy Time to use as objectRegistry
-    autoPtr<Time> dummyTimePtr;
+    refPtr<Time> dummyTimePtr;
 
     if (enableWrite_)
     {
-        #if (OPENFOAM <= 2306)
-        dummyTimePtr = Time::New(argList::envGlobalPath());
-        #else
         dummyTimePtr = Time::NewGlobalTime();
-        #endif
     }
     else if (verbose_)
     {
@@ -437,11 +463,35 @@ Foam::fileName Foam::surfaceWriters::mydebugWriter::writeTemplate
     const meshedSurf& surf = surface();
     // const meshedSurfRef& surf = adjustSurface();
 
+    const bool withPointData = this->isPointData();
+    const bool withVertexData =
+    (
+        // If vertexOutput enabled and no surface faces
+        this->vertexOutput() && surf.faces().empty()
+    );
+
+    // Return "(point|vertex|face) data" for the IOobject note
+    const auto add_note = [withPointData,withVertexData]() -> std::string
+    {
+        if (withPointData)
+        {
+            return "point data";
+        }
+        else if (withVertexData)
+        {
+            return "vertex data";
+        }
+        else
+        {
+            return "face data";
+        }
+    };
+
     if (enableWrite_ && (UPstream::master() || !parallel_))
     {
-        if (!isDir(outputFile.path()))
+        if (!Foam::isDir(outputFile.path()))
         {
-            mkDir(outputFile.path());
+            Foam::mkDir(outputFile.path());
         }
 
         // Write sample locations
@@ -457,7 +507,7 @@ Foam::fileName Foam::surfaceWriters::mydebugWriter::writeTemplate
                     IOobjectOption::NO_REGISTER
                 )
             );
-            iopts.note() = (this->isPointData() ? "point data" : "face data");
+            iopts.note() = add_note();
 
             serialWriteGeometry(iopts, surf);
         }
@@ -475,7 +525,7 @@ Foam::fileName Foam::surfaceWriters::mydebugWriter::writeTemplate
                     IOobjectOption::NO_REGISTER
                 )
             );
-            iofld.note() = (this->isPointData() ? "point data" : "face data");
+            iofld.note() = add_note();
 
             OFstream os(iofld.objectPath(), streamOpt_);
 
