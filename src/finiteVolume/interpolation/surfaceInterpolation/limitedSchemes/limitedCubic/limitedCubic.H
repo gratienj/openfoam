@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -110,8 +111,14 @@ public:
 
         // Calculate the face value using cubic interpolation
         scalar phif =
-            cdWeight*(phiP - 0.25*(d & gradcN))
-          + (1 - cdWeight)*(phiN + 0.25*(d & gradcP));
+            cdWeight*phiP
+          + (1 - cdWeight)*phiN
+          + cdWeight*(1 - cdWeight)
+           *(
+                (1 - 2*cdWeight)*(phiN - phiP)
+              + cdWeight*(d & gradcP)
+              - (1 - cdWeight)*(d & gradcN)
+            );
 
         scalar phiCD = cdWeight*phiP + (1 - cdWeight)*phiN;
 

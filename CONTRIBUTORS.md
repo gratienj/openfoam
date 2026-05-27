@@ -22,6 +22,7 @@ It is likely incomplete...
 - Sergio Ferraris
 - Matej Forman
 - Marian Fuchs
+- Vijaya Kumar G
 - Gabriel Gerlero
 - Pawan Ghildiyal
 - Chris Greenshields
@@ -35,6 +36,7 @@ It is likely incomplete...
 - Hrvoje Jasak
 - Alexander Kabat vel Job
 - Thilo Knacke
+- Marine Lasbleis
 - Shannon Leakey
 - Sergey Lesnik
 - Tommaso Lucchini
@@ -49,6 +51,7 @@ It is likely incomplete...
 - Victor Olesen
 - Evangelos Papoutsis-Kiachagias
 - Juho Peltola
+- Robert Perry
 - Josep Pocurull
 - Johan Roenby
 - Henrik Rusche
@@ -67,6 +70,7 @@ It is likely incomplete...
 - Gregor Weiss
 - Volker Weissmann
 - Henry Weller
+- Qizhe Wen
 - Niklas Wikstrom
 - Guanyang Xue
 - Thorsten Zirwes
