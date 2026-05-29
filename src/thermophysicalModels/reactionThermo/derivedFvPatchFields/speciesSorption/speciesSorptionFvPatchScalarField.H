@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +33,7 @@ Group
 Description
     This boundary condition provides a first-order zero-gradient
     condition for a given scalar field to model time-dependent
-    adsorption-desorption processes.
+    adsorption-desorption processes. Desorption can be disabled.
 
     \f[
         \frac{d c}{d t} = k_{ads} (c_{eq} - c_{abs})
@@ -72,6 +73,7 @@ Usage
         rhoS                    <scalar>;
 
         // Optional entries
+        allowDesorption         <bool>;
         dfldp                   <scalarField>;
         mass                    <scalarField>;
         pName                   <word>;
@@ -93,6 +95,7 @@ Usage
       thickness| Solid thickness along the patch   <!--
                -->                   | PatchFunction1\<scalar\> | yes | -
       rhoS     | Solid density                      | scalar | yes  | -
+      allowDesorption | Allow desorption from the solid | bool | no  | true
       dfldp    | Source on cells next to patch      | scalarField | no  | Zero
       mass     | Absorbed mass per kg of absorbent [mol/kg] <!--
                -->                                  | scalarField | no  | Zero
@@ -174,6 +177,9 @@ private:
 
         //- Kinematic model
         enum kineticModelType kinematicModel_;
+
+        //- Flag to allow desorption from the solid
+        bool allowDesorption_;
 
         //- Solid thickness along the patch
         autoPtr<PatchFunction1<scalar>> thicknessPtr_;

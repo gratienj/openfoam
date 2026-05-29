@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -148,6 +149,7 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
     parent_bctype(p, iF),
     equilibriumModel_(equilibriumModelType::LANGMUIR),
     kinematicModel_(kineticModelType::PseudoFirstOrder),
+    allowDesorption_(true),
     thicknessPtr_(nullptr),
     kabs_(1),
     kl_(0),
@@ -169,6 +171,7 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
     parent_bctype(p, iF, dict),
     equilibriumModel_(equilibriumModelTypeNames.get("equilibriumModel", dict)),
     kinematicModel_(kinematicModelTypeNames.get("kinematicModel", dict)),
+    allowDesorption_(dict.getOrDefault<bool>("allowDesorption", true)),
     thicknessPtr_(PatchFunction1<scalar>::New(p.patch(), "thickness", dict)),
     kabs_(dict.getCheck<scalar>("kabs", scalarMinMax::ge(0))),
     kl_(dict.getCheck<scalar>("kl", scalarMinMax::ge(0))),
@@ -196,6 +199,7 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
     parent_bctype(ptf, p, iF, mapper),
     equilibriumModel_(ptf.equilibriumModel_),
     kinematicModel_(ptf.kinematicModel_),
+    allowDesorption_(ptf.allowDesorption_),
     thicknessPtr_(ptf.thicknessPtr_.clone(patch().patch())),
     kabs_(ptf.kabs_),
     kl_(ptf.kl_),
@@ -216,6 +220,7 @@ Foam::speciesSorptionFvPatchScalarField::speciesSorptionFvPatchScalarField
     parent_bctype(ptf, iF),
     equilibriumModel_(ptf.equilibriumModel_),
     kinematicModel_(ptf.kinematicModel_),
+    allowDesorption_(ptf.allowDesorption_),
     thicknessPtr_(ptf.thicknessPtr_.clone(patch().patch())),
     kabs_(ptf.kabs_),
     kl_(ptf.kl_),
@@ -358,6 +363,11 @@ void Foam::speciesSorptionFvPatchScalarField::updateCoeffs()
             break;
     }
 
+    if (!allowDesorption_)
+    {
+        dfldp_.clamp_min(scalar(0));
+    }
+
     // mass [mol/kg]
     const scalar dt = db().time().deltaTValue();
     mass_ += dfldp_*dt;
@@ -366,7 +376,7 @@ void Foam::speciesSorptionFvPatchScalarField::updateCoeffs()
     scalarField& pMass =
         field
         (
-            "absorbedMass" + this->internalField().name(),
+            "adsorbedMass" + this->internalField().name(),
             dimensionSet(dimMoles/dimMass)
         ).boundaryFieldRef()[patch().index()];
 
@@ -404,6 +414,12 @@ void Foam::speciesSorptionFvPatchScalarField::write(Ostream& os) const
     os.writeEntry("kl", kl_);
     os.writeEntry("max", max_);
     os.writeEntry("rhoS", rhoS_);
+    os.writeEntryIfDifferent<bool>
+    (
+        "allowDesorption",
+        true,
+        allowDesorption_
+    );
 
     dfldp_.writeEntry("dfldp", os);
     mass_.writeEntry("mass", os);
