@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
     Copyright (C) 2018-2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -84,6 +85,12 @@ Usage
       j        (-0.2 0.2  0);
       k        ( 0.0 0.0  200);
     \endverbatim
+
+Note
+  - The spanning vectors \c i, \c j, \c k must form a right-handed system,
+    i.e. the scalar triple product "(i ^ j) & k" must be positive.
+    If the vectors do not satisfy this requirement, the resulting
+    parallelepiped will be inside-out and no cells will be selected.
 
 See also
     - Foam::topoSetSource

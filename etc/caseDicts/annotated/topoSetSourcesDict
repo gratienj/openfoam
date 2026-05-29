@@ -170,6 +170,8 @@ cellSet_doc
 
     //- Cells with cell centre within box
     // Is skewed, rotated box. Given as origin and three spanning vectors.
+    // Note: i, j, k must form a right-handed system ((i ^ j) & k > 0),
+    // otherwise the box is inside-out and will not select any cells.
     {
         source  rotatedBoxToCell;
         origin  (0.2 0.2 -10);

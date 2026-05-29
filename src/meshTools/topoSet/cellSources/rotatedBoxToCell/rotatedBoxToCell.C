@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -70,6 +71,27 @@ Foam::topoSetSource::addToUsageTable Foam::rotatedBoxToCell::usage_
 
 void Foam::rotatedBoxToCell::combine(topoSet& set, const bool add) const
 {
+    // Check vector handedness: (i ^ j) & k should be positive
+    const scalar vol = (i_ ^ j_) & k_;
+
+    if (mag(vol) < SMALL)
+    {
+        WarningInFunction
+            << "Spanning vectors are coplanar or near-zero." << nl
+            << "(i ^ j) & k = " << vol << nl
+            << "Rotated box has zero volume; will not select any cells." << nl
+            << endl;
+    }
+    else if (vol < 0)
+    {
+        WarningInFunction
+            << "Spanning vectors do not form a right-handed system." << nl
+            << "(i ^ j) & k = " << vol << nl
+            << "Rotated box has zero volume; will not select any cells." << nl
+            << "Reorder the vectors to satisfy (i ^ j) & k > 0." << nl
+            << endl;
+    }
+
     // Define a cell for the box
     pointField boxPoints(8, origin_);
     // boxPoints[0] = origin_;
