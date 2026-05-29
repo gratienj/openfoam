@@ -27,8 +27,27 @@ wmakeLnInclude -u OSspecific/"${WM_OSTYPE:-POSIX}"
 
 OSspecific/"${WM_OSTYPE:-POSIX}"/Allwmake $targetType $*
 
-case "$WM_COMPILER" in
-(Mingw*)
+case "$WM_ARCH/$COMPILER" in
+(*ARM64/Mingw*)
+    # Handle Pstream/OpenFOAM cyclic dependency
+    # - compile Pstream as single .o object
+    # - compile OpenFOAM and link against libPstream.o
+    WM_MPLIB=dummy Pstream/Allwmake libo
+    FOAM_LINK_DUMMY_PSTREAM=libo wmake $targetType OpenFOAM
+
+    # Extra handling to ensure that export symbols are not pruned
+    special_def_file="${FOAM_LIBBIN:?}/dummy/libPstream.o.def"
+    if [ -f "$special_def_file" ]
+    then
+        # Recompile [dummy] libPstream with the full export
+        FOAM_EXTRA_CXXFLAGS="$FOAM_EXTRA_CXXFLAGS -Wl,$special_def_file" \
+        WM_MPLIB=dummy Pstream/Allwmake $targetType $*
+    fi
+
+    # Force relink of libOpenFOAM against libPstream.{dll,so}
+    OpenFOAM/Alltouch 2>/dev/null
+    ;;
+(*/Mingw*)
     # Handle Pstream/OpenFOAM cyclic dependency
     # - compile Pstream as single .o object
     # - compile OpenFOAM and link against libPstream.o
