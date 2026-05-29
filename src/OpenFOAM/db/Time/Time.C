@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2015-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,6 +29,7 @@ License
 
 #include "Time.H"
 #include "PstreamReduceOps.H"
+#include "MinMaxOps.H"
 #include "argList.H"
 #include "HashSet.H"
 #include "profiling.H"
@@ -259,13 +261,10 @@ void Foam::Time::setControls()
 
     if (Pstream::parRun())
     {
-        scalar sumStartTime = startTime_;
-        reduce(sumStartTime, sumOp<scalar>());
-        if
-        (
-            mag(Pstream::nProcs()*startTime_ - sumStartTime)
-          > Pstream::nProcs()*deltaT_/10.0
-        )
+        scalarMinMax startTimeLimits(startTime_);
+        reduce(startTimeLimits, sumOp<scalarMinMax>());
+
+        if (startTimeLimits.span() > deltaT_/10.0)
         {
             FatalIOErrorInFunction(controlDict_)
                 << "Start time is not the same for all processors" << nl
