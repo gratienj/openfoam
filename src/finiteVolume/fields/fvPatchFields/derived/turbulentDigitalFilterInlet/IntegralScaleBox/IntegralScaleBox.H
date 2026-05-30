@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2022-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -95,9 +96,6 @@ class IntegralScaleBox
         //- Correlation function form of the kernel
         const enum kernelType kernelType_;
 
-        //- Random number generator
-        Random rndGen_;
-
         //- Number of faces on integral-scale box inlet plane (<e2> <e3>)
         const Vector2D<label> n_;
 
@@ -112,6 +110,19 @@ class IntegralScaleBox
 
         //- Integral scale set in local coordinates
         const TypeL L_;
+
+        //- Global seed for the deterministic, index-addressable random field
+        //  Broadcast from the master so that all ranks share an identical
+        //  random field and overlapping halo cells agree without communication
+        label seed_;
+
+        //- Owned output row range on the generation plane along e3: [j0_, j1_)
+        //  Each rank generates/convolves only this disjoint slab of the plane
+        label j0_;
+        label j1_;
+
+        //- Time index at first initialisation (for streamwise/time indexing)
+        label startTimeIndex_;
 
         //- Random-number box ranges to be filtered by corresponding kernels
         //  e.g. for U: (Lxu, Lxv, Lxw, Lyu, Lyv, Lyw, Lzu, Lzv, Lzw)
@@ -158,6 +169,16 @@ class IntegralScaleBox
 
         //- Initialise the local coordinate system with patch properties
         void calcCoordinateSystem();
+
+        //- Deterministic standard-normal random number for the global
+        //- generation-box cell (component dir, streamwise i1, lateral i2, i3)
+        //  Counter-based hash: identical on every rank for identical indices,
+        //  so overlapping halo cells agree with no communication
+        scalar gaussHash(label dir, label i1, label i2, label i3) const;
+
+        //- Determine this rank's disjoint owned plane-row range [j0_, j1_)
+        //- along e3 from the local patch footprint (collective)
+        void calcOwnership();
 
         //- Initialise the bounding box in local coordinates
         Vector2D<vector> calcBoundBox() const;
