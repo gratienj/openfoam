@@ -204,7 +204,8 @@ _foamEtc -config  settings
 _foamEtc -config  mpi
 _foamEtc -config  paraview -- "$@"  # Pass through for evaluation
 _foamEtc -config  vtk
-_foamEtc -config  adios2
+_foamEtc -config  adios2  # Non-core
+_foamEtc -config  hdf5    # Non-core
 _foamEtc -config  CGAL
 _foamEtc -config  scotch
 _foamEtc -config  FFTW

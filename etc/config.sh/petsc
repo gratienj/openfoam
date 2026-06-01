@@ -5,7 +5,8 @@
 #   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
-#     Copyright (C) 2018-2026 OpenCFD Ltd.
+#     Copyright (C) 2018-2025 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -27,7 +28,7 @@
 #------------------------------------------------------------------------------
 # USER EDITABLE PART: Changes made here may be lost with the next upgrade
 
-petsc_version=petsc-3.24.3
+petsc_version=petsc-3.25.1
 export PETSC_ARCH_PATH="$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER$WM_PRECISION_OPTION$WM_LABEL_OPTION/$petsc_version"
 
 # END OF (NORMAL) USER EDITABLE PART

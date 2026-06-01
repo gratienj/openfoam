@@ -6,13 +6,14 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2024-2025 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
 #
 # File
 #     etc/config.sh/hdf5
-#     [optional/experimental: not sourced by OpenFOAM-*/etc/bashrc]
+#     [non-core] - sourced by OpenFOAM-*/etc/cshrc
 #
 # Description
 #     Setup for HDF5 include/libraries (usually ThirdParty installation).
@@ -30,7 +31,7 @@
 #------------------------------------------------------------------------------
 # USER EDITABLE PART: Changes made here may be lost with the next upgrade
 
-hdf5_version=hdf5-1.14.6
+hdf5_version=hdf5-2.1.1
 export HDF5_ARCH_PATH="$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER/$hdf5_version/$FOAM_MPI"
 
 # END OF (NORMAL) USER EDITABLE PART
@@ -43,8 +44,12 @@ fi
 if command -v _foamAddLibAuto >/dev/null
 then
     # Normal sourcing (not makeHDF5)
+    # Only add to PATH if the directory really exists
 
-    _foamAddLibAuto "$HDF5_ARCH_PATH"
+    if _foamAddLibAuto "$HDF5_ARCH_PATH"
+    then
+        _foamAddPath "$HDF5_ARCH_PATH"/bin
+    fi
 
     unset hdf5_version
 
