@@ -5,7 +5,8 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2011-2017 OpenFOAM Foundation
+    Copyright (C) 2015-2022 OpenCFD Ltd.
     Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
@@ -26,25 +27,18 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "fieldStatistics.H"
+#include "fieldMinMax.H"
 #include "volFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace
-{
-
-// Return min/max indices based on the magnitude of the input.
-// This function should be migrated elsewhere.
 template<class T>
-Foam::labelPair findMinMax_mag
+Foam::labelPair Foam::functionObjects::fieldMinMax::findMinMax_mag
 (
-    const Foam::UList<T>& input,
-    Foam::label start=0
+    const UList<T>& input,
+    label start
 )
 {
-    using namespace Foam;
-
     const label len = input.size();
 
     if (start < 0 || start >= len)
@@ -76,217 +70,105 @@ Foam::labelPair findMinMax_mag
     return labelPair(minIdx, maxIdx);
 }
 
-} // End anonymous namespace
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-template<class GeoField>
-Foam::tmp<Foam::Field<typename GeoField::value_type>>
-Foam::functionObjects::fieldStatistics::flatten(const GeoField& fld) const
-{
-    typedef typename GeoField::value_type value_type;
-    typedef Field<value_type> FieldType;
-
-    label n(0);
-
-    if (!internal_)
-    {
-        // Count boundary values
-        for (const auto& pfld : fld.boundaryField())
-        {
-            if (!pfld.coupled())
-            {
-                n += pfld.size();
-            }
-        }
-    }
-
-    if (!n)
-    {
-        // No boundary values - quick return
-        return tmp<FieldType>(fld.primitiveField());
-    }
-
-
-    // Combined internal + flattened boundary fields
-    // - this adds extra storage, but necessary since the visitor pattern
-    //   requires a single input
-
-    auto tflatFld = tmp<FieldType>::New(fld.size() + n);
-    auto& flatFld = tflatFld.ref();
-
-    // Copy internal values
-    flatFld.slice(0, fld.size()) = fld.primitiveField();
-
-    // Copy boundary values
-    n = fld.size();
-    for (const auto& pfld : fld.boundaryField())
-    {
-        if (!pfld.coupled())
-        {
-            flatFld.slice(n, pfld.size()) = pfld;
-            n += pfld.size();
-        }
-    }
-
-    return tflatFld;
-}
-
-
 template<class Type>
-bool Foam::functionObjects::fieldStatistics::calcStat(const word& fieldName)
+void Foam::functionObjects::fieldMinMax::output
+(
+    const word& fieldName,
+    const word& outputName,
+    const label minCell,
+    const label maxCell,
+    const vector& minPosition,
+    const vector& maxPosition,
+    const label minProci,
+    const label maxProci,
+    const Type& minValue,
+    const Type& maxValue
+)
 {
-    typedef GeometricField<Type, fvPatchField, volMesh> VolFieldType;
+    OFstream& file = this->file();
 
-    const auto* fieldp = obr_.cfindObject<VolFieldType>(fieldName);
-    if (!fieldp)
+    if (location_)
     {
-        return false;
-    }
-    const auto& field = *fieldp;
+        writeCurrentTime(file);
 
-    tmp<Field<Type>> tfullfield = flatten(field);
-    const auto& fullfield = tfullfield.cref();
+        writeTabbed(file, fieldName);
 
-    HashTable<variantOutput> result;
-    for (const auto& iter : statistics_.csorted())
-    {
-        const statistic& stat = iter.val();
+        file<< token::TAB << minValue
+            << token::TAB << minPosition;
 
-        // Assign a new entry, overwriting existing entries
-        result.set(stat.name_, stat.calc(fullfield));
-    }
-
-    results_.set(fieldName, result);
-
-    if (extrema_)
-    {
-        if (mode_ == modeType::MAG)
+        if (UPstream::parRun())
         {
-            extremaResults_.set
-            (
-                fieldName,
-                calcExtremaData<VolFieldType, modeType::MAG>(field)
-            );
+            file<< token::TAB << minProci;
         }
-        else
+
+        file<< token::TAB << maxValue
+            << token::TAB << maxPosition;
+
+        if (UPstream::parRun())
         {
-            extremaResults_.set
-            (
-                fieldName,
-                calcExtremaData(field)
-            );
+            file<< token::TAB << maxProci;
         }
-    }
 
-    return true;
-}
+        file<< endl;
 
+        Log << "    min(" << outputName << ") = " << minValue
+            << " in cell " << minCell
+            << " at location " << minPosition;
 
-template<class T>
-T Foam::functionObjects::fieldStatistics::calcMean(const Field<T>& field) const
-{
-    if (internal_ && (mean_ == meanType::VOLUMETRIC))
-    {
-        return gWeightedAverage(mesh_.V(), field);
-    }
-
-    return gAverage(field);
-}
-
-
-template<class T, Foam::functionObjects::fieldStatistics::modeType Mode>
-Foam::functionObjects::fieldStatistics::modeValueType_t<T, Mode>
-Foam::functionObjects::fieldStatistics::calcMin(const Field<T>& field) const
-{
-    if constexpr (Mode == modeType::MAG)
-    {
-        scalar limit = pTraits<scalar>::max;
-        for (const auto& elem : field)
+        if (UPstream::parRun())
         {
-            if (const scalar val = Foam::mag(elem); val < limit)
-            {
-                limit = val;
-            }
+            Log << " on processor " << minProci;
         }
-        Foam::reduce(limit, minOp<scalar>());
-        return limit;
+
+        Log << nl << "    max(" << outputName << ") = " << maxValue
+            << " in cell " << maxCell
+            << " at location " << maxPosition;
+
+        if (UPstream::parRun())
+        {
+            Log << " on processor " << maxProci;
+        }
     }
     else
     {
-        return gMin(field);
+        file<< token::TAB << minValue << token::TAB << maxValue;
+
+        Log << "    min/max(" << outputName << ") = "
+            << minValue << ' ' << maxValue;
     }
+
+    Log << endl;
+
+    // Write state/results information
+    word nameStr('(' + outputName + ')');
+    this->setResult("min" + nameStr, minValue);
+    this->setResult("min" + nameStr + "_cell", minCell);
+    this->setResult("min" + nameStr + "_position", minPosition);
+    this->setResult("min" + nameStr + "_processor", minProci);
+    this->setResult("max" + nameStr, maxValue);
+    this->setResult("max" + nameStr + "_cell", maxCell);
+    this->setResult("max" + nameStr + "_position", maxPosition);
+    this->setResult("max" + nameStr + "_processor", maxProci);
 }
 
 
-template<class T, Foam::functionObjects::fieldStatistics::modeType Mode>
-Foam::functionObjects::fieldStatistics::modeValueType_t<T, Mode>
-Foam::functionObjects::fieldStatistics::calcMax(const Field<T>& field) const
-{
-    if constexpr (Mode == modeType::MAG)
-    {
-        scalar limit = pTraits<scalar>::min;
-        for (const auto& elem : field)
-        {
-            if (const scalar val = Foam::mag(elem); limit < val)
-            {
-                limit = val;
-            }
-        }
-        Foam::reduce(limit, maxOp<scalar>());
-        return limit;
-    }
-    else
-    {
-        return gMax(field);
-    }
-}
-
-
-template<class T>
-T Foam::functionObjects::fieldStatistics::calcVariance
+template<class Type, Foam::functionObjects::fieldMinMax::modeType Mode>
+void Foam::functionObjects::fieldMinMax::calcMinMaxFieldType
 (
-    const Field<T>& field
-) const
+    const GeometricField<Type, fvPatchField, volMesh>& field,
+    const word& outputFieldName
+)
 {
-    const T avg(calcMean(field));
-
-    T var = Zero;
-    for (const auto& elem : field)
-    {
-        var += (elem - avg);
-    }
-
-    label count = field.size();
-    Foam::sumReduce(var, count);
-
-    if (count <= 1)
-    {
-        return Zero;
-    }
-
-    return 1.0/(count - 1.0)*var;
-}
-
-
-template<class GeoField, Foam::functionObjects::fieldStatistics::modeType Mode>
-Foam::Pair<Foam::functionObjects::fieldStatistics::extremaData>
-Foam::functionObjects::fieldStatistics::calcExtremaData
-(
-    const GeoField& field
-) const
-{
-    // The data type of the geometric field
-    typedef typename GeoField::value_type Type;
-
     const auto myProci = UPstream::myProcNo();
     const auto numProc = UPstream::nProcs();
 
-    // NOTE: the code here is largely identical to fieldMinMax
-    // For modeType::MAG, we compute on magnitudes (scalar values)
+    // NOTE: the code here is largely identical to fieldStatistics
+    // For modeType::mdMag, we compute on magnitudes (scalar values)
 
-    // Magnitude mode: scalar; Component mode: Field value_type
+    // Magnitude mode: scalar; Component mode: Type
     // (same as std::conditional_t)
     using value_type = modeValueType_t<Type, Mode>;
 
@@ -317,7 +199,7 @@ Foam::functionObjects::fieldStatistics::calcExtremaData
     // Return the value or mag at specified index
     const auto getFieldValue = [](const UList<Type>& fld, label i)
     {
-        if constexpr (Mode == modeType::MAG)
+        if constexpr (Mode == modeType::mdMag)
         {
             return Foam::mag(fld[i]);
         }
@@ -330,7 +212,7 @@ Foam::functionObjects::fieldStatistics::calcExtremaData
     // Find min/max locations, possibly with on-the-fly mag() calculation
     const auto findMinMax_locations = [](const UList<Type>& fld)
     {
-        if constexpr (Mode == modeType::MAG)
+        if constexpr (Mode == modeType::mdMag)
         {
             return findMinMax_mag(fld);
         }
@@ -348,8 +230,9 @@ Foam::functionObjects::fieldStatistics::calcExtremaData
         const auto& centres = mesh_.C().primitiveField();
         const auto& fld = field.primitiveField();
 
-        auto [minId, maxId] = findMinMax_locations(field);
+        auto [minId, maxId] = findMinMax_locations(fld);
 
+        // min
         if (auto& slot = myData.min_; minId >= 0)
         {
             slot.cellID_ = minId;
@@ -363,6 +246,7 @@ Foam::functionObjects::fieldStatistics::calcExtremaData
             slot.value_ = pTraits<value_type>::max;
         }
 
+        // max
         if (auto& slot = myData.max_; maxId >= 0)
         {
             slot.cellID_ = maxId;
@@ -380,7 +264,6 @@ Foam::functionObjects::fieldStatistics::calcExtremaData
     // Find min/max info (boundary field)
     if (!internal_)
     {
-        // Find extrema within the boundary fields
         const auto& fieldBoundary = field.boundaryField();
         const auto& CfBoundary = mesh_.C().boundaryField();
 
@@ -460,32 +343,67 @@ Foam::functionObjects::fieldStatistics::calcExtremaData
         }
     }
 
-    // Results
-    Pair<extremaData> results;
+    const auto& minData = allLimits[minProci].min_;
+    const auto& maxData = allLimits[maxProci].max_;
 
-    // min
+    output
+    (
+        field.name(),
+        outputFieldName,
+        minData.cellID_,
+        maxData.cellID_,
+        minData.position_,
+        maxData.position_,
+        minProci,
+        maxProci,
+        minData.value_,
+        maxData.value_
+    );
+}
+
+
+template<class Type>
+bool Foam::functionObjects::fieldMinMax::calcMinMaxFields
+(
+    const word& fieldName,
+    const modeType mode
+)
+{
+    typedef GeometricField<Type, fvPatchField, volMesh> VolFieldType;
+
+    const auto* fieldp = obr_.cfindObject<VolFieldType>(fieldName);
+
+    if (fieldp)
     {
-        const auto& limit = allLimits[minProci].min_;
-        auto& slot = results.first();
+        const auto& field = *fieldp;
 
-        slot.value_ = limit.value_;
-        slot.procID_ = minProci;
-        slot.cellID_ = limit.cellID_;
-        slot.position_ = limit.position_;
+        switch (mode)
+        {
+            case modeType::mdMag :
+            {
+                calcMinMaxFieldType<Type, modeType::mdMag>
+                (
+                    field,
+                    word("mag(" + fieldName + ")")
+                );
+                break;
+            }
+            case modeType::mdCmpt :
+            {
+                calcMinMaxFieldType(field, fieldName);
+                break;
+            }
+            default:
+            {
+                FatalErrorInFunction
+                    << "Unknown min/max mode: " << modeTypeNames_[mode_]
+                    << exit(FatalError);
+            }
+        }
+
     }
 
-    // max
-    {
-        const auto& limit = allLimits[maxProci].max_;
-        auto& slot = results.second();
-
-        slot.value_ = limit.value_;
-        slot.procID_ = maxProci;
-        slot.cellID_ = limit.cellID_;
-        slot.position_ = limit.position_;
-    }
-
-    return results;
+    return bool(fieldp);
 }
 
 

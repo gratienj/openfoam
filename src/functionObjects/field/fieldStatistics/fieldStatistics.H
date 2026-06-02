@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -172,6 +173,18 @@ class fieldStatistics
 
     // Private Classes
 
+        //- Trait: the default output type (is component mode)
+        template<class T, modeType Mode = modeType::CMPT>
+        struct modeValueType { using type = T; };
+
+        //- Trait: the output type (for magnitude mode)
+        template<class T>
+        struct modeValueType<T, modeType::MAG> { using type = Foam::scalar; };
+
+        //- Helper alias for modeValueType<T, Mode>::type
+        template<class T, modeType Mode = modeType::CMPT>
+        using modeValueType_t = typename modeValueType<T, Mode>::type;
+
         //- Type-safe union for input field types
         using variantInput = std::variant
         <
@@ -264,22 +277,24 @@ class fieldStatistics
 
         // Central tendency statistics
 
-        //- Return the arithmetic mean of the given input field
+        //- Return the arithmetic (or volumetric) mean of the given input field
         template<class T>
         T calcMean(const Field<T>& field) const;
 
 
         // Dispersion statistics
 
-        //- Return the minimum value of the given input field
-        //  Store the processor index, cell index and location of the minimum
-        template<class T>
-        T calcMin(const Field<T>& field) const;
+        //- Return the minimum value of the given input field.
+        //  For modeType::MAG, returns the min magnitude as a scalar.
+        //  For modeType::CMPT (default), returns the min of the type.
+        template<class T, modeType Mode = modeType::CMPT>
+        modeValueType_t<T, Mode> calcMin(const Field<T>& field) const;
 
         //- Return the maximum value of the given input field
-        //  Store the processor index, cell index and location of the maximum
-        template<class T>
-        T calcMax(const Field<T>& field) const;
+        //  For modeType::MAG, returns the max magnitude as a scalar.
+        //  For modeType::CMPT (default), returns the max of the type.
+        template<class T, modeType Mode = modeType::CMPT>
+        modeValueType_t<T, Mode> calcMax(const Field<T>& field) const;
 
         //- Return the sample variance of the given input field
         template<class T>
@@ -291,7 +306,7 @@ class fieldStatistics
         flatten(const GeoField& field) const;
 
         //- Return the extrema data of the specified field
-        template<class GeoField>
+        template<class GeoField, modeType Mode = modeType::CMPT>
         Pair<extremaData> calcExtremaData(const GeoField& field) const;
 
         //- Output the file header information

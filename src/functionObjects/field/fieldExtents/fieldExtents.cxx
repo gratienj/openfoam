@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,6 +27,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fieldExtents.H"
+#include "emptyPolyPatch.H"
 #include "processorPolyPatch.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -82,19 +84,9 @@ void Foam::functionObjects::fieldExtents::writeFileHeader(Ostream& os)
 }
 
 
-template<>
-Foam::tmp<Foam::volScalarField> Foam::functionObjects::fieldExtents::calcMask
-(
-    const GeometricField<scalar, fvPatchField, volMesh>& field
-) const
-{
-    return
-        pos
-        (
-            field
-          - dimensionedScalar("t", field.dimensions(), threshold_)
-        );
-}
+// * * * * * * * * * * * * * * * Implementation * * * * * * * * * * * * * * * //
+
+#include "fieldExtents_impl.cxx"
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -110,7 +102,7 @@ Foam::functionObjects::fieldExtents::fieldExtents
     writeFile(mesh_, name, typeName, dict),
     internalField_(true),
     threshold_(0),
-    C0_(Zero),
+    C0_(point::zero),
     fieldSet_(mesh_)
 {
     read(dict);
@@ -134,31 +126,58 @@ bool Foam::functionObjects::fieldExtents::read(const dictionary& dict)
 
         dict.readIfPresent<vector>("referencePosition", C0_);
 
-        wordRes patchNames;
-        if (dict.readIfPresent("patches", patchNames))
+        const label maxPatches = pbm.nNonProcessor();
+
+        if (wordRes patchNames; dict.readIfPresent("patches", patchNames))
         {
             patchIDs_ = pbm.indices(patchNames);
+
+            label nPatches = 0;
+
+            // Remove any empty or processor patches
+            forAll(patchIDs_, i)
+            {
+                const label patchi = patchIDs_[i];
+
+                const polyPatch& pp = pbm[patchi];
+
+                if
+                (
+                    patchi < maxPatches
+                 && !isA<emptyPolyPatch>(pp)
+                 && !isA<processorPolyPatch>(pp)
+                )
+                {
+                    patchIDs_[nPatches] = patchi;
+                    ++nPatches;
+                }
+            }
+
+            patchIDs_.resize(nPatches);
         }
         else
         {
-            labelHashSet patchSet(2*pbm.size());
+            patchIDs_.resize_nocopy(maxPatches);
 
-            // All non-processor and non-empty patches
-            forAll(pbm, patchi)
+            label nPatches = 0;
+
+            // All non-empty, non-processor patches
+            for (label patchi = 0; patchi < maxPatches; ++patchi)
             {
                 const polyPatch& pp = pbm[patchi];
 
                 if
                 (
-                    !isA<processorPolyPatch>(pp)
-                 && !isA<emptyPolyPatch>(pp)
+                    !isA<emptyPolyPatch>(pp)
+                 && !isA<processorPolyPatch>(pp)
                 )
                 {
-                    patchSet.insert(patchi);
+                    patchIDs_[nPatches] = patchi;
+                    ++nPatches;
                 }
             }
 
-            patchIDs_ = patchSet.sortedToc();
+            patchIDs_.resize(nPatches);
         }
 
         if (!internalField_ && patchIDs_.empty())
@@ -189,15 +208,29 @@ bool Foam::functionObjects::fieldExtents::write()
 
     Log << type() << " " << name() <<  " write:" << nl;
 
+    label count = 0;
+
     for (const word& fieldName : fieldSet_.selectionNames())
     {
-        calcFieldExtents<scalar>(fieldName, true);
-        calcFieldExtents<vector>(fieldName);
-        calcFieldExtents<sphericalTensor>(fieldName);
-        calcFieldExtents<symmTensor>(fieldName);
-        calcFieldExtents<tensor>(fieldName);
+        bool ok = obr_.contains(fieldName) &&
+        (
+            calcFieldExtents<scalar>(fieldName)
+         || calcFieldExtents<vector>(fieldName)
+         || calcFieldExtents<sphericalTensor>(fieldName)
+         || calcFieldExtents<symmTensor>(fieldName)
+         || calcFieldExtents<tensor>(fieldName)
+        );
+
+        if (ok)
+        {
+            ++count;
+        }
     }
 
+    if (debug)
+    {
+        Log << " : nFields=" << count;
+    }
     Log << endl;
 
     return true;

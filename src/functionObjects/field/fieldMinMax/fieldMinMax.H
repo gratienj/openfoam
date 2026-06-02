@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2015-2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,6 +77,7 @@ Usage
       fields       | List of operand fields             | wordList | yes | -
       location     | Write location of the min/max value | bool | no   | true
       mode   | Calculation mode: magnitude or component | word | no | magnitude
+      internal | Internal fields only for the calculations | bool | no | false
     \endtable
 
     The inherited entries are elaborated in:
@@ -83,8 +85,8 @@ Usage
       - \link writeFile.H \endlink
 
 SourceFiles
-    fieldMinMax.C
-    fieldMinMaxTemplates.C
+    fieldMinMax.cxx
+    fieldMinMax.txx
 
 \*---------------------------------------------------------------------------*/
 
@@ -114,13 +116,12 @@ class fieldMinMax
     public fvMeshFunctionObject,
     public writeFile
 {
-
 public:
 
     // Public Enumerations
 
         //- Options for the mode types
-        enum modeType
+        enum class modeType : char
         {
             mdMag,      //!< magnitude
             mdCmpt      //!< component
@@ -129,10 +130,28 @@ public:
 
 protected:
 
+    // Private Classes
+
+        //- Trait: the default output type (is component mode)
+        template<class T, modeType Mode = modeType::mdCmpt>
+        struct modeValueType { using type = T; };
+
+        //- Trait: the output type (for magnitude mode)
+        template<class T>
+        struct modeValueType<T, modeType::mdMag> { using type = Foam::scalar; };
+
+        //- Helper alias for modeValueType<T, Mode>::type
+        template<class T, modeType Mode = modeType::mdCmpt>
+        using modeValueType_t = typename modeValueType<T, Mode>::type;
+
+
     // Protected Data
 
         //- Mode type names
         static const Enum<modeType> modeTypeNames_;
+
+        //- Only use internal fields for the calculations
+        bool internal_;
 
         //- Flag to write location of min/max values
         bool location_;
@@ -145,6 +164,11 @@ protected:
 
 
     // Protected Member Functions
+
+        //- Return min/max indices base on the magnitude of the input.
+        //  This function should be migrated elsewhere.
+        template<class T>
+        static labelPair findMinMax_mag(const UList<T>& input, label start=0);
 
         //- Helper function to write the output
         template<class Type>
@@ -166,8 +190,9 @@ protected:
         //- Output file header information
         virtual void writeFileHeader(Ostream& os);
 
-        //- Calculate the field min/max for a given field type
-        template<class Type>
+        //- Calculate the field min/max for a given field type,
+        //- optionally forcing mag vs component calculation
+        template<class Type, modeType Mode = modeType::mdCmpt>
         void calcMinMaxFieldType
         (
             const GeometricField<Type, fvPatchField, volMesh>& field,
@@ -176,10 +201,10 @@ protected:
 
         //- Calculate the field min/max
         template<class Type>
-        void calcMinMaxFields
+        bool calcMinMaxFields
         (
             const word& fieldName,
-            const modeType& mode
+            const modeType mode
         );
 
 
@@ -231,7 +256,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "fieldMinMaxTemplates.C"
+    #include "fieldMinMax.txx"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

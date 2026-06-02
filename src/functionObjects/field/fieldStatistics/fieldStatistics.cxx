@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -108,14 +109,14 @@ Foam::functionObjects::fieldStatistics::createStatistic
                     case calcType::MIN :
                     {
                         if (mode == modeType::MAG)
-                            return calcMin<scalar>(mag(arg));
+                            return calcMin<value_type, modeType::MAG>(arg);
                         else
                             return calcMin<value_type>(arg);
                     }
                     case calcType::MAX :
                     {
                         if (mode == modeType::MAG)
-                            return calcMax<scalar>(mag(arg));
+                            return calcMax<value_type, modeType::MAG>(arg);
                         else
                             return calcMax<value_type>(arg);
                     }
