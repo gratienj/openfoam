@@ -46,7 +46,7 @@ using namespace Foam;
 int main(int argc, char *argv[])
 {
     constexpr int n = 10000000;
-    const char* const memTags = "peak/size/rss/free mem: ";
+    const char* const memTags = "hwm/peak/size/rss/free mem: ";
 
     Info<< nl
         << "memInfo::supported() = " << Switch(memInfo::supported()) << nl

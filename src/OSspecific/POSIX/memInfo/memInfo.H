@@ -6,7 +6,8 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2026 OpenCFD Ltd.
+    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,7 +66,8 @@ class memInfo
 {
     // Private Data
 
-        //- Memory high-water mark in process (VmHWM in /proc/PID/status)
+        //- Memory high-water mark in process.
+        //- From getrusage or (VmHWM in /proc/PID/status)
         int64_t hwm_;
 
         //- Peak memory used by the process (VmPeak in /proc/PID/status)
@@ -101,12 +103,20 @@ public:
         static bool supported();
 
 
+    // Static Functions
+
+        //- Get the current memory high-water mark from a direct call
+        //- to getrusage (should be the fastest). [units: kB]
+        static int64_t get_hwm();
+
+
     // Access
 
         //- True if the memory information appears valid
         bool good() const noexcept;
 
-        //- Memory high-water mark - (VmHWM in /proc/PID/status)
+        //- Memory high-water mark.
+        //- From getrusage or (VmHWM in /proc/PID/status)
         int64_t hwm() const noexcept { return hwm_; }
 
         //- Peak memory at last update - (VmPeak in /proc/PID/status)

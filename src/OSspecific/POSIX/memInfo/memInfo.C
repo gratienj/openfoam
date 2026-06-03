@@ -6,7 +6,8 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2026 OpenCFD Ltd.
+    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,16 +35,11 @@ License
 #include <fstream>
 #include <string>
 
-#ifndef __linux__
-#include <sys/resource.h>  // For getrusage()
-#endif
-
 #ifdef __APPLE__
 #include <sys/sysctl.h>
 #include <sys/types.h>
-#include <sys/resource.h>  // For getrusage()
 #endif
-
+#include <sys/resource.h>  // For getrusage()
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
@@ -65,6 +61,36 @@ bool Foam::memInfo::supported()
     }
 
     return is_supported;
+}
+
+
+// Wrapper to get process memory using POSIX getrusage()
+// and normalize the units.
+inline static int64_t get_rusage_maxrss()
+{
+    if
+    (
+        struct rusage usage;
+        ::getrusage(RUSAGE_SELF, &usage) == 0
+    )
+    {
+        // Normalize values to kB for consistency
+        #ifdef __linux__
+        return (usage.ru_maxrss);         // Linux: ru_maxrss already in kB
+        #else
+        return (usage.ru_maxrss / 1024);  // BSD/MacOS: ru_maxrss is bytes
+        #endif
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
+int64_t Foam::memInfo::get_hwm()
+{
+    return get_rusage_maxrss();
 }
 
 
@@ -236,19 +262,10 @@ void Foam::memInfo::populate()
 
     #else  /* __linux__ */
 
-    // Get process memory using POSIX getrusage()
-    if
-    (
-        struct rusage usage;
-        ::getrusage(RUSAGE_SELF, &usage) == 0
-    )
+    // Get process memory using POSIX getrusage() and also use that
+    // for the baseline information
     {
-        // Normalize values to kB for consistency
-        #ifdef __APPLE__
-        hwm_ = usage.ru_maxrss / 1024;  // BSD/MacOS: ru_maxrss is bytes
-        #else
-        hwm_ = usage.ru_maxrss;         // Linux: ru_maxrss already in kB
-        #endif
+        hwm_ = get_rusage_maxrss();
 
         peak_ = hwm_;  // ru_maxrss is the peak memory used
         rss_  = hwm_;  //<- getrusage doesn't distinguish current RSS from peak

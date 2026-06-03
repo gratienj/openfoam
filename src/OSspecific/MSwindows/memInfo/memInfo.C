@@ -6,7 +6,8 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2026 OpenCFD Ltd.
+    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,6 +52,13 @@ bool Foam::memInfo::supported()
     #else
     return false;
     #endif
+}
+
+
+int64_t Foam::memInfo::get_hwm()
+{
+    // Not really any better/faster for windows...
+    return memInfo().hwm();
 }
 
 

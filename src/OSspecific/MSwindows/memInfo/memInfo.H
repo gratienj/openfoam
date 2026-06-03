@@ -6,7 +6,8 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2026 OpenCFD Ltd.
+    Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -98,6 +99,13 @@ public:
 
         //- True if memory information appears to be supported
         static bool supported();
+
+
+    // Static Functions
+
+        //- Get the current memory high-water mark
+        //- (may not be supported or any faster than as a member function)
+        static int64_t get_hwm();
 
 
     // Access
