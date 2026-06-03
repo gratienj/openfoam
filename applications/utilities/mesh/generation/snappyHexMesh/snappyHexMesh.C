@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2015-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -808,6 +809,7 @@ int main(int argc, char *argv[])
     const bool surfaceSimplify = args.found("surfaceSimplify");
     const bool noIntermediateWrite = args.found("no-intermediate-write");
     const bool dryRun = args.dryRun();
+    const bool optProfiling = args.found("profiling");
 
     if (dryRun)
     {
@@ -830,7 +832,10 @@ int main(int argc, char *argv[])
         checkAlignment(mesh, 1e-6, Pout);   //FatalIOError);
     }
 
-
+    if (optProfiling)
+    {
+        PrintMemoryIn("initial memory");
+    }
 
     // Read meshing dictionary
     const word dictName("snappyHexMeshDict");
@@ -1863,6 +1868,11 @@ int main(int argc, char *argv[])
             << timer.cpuTimeIncrement() << " s." << endl;
 
         profiling::writeNow();
+
+        if (optProfiling)
+        {
+            PrintMemoryIn("after mesh refine");
+        }
     }
 
     if (wantSnap)
@@ -1918,6 +1928,11 @@ int main(int argc, char *argv[])
             << timer.cpuTimeIncrement() << " s." << endl;
 
         profiling::writeNow();
+
+        if (optProfiling)
+        {
+            PrintMemoryIn("after mesh snap");
+        }
     }
 
     if (wantLayers)
@@ -1982,8 +1997,12 @@ int main(int argc, char *argv[])
             << timer.cpuTimeIncrement() << " s." << endl;
 
         profiling::writeNow();
-    }
 
+        if (optProfiling)
+        {
+            PrintMemoryIn("after mesh layers");
+        }
+    }
 
     {
         addProfiling(checkMesh, "snappyHexMesh::checkMesh");
@@ -2080,6 +2099,9 @@ int main(int argc, char *argv[])
     Info<< "Finished meshing in = "
         << runTime.elapsedCpuTime() << " s." << endl;
 
+    // Report max memory usage
+    Info<< "Memory per-node = "
+        << flatOutput(error::list_mem_hwm()) << endl;
 
     if (dryRun)
     {

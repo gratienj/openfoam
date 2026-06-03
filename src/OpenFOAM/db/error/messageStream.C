@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2017-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -219,8 +220,8 @@ std::ostream& Foam::messageStream::stdStream()
 Foam::OSstream& Foam::messageStream::deprecated
 (
     const int afterVersion,
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber
 )
 {
@@ -253,16 +254,19 @@ Foam::OSstream& Foam::messageStream::deprecated
         }
     }
 
-
     os  << nl;
-    if (functionName)  // nullptr check
+    if (!functionName.empty())
     {
+        os  << "    From ";
+        // Emit function name (unquoted) and newline
+        os.writeQuoted(functionName.data(), functionName.size(), false);
+        os  << nl;
+
+        if (!sourceFileName.empty())
         {
-            os  << "    From " << functionName << nl;
-        }
-        if (sourceFileName)  // nullptr check
-        {
-            os  << "    in file " << sourceFileName;
+            os  << "    in file ";
+            // Emit source file name (unquoted)
+            os.writeQuoted(sourceFileName.data(), sourceFileName.size(), false);
 
             if (sourceFileLineNumber >= 0)
             {
@@ -279,8 +283,8 @@ Foam::OSstream& Foam::messageStream::deprecated
 
 Foam::OSstream& Foam::messageStream::operator()
 (
-    const std::string& functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber
 )
 {
@@ -288,13 +292,17 @@ Foam::OSstream& Foam::messageStream::operator()
 
     if (!functionName.empty())
     {
-        os  << nl
-            << "    From " << functionName.c_str() << nl;
+        os  << nl << "    From ";
+        // Emit function name (unquoted) and newline
+        os.writeQuoted(functionName.data(), functionName.size(), false);
+        os  << nl;
     }
 
-    if (sourceFileName)  // nullptr check
+    if (!sourceFileName.empty())
     {
-        os  << "    in file " << sourceFileName;
+        os  << "    in file ";
+        // Emit source file name (unquoted)
+        os.writeQuoted(sourceFileName.data(), sourceFileName.size(), false);
 
         if (sourceFileLineNumber >= 0)
         {
@@ -309,52 +317,25 @@ Foam::OSstream& Foam::messageStream::operator()
 
 Foam::OSstream& Foam::messageStream::operator()
 (
-    const char* functionName,
-    const char* sourceFileName,
-    const int sourceFileLineNumber
-)
-{
-    OSstream& os = this->stream();
-
-    if (functionName)  // nullptr check
-    {
-        os  << nl
-            << "    From " << functionName << nl;
-    }
-
-    if (sourceFileName)  // nullptr check
-    {
-        os  << "    in file " << sourceFileName;
-
-        if (sourceFileLineNumber >= 0)
-        {
-            os  << " at line " << sourceFileLineNumber;
-        }
-        os  << nl << "    ";
-    }
-
-    return os;
-}
-
-
-Foam::OSstream& Foam::messageStream::operator()
-(
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber,
     const std::string& ioFileName,
     const label ioStartLineNumber,
     const label ioEndLineNumber
 )
 {
-    OSstream& os = operator()
+    auto& os = operator()
     (
         functionName,
         sourceFileName,
         sourceFileLineNumber
     );
 
-    os  << "Reading \"" << ioFileName.c_str() << '"';
+    os  << "Reading \"";
+    // Emit io filename (quoted!)
+    os.writeQuoted(ioFileName.data(), ioFileName.size(), false);
+    os  << '\"';
 
     if (ioStartLineNumber >= 0)
     {
@@ -374,8 +355,8 @@ Foam::OSstream& Foam::messageStream::operator()
 
 Foam::OSstream& Foam::messageStream::operator()
 (
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber,
     const IOstream& ioStream
 )
@@ -394,8 +375,8 @@ Foam::OSstream& Foam::messageStream::operator()
 
 Foam::OSstream& Foam::messageStream::operator()
 (
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber,
     const dictionary& dict
 )
