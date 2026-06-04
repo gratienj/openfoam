@@ -39,25 +39,6 @@ void Foam::UPstream::reduceOr(bool& value, const int communicator)
 {}
 
 
-void Foam::reduce
-(
-    bool& value,
-    Foam::andOp<bool>,
-    const int tag,
-    const int communicator
-)
-{}
-
-void Foam::reduce
-(
-    bool& value,
-    Foam::orOp<bool>,
-    const int tag,
-    const int communicator
-)
-{}
-
-
 // * * * * * * * * * * Protected Static Member Functions * * * * * * * * * * //
 
 void Foam::UPstream::mpi_reduce

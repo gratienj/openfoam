@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -84,8 +85,8 @@ Note
     to the value of \c threshold.
 
 SourceFiles
-    fieldExtents.C
-    fieldExtentsTemplates.C
+    fieldExtents.cxx
+    fieldExtents_impl.cxx
 
 \*---------------------------------------------------------------------------*/
 
@@ -112,6 +113,13 @@ class fieldExtents
     public fvMeshFunctionObject,
     public writeFile
 {
+    // Private Member Functions
+
+        //- Main calculation
+        template<class Type>
+        bool calcFieldExtents(const word& fieldName);
+
+
 protected:
 
     // Protected Data
@@ -136,22 +144,6 @@ protected:
 
         //- Output file header information
         virtual void writeFileHeader(Ostream& os);
-
-        //- Return the field mask
-        template<class Type>
-        tmp<volScalarField> calcMask
-        (
-            const GeometricField<Type, fvPatchField, volMesh>& field
-        ) const;
-
-        //- Main calculation
-        template<class Type>
-        void calcFieldExtents
-        (
-            const word& fieldName,
-            const bool calcMag = false
-        );
-
 
 public:
 
@@ -195,22 +187,8 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-template<>
-tmp<volScalarField> fieldExtents::calcMask
-(
-    const GeometricField<scalar, fvPatchField, volMesh>& field
-) const;
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 } // End namespace functionObjects
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#ifdef NoRepository
-    #include "fieldExtentsTemplates.C"
-#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

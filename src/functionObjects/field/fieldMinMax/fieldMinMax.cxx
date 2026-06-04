@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2015-2020 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -78,7 +79,7 @@ void Foam::functionObjects::fieldMinMax::writeFileHeader(Ostream& os)
         writeTabbed(os, "min");
         writeTabbed(os, "location(min)");
 
-        if (Pstream::parRun())
+        if (UPstream::parRun())
         {
             writeTabbed(os, "processor");
         }
@@ -86,7 +87,7 @@ void Foam::functionObjects::fieldMinMax::writeFileHeader(Ostream& os)
         writeTabbed(os, "max");
         writeTabbed(os, "location(max)");
 
-        if (Pstream::parRun())
+        if (UPstream::parRun())
         {
             writeTabbed(os, "processor");
         }
@@ -117,8 +118,9 @@ Foam::functionObjects::fieldMinMax::fieldMinMax
 :
     fvMeshFunctionObject(name, runTime, dict),
     writeFile(mesh_, name, typeName, dict),
+    internal_(false),
     location_(true),
-    mode_(mdMag),
+    mode_(modeType::mdMag),
     fieldSet_(mesh_)
 {
     read(dict);
@@ -132,6 +134,7 @@ bool Foam::functionObjects::fieldMinMax::read(const dictionary& dict)
     fvMeshFunctionObject::read(dict);
     writeFile::read(dict);
 
+    internal_ = dict.getOrDefault("internal", false);
     location_ = dict.getOrDefault("location", true);
 
     mode_ = modeTypeNames_.getOrDefault("mode", dict, modeType::mdMag);
@@ -153,18 +156,34 @@ bool Foam::functionObjects::fieldMinMax::write()
     writeFileHeader(file());
 
     if (!location_) writeCurrentTime(file());
+
     Log << type() << " " << name() <<  " write:" << nl;
+
+    label count = 0;
 
     for (const word& fieldName : fieldSet_.selectionNames())
     {
-        calcMinMaxFields<scalar>(fieldName, mdCmpt);
-        calcMinMaxFields<vector>(fieldName, mode_);
-        calcMinMaxFields<sphericalTensor>(fieldName, mode_);
-        calcMinMaxFields<symmTensor>(fieldName, mode_);
-        calcMinMaxFields<tensor>(fieldName, mode_);
-    }
+        bool ok = obr_.contains(fieldName) &&
+        (
+            calcMinMaxFields<scalar>(fieldName, modeType::mdCmpt)
+         || calcMinMaxFields<vector>(fieldName, mode_)
+         || calcMinMaxFields<sphericalTensor>(fieldName, mode_)
+         || calcMinMaxFields<symmTensor>(fieldName, mode_)
+         || calcMinMaxFields<tensor>(fieldName, mode_)
+        );
 
-    if (!location_) file()<< endl;
+        if (ok)
+        {
+            ++count;
+        }
+     }
+
+    if (!location_) file() << endl;
+
+    if (debug)
+    {
+        Log << " : nFields=" << count;
+    }
     Log << endl;
 
     return true;

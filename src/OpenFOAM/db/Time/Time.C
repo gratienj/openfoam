@@ -29,7 +29,6 @@ License
 
 #include "Time.H"
 #include "PstreamReduceOps.H"
-#include "MinMaxOps.H"
 #include "argList.H"
 #include "HashSet.H"
 #include "profiling.H"
@@ -259,16 +258,19 @@ void Foam::Time::setControls()
         }
     }
 
-    if (Pstream::parRun())
+    // Check for consistent startTime across all ranks
+    if (UPstream::parRun())
     {
-        scalarMinMax startTimeLimits(startTime_);
-        reduce(startTimeLimits, sumOp<scalarMinMax>());
+        scalar minValue = returnReduce(startTime_, minOp<scalar>());
 
-        if (startTimeLimits.span() > deltaT_/10.0)
+        // Local deviation more than 10% deltaT
+        bool hasDeviation = ((startTime_ - minValue) > (deltaT_/10.0));
+
+        if (returnReduceOr(hasDeviation))
         {
             FatalIOErrorInFunction(controlDict_)
                 << "Start time is not the same for all processors" << nl
-                << "processor " << Pstream::myProcNo() << " has startTime "
+                << "processor " << UPstream::myProcNo() << " has startTime "
                 << startTime_ << exit(FatalIOError);
         }
     }
@@ -311,8 +313,7 @@ void Foam::Time::setControls()
     // 1. Based on time name
     bool checkValue = true;
 
-    string storedTimeName;
-    if (timeDict.readIfPresent("name", storedTimeName))
+    if (string storedTimeName; timeDict.readIfPresent("name", storedTimeName))
     {
         if (storedTimeName == timeName())
         {
@@ -326,10 +327,9 @@ void Foam::Time::setControls()
     //     trigger if we just change the write precision)
     if (checkValue)
     {
-        scalar storedTimeValue;
-        if (timeDict.readIfPresent("value", storedTimeValue))
+        if (scalar storedValue; timeDict.readIfPresent("value", storedValue))
         {
-            word storedTimeName(timeName(storedTimeValue));
+            const word storedTimeName(timeName(storedValue));
 
             if (storedTimeName != timeName())
             {

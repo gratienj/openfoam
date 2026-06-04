@@ -192,8 +192,13 @@ int main(int argc, char *argv[])
     minmax1.clear();
 
     minmax1 += values1;
+
+    // label oldWarn = UPstream::commWarn(UPstream::worldComm+1);
+
     Pout<<"range: " << minmax1 << endl;
     Info<< "Reduced: "<< returnReduce(minmax1, plusOp<scalarMinMax>()) << nl;
+
+    // UPstream::commWarn(oldWarn);
 
     // Info<< "gMinMax: "<< gMinMax(values1v) << nl;
 
@@ -237,7 +242,7 @@ int main(int argc, char *argv[])
         }
 
         Info<< nl << "test clip(Field) with limiter: " << limiter << nl;
-        Info<< "clipped : " << clip(values1, limiter) << nl;
+        Info<< "clipped : " << clamp(values1, limiter) << nl;
 
         scalarField values2(values1);
 

@@ -47,28 +47,7 @@ void Foam::UPstream::reduceOr(bool& value, const int communicator)
 }
 
 
-void Foam::reduce
-(
-    bool& value,
-    Foam::andOp<bool>,
-    const int tag,  /* (unused) */
-    const int communicator
-)
-{
-    UPstream::reduceAnd(value, communicator);
-}
 
-
-void Foam::reduce
-(
-    bool& value,
-    Foam::orOp<bool>,
-    const int tag,  /* (unused) */
-    const int communicator
-)
-{
-    UPstream::reduceOr(value, communicator);
-}
 
 // * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 
