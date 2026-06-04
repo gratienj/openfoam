@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,6 +38,7 @@ Description
 
 #include "Pstream.H"
 #include "FixedList.H"
+#include "MinMax.H"
 #include "ops.H"
 #include "VectorSpaceOps.H"
 
@@ -209,25 +211,114 @@ void reduce
 // Special reductions for bool
 
 //- Logical (and) inplace reduction. Uses UPstream::reduceAnd
-void reduce
+inline void reduce
 (
     bool& value,
     Foam::andOp<bool>,
     [[maybe_unused]] const int tag = UPstream::msgType(),  /*!< (ignored) */
     const int communicator = UPstream::worldComm
-);
-// UPstream::reduceAnd(value, communicator);
+)
+{
+    UPstream::reduceAnd(value, communicator);
+}
 
 
 //- Logical (or) inplace reduction. Uses UPstream::reduceOr
-void reduce
+inline void reduce
 (
     bool& value,
     Foam::orOp<bool>,
     [[maybe_unused]] const int tag = UPstream::msgType(),  /*!< (ignored) */
     const int communicator = UPstream::worldComm
-);
-// UPstream::reduceOr(value, communicator);
+)
+{
+    UPstream::reduceOr(value, communicator);
+}
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Special reductions for MinMax
+
+//- Reduce inplace (Allreduce) for MinMax with sum/plus semantics, which
+//- corresponds to op_min on the min() value and op_max on the max() value
+//
+//  Note: similar to boundBox::reduce()
+template<class T>
+void reduce
+(
+    MinMax<T>& value,
+    Foam::sumOp<MinMax<T>>, //<- or std::plus<void>
+    [[maybe_unused]] const int tag = UPstream::msgType(),
+    const int communicator = UPstream::worldComm
+)
+{
+    constexpr auto nCmpts = int(pTraits_nComponents<T>::value);
+
+    if (!UPstream::is_parallel(communicator))
+    {
+        // Nothing to do
+        return;
+    }
+    else if constexpr (nCmpts > 0 && UPstream_basic_dataType<T>::value)
+    {
+        // MinMax (directly/indirectly) uses basic dataType.
+        // sumOp/plusOp combining is just a min-reduce and max-reduce
+
+        #ifdef FULLDEBUG
+        if (UPstream::warnComm >= 0 && communicator != UPstream::warnComm)
+        {
+            Perr<< "** min/max mpi-reduce:" << value << " comm:"
+                << communicator << endl;
+            error::printStack(Perr, 4);
+        }
+        #endif
+
+        UPstream::mpiAllReduce
+        (
+            vectorspace_data(value.min()),
+            nCmpts,
+            UPstream::opCodes::op_min,
+            communicator
+        );
+        UPstream::mpiAllReduce
+        (
+            vectorspace_data(value.max()),
+            nCmpts,
+            UPstream::opCodes::op_max,
+            communicator
+        );
+    }
+    else
+    {
+        // Unusual case: MinMax with some non-standard type of content
+        #ifdef FULLDEBUG
+        if (UPstream::warnComm >= 0 && communicator != UPstream::warnComm)
+        {
+            Perr<< "** min/max reduce:" << value << " comm:"
+                << communicator << endl;
+            error::printStack(Perr, 4);
+        }
+        #endif
+        Pstream::gather(value, sumOp<MinMax<T>>(), tag, communicator);
+        Pstream::broadcast(value, communicator);
+    }
+}
+
+
+//- Reduce inplace (Allreduce) for MinMax with sum/plus semantics
+//  Note: plusOp and sumOp are synonymous
+template<class T>
+inline void reduce
+(
+    MinMax<T>& value,
+    Foam::plusOp<MinMax<T>>,
+    const int tag = UPstream::msgType(),
+    const int communicator = UPstream::worldComm
+)
+{
+    Foam::reduce(value, Foam::sumOp<MinMax<T>>(), tag, communicator);
+}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
