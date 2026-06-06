@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2019 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -112,13 +113,11 @@ public:
         //- Correct the laminar viscosity
         virtual void correct()
         {
-            ViscousModel::correct();
+            this->nu_ = ViscousModel::calcNu();
 
-            const auto* fldPtr = mesh_.findObject<volScalarField>(fieldName_);
-
-            if (fldPtr)
+            if (const auto* ptr = mesh_.cfindObject<volScalarField>(fieldName_))
             {
-                this->nu_ *= calcNu(*fldPtr);
+                this->nu_ *= calcNu(*ptr);
             }
         }
 

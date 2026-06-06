@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
     Copyright (C) 2017 OpenCFD Ltd
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,6 +40,20 @@ namespace viscosityModels
     defineTypeNameAndDebug(Newtonian, 0);
     addToRunTimeSelectionTable(viscosityModel, Newtonian, dictionary);
 }
+}
+
+
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * * //
+
+Foam::tmp<Foam::volScalarField>
+Foam::viscosityModels::Newtonian::calcNu() const
+{
+    return tmp<volScalarField>::New
+    (
+        U_.mesh().newIOobject("nu"),
+        U_.mesh(),
+        nu0_
+    );
 }
 
 
