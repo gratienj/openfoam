@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,7 +34,7 @@ License
 #include "makeThermoParcelForces.H" // thermo variant
 #include "makeParcelDispersionModels.H"
 #include "makeReactingParcelInjectionModels.H" // Reacting variant
-#include "makeParcelPatchInteractionModels.H"
+#include "makeThermoParcelPatchInteractionModels.H"
 #include "makeParcelStochasticCollisionModels.H"
 #include "makeReactingParcelSurfaceFilmModels.H" // Reacting variant
 #include "makeHeterogeneousReactingParcelHeterogeneousReactingModels.H"
@@ -58,7 +59,7 @@ makeReactingParcelCloudFunctionObjects(basicHeterogeneousReactingCloud);
 makeThermoParcelForces(basicHeterogeneousReactingCloud);
 makeParcelDispersionModels(basicHeterogeneousReactingCloud);
 makeReactingParcelInjectionModels(basicHeterogeneousReactingCloud);
-makeParcelPatchInteractionModels(basicHeterogeneousReactingCloud);
+makeThermoParcelPatchInteractionModels(basicHeterogeneousReactingCloud);
 makeParcelStochasticCollisionModels(basicHeterogeneousReactingCloud);
 makeReactingParcelSurfaceFilmModels(basicHeterogeneousReactingCloud);
 

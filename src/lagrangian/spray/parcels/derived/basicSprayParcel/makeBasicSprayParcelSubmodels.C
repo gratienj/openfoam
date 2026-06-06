@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
     Copyright (C) 2020-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +37,7 @@ License
 #include "makeParcelDispersionModels.H"
 #include "makeParcelTurbulenceDispersionModels.H" // add turbulence variant
 #include "makeSprayParcelInjectionModels.H" // Spray variant
-#include "makeParcelPatchInteractionModels.H"
+#include "makeThermoParcelPatchInteractionModels.H"
 #include "makeSprayParcelStochasticCollisionModels.H" // Spray variant
 
 // Thermodynamic
@@ -67,7 +68,7 @@ makeThermoParcelTurbulenceForces(basicSprayCloud);
 makeParcelDispersionModels(basicSprayCloud);
 makeParcelTurbulenceDispersionModels(basicSprayCloud);
 makeSprayParcelInjectionModels(basicSprayCloud);
-makeParcelPatchInteractionModels(basicSprayCloud);
+makeThermoParcelPatchInteractionModels(basicSprayCloud);
 makeSprayParcelStochasticCollisionModels(basicSprayCloud);
 
 // Thermo sub-models

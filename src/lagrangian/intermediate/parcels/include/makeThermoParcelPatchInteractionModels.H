@@ -5,8 +5,6 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2020-2021 OpenCFD Ltd.
     Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
@@ -27,46 +25,34 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "basicThermoCloud.H"
-
-#include "makeThermoParcelCloudFunctionObjects.H"
-
-// Kinematic
-#include "makeThermoParcelForces.H" // thermo variant
-#include "makeParcelDispersionModels.H"
-#include "makeParcelInjectionModels.H"
-#include "makeThermoParcelPatchInteractionModels.H"
-#include "makeParcelStochasticCollisionModels.H"
-#include "makeThermoParcelSurfaceFilmModels.H" // thermo variant
-
-// Thermodynamic
-#include "makeParcelHeatTransferModels.H"
-
-// MPPIC sub-models
-#include "makeMPPICParcelDampingModels.H"
-#include "makeMPPICParcelIsotropyModels.H"
-#include "makeMPPICParcelPackingModels.H"
+#ifndef Foam_makeThermoParcelPatchInteractionModels_H
+#define Foam_makeThermoParcelPatchInteractionModels_H
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-makeThermoParcelCloudFunctionObjects(basicThermoCloud);
+#include "LocalInteraction.H"
+#include "NoInteraction.H"
+#include "MultiInteraction.H"
+#include "Rebound.H"
+#include "RecycleInteraction.H"
+#include "StandardWallInteraction.H"
 
-// Kinematic sub-models
-makeThermoParcelForces(basicThermoCloud);
-makeParcelDispersionModels(basicThermoCloud);
-makeParcelInjectionModels(basicThermoCloud);
-makeThermoParcelPatchInteractionModels(basicThermoCloud);
-makeParcelStochasticCollisionModels(basicThermoCloud);
-makeParcelSurfaceFilmModels(basicThermoCloud);
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Thermo sub-models
-makeParcelHeatTransferModels(basicThermoCloud);
+#define makeThermoParcelPatchInteractionModels(CloudType)                      \
+                                                                               \
+    makePatchInteractionModel(CloudType);                                      \
+                                                                               \
+    makePatchInteractionModelType(LocalInteraction, CloudType);                \
+    makePatchInteractionModelType(NoInteraction, CloudType);                   \
+    makePatchInteractionModelType(MultiInteraction, CloudType);                \
+    makePatchInteractionModelType(Rebound, CloudType);                         \
+    makePatchInteractionModelType(RecycleInteraction, CloudType);              \
+    makePatchInteractionModelType(StandardWallInteraction, CloudType);
 
 
-// MPPIC sub-models
-makeMPPICParcelDampingModels(basicThermoCloud);
-makeMPPICParcelIsotropyModels(basicThermoCloud);
-makeMPPICParcelPackingModels(basicThermoCloud);
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+#endif
 
 // ************************************************************************* //
