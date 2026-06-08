@@ -32,16 +32,33 @@ case "$WM_ARCH/$WM_COMPILER" in
     # Handle Pstream/OpenFOAM cyclic dependency
     # - compile Pstream as single .o object
     # - compile OpenFOAM and link against libPstream.o
-    WM_MPLIB=dummy Pstream/Allwmake libo
+    Pstream/Allwmake libo  #<- dummy and mpi
     FOAM_LINK_DUMMY_PSTREAM=libo wmake $targetType OpenFOAM
 
     # Extra handling to ensure that export symbols are not pruned
     special_def_file="${FOAM_LIBBIN:?}/dummy/libPstream.o.def"
     if [ -f "$special_def_file" ]
     then
-        # Recompile [dummy] libPstream with the full export
+        # Relink [dummy] libPstream as dll with full export
         FOAM_EXTRA_CXXFLAGS="$FOAM_EXTRA_CXXFLAGS -Wl,$special_def_file" \
         WM_MPLIB=dummy Pstream/Allwmake $targetType $*
+    fi
+
+    # Extra handling to ensure that export symbols are not pruned (mpi-lib)
+    unset special_def_file
+    if [ -d "$FOAM_MPI_LIBBIN" ]
+    then
+        special_def_file="${FOAM_MPI_LIBBIN}/libPstream.o.def"
+    elif [ "${FOAM_MPI:-dummy}" != dummy ]
+    then
+        special_def_file="$FOAM_LIBBIN/$FOAM_MPI/libPstream.o.def"
+    fi
+
+    if [ -f "$special_def_file" ]
+    then
+        # Relink [mpi] libPstream as dll with full export
+        FOAM_EXTRA_CXXFLAGS="$FOAM_EXTRA_CXXFLAGS -Wl,$special_def_file" \
+        Pstream/Allwmake-mpi $targetType $*
     fi
 
     # Force relink of libOpenFOAM against libPstream.{dll,so}
