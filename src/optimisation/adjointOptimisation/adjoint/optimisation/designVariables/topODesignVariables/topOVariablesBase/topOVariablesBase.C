@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2007-2023 PCOpt/NTUA
     Copyright (C) 2013-2023 FOSS GP
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -662,7 +663,10 @@ void Foam::topOVariablesBase::writeFluidSolidInterface
     surfFaces_.transfer(isoSurfFaces);
 
     const labelList zoneIds(std::move(zoneIDs));
-    writeSurfaceFiles(surfPoints_, surfFaces_, zoneIds, nSerialPatches);
+    if (debug || mesh.time().writeTime())
+    {
+        writeSurfaceFiles(surfPoints_, surfFaces_, zoneIds, nSerialPatches);
+    }
 
     // Invert changedFace-to-cuttingFace map for the sensitivity computations
     //changedFacesPerCuttingFace_ =
