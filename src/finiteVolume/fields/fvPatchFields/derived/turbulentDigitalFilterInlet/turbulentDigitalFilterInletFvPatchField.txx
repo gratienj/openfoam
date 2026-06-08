@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2019-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,7 +43,7 @@ Foam::turbulentDigitalFilterInletFvPatchField<Type>::calcPatchNormal() const
     vector patchNormal(-gAverage(nf));
 
     // Check that patch is planar
-    const scalar error = max(magSqr(patchNormal + nf));
+    const scalar error = Foam::max(magSqr(patchNormal + nf));
 
     if (error > SMALL)
     {
@@ -72,14 +73,12 @@ void Foam::turbulentDigitalFilterInletFvPatchField<Type>::mapL
     Field<Type>& fld
 )
 {
-    Field<Type> sourceFld;
-
-    if (Pstream::master())
-    {
-        sourceFld = L_.convolve();
-        L_.shift();
-        L_.refill();
-    }
+    // Each rank convolves only its owned slab of the generation plane; the
+    // resulting (distributed) virtual-plane field is the AMI target-side field
+    // and is mapped onto the distributed real patch below.
+    Field<Type> sourceFld(L_.convolve());
+    L_.shift();
+    L_.refill();
 
     // Map two-point correlations (integral scales)
     plusEqOp<Type> cop;
@@ -224,7 +223,7 @@ turbulentDigitalFilterInletFvPatchField
     AMIPtr_(ptf.AMIPtr_.clone()),
     meanPtr_(ptf.meanPtr_.clone(this->patch().patch())),
     Rptr_(ptf.Rptr_.clone(this->patch().patch())),
-    curTimeIndex_(ptf.curTimeIndex_),
+    curTimeIndex_(-1),
     patchNormal_(ptf.patchNormal_),
     L_(p, ptf.L_)
 {}
@@ -317,6 +316,10 @@ void Foam::turbulentDigitalFilterInletFvPatchField<Type>::autoMap
 {
     this->parent_bctype::autoMap(m);
 
+    // Patch distribution may have changed: force a full re-initialisation
+    // (plane ownership, generation box and AMI) on the next update
+    curTimeIndex_ = -1;
+
     if (meanPtr_)
     {
         meanPtr_->autoMap(m);
@@ -336,6 +339,9 @@ void Foam::turbulentDigitalFilterInletFvPatchField<Type>::rmap
 )
 {
     this->parent_bctype::rmap(ptf, addr);
+
+    // Patch distribution may have changed: force a full re-initialisation
+    curTimeIndex_ = -1;
 
     const auto& dfmptf = refCast<const this_bctype>(ptf);
 
