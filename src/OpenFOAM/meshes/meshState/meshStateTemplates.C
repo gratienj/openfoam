@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2016 OpenFOAM Foundation
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +30,18 @@ License
 #include "solverPerformance.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class Type>
+void Foam::meshState::setMeshMetric
+(
+    const word& metric,
+    const word& stat,
+    const Type& value
+)
+{
+    meshDict().subDictOrAdd(metric).set(stat, value);
+}
+
 
 template<class Type>
 void Foam::meshState::setSolverPerformance

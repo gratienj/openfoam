@@ -119,7 +119,7 @@ private:
     // Private Data
 
         //- Mesh and solver state data
-        meshState data_;
+        mutable meshState data_;
 
 
         // Primitive mesh data
@@ -446,6 +446,7 @@ public:
 
             //- Reference to the mesh and solver state data
             virtual meshState& data() noexcept { return data_; }
+            virtual meshState& dataRef() const noexcept { return data_; }
 
             //- Return raw points
             virtual const pointField& points() const;

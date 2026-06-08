@@ -34,6 +34,8 @@ Foam::label Foam::checkMeshQuality
             {
                 mergeAndWrite(*writer, faces);
             }
+
+            mesh.dataRef().setMeshMetric("faceQuality", "nError", nFaces);
         }
     }
 

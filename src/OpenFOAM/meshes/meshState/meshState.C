@@ -32,9 +32,8 @@ License
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 const Foam::word Foam::meshState::controlsDictName = "controls";
-const Foam::word Foam::meshState::meshDictName = "mesh";
 const Foam::word Foam::meshState::solverPerformanceDictName = "solver";
-
+const Foam::word Foam::meshState::meshDictName = "mesh";
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 

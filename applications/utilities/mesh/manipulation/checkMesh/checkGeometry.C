@@ -547,6 +547,10 @@ Foam::label Foam::checkGeometry
     Info<< "    Overall domain bounding box "
         << globalBb.min() << " " << globalBb.max() << endl;
 
+    auto& dataRef = mesh.dataRef();
+
+    dataRef.setMeshMetric("geometry", "boundsMin", globalBb.min());
+    dataRef.setMeshMetric("geometry", "boundsMax", globalBb.max());
 
     // Min length
     scalar minDistSqr = magSqr(1e-6 * globalBb.span());
@@ -556,10 +560,14 @@ Foam::label Foam::checkGeometry
     Info<< "    Mesh has " << mesh.nGeometricD()
         << " geometric (non-empty/wedge) directions " << validDirs << endl;
 
+    dataRef.setMeshMetric("geometry", "geometricDimensions", mesh.nGeometricD());
+
     // Solution directions
     const Vector<label> solDirs = (mesh.solutionD() + Vector<label>::one)/2;
     Info<< "    Mesh has " << mesh.nSolutionD()
         << " solution (non-empty) directions " << solDirs << endl;
+
+    dataRef.setMeshMetric("geometry", "solutionDimensions", mesh.nSolutionD());
 
     if (mesh.nGeometricD() < 3)
     {
@@ -595,6 +603,13 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*setWriter, nonAlignedPoints);
                 }
+
+                dataRef.setMeshMetric
+                (
+                    "pointsNonAligned",
+                    "errorCount",
+                    nNonAligned
+                );
             }
         }
     }
@@ -629,6 +644,9 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, cells);
                 }
+
+                // Note: check performed in primitiveMesh (no access to dataRef)
+                dataRef.setMeshMetric("closedCells", "errorCount", nNonClosed);
             }
         }
 
@@ -645,6 +663,8 @@ Foam::label Foam::checkGeometry
             {
                 mergeAndWrite(*surfWriter, aspectCells);
             }
+
+            dataRef.setMeshMetric("cellsHighAspect", "errorCount", nHighAspect);
         }
     }
 
@@ -666,6 +686,9 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, faces);
                 }
+
+                // Note: check performed in primitiveMesh (no access to dataRef)
+                dataRef.setMeshMetric("facesZeroArea", "errorCount", nFaces);
             }
         }
     }
@@ -688,6 +711,9 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, cells);
                 }
+
+                // Note: check performed in primitiveMesh (no access to dataRef)
+                dataRef.setMeshMetric("cellsZeroVolume", "errorCount", nCells);
             }
         }
     }
@@ -711,6 +737,9 @@ Foam::label Foam::checkGeometry
             {
                 mergeAndWrite(*surfWriter, faces);
             }
+
+            // Note: check performed in primitiveMesh (no access to dataRef)
+            dataRef.setMeshMetric("nonOrthogonality", "errorCount", nFaces);
         }
     }
 
@@ -733,6 +762,9 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, faces);
                 }
+
+                // Note: check performed in primitiveMesh (no access to dataRef)
+                dataRef.setMeshMetric("faceOrientation", "errorCount", nFaces);
             }
         }
     }
@@ -756,6 +788,8 @@ Foam::label Foam::checkGeometry
                     mergeAndWrite(*surfWriter, faces);
                 }
             }
+
+            // Note: mesh.checkFaceSkewness populates stats in dataRef
         }
     }
 
@@ -779,6 +813,8 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, faces);
                 }
+
+                dataRef.setMeshMetric("coupledFaces", "errorCount", nFaces);
             }
         }
     }
@@ -812,6 +848,8 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, faces);
                 }
+
+                dataRef.setMeshMetric("facesQuality", "errorCount", nFaces);
             }
         }
     }
@@ -837,6 +875,8 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*setWriter, points);
                 }
+
+                dataRef.setMeshMetric("shortEdgePoints", "errorCount", nPoints);
             }
         }
 
@@ -845,6 +885,10 @@ Foam::label Foam::checkGeometry
         if (mesh.checkPointNearness(false, minDistSqr, &points))
         {
             //noFailedChecks++;
+            dataRef.setMeshMetric
+            (
+                "nearPoints", "threshold", Foam::sqrt(minDistSqr)
+            );
 
             label nPoints = returnReduce(points.size(), sumOp<label>());
 
@@ -860,6 +904,8 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*setWriter, nearPoints);
                 }
+
+                dataRef.setMeshMetric("nearPoints", "errorCount", nPoints);
             }
         }
     }
@@ -884,6 +930,8 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, faces);
                 }
+
+                dataRef.setMeshMetric("concaveFaces", "errorCount", nFaces);
             }
         }
     }
@@ -907,13 +955,16 @@ Foam::label Foam::checkGeometry
                 {
                     mergeAndWrite(*surfWriter, faces);
                 }
+
+                // Note: check performed in primitiveMesh (no access to dataRef)
+                dataRef.setMeshMetric("warpedFaces", "errorCount", nFaces);
             }
         }
     }
 
     if (allGeometry)
     {
-        cellSet cells(mesh, "underdeterminedCells", mesh.nCells()/100);
+        cellSet cells(mesh, "cellDeterminant", mesh.nCells()/100);
         if (mesh.checkCellDeterminant(true, &cells))
         {
             noFailedChecks++;
@@ -928,6 +979,8 @@ Foam::label Foam::checkGeometry
             {
                 mergeAndWrite(*surfWriter, cells);
             }
+
+            dataRef.setMeshMetric("cellDeterminant", "errorCount", nCells);
         }
     }
 
@@ -948,13 +1001,19 @@ Foam::label Foam::checkGeometry
             {
                 mergeAndWrite(*surfWriter, cells);
             }
+
+            // Note: check performed in primitiveMesh (no access to dataRef)
+            dataRef.setMeshMetric("concaveCells", "errorCount", nCells);
         }
     }
 
     if (allGeometry)
     {
         faceSet faces(mesh, "lowWeightFaces", mesh.nFaces()/100);
-        if (mesh.checkFaceWeight(true, 0.05, &faces))
+
+        const scalar threshold = 0.05;
+
+        if (mesh.checkFaceWeight(true, threshold, &faces))
         {
             noFailedChecks++;
 
@@ -974,8 +1033,11 @@ Foam::label Foam::checkGeometry
 
     if (allGeometry)
     {
-        faceSet faces(mesh, "lowVolRatioFaces", mesh.nFaces()/100);
-        if (mesh.checkVolRatio(true, 0.01, &faces))
+        faceSet faces(mesh, "faceVolumeRatio", mesh.nFaces()/100);
+
+        const scalar threshold = 0.01;
+
+        if (mesh.checkVolRatio(true, threshold, &faces))
         {
             noFailedChecks++;
 

@@ -21,6 +21,72 @@ auto writeMeshChecks = [&](const fvMesh& mesh, const writeChecksFormatType fmt)
         return;
     }
 
+    auto& dataRef = mesh.dataRef();
+
+    // Add base count metrics
+    dataRef.setMeshMetric
+    (
+        "geometry", "cellCount", mesh.globalData().nTotalCells()
+    );
+    dataRef.setMeshMetric
+    (
+        "geometry", "faceCount", mesh.globalData().nTotalFaces()
+    );
+    dataRef.setMeshMetric
+    (
+        "geometry", "pointCount", mesh.globalData().nTotalPoints()
+    );
+    dataRef.setMeshMetric
+    (
+        "geometry", "patchCount", mesh.boundaryMesh().nNonProcessor()
+    );
+
+    // Summarise errors
+    {
+        DynamicList<Tuple2<word, label>> errorCounts;
+        DynamicList<Tuple2<word, label>> warningCounts;
+        forAllConstIters(mesh.data().meshDict(), iter)
+        {
+            if (iter().isDict())
+            {
+                const dictionary& metricDict = iter().dict();
+
+                auto* warnPtr = metricDict.findEntry("warningCount");
+                if (warnPtr)
+                {
+                    if (label nWarn(readLabel(warnPtr->stream())); nWarn > 0)
+                    {
+                        warningCounts.emplace_back(iter().keyword(), nWarn);
+                    }
+                }
+
+                auto* errPtr = metricDict.findEntry("errorCount");
+                if (errPtr)
+                {
+                    if (label nErr(readLabel(errPtr->stream())); nErr > 0)
+                    {
+                        errorCounts.emplace_back(iter().keyword(), nErr);
+                    }
+                }
+            }
+        }
+
+        if (warningCounts.size())
+        {
+            dataRef.setMeshMetric("summary", "warningCounts", warningCounts);
+        }
+
+        if (errorCounts.size())
+        {
+            dataRef.setMeshMetric("summary", "state", "fail");
+            dataRef.setMeshMetric("summary", "errorCounts", errorCounts);
+        }
+        else
+        {
+            dataRef.setMeshMetric("summary", "state", "pass");
+        }
+    }
+
     if (UPstream::master())
     {
         fileName path(mesh.time().globalPath()/"checkMesh");

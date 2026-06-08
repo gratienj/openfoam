@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2020-2023 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -92,11 +93,11 @@ public:
         //- Name for "controls" sub-dictionary
         static const word controlsDictName;
 
-        //- Name for "mesh" sub-dictionary
-        static const word meshDictName;
-
         //- Name for "solver" (solver performance) sub-dictionary
         static const word solverPerformanceDictName;
+
+        //- Name for "mesh" sub-dictionary
+        static const word meshDictName;
 
 
     // Constructors
@@ -149,6 +150,16 @@ public:
         //- the polyMesh::checkXXX functions, checkMesh etc.
         dictionary& meshDict();
         const dictionary& meshDict() const;
+
+        //- Set an entry for a named metric in meshDict
+        //  Sets meshDict/<metric>/<stat> = value
+        template<class Type>
+        void setMeshMetric
+        (
+            const word& metric,
+            const word& stat,
+            const Type& value
+        );
 
         //- Return the dictionary of solver performance data which
         //- includes initial and final residuals for convergence checking

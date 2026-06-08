@@ -519,6 +519,8 @@ bool Foam::polyMeshTetDecomposition::checkFaceTets
 
     if (nErrorTets > 0)
     {
+        mesh.dataRef().setMeshMetric("faceTets", "nErrorTets", nErrorTets);
+
         if (report)
         {
             Info<< " ***Error in face tets: "
