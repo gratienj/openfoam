@@ -50,6 +50,8 @@ processorField/processorField.C
 proudmanAcousticPower/proudmanAcousticPower.C
 readFields/readFields.C
 
+relativeVelocity/relativeVelocityFunctionObject.cxx
+
 surfaceDistance/surfaceDistance.C
 
 setFlow/setFlow.C

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2020-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,6 +63,32 @@ Foam::solidBodyMotionFunctions::rotatingMotion::rotatingMotion
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+
+Foam::scalar Foam::solidBodyMotionFunctions::rotatingMotion::omega() const
+{
+    if (omega_)
+    {
+        return omega_->value(time_.value());
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
+Foam::vector Foam::solidBodyMotionFunctions::rotatingMotion::Omega() const
+{
+    if (omega_)
+    {
+        return omega_->value(time_.value()) * axis_;
+    }
+    else
+    {
+        return Zero;
+    }
+}
+
 
 Foam::septernion
 Foam::solidBodyMotionFunctions::rotatingMotion::transformation() const

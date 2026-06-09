@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -67,11 +68,7 @@ void Foam::MRFZone::setMRFFaces()
 
     if (cellZoneID_ != -1)
     {
-        const labelList& cellLabels = mesh_.cellZones()[cellZoneID_];
-        forAll(cellLabels, i)
-        {
-            zoneCell[cellLabels[i]] = true;
-        }
+        UIndirectList<bool>(zoneCell, mesh_.cellZones()[cellZoneID_]) = true;
     }
 
 
@@ -258,6 +255,18 @@ Foam::MRFZone::MRFZone
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+const Foam::cellZone* Foam::MRFZone::whichZone() const
+{
+    return cellZoneID_ >= 0 ? mesh_.cellZones().get(cellZoneID_) : nullptr;
+}
+
+
+Foam::scalar Foam::MRFZone::omega() const
+{
+    return omega_->value(mesh_.time().timeOutputValue());
+}
+
 
 Foam::vector Foam::MRFZone::Omega() const
 {

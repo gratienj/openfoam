@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef dynamicMotionSolverFvMesh_H
-#define dynamicMotionSolverFvMesh_H
+#ifndef Foam_dynamicMotionSolverFvMesh_H
+#define Foam_dynamicMotionSolverFvMesh_H
 
 #include "dynamicFvMesh.H"
 
@@ -55,12 +55,16 @@ class dynamicMotionSolverFvMesh
 :
     public dynamicFvMesh
 {
-    // Private data
+    // Private Data
 
         autoPtr<motionSolver> motionPtr_;
 
+public:
 
-    // Private Member Functions
+    //- Runtime type information
+    TypeName("dynamicMotionSolverFvMesh");
+
+    // Generated Methods
 
         //- No copy construct
         dynamicMotionSolverFvMesh(const dynamicMotionSolverFvMesh&) = delete;
@@ -69,16 +73,14 @@ class dynamicMotionSolverFvMesh
         void operator=(const dynamicMotionSolverFvMesh&) = delete;
 
 
-public:
-
-    //- Runtime type information
-    TypeName("dynamicMotionSolverFvMesh");
-
-
     // Constructors
 
         //- Construct from IOobject
-        dynamicMotionSolverFvMesh(const IOobject& io, const bool doInit=true);
+        explicit dynamicMotionSolverFvMesh
+        (
+            const IOobject& io,
+            const bool doInit=true
+        );
 
         //- Construct from components without boundary.
         //  Boundary is added using addFvPatches() member function
@@ -94,7 +96,7 @@ public:
 
 
     //- Destructor
-    virtual ~dynamicMotionSolverFvMesh() = default;
+    virtual ~dynamicMotionSolverFvMesh();
 
 
     // Member Functions

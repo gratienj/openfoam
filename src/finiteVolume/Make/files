@@ -517,9 +517,9 @@ $(porosity)/powerLaw/powerLaw.C
 $(porosity)/solidification/solidification.C
 
 MRF = $(general)/MRF
-$(MRF)/MRFZone.C
-$(MRF)/MRFZoneList.C
-$(MRF)/IOMRFZoneList.C
+$(MRF)/MRFZone.cxx
+$(MRF)/MRFZoneList.cxx
+$(MRF)/IOMRFZoneList.cxx
 
 SRF = $(general)/SRF
 $(SRF)/SRFModel/SRFModel/SRFModel.C

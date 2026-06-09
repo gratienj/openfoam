@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,8 +29,6 @@ License
 #include "dynamicMultiMotionSolverFvMesh.H"
 #include "addToRunTimeSelectionTable.H"
 #include "volFields.H"
-#include "bitSet.H"
-#include "syncTools.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -75,98 +74,76 @@ bool Foam::dynamicMultiMotionSolverFvMesh::init(const bool doInit)
         dynamicFvMesh::init(doInit);
     }
 
-    IOdictionary dynDict
+    IOobject dynMeshDictIO
     (
-        IOobject
-        (
-            "dynamicMeshDict",
-            time().constant(),
-            *this,
-            IOobject::MUST_READ_IF_MODIFIED,
-            IOobject::NO_WRITE,
-            IOobject::NO_REGISTER
-        )
+        "dynamicMeshDict",
+        time().constant(),
+       *this,
+        IOobjectOption::MUST_READ,  //<- MUST_READ for initial setup
+        IOobjectOption::NO_WRITE,
+        IOobjectOption::NO_REGISTER
     );
-    const dictionary& dynamicMeshCoeffs = dynDict.subDict(typeName + "Coeffs");
 
-    motionPtr_.resize(dynamicMeshCoeffs.size());
-    pointIDs_.resize(dynamicMeshCoeffs.size());
+    dictionary dynDict(IOdictionary::readContents(dynMeshDictIO));
+    const auto& dynamicMeshCoeffs = dynDict.subDict(typeName + "Coeffs");
+
+    // NO_READ for further construction
+    dynMeshDictIO.readOpt(IOobjectOption::NO_READ);
+
+    motionSolvers_.resize(dynamicMeshCoeffs.size());
+    zoneMotions_.resize(dynamicMeshCoeffs.size());
+
+    const auto& allCellZones = this->cellZones();
 
     label zonei = 0;
 
-    bitSet movePts;
-
-    for (const entry& dEntry : dynamicMeshCoeffs)
+    for (const entry& e : dynamicMeshCoeffs)
     {
-        if (dEntry.isDict())
+        if (const auto* dictptr = e.dictPtr())
         {
-            const dictionary& subDict = dEntry.dict();
+            const auto& subDict = *dictptr;
 
             wordRe cellZoneName;
             subDict.readEntry("cellZone", cellZoneName);
 
             // Also handles groups, multiple zones (as wordRe match) ...
-            labelList zoneIDs = cellZones().indices(cellZoneName);
+            labelList zoneIDs = allCellZones.indices(cellZoneName);
 
             if (zoneIDs.empty())
             {
                 FatalIOErrorInFunction(dynamicMeshCoeffs)
                     << "No matching cellZones: " << cellZoneName << nl
                     << "    Valid zones : "
-                    << flatOutput(cellZones().names()) << nl
+                    << flatOutput(allCellZones.names()) << nl
                     << "    Valid groups: "
-                    << flatOutput(cellZones().groupNames())
-                    << nl
+                    << flatOutput(allCellZones.groupNames()) << nl
                     << exit(FatalIOError);
             }
 
-            IOobject io(dynDict, IOobject::NO_READ, IOobject::NO_WRITE);
-
-            motionPtr_.set
+            motionSolvers_.set
             (
                 zonei,
                 motionSolver::New
                 (
                     *this,
-                    IOdictionary(io, subDict)
+                    IOdictionary(dynMeshDictIO, subDict)
                 )
             );
 
+            // The points associated with cell zone(s)
+            auto& zoneMove = zoneMotions_.emplace_set(zonei, *this, zoneIDs);
 
-            // Markup points associated with cell zone(s)
-
-            movePts.reset();
-            movePts.resize(nPoints());
-
-            for (const label zoneID : zoneIDs)
-            {
-                for (const label celli : cellZones()[zoneID])
-                {
-                    for (const label facei : cells()[celli])
-                    {
-                        movePts.set(faces()[facei]);
-                    }
-                }
-            }
-
-            syncTools::syncPointList
-            (
-                *this, movePts, orEqOp<unsigned int>(), 0u
-            );
-
-            pointIDs_[zonei] = movePts.sortedToc();
-
-            Info<< "Applying motionSolver " << motionPtr_[zonei].type()
+            Info<< "Applying motionSolver " << motionSolvers_[zonei].type()
                 << " to "
-                << returnReduce(pointIDs_[zonei].size(), sumOp<label>())
+                << returnReduce(zoneMove.pointIDs().size(), sumOp<label>())
                 << " points of cellZone " << cellZoneName << endl;
 
             ++zonei;
         }
     }
 
-    motionPtr_.resize(zonei);
-    pointIDs_.resize(zonei);
+    motionSolvers_.resize(zonei);
+    zoneMotions_.resize(zonei);
 
     // Assume changed ...
     return true;
@@ -177,13 +154,13 @@ bool Foam::dynamicMultiMotionSolverFvMesh::init(const bool doInit)
 
 bool Foam::dynamicMultiMotionSolverFvMesh::update()
 {
-    pointField transformedPts(points());
+    pointField transformedPts(this->points());
 
-    forAll(motionPtr_, zonei)
+    forAll(motionSolvers_, zonei)
     {
-        const labelList& zonePoints = pointIDs_[zonei];
+        const labelUList& zonePoints = zoneMotions_[zonei].pointIDs();
 
-        const pointField newPoints(motionPtr_[zonei].newPoints());
+        const pointField newPoints(motionSolvers_[zonei].newPoints());
 
         for (const label pointi : zonePoints)
         {
@@ -195,9 +172,7 @@ bool Foam::dynamicMultiMotionSolverFvMesh::update()
 
     static bool hasWarned = false;
 
-    volVectorField* Uptr = getObjectPtr<volVectorField>("U");
-
-    if (Uptr)
+    if (auto* Uptr = getObjectPtr<volVectorField>("U"))
     {
         Uptr->correctBoundaryConditions();
     }

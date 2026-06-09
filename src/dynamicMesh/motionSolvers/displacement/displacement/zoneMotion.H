@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -63,6 +64,7 @@ namespace Foam
 // Forward Declarations
 class dictionary;
 class polyMesh;
+class wordRe;
 
 /*---------------------------------------------------------------------------*\
                            Class zoneMotion Declaration
@@ -70,21 +72,59 @@ class polyMesh;
 
 class zoneMotion
 {
+public:
+
+    // Public Data
+
+        //- The selection modes
+        enum class selectionModes : char
+        {
+            smAll = 0,              //!< "all" cells
+            smCellSet = 1,          //!< "cellSet"
+            smCellZone = 2,         //!< "cellZone"
+            smCellSetAndZone = 3    //!< both cellSet and cellZone specified
+        };
+
+private:
+
      // Private Data
 
         //- Points to move when cell zones or sets are supplied
         labelList pointIDs_;
 
-        //- Flag to indicate whether all cells should move
-        bool moveAllCells_;
+        //- Selected cell zones (for 'cellZone' selection mode)
+        labelList cellZoneIDs_;
+
+        //- Cell selection mode
+        selectionModes selectionMode_;
+
+
+    // Private Member Functions
+
+        //- Select pointIDs according to the current cellZoneIDs
+        void selectZonePoints(const polyMesh& mesh);
 
 
 public:
 
     // Constructors
 
-        //- Construct from dictionary
+        //- Default construct (all points)
+        zoneMotion();
+
+        //- Construct from dictionary (uses cellSet, cellZone entries)
+        zoneMotion(const polyMesh& mesh, const dictionary& dict);
+
+        //- Construct from dictionary (uses cellSet, cellZone entries)
         zoneMotion(const dictionary& dict, const polyMesh& mesh);
+
+        //- Construct from cellZones specified by ids.
+        //- An empty list corresponds to "all"
+        zoneMotion(const polyMesh& mesh, const labelUList& cellZoneIds);
+
+        //- Construct from cellZones specified by name.
+        //- An empty name corresponds to "all"
+        zoneMotion(const polyMesh& mesh, const wordRe& cellZoneSelection);
 
 
     //- Destructor
@@ -94,16 +134,26 @@ public:
     // Member Functions
 
         //- The point ids (for cell set/zone subset)
-        const labelList& pointIDs() const noexcept
-        {
-            return pointIDs_;
-        }
+        const labelUList& pointIDs() const noexcept { return pointIDs_; }
+
+        //- Selected cell zones (if any)
+        const labelUList& cellZoneIDs() const noexcept { return cellZoneIDs_; }
 
         //- Move all cells?
         bool moveAllCells() const noexcept
         {
-            return moveAllCells_;
+            return (selectionMode_ == selectionModes::smAll);
         }
+
+        //- Reset to use all points
+        void resetZone();
+
+        //- Reset with cellZones specified by name.
+        //- An empty name corresponds to "all"
+        void resetZone(const polyMesh& mesh, const wordRe& cellZoneSelection);
+
+        //- Reset from dictionary (uses cellSet, cellZone entries)
+        void resetZone(const polyMesh& mesh, const dictionary& dict);
 };
 
 

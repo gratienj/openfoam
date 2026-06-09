@@ -244,14 +244,11 @@ bool Foam::dynamicMotionSolverFvMeshAMI::update()
         fvMesh::movePoints(newPoints);
     }
 
-    volVectorField* Uptr = getObjectPtr<volVectorField>("U");
-
-    if (Uptr)
+    if (auto* Uptr = getObjectPtr<volVectorField>("U"))
     {
         Uptr->correctBoundaryConditions();
 
-        surfaceVectorField* UfPtr = getObjectPtr<surfaceVectorField>("Uf");
-        if (UfPtr)
+        if (auto* UfPtr = getObjectPtr<surfaceVectorField>("Uf"))
         {
             *UfPtr = fvc::interpolate(*Uptr);
         }

@@ -59,6 +59,21 @@ Foam::solidBodyMotionSolver::solidBodyMotionSolver
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+const Foam::solidBodyMotionFunction&
+Foam::solidBodyMotionSolver::motionControl() const
+{
+    // if (!SBMFPtr_)  // FUTURE? make mutable and demand-driven
+    // {
+    //     SBMFPtr_ = solidBodyMotionFunction::New
+    //     (
+    //         coeffDict(),
+    //         this->mesh().time()
+    //     );
+    // }
+    return *SBMFPtr_;
+}
+
+
 Foam::tmp<Foam::pointField> Foam::solidBodyMotionSolver::curPoints() const
 {
     if (moveAllCells())
@@ -68,7 +83,7 @@ Foam::tmp<Foam::pointField> Foam::solidBodyMotionSolver::curPoints() const
     else
     {
         auto ttransformedPts = tmp<pointField>::New(mesh().points());
-        pointField& transformedPts = ttransformedPts.ref();
+        auto& transformedPts = ttransformedPts.ref();
 
         UIndirectList<point>(transformedPts, pointIDs()) = transformPoints
         (

@@ -104,6 +104,12 @@ Foam::dynamicMotionSolverFvMesh::dynamicMotionSolverFvMesh
 {}
 
 
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+// Non-default in header (incomplete types)
+Foam::dynamicMotionSolverFvMesh::~dynamicMotionSolverFvMesh() = default;
+
+
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 const Foam::motionSolver& Foam::dynamicMotionSolverFvMesh::motion() const
@@ -116,9 +122,7 @@ bool Foam::dynamicMotionSolverFvMesh::update()
 {
     fvMesh::movePoints(motionPtr_->newPoints());
 
-    volVectorField* Uptr = getObjectPtr<volVectorField>("U");
-
-    if (Uptr)
+    if (auto* Uptr = getObjectPtr<volVectorField>("U"))
     {
         Uptr->correctBoundaryConditions();
     }
