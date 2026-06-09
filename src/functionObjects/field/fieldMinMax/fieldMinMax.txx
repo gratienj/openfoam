@@ -76,7 +76,6 @@ Foam::labelPair Foam::functionObjects::fieldMinMax::findMinMax_mag
 template<class Type>
 void Foam::functionObjects::fieldMinMax::output
 (
-    const word& fieldName,
     const word& outputName,
     const label minCell,
     const label maxCell,
@@ -94,7 +93,7 @@ void Foam::functionObjects::fieldMinMax::output
     {
         writeCurrentTime(file);
 
-        writeTabbed(file, fieldName);
+        writeTabbed(file, outputName);
 
         file<< token::TAB << minValue
             << token::TAB << minPosition;
@@ -346,10 +345,10 @@ void Foam::functionObjects::fieldMinMax::calcMinMaxFieldType
     const auto& minData = allLimits[minProci].min_;
     const auto& maxData = allLimits[maxProci].max_;
 
+
     output
     (
-        field.name(),
-        outputFieldName,
+        (outputFieldName.empty() ? field.name() : outputFieldName),
         minData.cellID_,
         maxData.cellID_,
         minData.position_,
@@ -400,7 +399,6 @@ bool Foam::functionObjects::fieldMinMax::calcMinMaxFields
                     << exit(FatalError);
             }
         }
-
     }
 
     return bool(fieldp);

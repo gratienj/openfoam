@@ -174,7 +174,6 @@ protected:
         template<class Type>
         void output
         (
-            const word& fieldName,
             const word& outputName,
             const label minCell,
             const label maxCell,
