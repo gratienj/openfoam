@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2015-2024 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +33,7 @@ Description
     (possibly overlapping) part of the overall surface. All queries are
     distributed to the processor that can answer it and the result sent back.
 
-    Can work in three modes:
+    Can work in different modes:
     - follow : makes sure each processor has all the triangles inside the
     externally provided bounding box (usually the mesh bounding box).
     Guarantees minimum amount of communication since mesh-local queries
@@ -41,6 +42,9 @@ Description
     so the decomposition might be radically different from the mesh
     decomposition. Guarantees best memory balance but at the expense of
     more communication.
+    - distributed : has already been distributed and can be used as is.
+    - nodeMaster : only the node-local master has the surface and answers
+      queries. No communication between nodes.
     - frozen : no change
 
     Note: addressing used:
@@ -51,6 +55,51 @@ Description
     - surf.edges()          : edgeTree
     - surf.faceFaces()      : only if minQuality > 0
 
+Usage
+    In e.g. \c system/snappyHexMeshDict:
+    \verbatim
+    {
+        myGeometry
+        {
+            type distributedTriSurfaceMesh;
+            file "box.obj";
+
+            numberOfSubdomains  8;
+            method              hierarchical;
+            n                   (2 2 2);
+        }
+    }
+    \endverbatim
+
+        // Mandatory (inherited) entries
+        type            distributedTriSurfaceMesh;
+
+        // Optional entries
+
+        //- distributionType (default is distributed)
+        distributionType        nodeMaster;
+
+        //- Use bounding boxes (default) or unique decomposition of triangles
+        //- (i.e. do not duplicate triangles)
+        decomposeUsingBbs       false;
+
+        //- In nodeMaster mode : override the number of cores per master
+        //  (default is all cores on the same node so one master per node)
+        nProcessorsPerMaster    4;
+
+        //- Calculate bb that does not overlap any of the other bounding boxes.
+        exclusionBb             false;
+
+        //- Merging distance for points on the surface. Only used when reading.
+        mergeDistance           1e-10;
+
+        //- Override the closed state of the initial surface. Only used when
+        //  reading.
+        closed                  false;
+        //- Override the outside volume type. Only used when reading.
+        outsideVolumeType       outside;
+    }
+    \endverbatim
 
 SourceFiles
     distributedTriSurfaceMesh.C
@@ -97,7 +146,8 @@ public:
             FOLLOW = 0,
             INDEPENDENT = 1,
             DISTRIBUTED = 2,
-            FROZEN = 3
+            FROZEN = 3,
+            NODEMASTER = 4
         };
 
         static const Enum<distributionType> distributionTypeNames_;
@@ -121,8 +171,19 @@ private:
         //- (i.e. do not duplicate triangles)
         bool decomposeUsingBbs_;
 
-        //- Bounding boxes of all processors
+        //- Calculate bb that does not overlap any of the other bounding
+        //- boxes
+        bool doExclusionBb_;
+
+        //- Bounding boxes of all processors.
         List<List<treeBoundBox>> procBb_;
+
+        //- if !decomposeUsingBbs_ (so no fill in but unique processor
+        //  assignment) we can still have a local boundbox where we guarantee
+        //  we have the interacting triangles. This is an optional filtering
+        //  at start up. Is list over all processors - currently only
+        //  a single bb per processor.
+        List<treeBoundBox> exclusionBb_;
 
         //- Global triangle numbering
         mutable autoPtr<globalIndex> globalTris_;
@@ -137,6 +198,13 @@ private:
         //- The (current) distribution type. Used to trigger re-distribution
         //  when starting from undecomposed surface.
         distributionType currentDistType_;
+
+        //- Optional communicator to send queries. Used in NODEMASTER mode.
+        label comm_;
+
+        //- In nodeMaster mode : IDs of master processors (one per node, or
+        //  as specified by nProcessorsPerMaster)
+        DynamicList<label> masterProcIDs_;
 
 
     // Private Member Functions
@@ -162,12 +230,36 @@ private:
 
         // Line intersection
 
-            static bool isLocal
+            //- Is segment contained inside the supplied bbs
+            static bool contains
             (
                 const List<treeBoundBox>& myBbs,
                 const point& start,
                 const point& end
             );
+
+            //- Return index of bb that fully contains segment. -1
+            //- if none found.
+            static label findBb
+            (
+                const List<treeBoundBox>& myBbs,
+                const point& start,
+                const point& end
+            );
+
+            //- 'subtract' bounding box b from a such that max volume
+            //- remains
+            static treeBoundBox subtract
+            (
+                const treeBoundBox& a,
+                const treeBoundBox& b
+            );
+
+            //- Update exclusionBb_ from new procBb.
+            void calcExclusionBb();
+
+            //- Is segment local to myProcNo
+            bool isInExclusion(const point& start, const point& end) const;
 
             //- Split segment into subsegments overlapping the processor
             //  bounding box.
@@ -202,6 +294,7 @@ private:
             (
                 const pointField& start,
                 const pointField& end,
+                const bitSet& doTest,
 
                 List<segment>& allSegments,
                 List<label>& allSegmentMap
@@ -236,11 +329,28 @@ private:
         // Nearest
 
             //- Is location inside any of the bounding boxes
-            bool contains
+            static bool contains
             (
                 const List<treeBoundBox>& bbs,
                 const point& sample
-            ) const;
+            );
+
+            //- Is sphere (centre+radius) inside bb
+            static bool contains
+            (
+                const treeBoundBox& bb,
+                const point& centre,
+                const scalar radius
+            );
+
+            //- Return index of bb that fully contains sphere. -1
+            //- if none found.
+            static label findBb
+            (
+                const List<treeBoundBox>& myBbs,
+                const point& centre,
+                const scalar radius
+            );
 
             //- Is location inside any of the processors bb or if not
             //  does it overlap
@@ -248,16 +358,17 @@ private:
             (
                 const point& centre,
                 const scalar radiusSqr,
-                boolList& procContains,
-                boolList& procOverlaps,
-                label& minProci
+                bitSet& procContains,
+                bitSet& procOverlaps,
+                label& minProci,
+                label& excludeProci
             ) const;
 
             label calcOverlappingProcs
             (
                 const point& centre,
                 const scalar radiusSqr,
-                boolList& overlaps
+                bitSet& overlaps
             ) const;
 
             //- Calculate map to send centres+radius to processors
@@ -441,6 +552,29 @@ private:
             //- Distribute stored fields
             template<class Type>
             void distributeFields(const mapDistribute& map);
+
+            //- Calculate the distribution of triangles based on the
+            //  distribution type. Gets passed in mesh bounding boxes
+            //  (if in 'follow' mode)
+            void getDistribution
+            (
+                const distributionType distType,
+                const List<treeBoundBox>& bbs,
+                labelList& distribution,
+                // Per processor the bounding box of all (destination) triangles
+                List<List<treeBoundBox>>& newProcBb
+            ) const;
+
+            //- Do actual sending and receiving of triangles and points.
+            void distribute
+            (
+                labelListList&& faceSendMap,
+                labelListList&& pointSendMap,
+                autoPtr<mapDistribute>& faceMap,
+                autoPtr<mapDistribute>& pointMap,
+                List<labelledTri>& allTris,
+                pointField& allPoints
+            ) const;
 
 
         //- No copy construct

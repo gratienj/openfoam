@@ -27,20 +27,20 @@ runApplication -s 4 surfaceRefineRedGreen \
 runApplication -s 5 surfaceRefineRedGreen \
     constant/triSurface/box_12_4.obj constant/triSurface/box_12_5.obj
 
-runApplication -s 6 surfaceRefineRedGreen \
-    constant/triSurface/box_12_5.obj constant/triSurface/box_12_6.obj
+# runApplication -s 6 surfaceRefineRedGreen \
+#     constant/triSurface/box_12_5.obj constant/triSurface/box_12_6.obj
 
-runApplication -s 7 surfaceRefineRedGreen \
-    constant/triSurface/box_12_6.obj constant/triSurface/box_12_7.obj
+# runApplication -s 7 surfaceRefineRedGreen \
+#     constant/triSurface/box_12_6.obj constant/triSurface/box_12_7.obj
 
-runApplication -s 8 surfaceRefineRedGreen \
-    constant/triSurface/box_12_7.obj constant/triSurface/box_12_8.obj
+# runApplication -s 8 surfaceRefineRedGreen \
+#     constant/triSurface/box_12_7.obj constant/triSurface/box_12_8.obj
 
-runApplication -s 9 surfaceRefineRedGreen \
-    constant/triSurface/box_12_8.obj constant/triSurface/box_12_9.obj
+# runApplication -s 9 surfaceRefineRedGreen \
+#     constant/triSurface/box_12_8.obj constant/triSurface/box_12_9.obj
 
 runApplication -s 10 surfaceRefineRedGreen \
-    constant/triSurface/box_12_9.obj constant/triSurface/box.obj
+    constant/triSurface/box_12_5.obj constant/triSurface/box.obj
 
 #- Offset to create second surface
 runApplication surfaceTransformPoints \
@@ -65,5 +65,15 @@ runApplication snappyHexMesh
 runApplication decomposePar
 
 runParallel -s parallel snappyHexMesh
+
+#- Try running with other distribution types
+dType="_decomp.distributionType"
+echo "Current distribution type: $(foamDictionary -value -entry $dType system/snappyHexMeshDict)"
+foamDictionary -entry $dType -set nodeMaster system/snappyHexMeshDict
+echo "Changed distribution type: $(foamDictionary -value -entry $dType system/snappyHexMeshDict)"
+
+foamListTimes -processor -rm
+
+runParallel -s parallel_nodeMaster snappyHexMesh
 
 #------------------------------------------------------------------------------
