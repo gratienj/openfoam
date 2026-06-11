@@ -46,38 +46,17 @@ SourceFiles
 #include "GeometricFieldExpression.H"
 #include "fvMesh.H"
 #include "surfaceFields.H"
-#include <type_traits>
-
-// #include <boost/core/demangle.hpp>
-// #include <typeinfo>
-// #include <iostream>
-// demangle
-#ifdef DEBUG_ET
-#include <cstdlib>
-#include <cxxabi.h>
-#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
+// Forward Declarations
 template<class Type> class fvMatrix;
 
 namespace Expression
 {
-
-#ifdef DEBUG_ET
-string demangle(const std::type_info& typeInfo)
-{
-    int status;
-    char* s = abi::__cxa_demangle(typeInfo.name(), NULL, NULL, &status);
-    const string typeName(s);
-    std::free(s);
-    return typeName;
-}
-#endif
-
 
 /*---------------------------------------------------------------------------*\
                      Class fvMatrixExpression Declaration
@@ -132,30 +111,30 @@ public:
         {
             #ifdef DEBUG_ET
             Pout<< "fvMatrixExpression :" << nl
-                << "    E              : " << demangle(typeid(E)) << nl;
+                << "    E              : " << error::demangle<E>() << nl;
             if (hasDiag_)
             {
                 Pout<< "    DiagExpr       : "
-                    << demangle(typeid(DiagExpr)) << nl;
+                    << error::demangle<DiagExpr>() << nl;
             }
             {
                 Pout<< "    SourceExpr     : "
-                    << demangle(typeid(SourceExpr)) << nl;
+                    << error::demangle<SourceExpr>() << nl;
             }
             if (hasUpper_)
             {
                 Pout<< "    UpperExpr      : "
-                    << demangle(typeid(UpperExpr)) << nl;
+                    << error::demangle<UpperExpr>() << nl;
             }
             if (hasLower_)
             {
                 Pout<< "    LowerExpr      : "
-                    << demangle(typeid(LowerExpr)) << nl;
+                    << error::demangle<LowerExpr>() << nl;
             }
             if (hasFaceFluxCorrection_)
             {
                 Pout<< "    FaceFluxExpr   : "
-                    << demangle(typeid(FaceFluxExpr)) << nl;
+                    << error::demangle<FaceFluxExpr>() << nl;
             }
             #endif
         }
@@ -1012,10 +991,8 @@ public:
         v_(v)
     {
         //Pout<< "fvm_add :" << nl
-        //    << "    u_ : " << boost::core::demangle(typeid(u_).name())
-        //    << nl
-        //    << "    v_ : " << boost::core::demangle(typeid(v_).name())
-        //    << endl;
+        //    << "    u_ : " << error::demangle(typeid(u_)) << nl
+        //    << "    v_ : " << error::demangle(typeid(v_)) << endl;
     }
 
 

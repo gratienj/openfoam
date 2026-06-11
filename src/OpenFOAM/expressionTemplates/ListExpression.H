@@ -44,6 +44,7 @@ SourceFiles
 
 #include <cassert>
 #include <iterator>
+#include "stdFoam.H"  // Compiler macros
 
 // Parallel execution
 #if defined(_WIN32) || (defined(FOAM_REAL_GNUC) && (FOAM_REAL_GNUC < 10))
@@ -53,11 +54,14 @@ SourceFiles
     #include <execution>
 #endif
 #if defined(__STDPAR__) \
+    && (__cplusplus >= 202002L) \
     && defined(__cpp_lib_execution) && (__cpp_lib_execution >= 201902L)
     #include <ranges>
 #endif
+
 #include "List.H"
 #include "labelPair.H"
+#include "labelRange.H"
 #include "dimensionedType.H"
 #include "orientedType.H"
 #include "scalar.H"
@@ -93,7 +97,7 @@ public:
     Container& fill(Container& lst) const
     {
         const auto& expr = static_cast<E const&>(*this);
-        label loopLen = this->size();
+        const label loopLen = this->size();
 #ifdef _OPENMP
         _Pragma("omp target teams distribute parallel for if(loopLen > 1000)")
         for(label i = 0; i < loopLen; ++i)
@@ -125,7 +129,12 @@ public:
         // {
         //     idx[i] = i;
         // }
+        #if (__cplusplus >= 202002L)
         auto idx = std::views::iota(label(0), loopLen);
+        #else
+        const Foam::labelRange idx(loopLen);
+        #endif
+
         if (expr.is_alias(&lst))
         {
             // Need temporary storage to avoid overwriting source data
@@ -228,13 +237,13 @@ public:
     }
 
     // Access underlying data
-    const auto& data() const
+    const auto& data() const noexcept
     {
         return elems_;
     }
 
     // Access underlying data
-    auto& data()
+    auto& data() noexcept
     {
         return elems_;
     }
@@ -341,13 +350,13 @@ public:
     }
 
     // Access underlying data
-    const auto& data() const
+    const auto& data() const noexcept
     {
         return elems_;
     }
 
     // Access underlying data
-    auto& data()
+    auto& data() noexcept
     {
         return elems_;
     }
@@ -420,7 +429,7 @@ public:
     {}
 
     // returns the underlying data
-    const auto& data() const
+    const auto& data() const noexcept
     {
         return elems_;
     }
@@ -620,7 +629,7 @@ public:
     }
 
     // returns the underlying data
-    const T& data() const
+    const T& data() const  /* (NOT noexcept) */
     {
         return elems_();
     }
@@ -632,12 +641,19 @@ public:
 
     auto size() const noexcept
     {
-        return elems_().size();
+        if (const auto* ptr = elems_.get())
+        {
+            return ptr->size();
+        }
+        else
+        {
+            return label(0);
+        }
     }
 
     bool is_alias(const void* lst) const noexcept
     {
-        return (&elems_() == lst);
+        return (elems_.get() == lst);
     }
 
     typedef typename List<T>::const_iterator const_iterator;
@@ -687,7 +703,7 @@ public:
     {}
 
     // returns the underlying data
-    const T& data() const
+    const T& data() const  /* (NOT noexcept) */
     {
         return elems_();
     }
@@ -699,12 +715,19 @@ public:
 
     auto size() const noexcept
     {
-        return elems_().size();
+        if (const auto* ptr = elems_.get())
+        {
+            return ptr->size();
+        }
+        else
+        {
+            return label(0);
+        }
     }
 
     bool is_alias(const void* lst) const noexcept
     {
-        return (&elems_() == lst);
+        return (elems_.get() == lst);
     }
 
     // //- Define our own iterator so we can refer to it. 'normal', e.g. double*
@@ -1025,7 +1048,8 @@ public:
     {
         return values_[addr_[i]];
     }
-    label size() const
+
+    auto size() const noexcept
     {
         return addr_.size();
     }
@@ -2048,7 +2072,8 @@ public:
         const auto neiVal = v_[i];
         return weight_[i]*(ownVal-neiVal) + neiVal;
     }
-    label size() const
+
+    label size() const  /* is noexcept */
     {
         return Foam::max(Foam::max(u_.size(), v_.size()), weight_.size());
     }
@@ -2414,7 +2439,8 @@ public:
         const label elem_index = i - offsets_[vec_index];
         return (*data_[vec_index])[elem_index];
     }
-    label size() const { return total_size_; }
+
+    label size() const noexcept { return total_size_; }
 
     bool is_alias(const void* lst) const noexcept
     {
@@ -2689,7 +2715,11 @@ public:
         const label loop_len = this->size();
 #if defined(__STDPAR__) \
     && defined(__cpp_lib_execution) && (__cpp_lib_execution >= 201902L)
-        auto idx = std::views::iota(label(0), loop_len);
+        #if (__cplusplus >= 202002L)
+        auto idx = std::views::iota(label(0), loopLen);
+        #else
+        const Foam::labelRange idx(loopLen);
+        #endif
         std::transform
         (
             std::execution::par_unseq,
@@ -2738,7 +2768,7 @@ public:
         return elems[j];
     }
 
-    label size() const { return total_size_; }
+    label size() const noexcept { return total_size_; }
 
     bool is_alias(const void* lst) const noexcept
     {

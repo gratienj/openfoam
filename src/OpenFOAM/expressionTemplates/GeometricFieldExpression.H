@@ -42,9 +42,6 @@ SourceFiles
 #include "ListExpression.H"
 #include "orientedType.H"
 #include "pointMesh.H"
-//#include <boost/core/demangle.hpp>
-//#include <typeinfo>
-//#include <iostream>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -89,11 +86,8 @@ public:
         oriented_(oriented)
     {
         //Pout<< "GeometricFieldExpression :" << nl
-        //    << "    E          : "
-        //    << boost::core::demangle(typeid(E).name())
-        //    << nl
-        //    << "    IntExpr   : "
-        //    << boost::core::demangle(typeid(IntExpr).name()) << nl
+        //    << "    E          : " << error::demangle<E>() << nl
+        //    << "    IntExpr    : " << error::demangle<IntExpr>() << nl
         //    << "    dimensions : " << dimensions_ << nl
         //    << "    oriented   : " << oriented_ << nl
         //    << endl;
@@ -159,6 +153,9 @@ public:
     template<class GeoField>
     GeoField& evaluate(GeoField& fld, const bool force = false) const
     {
+        constexpr bool is_pointField =
+            std::is_same_v<pointMesh, typename GeoField::Mesh>;
+
         fld.dimensions() = this->dimensions();
         fld.oriented() = this->oriented();
 
@@ -180,16 +177,13 @@ public:
             // Wrap multiple containers into single container so there is only
             // a single kernel. Looking up individual container is fast enough.
 
-            constexpr bool is_pointField =
-                std::is_same_v<pointMesh, typename GeoField::Mesh>;
-
             auto do_something = [](auto& data, label& i, auto& pfld)
             {
                 if constexpr (is_pointField)
                 {
-                    if (auto* vp = isA<FieldType>(pfld))
+                    if (auto* vp = isA_constCast<FieldType>(pfld))
                     {
-                        data[i++] = const_cast<FieldType*>(vp);
+                        data[i++] = vp;
                     }
                 }
                 else
@@ -262,15 +256,11 @@ public:
                         // Get patch expression
                         const auto patchExpr = this->coupledPatchField(i);
 
-                        if constexpr
-                        (
-                            std::is_same_v<pointMesh, typename GeoField::Mesh>
-                        )
+                        if constexpr (is_pointField)
                         {
-                            const auto* vp = isA<FieldType>(pfld);
-                            if (vp)
+                            if (auto* vp = isA_constCast<FieldType>(pfld))
                             {
-                                patchExpr.evaluate(const_cast<FieldType&>(*vp));
+                                patchExpr.evaluate(*vp);
                             }
                         }
                         else
@@ -282,15 +272,12 @@ public:
                     {
                         // Get patch expression
                         const auto patchExpr = this->patchField(i);
-                        if constexpr
-                        (
-                            std::is_same_v<pointMesh, typename GeoField::Mesh>
-                        )
+
+                        if constexpr (is_pointField)
                         {
-                            const auto* vp = isA<FieldType>(pfld);
-                            if (vp)
+                            if (auto* vp = isA_constCast<FieldType>(pfld))
                             {
-                                patchExpr.evaluate(const_cast<FieldType&>(*vp));
+                                patchExpr.evaluate(*vp);
                             }
                         }
                         else
@@ -327,6 +314,10 @@ class GeometricFieldRefWrap
 public:
 
     static constexpr bool is_leaf = false;  //true;
+
+    //- True if GeoField is associated with a pointMesh
+    static constexpr bool is_pointField =
+        std::is_same_v<pointMesh, typename GeoField::Mesh>;
 
     //- The GeometricField type
     typedef GeoField this_type;
@@ -480,20 +471,12 @@ public:
     UncoupledPatchExpr patchField(const label i)
     {
         auto& fld = elems_.boundaryFieldRef()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (auto* vp = isA_constCast<Field<value_type>>(fld))
             {
-                auto& v = *vp;
-                return UncoupledPatchExpr
-                (
-                    v.size(),
-                    const_cast<Field<value_type>&>(v)
-                );
+                return UncoupledPatchExpr(vp->size(), *vp);
             }
             else
             {
@@ -509,13 +492,10 @@ public:
     UncoupledPatchExpr patchField(const label i) const
     {
         const auto& fld = elems_.boundaryField()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (const auto* vp = isA<Field<value_type>>(fld))
             {
                 return UncoupledPatchExpr(vp->size(), *vp);
             }
@@ -533,20 +513,12 @@ public:
     CoupledPatchExpr coupledPatchField(const label i)
     {
         auto& fld = elems_.boundaryFieldRef()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (auto* vp = isA_constCast<Field<value_type>>(fld))
             {
-                auto& v = *vp;
-                return CoupledPatchExpr
-                (
-                    //v.size(),
-                    const_cast<Field<value_type>&>(v)
-                );
+                return CoupledPatchExpr(*vp);
             }
             else
             {
@@ -562,13 +534,10 @@ public:
     CoupledPatchExpr coupledPatchField(const label i) const
     {
         const auto& fld = elems_.boundaryField()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (const auto* vp = isA<Field<value_type>>(fld))
             {
                 //return CoupledPatchExpr(vp->size(), *vp);
                 return CoupledPatchExpr(*vp);
@@ -614,6 +583,10 @@ class GeometricFieldConstRefWrap
 public:
 
     static constexpr bool is_leaf = false;  //true;
+
+    //- True if GeoField is associated with a pointMesh
+    static constexpr bool is_pointField =
+        std::is_same_v<pointMesh, typename GeoField::Mesh>;
 
     //- The GeometricField type
     typedef GeoField this_type;
@@ -677,13 +650,10 @@ public:
     {
         //return elems_.boundaryField()[i];
         const auto& fld = elems_.boundaryField()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (const auto* vp = isA<Field<value_type>>(fld))
             {
                 return UncoupledPatchExpr(*vp);
             }
@@ -701,13 +671,10 @@ public:
     CoupledPatchExpr coupledPatchField(const label i) const
     {
         const auto& fld = elems_.boundaryField()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (const auto* vp = isA<Field<value_type>>(fld))
             {
                 return CoupledPatchExpr(*vp);
             }
@@ -752,6 +719,10 @@ public:
     //- Have expressions use copy to maintain tmp refCount
     static constexpr bool is_leaf = false;
 
+    //- True if GeoField is associated with a pointMesh
+    static constexpr bool is_pointField =
+        std::is_same_v<pointMesh, typename GeoField::Mesh>;
+
     //- The GeometricField type
     typedef GeoField this_type;
 
@@ -789,11 +760,8 @@ public:
         elems_(elems, true)
     {
         //Pout<< "GeometricFieldConstTmpWrap :" << nl
-        //    << "    this_type  : "
-        //    << boost::core::demangle(typeid(this_type).name())
-        //    << nl
-        //    << "    PatchExpr  : "
-        //    << boost::core::demangle(typeid(IntExpr).name()) << nl
+        //    << "    this_type  : " << error::demangle<this_type>() << nl
+        //    << "    PatchExpr  : " << error::demangle<IntExpr>() << nl
         //    << endl;
     }
 
@@ -817,20 +785,15 @@ public:
         elems_(w.elems_)
     {
         //Pout<< "GeometricFieldConstTmpWrap copy :" << nl
-        //    << "    this_type  : "
-        //    << boost::core::demangle(typeid(this_type).name())
-        //    << nl
-        //    << "    PatchExpr  : "
-        //    << boost::core::demangle(typeid(IntExpr).name()) << nl
+        //    << "    this_type  : " << error::demangle<this_type>() << nl
+        //    << "    PatchExpr  : " << error::demangle<IntExpr>() << nl
         //    << endl;
     }
 
     ~GeometricFieldConstTmpWrap()
     {
         //Pout<< "~GeometricFieldConstTmpWrap destructor :" << nl
-        //    << "    this_type  : "
-        //    << boost::core::demangle(typeid(this_type).name())
-        //    << nl
+        //    << "    this_type  : " << error::demangle<this_type>() << nl
         //    << endl;
     }
 
@@ -859,13 +822,10 @@ public:
     UncoupledPatchExpr patchField(const label i) const
     {
         const auto& fld = elems_().boundaryField()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (const auto* vp = isA<Field<value_type>>(fld))
             {
                 return UncoupledPatchExpr(*vp);
             }
@@ -878,19 +838,15 @@ public:
         {
             return UncoupledPatchExpr(fld);
         }
-
     }
 
     CoupledPatchExpr coupledPatchField(const label i) const
     {
         const auto& fld = elems_().boundaryField()[i];
-        if constexpr
-        (
-            std::is_same_v<pointMesh, typename GeoField::Mesh>
-        )
+
+        if constexpr (is_pointField)
         {
-            const auto* vp = isA<Field<value_type>>(fld);
-            if (vp)
+            if (const auto* vp = isA<Field<value_type>>(fld))
             {
                 return CoupledPatchExpr(*vp);
             }
