@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2016-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,9 +57,9 @@ SourceFiles
 #include "label.H"
 #include "word.H"
 
-#include <string_view>
-#include <string>
 #include <iostream>
+#include <string>
+#include <string_view>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -212,11 +213,13 @@ public:
         OSstream& deprecated
         (
             const int afterVersion,
-            const char* functionName = nullptr,
-            const char* sourceFileName = nullptr,
+            //! The originating function name (optional)
+            std::string_view functionName = std::string_view(),
+            //! The source file name (optional)
+            std::string_view sourceFileName = std::string_view(),
+            //! The source file line number (optional)
             const int sourceFileLineNumber = 0
         );
-
 
         //- Implicit cast to OSstream for << operations
         operator OSstream&()
@@ -235,18 +238,11 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const std::string& functionName,
-            const char* sourceFileName = nullptr,
-            const int sourceFileLineNumber = 0
-        );
-
-        //- Report 'From function-name',
-        //- optionally with 'source file, line number'
-        //  \return OSstream for further operations
-        OSstream& operator()
-        (
-            const char* functionName,
-            const char* sourceFileName = nullptr,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name (optional)
+            std::string_view sourceFileName = std::string_view(),
+            //! The source file line number (optional)
             const int sourceFileLineNumber = 0
         );
 
@@ -255,8 +251,11 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const char* functionName,
-            const char* sourceFileName,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name
+            std::string_view sourceFileName,
+            //! The source file line number
             const int sourceFileLineNumber,
             const std::string& ioFileName,
             const label ioStartLineNumber = -1,
@@ -268,10 +267,14 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const char* functionName,
-            const char* sourceFileName,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name
+            std::string_view sourceFileName,
+            //! The source file line number
             const int sourceFileLineNumber,
-            const IOstream&  //!< Provides name and lineNumber
+            //! The IOstream provides name, lineNumber.
+            const IOstream&
         );
 
         //- Report 'From function-name, source file, line number'
@@ -279,10 +282,14 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const char* functionName,
-            const char* sourceFileName,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name
+            std::string_view sourceFileName,
+            //! The source file line number
             const int sourceFileLineNumber,
-            const dictionary&  //!< Provides name, startLine, endLine
+            //! The dictionary provides name, startLine, endLine.
+            const dictionary& dict
         );
 };
 

@@ -6,7 +6,8 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2015-2026 OpenCFD Ltd.
+    Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,7 +67,9 @@ namespace Foam
 {
 
 // Forward Declarations
+class prefixOSstream;
 class OStringStream;
+template<class T> class List;
 template<class EnumType> class Enum;
 
 /*---------------------------------------------------------------------------*\
@@ -224,18 +227,11 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            string functionName,
-            const char* sourceFileName = nullptr,
-            const int sourceFileLineNumber = -1
-        );
-
-        //- Define basic print message with originating function name,
-        //- optionally with 'source file, line number'
-        //  \return OSstream for further operations
-        OSstream& operator()
-        (
-            const char* functionName,
-            const char* sourceFileName = nullptr,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name (optional)
+            std::string_view sourceFileName = std::string_view(),
+            //! The source file line number (optional)
             const int sourceFileLineNumber = -1
         );
 
@@ -268,6 +264,31 @@ public:
 
         //- Helper function to print a stack, with optional upper limit.
         static void printStack(Ostream& os, int size = -1);
+
+        //- Return prefixOSstream with the current memory high-water mark
+        //- (summed per-node).
+        //- Return a dummy (null) stream if the rank does not correspond
+        //- to a node leader.
+        //  Caution: includes MPI communication
+        static prefixOSstream& Pout_mem_hwm
+        (
+            //! The originating function name (optional)
+            std::string_view functionName = std::string_view(),
+            //! The source file name (optional)
+            std::string_view sourceFileName = std::string_view(),
+            //! The source file line number (optional)
+            const int sourceFileLineNumber = -1
+        );
+
+        //- List of the per-node memory high-water mark values.
+        //- These are summed per-node and aggregated across all node leaders.
+        //  Caution: includes MPI communication
+        static List<int64_t> list_mem_hwm
+        (
+            //! Use the max of any individual rank on the node instead
+            //! of the total sum on the node.
+            const bool useMaxValue = false
+        );
 
         //- True if FOAM_ABORT is on.
         static bool useAbort();
@@ -362,8 +383,11 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const char* functionName,
-            const char* sourceFileName,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name
+            std::string_view sourceFileName,
+            //! The source file line number
             const int sourceFileLineNumber,
             string ioFileName,
             const label ioStartLineNumber = -1,
@@ -374,8 +398,11 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const char* functionName,
-            const char* sourceFileName,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name
+            std::string_view sourceFileName,
+            //! The source file line number
             const int sourceFileLineNumber,
             const IOstream& ioStream
         );
@@ -385,8 +412,11 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const char* functionName,
-            const char* sourceFileName,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name
+            std::string_view sourceFileName,
+            //! The source file line number
             const int sourceFileLineNumber,
             const dictionary& dict
         );
@@ -398,7 +428,8 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const std::string& where,
+            //! The context for the message
+            std::string_view where,
             const IOstream& ioStream
         );
 
@@ -408,7 +439,8 @@ public:
         //  \return OSstream for further operations
         OSstream& operator()
         (
-            const std::string& where,
+            //! The context for the message
+            std::string_view where,
             const dictionary& dict
         );
 
@@ -418,8 +450,11 @@ public:
         //  Use in startup parsing instead of FatalError.
         static void SafeFatalIOError
         (
-            const char* functionName,
-            const char* sourceFileName,
+            //! The originating function name
+            std::string_view functionName,
+            //! The source file name
+            std::string_view sourceFileName,
+            //! The source file line number
             const int sourceFileLineNumber,
             const IOstream& ioStream,
             const std::string& msg
@@ -542,6 +577,18 @@ extern IOerror FatalIOError;
 //  complete the interface of a derived class even if they should never be
 //  called for this derived class.
 #define NotImplemented notImplemented(FUNCTION_NAME)
+
+//- Report memory high-water mark using Foam::error::Pout_mem_hwm()
+//- for functionName in file __FILE__ at line __LINE__.
+//  Caution : includes MPI communication
+#define PrintMemoryIn(functionName)                                            \
+    ::Foam::error::Pout_mem_hwm((functionName), __FILE__,__LINE__)
+
+//- Report memory high-water mark using Foam::error::Pout_mem_hwm()
+//- for FUNCTION_NAME in file __FILE__ at line __LINE__
+//  Caution : includes MPI communication
+#define PrintMemoryInFunction                                                  \
+    ::Foam::error::Pout_mem_hwm(FUNCTION_NAME, __FILE__, __LINE__)
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2015-2021 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,8 +67,8 @@ Foam::IOerror::~IOerror() noexcept
 
 Foam::OSstream& Foam::IOerror::operator()
 (
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber,
     string ioFileName,
     const label ioStartLineNumber,
@@ -91,8 +92,8 @@ Foam::OSstream& Foam::IOerror::operator()
 
 Foam::OSstream& Foam::IOerror::operator()
 (
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber,
     const IOstream& ioStream
 )
@@ -111,8 +112,8 @@ Foam::OSstream& Foam::IOerror::operator()
 
 Foam::OSstream& Foam::IOerror::operator()
 (
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber,
     const dictionary& dict
 )
@@ -131,13 +132,13 @@ Foam::OSstream& Foam::IOerror::operator()
 
 Foam::OSstream& Foam::IOerror::operator()
 (
-    const std::string& where,
+    std::string_view where,
     const IOstream& ioStream
 )
 {
     return operator()
     (
-        where.c_str(),
+        where,
         "",     // No source file
         -1,     // Non-zero to ensure 'where' is reported
         ioStream.relativeName(),
@@ -149,13 +150,13 @@ Foam::OSstream& Foam::IOerror::operator()
 
 Foam::OSstream& Foam::IOerror::operator()
 (
-    const std::string& where,
+    std::string_view where,
     const dictionary& dict
 )
 {
     return operator()
     (
-        where.c_str(),
+        where,
         "",     // No source file
         -1,     // Non-zero to ensure 'where' is reported
         dict.relativeName(),
@@ -167,8 +168,8 @@ Foam::OSstream& Foam::IOerror::operator()
 
 void Foam::IOerror::SafeFatalIOError
 (
-    const char* functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber,
     const IOstream& ioStream,
     const std::string& msg

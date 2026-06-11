@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2014 OpenFOAM Foundation
     Copyright (C) 2015-2025 OpenCFD Ltd.
+    Copyright (C) 2026 Keysight Technologies
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,8 +35,11 @@ Note
 #include "dictionary.H"
 #include "JobInfo.H"
 #include "UPstream.H"
+#include "prefixOSstream.H"
+#include "OCountStream.H"
 #include "StringStream.H"
 #include "foamVersion.H"
+#include "memInfo.H"
 #include "OSspecific.H"
 #include "Enum.H"
 #include "Switch.H"
@@ -121,6 +125,163 @@ bool Foam::error::useAbort()
 }
 
 
+Foam::prefixOSstream& Foam::error::Pout_mem_hwm
+(
+    std::string_view functionName,
+    std::string_view sourceFileName,
+    const int sourceFileLineNumber
+)
+{
+    // Can use ocountstream like /dev/null
+    static Foam::ocountstream cout_null;
+
+    static std::unique_ptr<prefixOSstream> null_stream;
+    static std::unique_ptr<prefixOSstream> singleton;
+
+    if (!JobInfo::constructed)
+    {
+        // Too early to be using this function...
+        if (!null_stream)
+        {
+            null_stream = std::make_unique<prefixOSstream>(cout_null, "null");
+        }
+        return *null_stream;
+    }
+
+    int64_t value = Foam::memInfo::get_hwm();
+
+    // The per-node summary is only needed on the node-leader itself.
+    // Can thus use mpiReduce instead of mpiAllReduce.
+
+    {
+        // The sum of all ranks on the node:
+        UPstream::mpiReduce_sum(&value, 1, UPstream::commLocalNode());
+    }
+
+    if (UPstream::master(UPstream::commLocalNode()))
+    {
+        // Output the per-node total on the master of that node,
+        // prefix with the node id (not the rank id)
+
+        // The associated node number
+        const auto nodeNumber = UPstream::myProcNo(UPstream::commInterNode());
+
+        if (!singleton)
+        {
+            // Write to stdout/stderr on node-leader
+            singleton = std::make_unique<prefixOSstream>
+            (
+                (Foam::infoDetailLevel > 0 ? std::cout : std::cerr),
+                "mem_hwm"
+            );
+        }
+
+        auto& os = *singleton;
+        auto& prefix = os.prefix();
+
+        // Assemble prefix in-place
+        prefix.clear();
+        prefix.reserve(sourceFileName.size() + 64);
+
+        prefix += "[node";
+        prefix += std::to_string(nodeNumber);
+        prefix += "][mem.hwm=";
+        prefix += std::to_string(value);
+        prefix += ']';
+
+        // Prefix:
+        // => "[node0][mem.hwm=<digits>]"
+
+        if (const auto len = sourceFileName.size(); len > 0)
+        {
+            // The base name of sourceFileName
+            size_t base = 0;
+            if
+            (
+                auto pos = sourceFileName.rfind('/');
+                (pos != std::string::npos) && (pos < len-1)
+            )
+            {
+                base = (pos+1);  // Start after the '/'
+            }
+
+            prefix += '(';
+            prefix.append(sourceFileName, base);
+
+            if (sourceFileLineNumber > 0)
+            {
+                prefix += ':';
+                prefix += std::to_string(sourceFileLineNumber);
+            }
+            prefix += ") ";
+
+            // Prefix:
+            // => "[node0][mem.hwm=<digits>](file.cxx) "
+            // => "[node0][mem.hwm=<digits>](file.cxx:123) "
+        }
+        else
+        {
+            prefix += ' ';
+            // Prefix:
+            // => "[node0][mem.hwm=<digits>] "
+        }
+
+        if (!functionName.empty())
+        {
+            // Emit function name (unquoted) and newline
+            os.writeQuoted(functionName.data(), functionName.size(), false);
+            os << nl;
+        }
+
+        return *singleton;
+    }
+    else
+    {
+        // Not a node leader, so treat like /dev/null
+        if (!null_stream)
+        {
+            null_stream = std::make_unique<prefixOSstream>(cout_null, "null");
+        }
+        return *null_stream;
+    }
+}
+
+
+Foam::List<int64_t> Foam::error::list_mem_hwm(const bool useMaxValue)
+{
+    if (!JobInfo::constructed)
+    {
+        // Too early to be using this function...
+        return List<int64_t>();
+    }
+
+    int64_t value = Foam::memInfo::get_hwm();
+
+    // The per-node summary is only needed on the node-leader itself.
+    // Can thus use mpiReduce instead of mpiAllReduce.
+    if (useMaxValue)
+    {
+        // The max of any single rank on the node:
+        UPstream::mpiReduce_max(&value, 1, UPstream::commLocalNode());
+    }
+    else
+    {
+        // The sum of all ranks on the node:
+        UPstream::mpiReduce_sum(&value, 1, UPstream::commLocalNode());
+    }
+
+    if (UPstream::is_rank(UPstream::commInterNode()))
+    {
+        return UPstream::listGatherValues(value, UPstream::commInterNode());
+    }
+    else
+    {
+        // Not a node leader, so no aggregation
+        return List<int64_t>();
+    }
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::error::error(const char* title)
@@ -177,43 +338,13 @@ Foam::error::~error() noexcept
 
 Foam::OSstream& Foam::error::operator()
 (
-    string functionName,
-    const char* sourceFileName,
+    std::string_view functionName,
+    std::string_view sourceFileName,
     const int sourceFileLineNumber
 )
 {
-    functionName_ = std::move(functionName);
-    sourceFileName_.clear();
-
-    if (sourceFileName)  // nullptr check
-    {
-        sourceFileName_.assign(sourceFileName);
-    }
-
-    sourceFileLineNumber_ = sourceFileLineNumber;
-
-    return this->stream();
-}
-
-
-Foam::OSstream& Foam::error::operator()
-(
-    const char* functionName,
-    const char* sourceFileName,
-    const int sourceFileLineNumber
-)
-{
-    functionName_.clear();
-    sourceFileName_.clear();
-
-    if (functionName)  // nullptr check
-    {
-        functionName_.assign(functionName);
-    }
-    if (sourceFileName)  // nullptr check
-    {
-        sourceFileName_.assign(sourceFileName);
-    }
+    functionName_.assign(functionName);
+    sourceFileName_.assign(sourceFileName);
     sourceFileLineNumber_ = sourceFileLineNumber;
 
     return this->stream();
