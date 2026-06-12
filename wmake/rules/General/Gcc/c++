@@ -11,7 +11,7 @@ CC         := g++$(COMPILER_VERSION) -std=c++17
 c++ARCH    :=
 c++DBUG    :=
 c++OPT     := -O2
-ptFLAGS    := -DNoRepository -ftemplate-depth-100
+ptFLAGS    := -DNoRepository -ftemplate-depth=1000
 
 c++WARN     = \
     -Wall -Wextra -Wold-style-cast \

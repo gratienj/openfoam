@@ -15,6 +15,11 @@ c++FLAGS    = \
     $(c++ARCH) $(GFLAGS) $(c++WARN) $(c++OPT) $(c++DBUG) $(ptFLAGS) \
     $(FOAM_EXTRA_CXXFLAGS) $(LIB_HEADER_DIRS)
 
+# big-obj for assembler stage since some files (eg, rhoReactionThermos)
+# exceed the classic 16-bit COFF section numbering.
+
+c++FLAGS   += -Wa,-mbig-obj
+
 Ctoo        = $(WM_SCHEDULER) $(CC) $(c++FLAGS) -c $< -o $@
 cctoo       = $(Ctoo)
 cpptoo      = $(Ctoo)
