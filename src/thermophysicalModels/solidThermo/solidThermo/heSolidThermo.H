@@ -39,6 +39,7 @@ SourceFiles
 #define heSolidThermo_H
 
 #include "heThermo.H"
+#include "coordinateSystem.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -59,8 +60,20 @@ class heSolidThermo
         //- Calculate the thermo variables
         void calculate();
 
+        //- Construct (or reconstruct) anisotropic alpha field
+        void constructAniAlpha();
+
         //- Construct as copy (not implemented)
         heSolidThermo(const heSolidThermo<BasicSolidThermo, MixtureType>&);
+
+
+    // Private Data
+
+        //- Coordinate system for anisotropic thermal conductivity
+        autoPtr<coordinateSystem> csysPtr_;
+
+        //- Anisotropic thermal diffusivity (kappa/Cp) in global coords
+        autoPtr<volSymmTensorField> aniAlphaPtr_;
 
 
 public:
@@ -114,6 +127,19 @@ public:
             virtual bool isotropic() const
             {
                 return MixtureType::thermoType::isotropic;
+            }
+
+            //- Anisotropic thermal diffusivity (kappa/Cp) in global
+            //  coordinates. Returns nullptr for isotropic materials.
+            virtual const volSymmTensorField& aniAlpha() const
+            {
+                if (!aniAlphaPtr_)
+                {
+                    FatalErrorInFunction
+                        << "Requested aniAlpha, but it has not been created"
+                        << abort(FatalError);
+                }
+                return *aniAlphaPtr_.get();
             }
 
 

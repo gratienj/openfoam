@@ -5,50 +5,6 @@ solidThermo& thermo = pThermo();
 
 tmp<volScalarField> trho = thermo.rho();
 
-autoPtr<coordinateSystem> coordinatesPtr;
-autoPtr<volSymmTensorField> taniAlpha;
-
-if (!thermo.isotropic())
-{
-    Info<< "Adding coordinateSystem\n" << endl;
-    coordinatesPtr = coordinateSystem::New
-    (
-        mesh,
-        thermo,
-        coordinateSystem::typeName
-    );
-
-    tmp<volVectorField> tkappaByCp = thermo.Kappa()/thermo.Cp();
-
-    taniAlpha.reset
-    (
-        new volSymmTensorField
-        (
-            IOobject
-            (
-                "Anialpha",
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedSymmTensor(tkappaByCp().dimensions(), Zero),
-            fvPatchFieldBase::zeroGradientType()
-        )
-    );
-    volSymmTensorField& aniAlpha = *taniAlpha;
-
-    aniAlpha.primitiveFieldRef() =
-        coordinatesPtr->transformPrincipal
-        (
-            mesh.cellCentres(),
-            tkappaByCp()
-        );
-    aniAlpha.correctBoundaryConditions();
-}
-
-
 IOobject betavSolidIO
 (
     "betavSolid",

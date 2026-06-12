@@ -28,6 +28,7 @@ License
 
 #include "heSolidThermo.H"
 #include "volFields.H"
+#include "coordinateSystem.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -138,6 +139,58 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::calculate()
     this->alpha_.correctBoundaryConditions();
 }
 
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+template<class BasicSolidThermo, class MixtureType>
+void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::constructAniAlpha()
+{
+    if (this->isotropic())
+    {
+        return;
+    }
+
+    const fvMesh& mesh = this->T_.mesh();
+
+    if (!csysPtr_)
+    {
+        csysPtr_ = coordinateSystem::New
+        (
+            mesh,
+            *this,
+            coordinateSystem::typeName
+        );
+    }
+
+    const tmp<volVectorField> tkappaByCp = this->Kappa()/this->Cp();
+
+    if (!aniAlphaPtr_)
+    {
+        aniAlphaPtr_.reset
+        (
+            new volSymmTensorField
+            (
+                IOobject
+                (
+                    "aniAlpha",
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                dimensionedSymmTensor(tkappaByCp().dimensions(), Zero),
+                fvPatchFieldBase::zeroGradientType()
+            )
+        );
+    }
+
+    aniAlphaPtr_().primitiveFieldRef() =
+        csysPtr_().transformPrincipal(mesh.cellCentres(), tkappaByCp());
+    aniAlphaPtr_().correctBoundaryConditions();
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class BasicSolidThermo, class MixtureType>
@@ -151,6 +204,7 @@ heSolidThermo
     heThermo<BasicSolidThermo, MixtureType>(mesh, phaseName)
 {
     calculate();
+    constructAniAlpha();
     this->mu_ == Zero;
     this->psi_ == Zero;
 }
@@ -168,6 +222,7 @@ heSolidThermo
     heThermo<BasicSolidThermo, MixtureType>(mesh, dict, phaseName)
 {
     calculate();
+    constructAniAlpha();
     this->mu_ == Zero;
     this->psi_ == Zero;
 }
@@ -185,6 +240,7 @@ heSolidThermo
     heThermo<BasicSolidThermo, MixtureType>(mesh, phaseName, dictName)
 {
     calculate();
+    constructAniAlpha();
 
     // TBD. initialise psi, mu (at heThermo level) since these do not
     // get initialised. Move to heThermo constructor?
@@ -208,6 +264,7 @@ void Foam::heSolidThermo<BasicSolidThermo, MixtureType>::correct()
     DebugInFunction << nl;
 
     calculate();
+    constructAniAlpha();
 
     DebugInfo << "    Finished" << endl;
 }

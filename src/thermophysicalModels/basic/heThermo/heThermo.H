@@ -156,6 +156,12 @@ public:
             return MixtureType::thermoType::isochoric;
         }
 
+        //- True if the mixture uses cellZone-dependent properties
+        virtual bool isZoneMixture() const
+        {
+            return MixtureType::isZoneMixture();
+        }
+
 
         // Access to thermodynamic state variables
 

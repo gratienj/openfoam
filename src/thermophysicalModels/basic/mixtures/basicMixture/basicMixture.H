@@ -63,6 +63,13 @@ public:
         //- Construct from dictionary, mesh and phase name
         basicMixture(const dictionary&, const fvMesh&, const word&)
         {}
+
+        //- True if the mixture uses cellZone-dependent properties
+        //  Note: non-virtual - resolved statically via template in heThermo
+        bool isZoneMixture() const
+        {
+            return false;
+        }
 };
 
 

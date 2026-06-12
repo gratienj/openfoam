@@ -43,7 +43,6 @@ Description
 #include "pimpleControl.H"
 #include "dummyCourantNo.H"
 #include "solidRegionDiffNo.H"
-#include "coordinateSystem.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

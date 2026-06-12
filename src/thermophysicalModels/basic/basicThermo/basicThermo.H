@@ -354,6 +354,12 @@ public:
         //  i.e. rho = const
         virtual bool isochoric() const = 0;
 
+        //- True if the mixture uses cellZone-dependent properties
+        virtual bool isZoneMixture() const
+        {
+            return false;
+        }
+
         //- True if dpdt term should be included in enthalpy equation
         bool dpdt() const noexcept
         {

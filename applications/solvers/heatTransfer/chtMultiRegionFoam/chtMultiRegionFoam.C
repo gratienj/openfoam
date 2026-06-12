@@ -50,7 +50,6 @@ Description
 #include "solidThermo.H"
 #include "radiationModel.H"
 #include "fvOptions.H"
-#include "coordinateSystem.H"
 #include "loopControl.H"
 #include "pressureControl.H"
 

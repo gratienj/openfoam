@@ -151,6 +151,12 @@ public:
             return "pureZoneMixture<" + ThermoType::typeName() + '>';
         }
 
+        //- True if the mixture uses cellZone-dependent properties
+        bool isZoneMixture() const
+        {
+            return true;
+        }
+
         const ThermoType& cellMixture(const label celli) const;
 
         const ThermoType& patchFaceMixture
