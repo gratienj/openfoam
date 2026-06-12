@@ -2,11 +2,7 @@
     fvScalarMatrix hEqn
     (
         fvm::ddt(betav*rho, h)
-      - (
-           thermo.isotropic()
-         ? fvm::laplacian(betav*thermo.alpha(), h, "laplacian(alpha,h)")
-         : fvm::laplacian(betav*taniAlpha(), h, "laplacian(alpha,h)")
-        )
+      - thermo.heatDiffusion(betav, h)
       ==
         fvOptions(rho, h)
     );

@@ -40,6 +40,7 @@ SourceFiles
 
 #include "rhoThermo.H"
 #include "autoPtr.H"
+#include "fvMatricesFwd.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -168,6 +169,25 @@ public:
 
             //- Return true if thermal conductivity is isotropic
             virtual bool isotropic() const = 0;
+
+            //- Anisotropic thermal diffusivity (kappa/Cp) in global
+            //  coordinates. Returns nullptr for isotropic materials.
+            virtual const volSymmTensorField& aniAlpha() const
+            {
+                NotImplemented;
+                return NullObjectRef<volSymmTensorField>();
+            }
+
+            //- Return the diffusion term for the enthalpy equation.
+            //  Handles isotropic/anisotropic and zone/non-zone mixtures.
+            //  For zone mixtures, adds explicit correction terms so that
+            //  at convergence the equation correctly represents
+            //  laplacian(kappa, T) rather than laplacian(alpha, h).
+            tmp<fvScalarMatrix> heatDiffusion
+            (
+                const volScalarField& betav,
+                const volScalarField& h
+            ) const;
 
 
         // Per patch calculation

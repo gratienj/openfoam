@@ -38,7 +38,7 @@ Description
       - 'solidThermo' : use solidThermo kappa()
       - 'directionalSolidThermo': uses look up for volSymmTensorField for
         transformed kappa vector. Field name definable in 'alphaAni',
-        named 'Anialpha' in solid solver by default
+        named 'aniAlpha' in solid solver by default
       - 'function' : kappa, alpha directly specified as Function1
       - 'phaseSystem' : used for multiphase thermos
 
@@ -59,7 +59,7 @@ Usage
     {
         ...
         kappaMethod     directionalSolidThermo;
-        alphaAni        Anialpha;
+        alphaAni        aniAlpha;
         ...
     }
     \endverbatim

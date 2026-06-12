@@ -1,10 +1,8 @@
     // Initialise solid field pointer lists
-    PtrList<coordinateSystem> coordinates(solidRegions.size());
     PtrList<solidThermo> thermos(solidRegions.size());
     PtrList<radiation::radiationModel> radiations(solidRegions.size());
     PtrList<fv::options> solidHeatSources(solidRegions.size());
     PtrList<volScalarField> betavSolid(solidRegions.size());
-    PtrList<volSymmTensorField> aniAlphas(solidRegions.size());
 
     // Populate solid field pointer lists
     forAll(solidRegions, i)
@@ -24,52 +22,6 @@
             i,
             new fv::options(solidRegions[i])
         );
-
-        if (!thermos[i].isotropic())
-        {
-            Info<< "    Adding coordinateSystems\n" << endl;
-            coordinates.set
-            (
-                i,
-                coordinateSystem::New
-                (
-                    solidRegions[i],
-                    thermos[i],
-                    coordinateSystem::typeName
-                )
-            );
-
-            tmp<volVectorField> tkappaByCp =
-                thermos[i].Kappa()/thermos[i].Cp();
-
-            aniAlphas.set
-            (
-                i,
-                new volSymmTensorField
-                (
-                    IOobject
-                    (
-                        "Anialpha",
-                        runTime.timeName(),
-                        solidRegions[i],
-                        IOobject::NO_READ,
-                        IOobject::NO_WRITE
-                    ),
-                    solidRegions[i],
-                    dimensionedSymmTensor(tkappaByCp().dimensions(), Zero),
-                    fvPatchFieldBase::zeroGradientType()
-                )
-            );
-
-            aniAlphas[i].primitiveFieldRef() =
-                coordinates[i].transformPrincipal
-                (
-                    solidRegions[i].cellCentres(),
-                    tkappaByCp()
-                );
-            aniAlphas[i].correctBoundaryConditions();
-
-        }
 
         IOobject betavSolidIO
         (
