@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
-# CGAL - empty flags for not compiling/linking
+# boost - empty flags for not compiling/linking
 
-CGAL_INCLUDES   =
-CGAL_LIBRARIES  =
+BOOST_INCLUDES   =
+BOOST_LIBRARIES  =
 
 #------------------------------------------------------------------------------

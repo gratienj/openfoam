@@ -10,7 +10,7 @@ EXE_INC = \
     ${ROUNDING_MATH} \
     ${EXE_NDEBUG} \
     ${CGAL_INEXACT} \
-    ${CGAL_INC} \
+    $(CGAL_INCLUDES) \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/dynamicMesh/lnInclude \
     -I$(LIB_SRC)/fileFormats/lnInclude \
@@ -21,7 +21,7 @@ EXE_INC = \
     -I../conformalVoronoiMesh/lnInclude
 
 EXE_LIBS =  \
-    $(CGAL_LIBS) \
+    $(CGAL_LIBRARIES) \
     -lconformalVoronoiMesh \
     -lfiniteVolume \
     -lmeshTools \

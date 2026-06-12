@@ -1,3 +1,6 @@
+SCOTCH_LIB_NAME   ?= scotch
+PTSCOTCH_LIB_NAME ?= ptscotch
+
 /*
  * NB: PINC must appear after PTSCOTCH_INC_DIR to ensure we do not
  * accidentally get a ptscotch header from the MPI distribution
@@ -18,8 +21,8 @@ LIB_LIBS = \
     -L$(FOAM_LIBBIN) -ldecompositionMethods \
     -L$(PTSCOTCH_LIB_DIR) \
     -L$(SCOTCH_LIB_DIR) \
-    -lscotch$(SCOTCH_LIBNAME_SUFFIX) \
-    -lptscotch$(SCOTCH_LIBNAME_SUFFIX)
+    -l$(SCOTCH_LIB_NAME) \
+    -l$(PTSCOTCH_LIB_NAME)
 
 /* errexit, except for windows compile (already in library) */
 ifeq (,$(findstring windows,$(WM_OSTYPE)))

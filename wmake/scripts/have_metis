@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2021 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -27,7 +28,7 @@
 #     METIS_ARCH_PATH
 #     METIS_INC_DIR
 #     METIS_LIB_DIR
-#     METIS_LIBNAME_SUFFIX [optional]
+#     METIS_LIB_NAME
 #
 #------------------------------------------------------------------------------
 . ${WM_PROJECT_DIR:?}/wmake/scripts/sysFunctions    # General system functions
@@ -37,8 +38,8 @@
 # Reset
 no_metis()
 {
-    unset HAVE_METIS METIS_ARCH_PATH METIS_INC_DIR METIS_LIB_DIR
-    unset METIS_VERSION METIS_LIBNAME_SUFFIX
+    unset METIS_ARCH_PATH METIS_VERSION
+    unset HAVE_METIS METIS_INC_DIR METIS_LIB_DIR METIS_LIB_NAME
 }
 
 
@@ -49,10 +50,7 @@ echo_metis()
     echo "root=\"$METIS_ARCH_PATH\""
     echo "include=\"$METIS_INC_DIR\""
     echo "library=\"$METIS_LIB_DIR\""
-    if [ -n "$METIS_LIBNAME_SUFFIX" ]
-    then
-        echo "libsuffix=\"$METIS_LIBNAME_SUFFIX\""
-    fi
+    echo "libname=\"$METIS_LIB_NAME\""
 }
 
 
@@ -60,7 +58,8 @@ echo_metis()
 # $1 : prefix (*_ARCH_PATH, system, ...)
 #
 # On success, return 0 and export variables
-# -> HAVE_METIS, METIS_ARCH_PATH, METIS_INC_DIR, METIS_LIB_DIR
+# -> HAVE_METIS, METIS_INC_DIR, METIS_LIB_DIR, METIS_LIB_NAME
+# -> METIS_ARCH_PATH
 search_metis()
 {
     local warn="==> skip metis"
@@ -123,21 +122,20 @@ search_metis()
         return 2
     }
 
-    # Library name suffix (-int32 | -int64)
-    case "${library##*/}" in
-    (*-int32.*) export METIS_LIBNAME_SUFFIX="-int32" ;;
-    (*-int64.*) export METIS_LIBNAME_SUFFIX="-int64" ;;
-    esac
+    ##echo "DEBUG: header=$header" 1>&2
+    ##echo "DEBUG: library=$library" 1>&2
 
     # OK
     echo "metis (${label}) - $prefix"
     export HAVE_METIS=true
     export METIS_ARCH_PATH="$prefix"
-    export METIS_INC_DIR="${header%/*}"     # Basename
-    export METIS_LIB_DIR="${library%/*}"    # Basename
+    export METIS_INC_DIR="${header%/*}"     # dirname
+    export METIS_LIB_DIR="${library%/*}"    # dirname
 
-    ##echo "DEBUG: header=$header" 1>&2
-    ##echo "DEBUG: library=$library" 1>&2
+    library="${library##*/}"  # basename
+    library="${library%%.*}"  # w/o extension
+    library="${library#lib}"  # w/o 'lib' prefix (eg, linking)
+    export METIS_LIB_NAME="$library"
 }
 
 

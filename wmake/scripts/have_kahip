@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2021 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -27,7 +28,7 @@
 #     KAHIP_ARCH_PATH
 #     KAHIP_INC_DIR
 #     KAHIP_LIB_DIR
-#     KAHIP_LIBNAME_SUFFIX [optional]
+#     KAHIP_LIB_NAME
 #
 #------------------------------------------------------------------------------
 . ${WM_PROJECT_DIR:?}/wmake/scripts/sysFunctions    # General system functions
@@ -37,8 +38,8 @@
 # Reset
 no_kahip()
 {
-    unset HAVE_KAHIP KAHIP_ARCH_PATH KAHIP_INC_DIR KAHIP_LIB_DIR
-    unset KAHIP_VERSION KAHIP_LIBNAME_SUFFIX
+    unset KAHIP_ARCH_PATH KAHIP_VERSION
+    unset HAVE_KAHIP KAHIP_INC_DIR KAHIP_LIB_DIR KAHIP_LIB_NAME
 }
 
 
@@ -49,10 +50,7 @@ echo_kahip()
     echo "root=\"$KAHIP_ARCH_PATH\""
     echo "include=\"$KAHIP_INC_DIR\""
     echo "library=\"$KAHIP_LIB_DIR\""
-    if [ -n "$KAHIP_LIBNAME_SUFFIX" ]
-    then
-        echo "libsuffix=\"$KAHIP_LIBNAME_SUFFIX\""
-    fi
+    echo "libname=\"$KAHIP_LIB_NAME\""
 }
 
 
@@ -60,7 +58,7 @@ echo_kahip()
 # $1 : prefix (*_ARCH_PATH, system, ...)
 #
 # On success, return 0 and export variables
-# -> HAVE_KAHIP, KAHIP_ARCH_PATH, KAHIP_INC_DIR, KAHIP_LIB_DIR
+# -> HAVE_KAHIP, KAHIP_ARCH_PATH, KAHIP_INC_DIR, KAHIP_LIB_DIR, KAHIP_LIB_NAME
 search_kahip()
 {
     local warn="==> skip kahip"
@@ -110,8 +108,13 @@ search_kahip()
     echo "kahip (int32) - $prefix"
     export HAVE_KAHIP=true
     export KAHIP_ARCH_PATH="$prefix"
-    export KAHIP_INC_DIR="${header%/*}"     # Basename
-    export KAHIP_LIB_DIR="${library%/*}"    # Basename
+    export KAHIP_INC_DIR="${header%/*}"     # dirname
+    export KAHIP_LIB_DIR="${library%/*}"    # dirname
+
+    library="${library##*/}"  # basename
+    library="${library%%.*}"  # w/o extension
+    library="${library#lib}"  # w/o 'lib' prefix (eg, linking)
+    export KAHIP_LIB_NAME="$library"
 }
 
 

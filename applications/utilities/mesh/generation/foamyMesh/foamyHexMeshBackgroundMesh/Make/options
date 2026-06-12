@@ -6,7 +6,7 @@ include $(GENERAL_RULES)/cgal
 EXE_INC = \
     ${ROUNDING_MATH} \
     ${EXE_NDEBUG} \
-    ${CGAL_INC} \
+    $(CGAL_INCLUDES) \
     -I../conformalVoronoiMesh/lnInclude \
     -I$(LIB_SRC)/parallel/decompose/decompositionMethods/lnInclude \
     -I$(LIB_SRC)/parallel/decompose/decompose/lnInclude \
@@ -20,7 +20,7 @@ EXE_INC = \
     -I../vectorTools
 
 EXE_LIBS = \
-    $(CGAL_LIBS) \
+    $(CGAL_LIBRARIES) \
     -lconformalVoronoiMesh \
     -ldecompositionMethods /* -L$(FOAM_LIBBIN)/dummy -lscotchDecomp */ \
     -ldecompose \

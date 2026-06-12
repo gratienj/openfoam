@@ -14,7 +14,7 @@ EXE_INC = \
     -I$(LIB_SRC)/meshTools/lnInclude
 
 EXE_LIBS = \
-    $(CGAL_LIBS) \
+    $(CGAL_LIBRARIES) \
     -L$(FASTDUALOCTREE_SRC_PATH) -lperf_main \
     -lGL \
     -lconformalVoronoiMesh \

@@ -34,6 +34,12 @@ ifneq (,$(strip $(BOOST_ARCH_PATH)))
 endif
 endif
 
+# Report if something seems to be wrong
+ifeq (,$(wildcard $(BOOST_INC_DIR)/.))
+$(info Warning: boost include directory does not exist)
+$(info inc-dir: '$(BOOST_INC_DIR)')
+endif
+
 # ----------------------------------------------------------------------------
 # CGAL include/library directories - synthesize from ARCH_PATH as required
 
@@ -47,8 +53,8 @@ endif
 
 # ----------------------------------------------------------------------------
 
-CGAL_INC  =
-CGAL_LIBS =
+CGAL_INCLUDES  =
+CGAL_LIBRARIES =
 
 include $(GENERAL_RULES)/$(cgal_subrule)
 
@@ -62,9 +68,9 @@ sinclude $(DEFAULT_RULES)/$(cgal_subrule)
 ## $(info CGAL_FLAVOUR $(CGAL_FLAVOUR))
 ## $(info subrule $(cgal_subrule))
 
-## CGAL_INC += -Wp,-v
-## $(info CGAL_INC: $(CGAL_INC))
-## $(info CGAL_LIB: $(CGAL_LIBS))
+## CGAL_INCLUDES += -Wp,-v
+## $(info CGAL_INCLUDES: $(CGAL_INCLUDES))
+## $(info CGAL_LIBRARIES: $(CGAL_LIBRARIES))
 
 ## $(info BOOST_INC_DIR: $(BOOST_INC_DIR))
 ## $(info BOOST_LIB_DIR: $(BOOST_LIB_DIR))

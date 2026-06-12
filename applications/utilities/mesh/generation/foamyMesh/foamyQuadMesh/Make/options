@@ -6,8 +6,8 @@ include $(GENERAL_RULES)/cgal
 EXE_INC = \
     ${ROUNDING_MATH} \
     ${EXE_NDEBUG} \
-    ${CGAL_INC} \
-    ${c++LESSWARN} \
+    $(CGAL_INCLUDES) \
+    $(c++LESSWARN) \
     -I$(FOAM_UTILITIES)/mesh/generation/extrude2DMesh/extrude2DMesh/lnInclude \
     -I../conformalVoronoi2DMesh/lnInclude \
     -I../conformalVoronoiMesh/lnInclude \
@@ -21,7 +21,7 @@ EXE_INC = \
     -I$(LIB_SRC)/mesh/snappyHexMesh/lnInclude
 
 EXE_LIBS = \
-    $(CGAL_LIBS) \
+    $(CGAL_LIBRARIES) \
     -lextrude2DMesh \
     -lextrudeModel \
     -lcv2DMesh \

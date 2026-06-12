@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2020 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -27,6 +28,7 @@
 #     MGRIDGEN_ARCH_PATH
 #     MGRIDGEN_INC_DIR
 #     MGRIDGEN_LIB_DIR
+#     MGRIDGEN_LIB_NAME
 #
 #------------------------------------------------------------------------------
 . ${WM_PROJECT_DIR:?}/wmake/scripts/sysFunctions    # General system functions
@@ -36,8 +38,8 @@
 # Reset
 no_mgridgen()
 {
-    unset HAVE_MGRIDGEN MGRIDGEN_ARCH_PATH MGRIDGEN_INC_DIR MGRIDGEN_LIB_DIR
-    unset MGRIDGEN_VERSION
+    unset MGRIDGEN_ARCH_PATH MGRIDGEN_VERSION
+    unset HAVE_MGRIDGEN MGRIDGEN_INC_DIR MGRIDGEN_LIB_DIR MGRIDGEN_LIB_NAME
 }
 
 
@@ -48,6 +50,7 @@ echo_mgridgen()
     echo "root=\"$MGRIDGEN_ARCH_PATH\""
     echo "include=\"$MGRIDGEN_INC_DIR\""
     echo "library=\"$MGRIDGEN_LIB_DIR\""
+    echo "libname=\"$MGRIDGEN_LIB_NAME\""
 }
 
 
@@ -55,7 +58,8 @@ echo_mgridgen()
 # $1 : prefix (*_ARCH_PATH, system, ...)
 #
 # On success, return 0 and export variables
-# -> HAVE_MGRIDGEN, MGRIDGEN_ARCH_PATH, MGRIDGEN_INC_DIR, MGRIDGEN_LIB_DIR
+# -> HAVE_MGRIDGEN, MGRIDGEN_INC_DIR, MGRIDGEN_LIB_DIR, MGRIDGEN_LIB_NAME
+# -> MGRIDGEN_ARCH_PATH
 search_mgridgen()
 {
     local warn="==> skip mgridgen"
@@ -145,10 +149,15 @@ search_mgridgen()
     # OK
     echo "mgridgen (label=$label, scalar=$scalar) - $prefix"
     export HAVE_MGRIDGEN=true
-    export MGRIDGEN_ARCH_PATH="$prefix"
-    export MGRIDGEN_INC_DIR="${header%/*}"     # Basename
-    export MGRIDGEN_LIB_DIR="${library%/*}"    # Basename
     export MGRIDGEN_VERSION
+    export MGRIDGEN_ARCH_PATH="$prefix"
+    export MGRIDGEN_INC_DIR="${header%/*}"     # dirname
+    export MGRIDGEN_LIB_DIR="${library%/*}"    # dirname
+
+    library="${library##*/}"  # basename
+    library="${library%%.*}"  # w/o extension
+    library="${library#lib}"  # w/o 'lib' prefix (eg, linking)
+    export MGRIDGEN_LIB_NAME="$library"
 }
 
 

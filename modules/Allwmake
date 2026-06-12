@@ -5,7 +5,7 @@ targetType=libso
 
 #------------------------------------------------------------------------------
 # Default build into OpenFOAM project locations unless specified with
-# -prefix or FOAM_MODULE_PREFIX env varable
+# -prefix or FOAM_MODULE_PREFIX env variable
 
 # Long form to avoid dash 0.5.8 error (issue #1757)
 [ -n "$FOAM_MODULE_PREFIX" ] || FOAM_MODULE_PREFIX="${FOAM_LIBBIN%/*}"

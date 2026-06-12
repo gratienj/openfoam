@@ -9,12 +9,12 @@ EXE_INC = \
     $(c++LESSWARN) \
     ${ROUNDING_MATH} \
     ${EXE_NDEBUG} \
-    ${CGAL_INC} \
+    $(CGAL_INCLUDES) \
     -I.. \
     -I$(LIB_SRC)/surfMesh/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude
 
 LIB_LIBS = \
-    ${CGAL_LIBS} \
+    $(CGAL_LIBRARIES) \
     -lsurfMesh \
     -lmeshTools

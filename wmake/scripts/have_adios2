@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2025 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -28,6 +29,7 @@
 #     ADIOS2_ARCH_PATH
 #     ADIOS2_INC_DIR
 #     ADIOS2_LIB_DIR
+#     ADIOS2_LIB_NAME
 #
 #------------------------------------------------------------------------------
 . ${WM_PROJECT_DIR:?}/wmake/scripts/sysFunctions    # General system functions
@@ -37,7 +39,7 @@
 # Reset
 no_adios2()
 {
-    unset HAVE_ADIOS2 ADIOS2_INC_DIR ADIOS2_LIB_DIR
+    unset HAVE_ADIOS2 ADIOS2_INC_DIR ADIOS2_LIB_DIR ADIOS2_LIB_NAME
 }
 
 
@@ -48,6 +50,7 @@ echo_adios2()
     echo "root=\"$ADIOS2_ARCH_PATH\""
     echo "include=\"$ADIOS2_INC_DIR\""
     echo "library=\"$ADIOS2_LIB_DIR\""
+    echo "libname=\"$ADIOS2_LIB_NAME\""
 }
 
 
@@ -124,8 +127,13 @@ search_adios2()
     # OK
     export HAVE_ADIOS2=true
     export ADIOS2_ARCH_PATH="$prefix"
-    export ADIOS2_INC_DIR="${header%/*}"     # Basename
-    export ADIOS2_LIB_DIR="${library%/*}"    # Basename
+    export ADIOS2_INC_DIR="${header%/*}"     # dirname
+    export ADIOS2_LIB_DIR="${library%/*}"    # dirname
+
+    library="${library##*/}"  # basename
+    library="${library%%.*}"  # w/o extension
+    library="${library#lib}"  # w/o 'lib' prefix (eg, linking)
+    export ADIOS2_LIB_NAME="$library"
 }
 
 

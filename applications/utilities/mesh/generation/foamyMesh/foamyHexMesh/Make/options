@@ -11,8 +11,8 @@ EXE_INC = \
     ${EXE_NDEBUG} \
     ${CGAL_EXACT} \
     ${CGAL_INEXACT} \
-    ${CGAL_INC} \
-    ${c++LESSWARN} \
+    $(CGAL_INCLUDES) \
+    $(c++LESSWARN) \
     -I../conformalVoronoiMesh/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/fileFormats/lnInclude \
@@ -24,7 +24,7 @@ EXE_INC = \
     -IvectorTools
 
 EXE_LIBS = \
-    ${CGAL_LIBS} \
+    $(CGAL_LIBRARIES) \
     -lconformalVoronoiMesh \
     -lfileFormats \
     -lsurfMesh \

@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2021 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -27,7 +28,7 @@
 #     SCOTCH_ARCH_PATH
 #     SCOTCH_INC_DIR
 #     SCOTCH_LIB_DIR
-#     SCOTCH_LIBNAME_SUFFIX [optional]
+#     SCOTCH_LIB_NAME
 #
 # Functions provided [Must call have_scotch first]
 #     have_ptscotch, search_ptscotch
@@ -37,6 +38,7 @@
 #     PTSCOTCH_ARCH_PATH
 #     PTSCOTCH_INC_DIR
 #     PTSCOTCH_LIB_DIR
+#     PTSCOTCH_LIB_NAME
 #
 #
 # System files can be hiding in a large variety of locations.
@@ -94,9 +96,9 @@
 # Reset
 no_scotch()
 {
-    unset HAVE_SCOTCH SCOTCH_ARCH_PATH SCOTCH_INC_DIR SCOTCH_LIB_DIR
-    unset SCOTCH_VERSION SCOTCH_LIBNAME_SUFFIX
-    unset HAVE_PTSCOTCH PTSCOTCH_ARCH_PATH PTSCOTCH_INC_DIR PTSCOTCH_LIB_DIR
+    unset SCOTCH_ARCH_PATH PTSCOTCH_ARCH_PATH SCOTCH_VERSION
+    unset HAVE_SCOTCH SCOTCH_INC_DIR SCOTCH_LIB_DIR SCOTCH_LIB_NAME
+    unset HAVE_PTSCOTCH PTSCOTCH_INC_DIR PTSCOTCH_LIB_DIR PTSCOTCH_LIB_NAME
 }
 
 
@@ -107,19 +109,13 @@ echo_scotch()
     echo "root=\"$SCOTCH_ARCH_PATH\""
     echo "include=\"$SCOTCH_INC_DIR\""
     echo "library=\"$SCOTCH_LIB_DIR\""
-    if [ -n "$SCOTCH_LIBNAME_SUFFIX" ]
-    then
-        echo "libsuffix=\"$SCOTCH_LIBNAME_SUFFIX\""
-    fi
+    echo "libname=\"$SCOTCH_LIB_NAME\""
     echo
     echo "ptscotch=${HAVE_PTSCOTCH:-false}"
     echo "root=\"$PTSCOTCH_ARCH_PATH\""
     echo "include=\"$PTSCOTCH_INC_DIR\""
     echo "library=\"$PTSCOTCH_LIB_DIR\""
-    if [ -n "$SCOTCH_LIBNAME_SUFFIX" ]
-    then
-        echo "libsuffix=\"$SCOTCH_LIBNAME_SUFFIX\""
-    fi
+    echo "libname=\"$PTSCOTCH_LIB_NAME\""
 }
 
 
@@ -127,7 +123,8 @@ echo_scotch()
 # $1 : prefix (*_ARCH_PATH, system, ...)
 #
 # On success, return 0 and export variables
-# -> HAVE_SCOTCH, SCOTCH_ARCH_PATH, SCOTCH_INC_DIR, SCOTCH_LIB_DIR
+# -> HAVE_SCOTCH, SCOTCH_INC_DIR, SCOTCH_LIB_DIR, SCOTCH_LIB_NAME
+# -> SCOTCH_ARCH_PATH
 search_scotch()
 {
     local warn="==> skip scotch"
@@ -253,22 +250,21 @@ search_scotch()
         ;;
     esac
 
-    # Library name suffix (-int32 | -int64)
-    case "${library##*/}" in
-    (*-int32.*) export SCOTCH_LIBNAME_SUFFIX="-int32" ;;
-    (*-int64.*) export SCOTCH_LIBNAME_SUFFIX="-int64" ;;
-    esac
+    ##echo "DEBUG: header=$header" 1>&2
+    ##echo "DEBUG: library=$library" 1>&2
 
     # OK
     echo "scotch ($label) - $prefix"
+    export SCOTCH_VERSION
     export HAVE_SCOTCH=true
     export SCOTCH_ARCH_PATH="$prefix"
-    export SCOTCH_INC_DIR="${header%/*}"     # Basename
-    export SCOTCH_LIB_DIR="${library%/*}"    # Basename
-    export SCOTCH_VERSION
+    export SCOTCH_INC_DIR="${header%/*}"   # dirname
+    export SCOTCH_LIB_DIR="${library%/*}"  # dirname
 
-    ##echo "DEBUG: header=$header" 1>&2
-    ##echo "DEBUG: library=$library" 1>&2
+    library="${library##*/}"  # basename
+    library="${library%%.*}"  # w/o extension
+    library="${library#lib}"  # w/o 'lib' prefix (eg, linking)
+    export SCOTCH_LIB_NAME="$library"
 }
 
 
@@ -290,6 +286,14 @@ search_ptscotch()
     local mpiPrefix="$MPI_ARCH_PATH"
     local mpiName="${MPI_ARCH_PATH##*/}"
 
+    # Capture any library name suffix (-int32 | -int64) used by libscotch
+    # for reuse in libptscotch
+    local libName_suffix
+    case "$SCOTCH_LIB_NAME" in
+    (*-int32) libName_suffix="-int32" ;;
+    (*-int64) libName_suffix="-int64" ;;
+    esac
+
     # ----------------------------------
     if isNone "$prefix"
     then
@@ -308,9 +312,8 @@ search_ptscotch()
             "$prefix/include/${mpiName}-$(uname -m)/$incName" \
         )
         library=$(findExtLib \
-            "$FOAM_MPI/$libName${SCOTCH_LIBNAME_SUFFIX}" \
-            "$libName${SCOTCH_LIBNAME_SUFFIX}" \
-            "$FOAM_MPI/$libName${SCOTCH_LIBNAME_SUFFIX}" \
+            "$FOAM_MPI/$libName${libName_suffix}" \
+            "$libName${libName_suffix}" \
         )
     elif isSystem "$prefix"
     then
@@ -350,16 +353,20 @@ search_ptscotch()
     }
 
     # ----------------------------------
+    ##echo "DEBUG: header=$header" 1>&2
+    ##echo "DEBUG: library=$library" 1>&2
 
     # OK
     echo "ptscotch - $prefix"
     export HAVE_PTSCOTCH=true
     export PTSCOTCH_ARCH_PATH="$prefix"
-    export PTSCOTCH_INC_DIR="${header%/*}"     # Basename
-    export PTSCOTCH_LIB_DIR="${library%/*}"    # Basename
+    export PTSCOTCH_INC_DIR="${header%/*}"   # dirname
+    export PTSCOTCH_LIB_DIR="${library%/*}"  # dirname
 
-    ##echo "DEBUG: header=$header" 1>&2
-    ##echo "DEBUG: library=$library" 1>&2
+    library="${library##*/}"  # basename
+    library="${library%%.*}"  # w/o extension
+    library="${library#lib}"  # w/o 'lib' prefix (eg, linking)
+    export PTSCOTCH_LIB_NAME="$library"
 }
 
 
