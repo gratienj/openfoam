@@ -7,6 +7,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2019-2024 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -64,10 +65,11 @@ options:
   -compress=TYPE    Use specified compression type
   -sep=SEP          Change version/patch separator from '_' to SEP
   -gitbase=DIR      Alternative repository location
-  -with-api=NUM     Specify alternative api value for packaging
+  -with-api=<int>   Specify alternative api value for packaging
   -tgz, -xz, -zstd  Alias for -compress=tgz, -compress=xz, -compress=zstd
   -debian           Auto (debian) naming with -no-prefix, -xz
-  -debian=NUM       Auto (debian) naming with specified debian patch value
+  -debian=<int>     Auto (debian) naming with specified patch value
+  -debian=rc<int>   Auto (debian) release candidate naming (patch=0)
   -debian=NAME      Short-cut for -name=NAME.orig, -no-prefix, -xz
   -help             Print help
 
@@ -133,7 +135,7 @@ do
     -h | -help* | --help*)
         printHelp
         ;;
-    -debian | -debian=[0-9]*)
+    -debian | -debian=[0-9]* | -debian=rc[0-9]*)
         tarName="$1"         # Leave as special placeholder
         prefixDir=false      # No prefix directory
         : "${compress:=xz}"  # Default 'xz' compression
@@ -356,15 +358,20 @@ case "$tarName" in
     if [ "$withPatchNum" = false ]
     then
         echo "Ignoring patch number for output name" 1>&2
-    elif [ "${patch:-0}" != 0 ]
-    then
-        tarName="${tarName}.${patch}"
+    else
+        # Include patch=0 in the name for debian tar files
+        tarName="${tarName}.${patch:-0}"
     fi
     tarName="${tarName}.orig"  # Append .orig
     ;;
 
 (-debian=[0-9]*)
     tarName="openfoam_${packageApi}.${tarName#*=}.orig"
+    ;;
+
+# release candidate: so patch=0~rc
+(-debian=rc[0-9]*)
+    tarName="openfoam_${packageApi}.0~${tarName#*=}.orig"
     ;;
 
 ('')
@@ -385,6 +392,7 @@ case "$tarName" in
         echo "Ignoring patch number for output name" 1>&2
     elif [ "${patch:-0}" != 0 ]
     then
+        # No patch=0 in the name for normal (rpm) tar files
         tarName="${tarName}${versionSeparator}${patch}"
     fi
     ;;
@@ -445,8 +453,11 @@ echo
 #------------------------------------------------------------------------------
 # OpenFOAM sources (unless explicitly excluded)
 
-if [ "$select_source" != false ]
+if [ "$select_source" = false ]
 then
+    echo
+    echo '# source : excluded'
+else
     echo 'git -c tar.umask=0022 archive --format=tar ${prefixDir:+--prefix="$prefixDir/"} -o "$outputDir/$tarName.tar" "$head"'
 
     # Tag build information with underscore to distinguish from "real" build
@@ -478,13 +489,27 @@ fi
 #
 packModule()
 {
-    local parent="$1"
-    local filter="$2"
+    local parent="${1%/}"   # parent directory
+    local filter="${2#,}"   # filter list (comma-delimited)
 
-    # Using filter=true means accept everything
-    if [ "$filter" = true ]; then unset filter; fi
+    # Using filter=(-all|true) == "no filtering", but handle slightly
+    # differently:
+    # - subdir: unset filter for "no filtering"
+    # - root:   use '-all' for "no filtering" to allow scanning and
+    #           recursion of its subdirs
+    case "${filter:-true}" in
+    (-all | true)
+        case "$parent" in
+        (*/*) unset filter  ;;  # subdir: unset for 'no filtering'
+        (*)   filter="-all" ;;  # root  : 'no filtering' = -all (for recursion)
+        esac
+        ;;
+    esac
 
     (
+        ##DEBUG echo "packModule $parent [$filter]" 1>&2
+        ##DEBUG set -x
+
         if [ -n "$parent" ]
         then
             cd "${parent##*/}" 2>/dev/null || exit
@@ -493,7 +518,47 @@ packModule()
         git ls-tree -d HEAD | \
         while read mode gittype sha1 moduleName
         do
-            [ "$gittype" == commit ] || continue
+            ##DEBUG echo "processing: $gittype $moduleName [$filter]" 1>&2
+
+            if [ "$gittype" = tree ] && [ -n "$filter" ]
+            then
+                # A plain directory may contain submodules.
+                # Build a derived filter from tokens that match "moduleName"
+                # (exact == accept all below) or "moduleName/..."
+                # (path prefix, pass remainder).
+                # No filter means no descent (avoid recursion)
+                module="$parent${parent:+/}$moduleName"
+                moduleName="${moduleName##*/}"
+                sub_filter=''
+                if [ "$filter" = -all ]
+                then
+                    sub_filter=true
+                elif [ -n "$filter" ]  # A slightly redundant check..
+                then
+                    oldIFS="$IFS"; IFS=','
+                    for item in $filter
+                    do
+                        case "$item" in
+                        # Exact (full) match => accept everything
+                        ("$moduleName" | "$moduleName"/)
+                            sub_filter=true
+                            break
+                            ;;
+                        # Sub-match => accumulate filter
+                        ("$moduleName"/*)
+                            item="${item#$moduleName/}"
+                            sub_filter="$sub_filter,$item"
+                            ;;
+                        esac
+                    done
+                    IFS="$oldIFS"
+                fi
+                [ -n "$sub_filter" ] && packModule "$module" "$sub_filter"
+                continue
+            fi
+
+            # Further processing assumes a 'commit' (ie, submodule)
+            [ "$gittype" = commit ] || continue
 
             case "$moduleName" in
             (. | ./)
@@ -510,12 +575,20 @@ packModule()
             moduleName="${moduleName##*/}"
 
             echo
-            echo "# submodule"
+            echo "# [${parent%%/*}] submodule :"
             echo "module='$module'"
             echo "commit='$sha1'"
 
-            # Simplistic filtering
-            if [ -n "$filter" ] && [ "${filter/$moduleName/}" = "$filter" ]
+            # Filter: accept 'all' or exact match within comma-delimited list
+            matches=false
+            if [ "${filter:--all}" = -all ]  # accept everything
+            then
+                matches=true
+            else
+                case ",$filter," in (*",$moduleName,"*) matches=true ;; esac
+            fi
+
+            if [ "$matches" = false ]
             then
                 echo "# ----"
                 echo '{'
@@ -558,10 +631,13 @@ packModule()
 
 
 # modules/
-if [ "$select_modules" != false ]
+if [ "$select_modules" = false ]
 then
     echo
-    echo '# modules/'
+    echo '# modules : excluded'
+else
+    echo
+    echo '# modules :'
     echo 'manifestFile="$manifest1"'
     echo '{'
     echo '  echo "# OpenFOAM modules"'
@@ -579,10 +655,13 @@ then
 fi
 
 # plugins/
-if [ "$select_plugins" != false ]
+if [ "$select_plugins" = false ]
 then
     echo
-    echo '# plugins/'
+    echo '# plugins : excluded'
+else
+    echo
+    echo '# plugins :'
     echo 'manifestFile="$manifest2"'
     echo '{'
     echo '  echo "# OpenFOAM plugins"'
@@ -619,7 +698,7 @@ echo "# -----------------------"
 # Compression
 
 case "$compress" in
-('')
+('' | none)
     echo "No compression requested" 1>&2
     ;;
 
