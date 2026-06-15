@@ -33,12 +33,12 @@ License
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-const Foam::word Foam::patchInteractionData::beiGosmanTypeName("BeiGosman");
+const Foam::word Foam::patchInteractionData::beiGosmanTypeName("BaiGosman");
 
 
 namespace
 {
-void validateBeiGosmanData
+void validateBaiGosmanData
 (
     const Foam::dictionary& dict,
     const Foam::patchInteractionData& pid
@@ -144,7 +144,7 @@ Foam::Istream& Foam::operator>>
     pid.e_ = dict.getOrDefault<scalar>("e", 1);
     pid.mu_ = dict.getOrDefault<scalar>("mu", 0);
 
-    if (pid.isBeiGosman())
+    if (pid.isBaiGosman())
     {
         dict.readEntry("dry", pid.dry_);
         dict.readEntry("Tmelt", pid.Tmelt_);
@@ -162,7 +162,7 @@ Foam::Istream& Foam::operator>>
         pid.Cf_ = dict.getOrDefault<scalar>("Cf", 0.7);
         pid.Tref_ = dict.getOrDefault<scalar>("Tref", -1);
 
-        validateBeiGosmanData(dict, pid);
+        validateBaiGosmanData(dict, pid);
     }
 
     return is;

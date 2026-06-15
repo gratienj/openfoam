@@ -25,7 +25,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "BeiGosman.H"
+#include "BaiGosman.H"
 #include "LocalInteraction.H"
 #include "fvMesh.H"
 #include "mathematicalConstants.H"
@@ -37,7 +37,7 @@ License
 // * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * * //
 
 template<class CloudType>
-Foam::localInteractionModels::BeiGosman<CloudType>::BeiGosman
+Foam::localInteractionModels::BaiGosman<CloudType>::BaiGosman
 (
     LocalInteraction<CloudType>& localInteraction
 )
@@ -49,9 +49,9 @@ Foam::localInteractionModels::BeiGosman<CloudType>::BeiGosman
 
 
 template<class CloudType>
-Foam::localInteractionModels::BeiGosman<CloudType>::BeiGosman
+Foam::localInteractionModels::BaiGosman<CloudType>::BaiGosman
 (
-    const BeiGosman<CloudType>& bg,
+    const BaiGosman<CloudType>& bg,
     LocalInteraction<CloudType>& localInteraction
 )
 :
@@ -64,7 +64,7 @@ Foam::localInteractionModels::BeiGosman<CloudType>::BeiGosman
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class CloudType>
-void Foam::localInteractionModels::BeiGosman<CloudType>::initialise
+void Foam::localInteractionModels::BaiGosman<CloudType>::initialise
 (
     std::true_type
 )
@@ -98,7 +98,7 @@ void Foam::localInteractionModels::BeiGosman<CloudType>::initialise
 
 
 template<class CloudType>
-void Foam::localInteractionModels::BeiGosman<CloudType>::initialise
+void Foam::localInteractionModels::BaiGosman<CloudType>::initialise
 (
     std::false_type
 )
@@ -115,7 +115,7 @@ void Foam::localInteractionModels::BeiGosman<CloudType>::initialise
 
 template<class CloudType>
 const Foam::SLGThermo&
-Foam::localInteractionModels::BeiGosman<CloudType>::thermo() const
+Foam::localInteractionModels::BaiGosman<CloudType>::thermo() const
 {
     if (!thermoPtr_)
     {
@@ -131,7 +131,7 @@ Foam::localInteractionModels::BeiGosman<CloudType>::thermo() const
 
 
 template<class CloudType>
-Foam::vector Foam::localInteractionModels::BeiGosman<CloudType>::tangentVector
+Foam::vector Foam::localInteractionModels::BaiGosman<CloudType>::tangentVector
 (
     const vector& v
 ) const
@@ -176,7 +176,7 @@ Foam::vector Foam::localInteractionModels::BeiGosman<CloudType>::tangentVector
 
 
 template<class CloudType>
-Foam::vector Foam::localInteractionModels::BeiGosman<CloudType>::splashDirection
+Foam::vector Foam::localInteractionModels::BaiGosman<CloudType>::splashDirection
 (
     const vector& tanVec1,
     const vector& tanVec2,
@@ -203,7 +203,7 @@ Foam::vector Foam::localInteractionModels::BeiGosman<CloudType>::splashDirection
 
 
 template<class CloudType>
-void Foam::localInteractionModels::BeiGosman<CloudType>::absorbInteraction
+void Foam::localInteractionModels::BaiGosman<CloudType>::absorbInteraction
 (
     typename CloudType::parcelType& p,
     const polyPatch& pp,
@@ -234,7 +234,7 @@ void Foam::localInteractionModels::BeiGosman<CloudType>::absorbInteraction
 
 
 template<class CloudType>
-void Foam::localInteractionModels::BeiGosman<CloudType>::bounceInteraction
+void Foam::localInteractionModels::BaiGosman<CloudType>::bounceInteraction
 (
     const scalar e,
     const vector& Un,
@@ -249,7 +249,7 @@ void Foam::localInteractionModels::BeiGosman<CloudType>::bounceInteraction
 
 
 template<class CloudType>
-void Foam::localInteractionModels::BeiGosman<CloudType>::splashInteraction
+void Foam::localInteractionModels::BaiGosman<CloudType>::splashInteraction
 (
     typename CloudType::parcelType& p,
     const polyPatch& pp,
@@ -449,7 +449,7 @@ void Foam::localInteractionModels::BeiGosman<CloudType>::splashInteraction
 
 
 template<class CloudType>
-void Foam::localInteractionModels::BeiGosman<CloudType>::drySplashInteraction
+void Foam::localInteractionModels::BaiGosman<CloudType>::drySplashInteraction
 (
     const scalar sigma,
     const scalar mu,
@@ -502,7 +502,7 @@ void Foam::localInteractionModels::BeiGosman<CloudType>::drySplashInteraction
 
 
 template<class CloudType>
-void Foam::localInteractionModels::BeiGosman<CloudType>::wetSplashInteraction
+void Foam::localInteractionModels::BaiGosman<CloudType>::wetSplashInteraction
 (
     const scalar sigma,
     const scalar mu,
@@ -577,7 +577,7 @@ void Foam::localInteractionModels::BeiGosman<CloudType>::wetSplashInteraction
 
 
 template<class CloudType>
-bool Foam::localInteractionModels::BeiGosman<CloudType>::correct
+bool Foam::localInteractionModels::BaiGosman<CloudType>::correct
 (
     typename CloudType::parcelType& p,
     const polyPatch& pp,
@@ -637,7 +637,7 @@ bool Foam::localInteractionModels::BeiGosman<CloudType>::correct
         if (!warnedProps)
         {
             WarningInFunction
-                << "Non-positive BeiGosman liquid properties for patch "
+                << "Non-positive BaiGosman liquid properties for patch "
                 << pp.name() << " at (pc=" << pc << ", Td=" << Td << "): "
                 << "sigma=" << sigma << ", rho=" << rho << ", mu=" << mu
                 << ", d=" << d << "; parcel absorbed. Check thermo "
@@ -739,7 +739,7 @@ bool Foam::localInteractionModels::BeiGosman<CloudType>::correct
 
 
 template<class CloudType>
-bool Foam::localInteractionModels::BeiGosman<CloudType>::correct
+bool Foam::localInteractionModels::BaiGosman<CloudType>::correct
 (
     typename CloudType::parcelType&,
     const polyPatch& pp,

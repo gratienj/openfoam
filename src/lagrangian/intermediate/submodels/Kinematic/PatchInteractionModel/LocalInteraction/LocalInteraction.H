@@ -39,7 +39,7 @@ Description
 #ifndef LocalInteraction_H
 #define LocalInteraction_H
 
-#include "BeiGosman.H"
+#include "BaiGosman.H"
 #include "PatchInteractionModel.H"
 #include "patchInteractionDataList.H"
 #include "Switch.H"
@@ -60,7 +60,7 @@ class LocalInteraction
 {
     // Friends
 
-        friend class localInteractionModels::BeiGosman<CloudType>;
+        friend class localInteractionModels::BaiGosman<CloudType>;
 
 
     // Private data
@@ -99,11 +99,11 @@ class LocalInteraction
         //- Flag to output data as fields
         bool writeFields_;
 
-        //- True if any patch entry uses the BeiGosman interaction type
-        bool hasBeiGosman_;
+        //- True if any patch entry uses the BaiGosman interaction type
+        bool hasBaiGosman_;
 
-        //- Internal BeiGosman thermo patch interaction
-        localInteractionModels::BeiGosman<CloudType> beiGosman_;
+        //- Internal BaiGosman thermo patch interaction
+        localInteractionModels::BaiGosman<CloudType> beiGosman_;
 
         //- InjectorId to index map, when outputting escaped/stick/...
         //  particles sorted by injectorID
@@ -118,8 +118,8 @@ class LocalInteraction
 
     // Private Member Functions
 
-        //- True if any patch data entry is a BeiGosman interaction
-        bool hasBeiGosmanPatch() const;
+        //- True if any patch data entry is a BaiGosman interaction
+        bool hasBaiGosmanPatch() const;
 
         //- Add escape stats and optional field output
         void addEscapeCounters

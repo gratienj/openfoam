@@ -24,10 +24,10 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::localInteractionModels::BeiGosman
+    Foam::localInteractionModels::BaiGosman
 
 Description
-    Internal BeiGosman thermo parcel-patch interaction used by
+    Internal BaiGosman thermo parcel-patch interaction used by
     Foam::LocalInteraction.
 
     Requires a parcel type exposing T() and rho() (thermo / reacting
@@ -37,8 +37,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_BeiGosman_H
-#define Foam_BeiGosman_H
+#ifndef Foam_BaiGosman_H
+#define Foam_BaiGosman_H
 
 #include "patchInteractionData.H"
 #include "polyPatch.H"
@@ -80,11 +80,11 @@ struct parcelHasThermo
 
 
 /*---------------------------------------------------------------------------*\
-                         Class BeiGosman Declaration
+                         Class BaiGosman Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class CloudType>
-class BeiGosman
+class BaiGosman
 {
     // Private Typedefs
 
@@ -107,12 +107,12 @@ class BeiGosman
     // Private Constructors
 
         //- Construct from owning localInteraction model
-        explicit BeiGosman(LocalInteraction<CloudType>& localInteraction);
+        explicit BaiGosman(LocalInteraction<CloudType>& localInteraction);
 
         //- Copy construct with a new owning localInteraction model
-        BeiGosman
+        BaiGosman
         (
-            const BeiGosman<CloudType>& bg,
+            const BaiGosman<CloudType>& bg,
             LocalInteraction<CloudType>& localInteraction
         );
 
@@ -176,7 +176,7 @@ class BeiGosman
             bool& keepParticle
         );
 
-        //- Dry-wall BeiGosman splash/adhesion model
+        //- Dry-wall BaiGosman splash/adhesion model
         void drySplashInteraction
         (
             const scalar sigma,
@@ -191,7 +191,7 @@ class BeiGosman
             bool& keepParticle
         );
 
-        //- Wet-wall BeiGosman splash/adhesion/bounce model
+        //- Wet-wall BaiGosman splash/adhesion/bounce model
         void wetSplashInteraction
         (
             const scalar sigma,
@@ -206,7 +206,7 @@ class BeiGosman
             bool& keepParticle
         );
 
-        //- Apply BeiGosman model for thermo parcels
+        //- Apply BaiGosman model for thermo parcels
         bool correct
         (
             typename CloudType::parcelType& p,
@@ -217,7 +217,7 @@ class BeiGosman
             std::true_type
         );
 
-        //- Reject BeiGosman model for non-thermo parcels
+        //- Reject BaiGosman model for non-thermo parcels
         bool correct
         (
             typename CloudType::parcelType& p,

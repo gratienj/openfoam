@@ -114,7 +114,7 @@ public:
 
     // Public Data
 
-        //- BeiGosman type keyword used in patch entries
+        //- BaiGosman type keyword used in patch entries
         static const word beiGosmanTypeName;
 
 
@@ -132,8 +132,8 @@ public:
             return interactionTypeName_;
         }
 
-        //- Is this entry a BeiGosman interaction
-        bool isBeiGosman() const noexcept
+        //- Is this entry a BaiGosman interaction
+        bool isBaiGosman() const noexcept
         {
             return interactionTypeName_ == beiGosmanTypeName;
         }

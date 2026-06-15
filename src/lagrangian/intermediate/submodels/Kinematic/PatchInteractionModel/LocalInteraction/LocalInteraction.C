@@ -28,7 +28,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "LocalInteraction.H"
-#include "BeiGosman.C"
+#include "BaiGosman.C"
 #include "fvMesh.H"
 #include "volFields.H"
 
@@ -51,7 +51,7 @@ void Foam::LocalInteraction<CloudType>::writeFileHeader(Ostream& os)
             this->writeTabbed(os, patchName + "_nStick_" + suffix);
             this->writeTabbed(os, patchName + "_massStick_" + suffix);
 
-            if (hasBeiGosman_)
+            if (hasBaiGosman_)
             {
                 this->writeTabbed(os, patchName + "_nRebound_" + suffix);
                 this->writeTabbed(os, patchName + "_massRebound_" + suffix);
@@ -81,7 +81,7 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
     nSplash_(nEscape_.size()),
     massSplash_(nEscape_.size()),
     writeFields_(this->coeffDict().getOrDefault("writeFields", false)),
-    hasBeiGosman_(false),
+    hasBaiGosman_(false),
     beiGosman_(*this),
     injIdToIndex_(),
     massEscapePtr_(nullptr),
@@ -121,9 +121,9 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
         nInjectors = 1;
     }
 
-    hasBeiGosman_ = hasBeiGosmanPatch();
+    hasBaiGosman_ = hasBaiGosmanPatch();
 
-    if (hasBeiGosman_)
+    if (hasBaiGosman_)
     {
         beiGosman_.initialise
         (
@@ -140,7 +140,7 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
         const word& interactionTypeName =
             patchData_[patchi].interactionTypeName();
 
-        if (!patchData_[patchi].isBeiGosman())
+        if (!patchData_[patchi].isBaiGosman())
         {
             const typename PatchInteractionModel<CloudType>::interactionType& it =
                 this->wordToInteractionType(interactionTypeName);
@@ -163,7 +163,7 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
         nStick_[patchi].setSize(nInjectors, Zero);
         massStick_[patchi].setSize(nInjectors, Zero);
 
-        if (hasBeiGosman_)
+        if (hasBaiGosman_)
         {
             nRebound_[patchi].setSize(nInjectors, Zero);
             massRebound_[patchi].setSize(nInjectors, Zero);
@@ -191,7 +191,7 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
     nSplash_(pim.nSplash_),
     massSplash_(pim.massSplash_),
     writeFields_(pim.writeFields_),
-    hasBeiGosman_(pim.hasBeiGosman_),
+    hasBaiGosman_(pim.hasBaiGosman_),
     beiGosman_(pim.beiGosman_, *this),
     injIdToIndex_(pim.injIdToIndex_),
     massEscapePtr_(nullptr),
@@ -202,11 +202,11 @@ Foam::LocalInteraction<CloudType>::LocalInteraction
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
 template<class CloudType>
-bool Foam::LocalInteraction<CloudType>::hasBeiGosmanPatch() const
+bool Foam::LocalInteraction<CloudType>::hasBaiGosmanPatch() const
 {
     forAll(patchData_, patchi)
     {
-        if (patchData_[patchi].isBeiGosman())
+        if (patchData_[patchi].isBaiGosman())
         {
             return true;
         }
@@ -372,7 +372,7 @@ bool Foam::LocalInteraction<CloudType>::correct
           : 0
         );
 
-        if (patchData_[patchi].isBeiGosman())
+        if (patchData_[patchi].isBaiGosman())
         {
             return beiGosman_.correct
             (
@@ -408,7 +408,7 @@ bool Foam::LocalInteraction<CloudType>::correct
 
                 const scalar dm = p.mass()*p.nParticle();
 
-                if (hasBeiGosman_)
+                if (hasBaiGosman_)
                 {
                     addEscapeCounters
                     (
@@ -441,7 +441,7 @@ bool Foam::LocalInteraction<CloudType>::correct
 
                 const scalar dm = p.mass()*p.nParticle();
 
-                if (hasBeiGosman_)
+                if (hasBaiGosman_)
                 {
                     addStickCounters
                     (
@@ -504,7 +504,7 @@ bool Foam::LocalInteraction<CloudType>::correct
                 // Return velocity to global space
                 U += Up;
 
-                if (hasBeiGosman_)
+                if (hasBaiGosman_)
                 {
                     addReboundCounters
                     (
@@ -543,13 +543,13 @@ void Foam::LocalInteraction<CloudType>::info()
 
     if (Pstream::parRun())
     {
-        const bool anyBeiGosman = returnReduceOr(hasBeiGosman_);
-        const bool allBeiGosman = returnReduceAnd(hasBeiGosman_);
+        const bool anyBaiGosman = returnReduceOr(hasBaiGosman_);
+        const bool allBaiGosman = returnReduceAnd(hasBaiGosman_);
 
-        if (anyBeiGosman != allBeiGosman)
+        if (anyBaiGosman != allBaiGosman)
         {
             FatalErrorInFunction
-                << "Inconsistent BeiGosman configuration across processors."
+                << "Inconsistent BaiGosman configuration across processors."
                 << exit(FatalError);
         }
 
@@ -605,7 +605,7 @@ void Foam::LocalInteraction<CloudType>::info()
         nps0[patchi].setSize(lsd, Zero);
         mps0[patchi].setSize(lsd, Zero);
 
-        if (hasBeiGosman_)
+        if (hasBaiGosman_)
         {
             nRebound0[patchi].setSize(lsd, Zero);
             massRebound0[patchi].setSize(lsd, Zero);
@@ -620,7 +620,7 @@ void Foam::LocalInteraction<CloudType>::info()
     this->getModelProperty("nStick", nps0);
     this->getModelProperty("massStick", mps0);
 
-    if (hasBeiGosman_)
+    if (hasBaiGosman_)
     {
         this->getModelProperty("nRebound", nRebound0);
         this->getModelProperty("massRebound", massRebound0);
@@ -662,7 +662,7 @@ void Foam::LocalInteraction<CloudType>::info()
     labelListList nSplash(nSplash_);
     scalarListList massSplash(massSplash_);
 
-    if (hasBeiGosman_)
+    if (hasBaiGosman_)
     {
         forAll(nRebound, i)
         {
@@ -714,7 +714,7 @@ void Foam::LocalInteraction<CloudType>::info()
                     << " )  = " << nps[patchi][indexi]
                     << ", " << mps[patchi][indexi] << nl;
 
-                if (hasBeiGosman_)
+                if (hasBaiGosman_)
                 {
                     Log_<< "      - rebound (injector "
                         << indexToInjector[indexi]
@@ -741,7 +741,7 @@ void Foam::LocalInteraction<CloudType>::info()
                 << "      - stick                       = "
                 << nps[patchi][0] << ", " << mps[patchi][0] << nl;
 
-            if (hasBeiGosman_)
+            if (hasBaiGosman_)
             {
                 Log_<< "      - rebound                     = "
                     << nRebound[patchi][0] << ", "
@@ -763,7 +763,7 @@ void Foam::LocalInteraction<CloudType>::info()
                 << tab << nps[patchi][injectori]
                 << tab << mps[patchi][injectori];
 
-            if (hasBeiGosman_)
+            if (hasBaiGosman_)
             {
                 this->file()
                     << tab << nRebound[patchi][injectori]
@@ -783,7 +783,7 @@ void Foam::LocalInteraction<CloudType>::info()
         this->setModelProperty("nStick", nps);
         this->setModelProperty("massStick", mps);
 
-        if (hasBeiGosman_)
+        if (hasBaiGosman_)
         {
             this->setModelProperty("nRebound", nRebound);
             this->setModelProperty("massRebound", massRebound);
@@ -796,7 +796,7 @@ void Foam::LocalInteraction<CloudType>::info()
         nStick_ = Zero;
         massStick_ = Zero;
 
-        if (hasBeiGosman_)
+        if (hasBaiGosman_)
         {
             nRebound_ = Zero;
             massRebound_ = Zero;
