@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2020 OpenCFD Ltd.
+    Copyright (C) 2020,2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,7 +46,8 @@ Foam::pairGAMGAgglomeration::pairGAMGAgglomeration
 )
 :
     GAMGAgglomeration(mesh, controlDict),
-    mergeLevels_(controlDict.getOrDefault<label>("mergeLevels", 1))
+    mergeLevels_(controlDict.getOrDefault<label>("mergeLevels", 1)),
+    renumber_(controlDict.getOrDefault<bool>("renumber", false))
 {}
 
 

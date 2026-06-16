@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2023-2025 OpenCFD Ltd.
+    Copyright (C) 2023-2026 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,6 +30,105 @@ License
 #include "lduAddressing.H"
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
+
+void Foam::pairGAMGAgglomeration::cellCells
+(
+    const lduAddressing& fineMatrixAddressing,
+    const label nCoarseCells,
+    const labelList& coarseCellMap,
+    labelList& nbrCells,
+    labelList& cellOffsets
+)
+{
+    // Construct cell-cell addressing on coarse level
+
+    const labelUList& upperAddr = fineMatrixAddressing.upperAddr();
+    const labelUList& lowerAddr = fineMatrixAddressing.lowerAddr();
+
+    // Pass 1: count
+    labelList nNbrs(nCoarseCells, 0);
+
+    forAll(upperAddr, facei)
+    {
+        const label coarseUpper = coarseCellMap[upperAddr[facei]];
+        const label coarseLower = coarseCellMap[lowerAddr[facei]];
+
+        if (coarseUpper != coarseLower)
+        {
+            nNbrs[coarseUpper]++;
+            nNbrs[coarseLower]++;
+        }
+    }
+
+    // Size
+    cellOffsets.setSize(nCoarseCells+1);
+    cellOffsets[0] = 0;
+    forAll(nNbrs, celli)
+    {
+        cellOffsets[celli+1] = cellOffsets[celli] + nNbrs[celli];
+    }
+    nbrCells.setSize(cellOffsets.last());
+
+    // Pass2: fill
+    nNbrs = 0;
+
+    forAll(upperAddr, facei)
+    {
+        const label coarseUpper = coarseCellMap[upperAddr[facei]];
+        const label coarseLower = coarseCellMap[lowerAddr[facei]];
+
+        if (coarseUpper != coarseLower)
+        {
+            {
+                const label start = cellOffsets[coarseUpper];
+                label& nUsed = nNbrs[coarseUpper];
+                // SubList<label> used(nbrCells, nUsed, start);
+
+                // if (used.find(coarseLower) == -1)
+                {
+                    nbrCells[start + nUsed++] = coarseLower;
+                }
+            }
+            {
+                const label start = cellOffsets[coarseLower];
+                label& nUsed = nNbrs[coarseLower];
+                // SubList<label> used(nbrCells, nUsed, start);
+
+                // if (used.find(coarseUpper) == -1)
+                {
+                    nbrCells[start + nUsed++] = coarseUpper;
+                }
+            }
+        }
+    }
+
+    // Filter duplicates
+    forAll(nNbrs, celli)
+    {
+        const label start = cellOffsets[celli];
+        const label end = cellOffsets[celli+1];
+        const label size = end - start;
+
+        label nUsed = 1;
+
+        // Filter duplicates.
+        for (label i = 1; i < size; i++)
+        {
+            const label nbr = nbrCells[start + i];
+
+            SubList<label> used(nbrCells, i-1, start);
+            if (used.find(nbr) == -1)
+            {
+                nbrCells[start + nUsed++] = nbr;
+            }
+        }
+
+        // Update offset for next level
+        cellOffsets[celli+1] = cellOffsets[celli] + nUsed;
+    }
+    nbrCells.setSize(cellOffsets.last());
+}
+
 
 void Foam::pairGAMGAgglomeration::agglomerate
 (
@@ -93,7 +192,8 @@ void Foam::pairGAMGAgglomeration::agglomerate
         (
             nCoarseCells,
             fineMesh.lduAddr(),
-            faceWeights
+            faceWeights,
+            renumber_
         );
 
         if
@@ -159,7 +259,8 @@ Foam::tmp<Foam::labelField> Foam::pairGAMGAgglomeration::agglomerate
 (
     label& nCoarseCells,
     const lduAddressing& fineMatrixAddressing,
-    const scalarField& faceWeights
+    const scalarField& faceWeights,
+    const bool renumber
 )
 {
     const label nFineCells = fineMatrixAddressing.size();
@@ -216,7 +317,39 @@ Foam::tmp<Foam::labelField> Foam::pairGAMGAgglomeration::agglomerate
     }
 
 
-    // go through the faces and create clusters
+    // Determine cell visit order. This will lower the effect of having
+    // one cell clustering with a neighbouring one whereas it would be better
+    // if that neighbour clustered with another one of its neighbours. So
+    // instead make sure to start with the cells with highest face weights
+    // first. This causes larger clusters to be formed first, but might
+    // leave some smaller clusters at the end.
+
+    labelList visitOrder;
+    // if (renumber)
+    // {
+    //     scalarField maxCellWeight(nFineCells, -GREAT);
+    //     forAll(upperAddr, facei)
+    //     {
+    //         scalar& cWeight = maxCellWeight[upperAddr[facei]];
+    //         cWeight = max(cWeight, faceWeights[facei]);
+    //     }
+    //     forAll(lowerAddr, facei)
+    //     {
+    //         scalar& cWeight = maxCellWeight[lowerAddr[facei]];
+    //         cWeight = max(cWeight, faceWeights[facei]);
+    //     }
+
+    //     sortedOrder
+    //     (
+    //         maxCellWeight,
+    //         visitOrder,
+    //         typename UList<scalar>::greater(maxCellWeight)
+    //     );
+    // }
+
+
+
+    // Go through the faces and create clusters
 
     auto tcoarseCellMap = tmp<labelField>::New(nFineCells, -1);
     auto& coarseCellMap = tcoarseCellMap.ref();
@@ -234,11 +367,15 @@ Foam::tmp<Foam::labelField> Foam::pairGAMGAgglomeration::agglomerate
     #endif
 
     nCoarseCells = 0;
-    label celli;
     for (label cellfi=0; cellfi<nFineCells; cellfi++)
     {
         // Change cell ordering depending on direction for this level
-        celli = forward_ ? cellfi : nFineCells - cellfi - 1;
+        const label celli =
+        (
+            visitOrder.size()
+          ? visitOrder[cellfi]
+          : forward_ ? cellfi : nFineCells - cellfi - 1
+        );
 
         if (coarseCellMap[celli] < 0)
         {
@@ -318,7 +455,12 @@ Foam::tmp<Foam::labelField> Foam::pairGAMGAgglomeration::agglomerate
     for (label cellfi=0; cellfi<nFineCells; cellfi++)
     {
         // Change cell ordering depending on direction for this level
-        celli = forward_ ? cellfi : nFineCells - cellfi - 1;
+        const label celli =
+        (
+            visitOrder.size()
+          ? visitOrder[cellfi]
+          : forward_ ? cellfi : nFineCells - cellfi - 1
+        );
 
         if (coarseCellMap[celli] < 0)
         {
@@ -327,16 +469,38 @@ Foam::tmp<Foam::labelField> Foam::pairGAMGAgglomeration::agglomerate
         }
     }
 
-    if (!forward_)
+    if (renumber)
     {
-        nCoarseCells--;
+        // Construct cell-cell addressing on coarse level
+        labelList nbrCells;
+        labelList cellOffsets;
 
+        cellCells
+        (
+            fineMatrixAddressing,
+            nCoarseCells,
+            coarseCellMap,
+            nbrCells,
+            cellOffsets
+        );
+        // Renumber (CutHill-McKee) and apply to cell map
+        const labelList newToOld
+        (
+            meshTools::bandCompression
+            (
+                nbrCells,
+                cellOffsets
+            )
+        );
+        const labelList oldToNew(invert(newToOld.size(), newToOld));
+        coarseCellMap = UIndirectList<label>(oldToNew, coarseCellMap)();
+    }
+    else if (!forward_)
+    {
         forAll(coarseCellMap, celli)
         {
-            coarseCellMap[celli] = nCoarseCells - coarseCellMap[celli];
+            coarseCellMap[celli] = nCoarseCells - 1 - coarseCellMap[celli];
         }
-
-        nCoarseCells++;
     }
 
     // Reverse the map ordering for the next level

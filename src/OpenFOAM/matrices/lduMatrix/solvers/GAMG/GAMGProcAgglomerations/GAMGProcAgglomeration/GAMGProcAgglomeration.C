@@ -103,11 +103,13 @@ void Foam::GAMGProcAgglomeration::printStats
          && agglom.procCellOffsets_.set(levelI)
         )
         {
-            os  << "    procCellOffsets:" << agglom.procCellOffsets_[levelI]
+            os  << "    procCellOffsets:"
+                << flatOutput(agglom.procCellOffsets_[levelI])
                 << nl
-                << "    procAgglomMap:" << agglom.procAgglomMap_[levelI]
+                << "    procAgglomMap:"
+                << flatOutput(agglom.procAgglomMap_[levelI])
                 << nl
-                << "    procIDs:" << agglom.agglomProcIDs_[levelI]
+                << "    procIDs:" << flatOutput(agglom.agglomProcIDs_[levelI])
                 << nl
                 << "    comm:" << agglom.procCommunicator_[levelI]
                 << endl;

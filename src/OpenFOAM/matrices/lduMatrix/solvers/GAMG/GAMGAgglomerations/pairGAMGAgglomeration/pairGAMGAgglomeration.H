@@ -59,6 +59,9 @@ class pairGAMGAgglomeration
         //- Number of levels to merge, 1 = don't merge, 2 = merge pairs etc.
         label mergeLevels_;
 
+        //- Apply renumbering after clustering
+        bool renumber_;
+
         //- Direction of cell loop for the current level
         static bool forward_;
 
@@ -66,6 +69,17 @@ class pairGAMGAgglomeration
 protected:
 
     // Protected Member Functions
+
+        //- Construct cell-cell addressing on coarse level. Move to
+        //  lduAddressing?
+        static void cellCells
+        (
+            const lduAddressing& fineMatrixAddressing,
+            const label nCoarseCells,
+            const labelList& coarseCellMap,
+            labelList& cellCells,
+            labelList& cellOffsets
+        );
 
         //- No copy construct
         pairGAMGAgglomeration(const pairGAMGAgglomeration&) = delete;
@@ -94,7 +108,8 @@ public:
         (
             label& nCoarseCells,
             const lduAddressing& fineMatrixAddressing,
-            const scalarField& faceWeights
+            const scalarField& faceWeights,
+            const bool renumber
         );
 
         //- Agglomerate from a starting level. Starting level is usually 0
