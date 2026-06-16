@@ -2141,14 +2141,14 @@ void fvmLaplacianUncorrected
             (
                 intCoeffs,
                 expr(pvf.gradientInternalCoeffs(pDeltaCoeffs)())
-               *gammaMagSf.patchField(patchi)
+               *gammaMagSf.coupledPatchField(patchi)
             );
             //bouCoeffs = -pGamma*pvf.gradientBoundaryCoeffs(pDeltaCoeffs);
             evaluator
             (
                 bouCoeffs,
                -expr(pvf.gradientBoundaryCoeffs(pDeltaCoeffs)())
-               *gammaMagSf.patchField(patchi)
+               *gammaMagSf.coupledPatchField(patchi)
             );
         }
         else
