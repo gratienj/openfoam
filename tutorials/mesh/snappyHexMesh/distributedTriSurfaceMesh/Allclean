@@ -7,4 +7,11 @@ cleanCase0
 
 rm -rf constant
 
+# Reset the snappyHexMeshDict
+if [ -f system/snappyHexMeshDict.orig ]
+then
+    echo "$0: restoring the snappyHexMeshDict from snappyHexMeshDict.orig"
+    cp system/snappyHexMeshDict.orig system/snappyHexMeshDict
+fi
+
 #------------------------------------------------------------------------------
