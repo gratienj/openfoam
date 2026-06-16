@@ -2225,17 +2225,39 @@ void Foam::argList::parse
             }
             Info<< nl;
 
-            Info<< "allowSystemOperations : ";
+            // Info<< "allowSystemOperations : ";
+            // if (dynamicCode::allowSystemOperations)
+            // {
+            //     Info<< "Allowing";
+            // }
+            // else
+            // {
+            //     Info<< "Disallowing";
+            // }
+            // Info<< " user-supplied system call operations" << nl
+            //     << nl;
+            // IOobject::writeDivider(Info);
+
             if (dynamicCode::allowSystemOperations)
             {
-                Info<< "Allowing";
+                Info<< nl;
+                Warning
+                    << "allowSystemOperations : "
+                    << "Allowing user-supplied system call"
+                    << " operations.\n                   "
+                    << "This can be a security risk if running"
+                    << " untrusted cases"
+                    << "\n                   "
+                    << "through e.g. 'coded'"
+                    << " on-the-fly-compilation functionality."
+                    << nl << nl;
             }
             else
             {
-                Info<< "Disallowing";
+                Info<< "allowSystemOperations : Disallowing"
+                    << " user-supplied system call operations" << nl
+                    << nl;
             }
-            Info<< " user-supplied system call operations" << nl
-                << nl;
             IOobject::writeDivider(Info);
 
             // Ugly handling of localBoundaryConsistency switches
