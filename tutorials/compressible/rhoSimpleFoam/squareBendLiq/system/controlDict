@@ -54,6 +54,7 @@ runTimeModifiable true;
 functions
 {
     #include "abort"
+    #include "writeAgglom"
 }
 
 

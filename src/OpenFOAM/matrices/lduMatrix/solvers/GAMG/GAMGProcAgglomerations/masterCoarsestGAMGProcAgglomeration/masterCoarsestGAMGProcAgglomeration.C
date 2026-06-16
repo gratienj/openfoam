@@ -119,14 +119,14 @@ bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
     {
         // Agglomerate one but last level (since also agglomerating
         // restrictAddressing)
-        label fineLevelIndex = agglom_.size()-1;
+        const label fineLevelIndex = agglom_.size()-1;
 
         if (agglom_.hasMeshLevel(fineLevelIndex))
         {
             // Get the fine mesh
             const lduMesh& levelMesh = agglom_.meshLevel(fineLevelIndex);
-            label levelComm = levelMesh.comm();
-            label nProcs = UPstream::nProcs(levelComm);
+            const label levelComm = levelMesh.comm();
+            const label nProcs = UPstream::nProcs(levelComm);
 
             if (nProcs > 1)
             {
@@ -170,7 +170,7 @@ bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
                             procAgglomMap[fineProci] =
                             (
                                 fineProci
-                            / nProcessorsPerMaster_
+                              / nProcessorsPerMaster_
                             );
                         }
                     }
