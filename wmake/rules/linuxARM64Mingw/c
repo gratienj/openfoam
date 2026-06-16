@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------
-# mingw (arm64) is clang (often)
+# mingw cross-compilation (ARM64) - clang-based [llvm-mingw]
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Clang/c
 

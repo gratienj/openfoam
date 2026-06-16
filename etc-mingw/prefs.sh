@@ -15,3 +15,13 @@ unset WM_COMPILE_CONTROL
 # WM_MPLIB=none
 
 # ----------------------------------------------------------------------------
+# [mingw] generally wish to avoid debug symbols from bloating the sizes
+
+case "$FOAM_EXTRA_CXXFLAGS" in
+(*-g*)
+    FOAM_EXTRA_CXXFLAGS="$(echo "$FOAM_EXTRA_CXXFLAGS" | sed 's/-g[0-9]*//')"
+    echo "Removed -g from FOAM_EXTRA_CXXFLAGS ($WM_COMPILER)" 1>&2
+    ;;
+esac
+
+# ----------------------------------------------------------------------------

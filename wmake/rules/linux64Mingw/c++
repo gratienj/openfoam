@@ -1,6 +1,7 @@
 #------------------------------------------------------------------------------
-# mingw is gcc, but new enough to support c++17
-# NB: gnu++17 (not c++17) to ensure __STRICT_ANSI__ is not defined
+# mingw cross-compilation (x86_64) - gcc-based
+#
+# NB: standard is 'gnu++' (not 'c++') to ensure __STRICT_ANSI__ is not defined
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Gcc/c++
 

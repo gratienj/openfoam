@@ -1,6 +1,7 @@
 #------------------------------------------------------------------------------
-# llvm-mingw for ARM64 Windows target
-# NB: gnu++17 (not c++17) to ensure __STRICT_ANSI__ is not defined
+# mingw cross-compilation (ARM64) - clang-based [llvm-mingw]
+#
+# NB: standard is 'gnu++' (not 'c++') to ensure __STRICT_ANSI__ is not defined
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Clang/c++
 

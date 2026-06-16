@@ -22,19 +22,16 @@ then
 fi
 
 
-# Mingw cross-compilation if using Mingw and not windows
-unset crossTarget
-if [ "${WM_COMPILER%Mingw}" != "$WM_COMPILER" ]
-then
-    case "$WM_ARCH" in
-    (linux64*)     crossTarget=win64 ;;
-    (linuxARM64*)  crossTarget=winARM64 ;;
-    esac
-fi
+# Cross-compilation when using mingw and host arch is not windows
+case "$WM_ARCH/$WM_COMPILER" in
+    (linux64*/Mingw*)     crossTarget=win64 ;;
+    (linuxARM64*/Mingw*)  crossTarget=winARM64 ;;
+    (*) unset crossTarget ;;
+esac
 
 if [ -n "$crossTarget" ]
 then
-    # Mingw cross-compilation
+    # Cross-compilation
     outputDir="${WM_PROJECT_DIR}/platforms/tools"
 
     # Toolchain for build (system gcc)
