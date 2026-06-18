@@ -204,7 +204,7 @@ private:
 
         //- In nodeMaster mode : IDs of master processors (one per node, or
         //  as specified by nProcessorsPerMaster)
-        DynamicList<label> masterProcIDs_;
+        DynamicList<int> masterProcIDs_;
 
 
     // Private Member Functions

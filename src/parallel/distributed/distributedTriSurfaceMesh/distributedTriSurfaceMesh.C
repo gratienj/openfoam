@@ -392,28 +392,39 @@ bool Foam::distributedTriSurfaceMesh::readSettings(const bool undecomposed)
             )
         );
 
-        if (nProcessorsPerMaster == labelMax)
+        if (nProcessorsPerMaster < 1 || nProcessorsPerMaster == labelMax)
         {
             comm_ = UPstream::commLocalNode();
             masterProcIDs_ = UPstream::procID(UPstream::commInterNode());
         }
         else
         {
-            const label colour = UPstream::myProcNo() / nProcessorsPerMaster;
-            comm_ = UPstream::splitCommunicator
+            const label colour
             (
-                UPstream::worldComm,
-                colour
+                UPstream::myProcNo(UPstream::worldComm)
+              / nProcessorsPerMaster
             );
+            label nMasters
+            (
+                UPstream::nProcs(UPstream::worldComm)
+              / nProcessorsPerMaster
+            );
+            nMasters = Foam::max(1, nMasters);  // At least one master!
+
+            comm_ = UPstream::splitCommunicator(UPstream::worldComm, colour);
+
             // Currently not doing inter-master communication so having
             // separate communicator would be overkill
-            masterProcIDs_.setCapacity(UPstream::nProcs(comm_));
             masterProcIDs_.clear();
-            label proci = 0;
-            while (proci < UPstream::nProcs())
+            masterProcIDs_.setCapacity(nMasters);
+            for
+            (
+                label proci = 0;
+                proci < UPstream::nProcs(UPstream::worldComm);
+                proci += nProcessorsPerMaster
+            )
             {
-                masterProcIDs_.append(proci);
-                proci += nProcessorsPerMaster;
+                masterProcIDs_.push_back(proci);
             }
         }
 
