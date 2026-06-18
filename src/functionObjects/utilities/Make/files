@@ -1,5 +1,7 @@
 abort/abort.C
 
+agglomerationInfo/agglomerationInfo.C
+
 caseInfo/caseInfo.C
 
 codedFunctionObject/codedFunctionObject.C
