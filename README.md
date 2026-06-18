@@ -143,8 +143,8 @@ These 3rd-party sources are normally located in a directory parallel
 to the OpenFOAM&reg; directory. For example,
 ```
 /path/parent
-|-- OpenFOAM-v2512
-\-- ThirdParty-v2512
+|-- OpenFOAM-v2606
+\-- ThirdParty-v2606
 ```
 There are, however, many cases where this simple convention is inadequate:
 
@@ -172,9 +172,9 @@ when locating the ThirdParty directory with the following precedence:
 2. PREFIX/ThirdParty-VERSION
    * this corresponds to the traditional approach
 3. PREFIX/ThirdParty-vAPI
-   * allows for an updated value of VERSION, *eg*, `v2512-myCustom`,
+   * allows for an updated value of VERSION, *eg*, `v2606-myCustom`,
      without requiring a renamed ThirdParty. The API value would still
-     be `2412` and the original `ThirdParty-v2512/` would be found.
+     be `2606` and the original `ThirdParty-v2606/` would be found.
 4. PREFIX/ThirdParty-API
    * same as the previous example, but using an unadorned API value.
 5. PREFIX/ThirdParty-common
@@ -207,7 +207,7 @@ You can start using OpenFOAM&reg; by launching a terminal<sup>[What is Linux ter
 In its simplest form, simply source the appropriate `etc/bashrc` or `etc/cshrc` file to load the environment and start using OpenFOAM&reg; tools such as `blockMesh`:
 
 ```bash
-source <absolute path of the installation>/OpenFOAM-v2512/etc/bashrc
+source <absolute path of the installation>/OpenFOAM-v2606/etc/bashrc
 
 cd $FOAM_TUTORIALS/incompressible/simpleFoam/pitzDaily
 

@@ -13,6 +13,5 @@ keywords:
   - OpenFOAM
   - Fluid Dynamics
 license: GPL-3.0-or-later
-commit: 87ed40d256
-version: v2512
-date-released: '2025-12-24'
+version: v2606
+date-released: '2026-06-22'
