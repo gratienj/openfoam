@@ -61,6 +61,12 @@
 #     ptscotch include: /usr/include/scotch-int32
 #     ptscotch library: /usr/lib/x86_64-linux-gnu
 #
+# (Ubuntu 26.04)
+#     scotch   include: /usr/include/scotch
+#     scotch   library: /usr/lib/x86_64-linux-gnu
+#
+#     ptscotch include: /usr/include/scotch
+#     ptscotch library: /usr/lib/x86_64-linux-gnu
 #
 # RedHat
 # ------
@@ -147,7 +153,10 @@ search_scotch()
             "$prefix/include/scotch/$incName" \
             "$prefix/include/$incName" \
         )
-        library="-extlib"  # Delay search...
+
+        # Search ext libs [delayed], except if actually a system installation
+        if [ "$prefix" != /usr ]; then library="-search-extlib"; fi
+
     elif isSystem "$prefix"
     then
         header=$(findFirstFile \
@@ -163,7 +172,12 @@ search_scotch()
         unset prefix
     fi
     # ----------------------------------
-    equalBaseName "${header%/*}" "$localDir" || unset localDir
+
+    # Discard localDir if not used for the include
+    case "$header" in
+        (*/"$localDir/$incName") ;;
+        (*) unset localDir ;;
+    esac
 
     # Header
     [ -n "$header" ] || {
@@ -201,7 +215,8 @@ search_scotch()
     # Transform (int32_t | int64_t) -> (int32 | int64)
     case "$label" in (int32_t | int64_t) label="${label%_t}" ;; esac
 
-    if [ "$library" = "-extlib" ]
+    # Search ext libs
+    if [ "$library" = "-search-extlib" ]
     then
         library=$(findExtLib "${libName}-${label}" "$libName")
     fi
@@ -284,7 +299,18 @@ search_ptscotch()
     local header library
 
     local mpiPrefix="$MPI_ARCH_PATH"
-    local mpiName="${MPI_ARCH_PATH##*/}"
+    local mpiName="${mpiPrefix##*/}"
+
+    # For system MPI installations, may resolve to /usr as the root
+    # (and thus the name) - need a more meaningful name.
+    if [ "${mpiName:-usr}" = usr ]
+    then
+        case "$FOAM_MPI" in
+        (*mpich*)    mpiName=mpich ;;
+        (*mvapich2*) mpiName=mvapich2 ;;
+        (*openmpi*)  mpiName=openmpi ;;
+        esac
+    fi
 
     # Capture any library name suffix (-int32 | -int64) used by libscotch
     # for reuse in libptscotch
@@ -308,13 +334,13 @@ search_ptscotch()
             "$prefix/include/scotch/$incName" \
             "$prefix/include/$incName" \
             "$mpiPrefix/include/$incName" \
-            "$prefix/include/$mpiName/$incName" \
+            "$prefix/include/${mpiName}/$incName" \
             "$prefix/include/${mpiName}-$(uname -m)/$incName" \
         )
-        library=$(findExtLib \
-            "$FOAM_MPI/$libName${libName_suffix}" \
-            "$libName${libName_suffix}" \
-        )
+
+        # Search ext libs [delayed], except if actually a system installation
+        if [ "$prefix" != /usr ]; then library="-search-extlib"; fi
+
     elif isSystem "$prefix"
     then
         header=$(findFirstFile \
@@ -327,7 +353,7 @@ search_ptscotch()
             "/usr/include/scotch/$incName" \
             "/usr/include/$incName" \
             "$mpiPrefix/include/$incName" \
-            "/usr/include/$mpiName/$incName" \
+            "/usr/include/${mpiName}/$incName" \
             "$prefix/include/${mpiName}-$(uname -m)/$incName" \
         )
         prefix=$(sysPrefix "$header")
@@ -335,13 +361,27 @@ search_ptscotch()
         unset prefix
     fi
     # ----------------------------------
-    equalBaseName "${header%/*}" "$localDir" || unset localDir
+
+    # Discard localDir if not used for the include
+    case "$header" in
+        (*/"$localDir/$incName") ;;
+        (*) unset localDir ;;
+    esac
 
     # Header
     [ -n "$header" ] || {
         [ -n "$warn" ] && echo "$warn (no header)"
         return 2
     }
+
+    # Search ext libs
+    if [ "$library" = "-search-extlib" ]
+    then
+        library=$(findExtLib \
+            "$FOAM_MPI/$libName${libName_suffix}" \
+            "$libName${libName_suffix}" \
+        )
+    fi
 
     # Library
     [ -n "$library" ] \

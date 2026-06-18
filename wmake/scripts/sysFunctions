@@ -115,15 +115,6 @@ then
     }
 
 
-    # True if '$1' and '$2' have the same directory basename
-    # Eg,
-    #    equalBaseName "/usr/include/scotch-int32" "scotch-int32"
-    equalBaseName()
-    {
-        [ "${1##*/}" = "${2##*/}" ]
-    }
-
-
     # Simple output for -query
     # $1 = software
     # $2 = setting

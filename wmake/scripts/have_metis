@@ -77,7 +77,10 @@ search_metis()
     elif hasAbsdir "$prefix"
     then
         header=$(findFirstFile "$prefix/include/$incName")
-        library="-extlib"  # Delay search...
+
+        # Search ext libs [delayed], except if actually a system installation
+        if [ "$prefix" != /usr ]; then library="-search-extlib"; fi
+
     elif isSystem "$prefix"
     then
         header=$(findSystemInclude -name="$incName")
@@ -109,7 +112,8 @@ search_metis()
     # Transform (32 | 64) -> (int32 | int64)
     case "$label" in (32|64) label="int${label}" ;; esac
 
-    if [ "$library" = "-extlib" ]
+    # Search ext libs
+    if [ "$library" = "-search-extlib" ]
     then
         library=$(findExtLib "${libName}-${label}" "$libName")
     fi

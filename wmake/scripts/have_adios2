@@ -31,6 +31,15 @@
 #     ADIOS2_LIB_DIR
 #     ADIOS2_LIB_NAME
 #
+# System files can be hiding in a variety of locations.
+# For x86_64 system:
+#
+# Debian (sid)
+# -------------
+#     include: /usr/include
+#     library: /usr/lib/x86_64-linux-gnu/libadios2_mpi_cxx.so
+#              /usr/lib/x86_64-linux-gnu/libadios2_mpi_cxx_mpi.so
+#
 #------------------------------------------------------------------------------
 . ${WM_PROJECT_DIR:?}/wmake/scripts/sysFunctions    # General system functions
 
@@ -77,9 +86,19 @@ search_adios2()
 {
     local warn # warn="==> skip adios2"
     local incName="adios2.h"
-    local libName="libadios2"  # (and libadios2_cxx_mpi, libadios2_cxx11_mpi)
+    local libName="libadios2"
     local prefix="${1:-system}"
     local header library
+
+    # NOTE: libName can also be
+    # (libadios2_mpi_cxx | libadios2_cxx_mpi | libadios2_cxx11_mpi)
+
+    # The prefix can be something like <path>/adios2-system/sys-openmpi
+    # in which case 'isSystem $prefix' test would fail.
+    # - strip out the FOAM_MPI for those cases
+
+    local prefixParent
+    case "$prefix" in (*/"$FOAM_MPI") prefixParent="${prefix%/*}" ;; esac
 
     # ----------------------------------
     if isNone "$prefix"
@@ -89,8 +108,11 @@ search_adios2()
     elif hasAbsdir "$prefix"
     then
         header=$(findFirstFile "$prefix/include/$incName")
-        library=$(findExtLib "$libName")
-    elif isSystem "$prefix"
+
+        # Search ext libs [delayed], except if actually a system installation
+        if [ "$prefix" != /usr ]; then library="-search-extlib"; fi
+
+    elif isSystem "$prefix" || isSystem "$prefixParent"
     then
         header=$(findSystemInclude -name="$incName")
         prefix=$(sysPrefix "$header")
@@ -105,11 +127,20 @@ search_adios2()
         return 2
     }
 
+    # Search ext libs
+    if [ "$library" = "-search-extlib" ]
+    then
+        library=$(findExtLib "$libName")
+    fi
+
     # Library searching
     if [ -z "$library" ] && [ -d "$prefix" ]
     then
         local name
-        for name in "${libName}" "${libName}_cxx_mpi" "${libName}_cxx11_mpi"
+        for name in \
+            "${libName}" "${libName}_mpi_cxx" \
+            "${libName}_cxx_mpi" "${libName}_cxx11_mpi" \
+        ;
         do
             [ -n "$name" ] || continue
             library=$(findLibrary -prefix="$prefix" -name="$name")

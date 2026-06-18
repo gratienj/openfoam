@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2024 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -65,7 +66,18 @@ search_zoltan()
     local header library
 
     local mpiPrefix="$MPI_ARCH_PATH"
-    local mpiName="${MPI_ARCH_PATH##*/}"
+    local mpiName="${mpiPrefix##*/}"
+
+    # For system MPI installations, may resolve to /usr as the root
+    # (and thus the name) - need a more meaningful name.
+    if [ "${mpiName:-usr}" = usr ]
+    then
+        case "$FOAM_MPI" in
+        (*mpich*)    mpiName=mpich ;;
+        (*mvapich2*) mpiName=mvapich2 ;;
+        (*openmpi*)  mpiName=openmpi ;;
+        esac
+    fi
 
     # ----------------------------------
     if isNone "$prefix"
@@ -79,7 +91,7 @@ search_zoltan()
             "$prefix/include/zoltan/$incName" \
             "$prefix/include/$incName" \
             "$mpiPrefix/include/$incName" \
-            "$prefix/include/$mpiName/$incName" \
+            "$prefix/include/${mpiName}/$incName" \
             "$prefix/include/${mpiName}-$(uname -m)/$incName" \
         )
         library=$(findExtLib \
@@ -94,7 +106,7 @@ search_zoltan()
             "/usr/include/zoltan/$incName" \
             "/usr/include/$incName" \
             "$mpiPrefix/include/$incName" \
-            "/usr/include/$mpiName/$incName" \
+            "/usr/include/${mpiName}/$incName" \
             "$prefix/include/${mpiName}-$(uname -m)/$incName" \
         )
         prefix=$(sysPrefix "$header")

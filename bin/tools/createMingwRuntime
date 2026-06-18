@@ -270,8 +270,15 @@ mkdir -p "$tmpTarget/platforms/$targetPlatform$compOptions"
 # No separate ThirdParty
 echo "Third-party libraries in platforms/$targetPlatform$compOptions" >| "$tmpTarget/ThirdParty"
 
+# Various files with names that may change between versions:
+miscFiles=''
+for file in COPYING LICENSE* README*
+do
+    [ -f "$file" ] && miscFiles="$miscFiles $file"
+done
+
 echo "Copy common files" 1>&2
-rsync -a --exclude .gitignore COPYING META-INFO README.md bin etc "$tmpTarget"
+rsync -a --exclude .gitignore $miscFiles META-INFO bin etc "$tmpTarget"
 
 # Remove branch info (probably spurious)
 if [ -f "$tmpTarget/META-INFO/build-info" ]
@@ -487,14 +494,20 @@ case "$compress" in
     ;;
 esac
 
+finalOutput="$outputDir/$tarName$archiveSuffix"
 (
     cd "$tmpDir" || exit
-    time $archiveCommand "$outputDir/$tarName$archiveSuffix" "${prefixDir:-.}"
+    time $archiveCommand "$finalOutput" "${prefixDir:-.}"
 )
 
 echo
 echo "# End of creating archive"
-echo "    $outputDir/$tarName$archiveSuffix"
+echo "    $finalOutput"
+echo
+echo "# Possible further commands:"
+echo
+# Split into 10 files with "_part<digits>" suffix
+echo "    split -d -n10 $finalOutput ${finalOutput}_part"
 echo
 
 

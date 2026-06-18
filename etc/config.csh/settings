@@ -111,7 +111,8 @@ case MSYS*:
     case Clang*:
     case Gcc*:
         setenv WM_COMPILER Mingw
-    breaksw
+        breaksw
+    endsw
     echo "openfoam: windows support ($WM_ARCH) is runtime only"
     breaksw
 
