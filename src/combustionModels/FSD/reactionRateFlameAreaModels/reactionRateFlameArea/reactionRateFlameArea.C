@@ -2,32 +2,13 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
+    \\  /    A nd           |
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2017 OpenFOAM Foundation
--------------------------------------------------------------------------------
-License
-    This file is part of OpenFOAM.
-
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-
 \*---------------------------------------------------------------------------*/
 
 #include "reactionRateFlameArea.H"
-
-// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+#include "addToRunTimeSelectionTable.H"
 
 namespace Foam
 {
@@ -36,7 +17,7 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 Foam::reactionRateFlameArea::reactionRateFlameArea
 (
@@ -46,36 +27,93 @@ Foam::reactionRateFlameArea::reactionRateFlameArea
     const combustionModel& combModel
 )
 :
-    coeffDict_(dict.optionalSubDict(modelType + "Coeffs")),
+    coeffDict_
+    (
+        dict.optionalSubDict(modelType + "Coeffs")
+    ),
+
     mesh_(mesh),
+
     combModel_(combModel),
-    fuel_(dict.lookup("fuel")),
+
+    fuel_
+    (
+        dict.lookupOrDefault<word>("fuel", "H2")
+    ),
+
     omega_
     (
         IOobject
         (
             "FSDomega",
-            mesh_.time().timeName(),
-            mesh_,
-            IOobject::MUST_READ,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
-        mesh_
+        mesh,
+        dimensionedScalar
+        (
+            "FSDomega",
+            dimensionSet(1, -2, -1, 0, 0, 0, 0),
+            Zero
+        )
     )
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+/*
+Foam::autoPtr<Foam::reactionRateFlameArea>
+Foam::reactionRateFlameArea::New
+(
+    const dictionary& dict,
+    const fvMesh& mesh,
+    const combustionModel& combModel
+)
+{
+    const word modelType
+    (
+        dict.lookup("reactionRateFlameArea")
+    );
+
+    Info<< "Selecting reaction rate flame area correlation "
+        << modelType << endl;
+
+    auto* ctorPtr = dictionaryConstructorTable(modelType);
+
+    if (!ctorPtr)
+    {
+        FatalIOErrorInLookup
+        (
+            dict,
+            "reactionRateFlameArea",
+            modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
+    }
+
+    const word className =
+        modelType.substr(0, modelType.find('<'));
+
+    return autoPtr<reactionRateFlameArea>
+    (
+        ctorPtr(className, dict, mesh, combModel)
+    );
+}
+*/
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 Foam::reactionRateFlameArea::~reactionRateFlameArea()
 {}
 
 
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 bool Foam::reactionRateFlameArea::read(const dictionary& dict)
 {
-    dict.readEntry("fuel", fuel_);
+    fuel_ = dict.lookupOrDefault<word>("fuel", "H2");
 
     return true;
 }

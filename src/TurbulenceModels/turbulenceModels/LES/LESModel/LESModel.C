@@ -220,7 +220,11 @@ Foam::LESModel<BasicTurbulenceModel>::epsilon() const
             this->mesh_.time().timeName(),
             this->mesh_
         ),
-        this->Ce()*pow(this->k(), 1.5)/this->delta()
+	    max
+	    (
+	        this->Ce()*pow(max(this->k(), this->kMin_), 1.5)/this->delta(),
+	        this->epsilonMin_
+	    )
     );
 }
 

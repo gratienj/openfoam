@@ -1,9 +1,8 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
+   \\    /    A nd          |
+  \\/     M anipulation     |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
 -------------------------------------------------------------------------------
@@ -11,8 +10,8 @@ License
     This file is part of OpenFOAM.
 
     OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
     OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
@@ -27,7 +26,8 @@ License
 
 #include "consumptionSpeed.H"
 
-/* * * * * * * * * * * * * * * private static data * * * * * * * * * * * * * */
+
+// * * * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * //
 
 namespace Foam
 {
@@ -41,7 +41,8 @@ Foam::consumptionSpeed::consumptionSpeed
 (
     const dictionary& dict
 )
-:   omega0_(dict.get<scalar>("omega0")),
+:
+    omega0_(dict.get<scalar>("omega0")),
     eta_(dict.get<scalar>("eta")),
     sigmaExt_(dict.get<scalar>("sigmaExt")),
     omegaMin_(dict.get<scalar>("omegaMin"))
@@ -54,7 +55,7 @@ Foam::consumptionSpeed::~consumptionSpeed()
 {}
 
 
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 Foam::scalar Foam::consumptionSpeed::omega0Sigma
 (
@@ -62,22 +63,40 @@ Foam::scalar Foam::consumptionSpeed::omega0Sigma
     scalar a
 ) const
 {
-    scalar omega0 = 0.0;
+    /*
+     * sigma is a strain-rate quantity.
+     *
+     * Only positive strain is used here.  The original implementation
+     * contained:
+     *
+     *     1 - exp(eta*sigma)
+     *
+     * which rapidly becomes negative for positive sigma and therefore
+     * collapses to omegaMin_.  We instead use a bounded exponential
+     * decrease.
+     */
 
-    if (sigma < sigmaExt_)
+    const scalar sigmaPos = max(sigma, scalar(0));
+
+    if (sigmaPos >= sigmaExt_)
     {
-        omega0 = max
-        (
-            a*omega0_*(1.0 - exp(eta_*max(sigma, 0.0))),
-            omegaMin_
-        ) ;
+        return omegaMin_;
     }
+
+    scalar omega0 = a*omega0_*exp(-eta_*sigmaPos);
+
+    /*
+     * Protect against pathological values of a or omega0.
+     */
+    omega0 = max(omega0, omegaMin_);
+    omega0 = min(omega0, a*omega0_);
 
     return omega0;
 }
 
 
-Foam::tmp<Foam::volScalarField> Foam::consumptionSpeed::omega0Sigma
+Foam::tmp<Foam::volScalarField>
+Foam::consumptionSpeed::omega0Sigma
 (
     const volScalarField& sigma
 )
@@ -87,18 +106,29 @@ Foam::tmp<Foam::volScalarField> Foam::consumptionSpeed::omega0Sigma
         "omega0",
         IOobject::NO_REGISTER,
         sigma.mesh(),
-        dimensionedScalar(dimensionSet(1, -2, -1, 0, 0, 0, 0), Zero)
+        dimensionedScalar
+        (
+            dimensionSet(1, -2, -1, 0, 0, 0, 0),
+            Zero
+        )
     );
+
     auto& omega0 = tomega0.ref();
 
     volScalarField::Internal& iomega0 = omega0;
 
     forAll(iomega0, celli)
     {
-        iomega0[celli] = omega0Sigma(sigma[celli], 1.0);
+        iomega0[celli] =
+            omega0Sigma
+            (
+                sigma[celli],
+                1.0
+            );
     }
 
-    volScalarField::Boundary& bomega0 = omega0.boundaryFieldRef();
+    volScalarField::Boundary& bomega0 =
+        omega0.boundaryFieldRef();
 
     forAll(bomega0, patchi)
     {
@@ -117,7 +147,10 @@ Foam::tmp<Foam::volScalarField> Foam::consumptionSpeed::omega0Sigma
 }
 
 
-void  Foam::consumptionSpeed::read(const dictionary& dict)
+void Foam::consumptionSpeed::read
+(
+    const dictionary& dict
+)
 {
     dict.readEntry("omega0", omega0_);
     dict.readEntry("eta", eta_);

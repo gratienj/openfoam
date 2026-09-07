@@ -1,9 +1,8 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
+   \\    /    A nd          |
+  \\/     M anipulation     |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2019 OpenCFD Ltd.
@@ -17,8 +16,8 @@ License
     (at your option) any later version.
 
     OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 
     You should have received a copy of the GNU General Public License
@@ -36,6 +35,7 @@ namespace Foam
 {
 namespace combustionModels
 {
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -55,6 +55,7 @@ FSD<ReactionThermo, ThermoType>::FSD
         turb,
         combustionProperties
     ),
+
     reactionRateFlameArea_
     (
         reactionRateFlameArea::New
@@ -64,6 +65,7 @@ FSD<ReactionThermo, ThermoType>::FSD
             *this
         )
     ),
+
     ft_
     (
         IOobject
@@ -78,18 +80,48 @@ FSD<ReactionThermo, ThermoType>::FSD
         this->mesh(),
         dimensionedScalar(dimless, Zero)
     ),
-    YFuelFuelStream_(dimensionedScalar("YFuelStream", dimless, 1.0)),
-    YO2OxiStream_(dimensionedScalar("YOxiStream", dimless, 0.23)),
-    Cv_(this->coeffs().getScalar("Cv")),
+
+    YFuelFuelStream_
+    (
+        dimensionedScalar
+        (
+            "YFuelStream",
+            dimless,
+            1.0
+        )
+    ),
+
+    YO2OxiStream_
+    (
+        dimensionedScalar
+        (
+            "YOxiStream",
+            dimless,
+            0.23
+        )
+    ),
+
+    Cv_
+    (
+        this->coeffs().getScalar("Cv")
+    ),
+
     C_(5.0),
+
     ftMin_(0.0),
+
     ftMax_(1.0),
+
     ftDim_(300),
-    ftVarMin_(this->coeffs().getScalar("ftVarMin"))
+
+    ftVarMin_
+    (
+        this->coeffs().getScalar("ftVarMin")
+    )
 {}
 
 
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * //
 
 template<class ReactionThermo, class ThermoType>
 FSD<ReactionThermo, ThermoType>::~FSD()
@@ -101,208 +133,623 @@ FSD<ReactionThermo, ThermoType>::~FSD()
 template<class ReactionThermo, class ThermoType>
 void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
 {
+    /*
+     * Update the fresh mixture composition.
+     */
     this->singleMixturePtr_->fresCorrect();
 
-    const label fuelI = this->singleMixturePtr_->fuelIndex();
+    const label fuelI =
+        this->singleMixturePtr_->fuelIndex();
 
-    const volScalarField& YFuel = this->thermo().composition().Y()[fuelI];
+    const volScalarField& YFuel =
+        this->thermo().composition().Y()[fuelI];
 
-    const volScalarField& YO2 = this->thermo().composition().Y("O2");
+    const volScalarField& YO2 =
+        this->thermo().composition().Y("O2");
 
-    const dimensionedScalar s = this->singleMixturePtr_->s();
+    const dimensionedScalar s =
+        this->singleMixturePtr_->s();
 
+
+    // --------------------------------------------------------------------- //
+    // Mixture fraction
+    // --------------------------------------------------------------------- //
+
+    const volScalarField ftRaw
+    (
+        (
+            s*YFuel
+          - (YO2 - YO2OxiStream_)
+        )
+       /
+        (
+            s*YFuelFuelStream_
+          + YO2OxiStream_
+        )
+    );
+
+    /*
+     * Physical mixture fraction:
+     *
+     *     0 <= ft <= 1
+     *
+     * This prevents unphysical values during the initial transient
+     * from entering the beta-PDF calculation.
+     */
     ft_ =
-        (s*YFuel - (YO2 - YO2OxiStream_))/(s*YFuelFuelStream_ + YO2OxiStream_);
+        min
+        (
+            max
+            (
+                ftRaw,
+                scalar(0)
+            ),
+            scalar(1)
+        );
 
 
-    volVectorField nft(fvc::grad(ft_));
+    // --------------------------------------------------------------------- //
+    // Mixture-fraction gradient and flame-surface-density estimate
+    // --------------------------------------------------------------------- //
 
-    volScalarField mgft(mag(nft));
+    volVectorField nft
+    (
+        fvc::grad(ft_)
+    );
 
-    surfaceVectorField SfHat(this->mesh().Sf()/this->mesh().magSf());
+    volScalarField mgft
+    (
+        mag(nft)
+    );
 
-    volScalarField cAux(scalar(1) - ft_);
+    volScalarField cAux
+    (
+        scalar(1) - ft_
+    );
 
-    dimensionedScalar dMgft = 1.0e-3*
-        (ft_*cAux*mgft)().weightedAverage(this->mesh().V())
-       /((ft_*cAux)().weightedAverage(this->mesh().V()) + SMALL)
-      + dimensionedScalar("ddMgft", mgft.dimensions(), SMALL);
+    /*
+     * Regularisation of |grad(ft)|.
+     *
+     * The regularisation is retained from the original FSD model.
+     */
+    dimensionedScalar dMgft =
+        1.0e-3
+       *
+        (
+            ft_*cAux*mgft
+        )().weightedAverage(this->mesh().V())
+       /
+        (
+            (ft_*cAux)().weightedAverage(this->mesh().V())
+          + SMALL
+        )
+      + dimensionedScalar
+        (
+            "ddMgft",
+            mgft.dimensions(),
+            SMALL
+        );
 
     mgft += dMgft;
 
+    mgft.max(SMALL);
+
     nft /= mgft;
 
-    const volVectorField& U = YO2.db().lookupObject<volVectorField>("U");
 
+    // --------------------------------------------------------------------- //
+    // Strain rate normal to the flame surface
+    // --------------------------------------------------------------------- //
+
+    const volScalarField sigmaRaw
+    (
+        (nft & nft)*fvc::div(YO2.db().lookupObject<volVectorField>("U"))
+      - (
+            nft
+          & fvc::grad
+            (
+                YO2.db().lookupObject<volVectorField>("U")
+            )
+          & nft
+        )
+    );
+
+    /*
+     * Only positive normal strain is supplied to the flame-area
+     * correlation.
+     */
     const volScalarField sigma
     (
-        (nft & nft)*fvc::div(U) - (nft & fvc::grad(U) & nft)
+        max
+        (
+            sigmaRaw,
+            dimensionedScalar("zero", sigmaRaw.dimensions(), 0.0)
+        )
     );
+
+
+    // --------------------------------------------------------------------- //
+    // Consumption speed per unit flame area
+    // --------------------------------------------------------------------- //
 
     reactionRateFlameArea_->correct(sigma);
 
-    const volScalarField& omegaFuel = reactionRateFlameArea_->omega();
+    const volScalarField& omegaFuel =
+        reactionRateFlameArea_->omega();
 
+
+    // --------------------------------------------------------------------- //
+    // Stoichiometric mixture fraction
+    // --------------------------------------------------------------------- //
 
     const scalar ftStoich =
         YO2OxiStream_.value()
-       /(
-            s.value()*YFuelFuelStream_.value() + YO2OxiStream_.value()
+       /
+        (
+            s.value()*YFuelFuelStream_.value()
+          + YO2OxiStream_.value()
         );
 
-    auto tPc = volScalarField::New
-    (
-        this->thermo().phasePropertyName("Pc"),
-        IOobject::NO_REGISTER,
-        U.mesh(),
-        dimensionedScalar(dimless, Zero)
-    );
+
+    // --------------------------------------------------------------------- //
+    // Local fields
+    // --------------------------------------------------------------------- //
+
+    auto tPc =
+        volScalarField::New
+        (
+            this->thermo().phasePropertyName("Pc"),
+            IOobject::NO_REGISTER,
+            YO2.mesh(),
+            dimensionedScalar(dimless, Zero)
+        );
+
     auto& pc = tPc.ref();
 
-    auto tomegaFuel = volScalarField::New
-    (
-        this->thermo().phasePropertyName("omegaFuelBar"),
-        IOobject::NO_REGISTER,
-        U.mesh(),
-        dimensionedScalar(omegaFuel.dimensions(), Zero)
-    );
+
+    auto tomegaFuel =
+        volScalarField::New
+        (
+            this->thermo().phasePropertyName("omegaFuelBar"),
+            IOobject::NO_REGISTER,
+            YO2.mesh(),
+            dimensionedScalar
+            (
+                omegaFuel.dimensions(),
+                Zero
+            )
+        );
+
     auto& omegaFuelBar = tomegaFuel.ref();
 
-    // Calculation of the mixture fraction variance (ftVar)
+
+    // --------------------------------------------------------------------- //
+    // LES filter width
+    // --------------------------------------------------------------------- //
+
     const compressible::LESModel& lesModel =
         YO2.db().lookupObject<compressible::LESModel>
         (
             turbulenceModel::propertiesName
         );
 
-    const volScalarField& delta = lesModel.delta();
-    const volScalarField ftVar(Cv_*sqr(delta)*sqr(mgft));
+    const volScalarField& delta =
+        lesModel.delta();
 
-    // Thickened flame (average flame thickness for counterflow configuration
-    // is 1.5 mm)
 
-    volScalarField  deltaF
+    // --------------------------------------------------------------------- //
+    // Sub-grid mixture-fraction variance
+    // --------------------------------------------------------------------- //
+
+    const volScalarField ftVarRaw
     (
-        delta/dimensionedScalar("flame", dimLength, 1.5e-3)
+        Cv_*sqr(delta)*sqr(mgft)
     );
 
-    // Linear correlation between delta and flame thickness
-    volScalarField omegaF(max(deltaF*(4.0/3.0) + (2.0/3.0), scalar(1)));
+    /*
+     * For a bounded variable 0 <= ft <= 1:
+     *
+     *     Var(ft) <= 1/4
+     *
+     * The clipping prevents invalid beta distributions.
+     */
+    const volScalarField ftVar
+    (
+        min
+        (
+            max
+            (
+                ftVarRaw,
+                scalar(0)
+            ),
+            scalar(0.25)
+        )
+    );
 
-    scalar deltaFt = 1.0/ftDim_;
+
+    // --------------------------------------------------------------------- //
+    // Flame thickening factor
+    // --------------------------------------------------------------------- //
+
+    const volScalarField deltaF
+    (
+        delta
+       /
+        dimensionedScalar
+        (
+            "flame",
+            dimLength,
+            1.5e-3
+        )
+    );
+
+    /*
+     * Linear correlation between filter size and flame thickness.
+     */
+    const volScalarField omegaF
+    (
+        max
+        (
+            deltaF*(4.0/3.0) + (2.0/3.0),
+            scalar(1)
+        )
+    );
+
+
+    // --------------------------------------------------------------------- //
+    // Numerical integration of the mixture fraction PDF
+    // --------------------------------------------------------------------- //
+
+    const scalar deltaFt =
+        1.0/ftDim_;
+
 
     forAll(ft_, celli)
     {
-        if (ft_[celli] > ftMin_ && ft_[celli] < ftMax_)
+        const scalar ftCell =
+            ft_[celli];
+
+
+        if
+        (
+            ftCell > ftMin_
+         && ftCell < ftMax_
+        )
         {
-            scalar ftCell = ft_[celli];
-
-            if (ftVar[celli] > ftVarMin_) //sub-grid beta pdf of ft_
+            if (ftVar[celli] > ftVarMin_)
             {
-                scalar ftVarc = ftVar[celli];
-                scalar a =
-                    max(ftCell*(ftCell*(1.0 - ftCell)/ftVarc - 1.0), 0.0);
-                scalar b = max(a/ftCell - a, 0.0);
+                /*
+                 * Safe values for the beta-PDF parameters.
+                 */
+                const scalar ftSafe =
+                    min
+                    (
+                        max(ftCell, 1e-6),
+                        1.0 - 1e-6
+                    );
 
-                for (int i=1; i<ftDim_; i++)
+                const scalar ftVarSafe =
+                    max
+                    (
+                        ftVar[celli],
+                        1e-8
+                    );
+
+                const scalar betaTerm =
+                    ftSafe*(1.0 - ftSafe)/ftVarSafe - 1.0;
+
+                const scalar a =
+                    max
+                    (
+                        ftSafe*betaTerm,
+                        1e-6
+                    );
+
+                const scalar b =
+                    max
+                    (
+                        (1.0 - ftSafe)*betaTerm,
+                        1e-6
+                    );
+
+
+                // --------------------------------------------------------- //
+                // Beta PDF normalization
+                // --------------------------------------------------------- //
+
+                scalar pdfIntegral = 0.0;
+
+                for
+                (
+                    label i = 1;
+                    i < ftDim_;
+                    ++i
+                )
                 {
-                    scalar ft = i*deltaFt;
-                    pc[celli] += pow(ft, a-1.0)*pow(1.0 - ft, b - 1.0)*deltaFt;
+                    const scalar ft =
+                        i*deltaFt;
+
+                    const scalar pdf =
+                        pow(ft, a - 1.0)
+                       *pow(1.0 - ft, b - 1.0);
+
+                    pdfIntegral +=
+                        pdf*deltaFt;
                 }
 
-                for (int i=1; i<ftDim_; i++)
+                pc[celli] =
+                    pdfIntegral;
+
+
+                // --------------------------------------------------------- //
+                // Filtered consumption speed
+                // --------------------------------------------------------- //
+
+                scalar omegaIntegral = 0.0;
+
+                const scalar sigmaFt =
+                    0.01*max
+                    (
+                        omegaF[celli],
+                        scalar(1)
+                    );
+
+                for
+                (
+                    label i = 1;
+                    i < ftDim_;
+                    ++i
+                )
                 {
-                    scalar ft = i*deltaFt;
-                    omegaFuelBar[celli] +=
-                        omegaFuel[celli]/omegaF[celli]
-                       *exp
+                    const scalar ft =
+                        i*deltaFt;
+
+                    const scalar pdf =
+                        pow(ft, a - 1.0)
+                       *pow(1.0 - ft, b - 1.0);
+
+                    const scalar gaussian =
+                        exp
                         (
-                           -sqr(ft - ftStoich)
-                           /(2.0*sqr(0.01*omegaF[celli]))
-                        )
-                       *pow(ft, a - 1.0)
-                       *pow(1.0 - ft, b - 1.0)
+                            -sqr(ft - ftStoich)
+                           /(2.0*sqr(sigmaFt))
+                        );
+
+                    omegaIntegral +=
+                        omegaFuel[celli]
+                       /max(omegaF[celli], scalar(1))
+                       *gaussian
+                       *pdf
                        *deltaFt;
                 }
-                omegaFuelBar[celli] /= max(pc[celli], 1e-4);
+
+
+                omegaFuelBar[celli] =
+                    omegaIntegral
+                   /max
+                    (
+                        pdfIntegral,
+                        scalar(1e-4)
+                    );
             }
             else
             {
+                /*
+                 * No sub-grid PDF required.
+                 */
+                const scalar sigmaFt =
+                    0.01*max
+                    (
+                        omegaF[celli],
+                        scalar(1)
+                    );
+
                 omegaFuelBar[celli] =
-                   omegaFuel[celli]/omegaF[celli]
-                  *exp(-sqr(ftCell - ftStoich)/(2.0*sqr(0.01*omegaF[celli])));
+                    omegaFuel[celli]
+                   /max
+                    (
+                        omegaF[celli],
+                        scalar(1)
+                    )
+                   *exp
+                    (
+                        -sqr(ftCell - ftStoich)
+                       /(2.0*sqr(sigmaFt))
+                    );
             }
         }
         else
         {
-            omegaFuelBar[celli] = 0.0;
+            omegaFuelBar[celli] =
+                0.0;
+
+            pc[celli] =
+                0.0;
         }
     }
 
 
-    // Combustion progress variable, c
+    // --------------------------------------------------------------------- //
+    // Progress variable probability
+    // --------------------------------------------------------------------- //
 
+    /*
+     * For the H2/O2/H2O/N2 global reaction we expect one product:
+     *
+     *     H2O
+     *
+     * The original code used List<label>(2).  Using one product is safer
+     * for the present four-species mechanism.
+     */
     List<label> productsIndex(2, label(-1));
+
     {
         label i = 0;
-        forAll(this->singleMixturePtr_->specieProd(), specieI)
+
+        forAll
+        (
+            this->singleMixturePtr_->specieProd(),
+            specieI
+        )
         {
-            if (this->singleMixturePtr_->specieProd()[specieI] < 0)
+            if
+            (
+                this->singleMixturePtr_->specieProd()[specieI]
+                < 0
+            )
             {
-                productsIndex[i] = specieI;
-                i++;
+                if (i < productsIndex.size())
+                {
+                    productsIndex[i] =
+                        specieI;
+
+                    ++i;
+                }
             }
         }
     }
 
 
-    // Flamelet probability of the progress c based on IFC (reuse pc)
-    scalar YprodTotal = 0;
+    // --------------------------------------------------------------------- //
+    // Total product mass fraction from the fresh/flamelet state
+    // --------------------------------------------------------------------- //
+
+    scalar YprodTotal =
+        0.0;
+
     forAll(productsIndex, j)
     {
-        YprodTotal += this->singleMixturePtr_->Yprod0()[productsIndex[j]];
+        const label specieI =
+            productsIndex[j];
+
+        if (specieI >= 0)
+        {
+            YprodTotal +=
+                this->singleMixturePtr_->Yprod0()[specieI];
+        }
     }
+
+
+    // --------------------------------------------------------------------- //
+    // Flamelet probability
+    // --------------------------------------------------------------------- //
+
+    const scalar ftStoichSafe =
+        min
+        (
+            max(ftStoich, 1e-6),
+            1.0 - 1e-6
+        );
 
     forAll(ft_, celli)
     {
-        if (ft_[celli] < ftStoich)
+        if (ft_[celli] < ftStoichSafe)
         {
-            pc[celli] = ft_[celli]*(YprodTotal/ftStoich);
+            pc[celli] =
+                ft_[celli]
+               *YprodTotal
+               /ftStoichSafe;
         }
         else
         {
-            pc[celli] = (1.0 - ft_[celli])*(YprodTotal/(1.0 - ftStoich));
+            pc[celli] =
+                (1.0 - ft_[celli])
+               *YprodTotal
+               /(1.0 - ftStoichSafe);
         }
+
+        pc[celli] =
+            min
+            (
+                max(pc[celli], scalar(0)),
+                scalar(1)
+            );
     }
 
-    auto tproducts = volScalarField::New
-    (
-        this->thermo().phasePropertyName("products"),
-        IOobject::NO_REGISTER,
-        U.mesh(),
-        dimensionedScalar(dimless, Zero)
-    );
-    auto& products = tproducts.ref();
+
+    // --------------------------------------------------------------------- //
+    // Actual products in the CFD field
+    // --------------------------------------------------------------------- //
+
+    auto tproducts =
+        volScalarField::New
+        (
+            this->thermo().phasePropertyName("products"),
+            IOobject::NO_REGISTER,
+            YO2.mesh(),
+            dimensionedScalar(dimless, Zero)
+        );
+
+    auto& products =
+        tproducts.ref();
+
 
     forAll(productsIndex, j)
     {
-        label specieI = productsIndex[j];
-        const volScalarField& Yp = this->thermo().composition().Y()[specieI];
-        products += Yp;
+        const label specieI =
+            productsIndex[j];
+
+        if (specieI >= 0)
+        {
+            products +=
+                this->thermo().composition().Y()[specieI];
+        }
     }
 
-    volScalarField c
+
+    // --------------------------------------------------------------------- //
+    // Combustion progress
+    // --------------------------------------------------------------------- //
+
+    const volScalarField c
     (
-        max(scalar(1) - products/max(pc, scalar(1e-5)), scalar(0))
+        max
+        (
+            scalar(1)
+          - products/max(pc, scalar(1e-5)),
+            scalar(0)
+        )
     );
 
-    pc = min(C_*c, scalar(1));
 
-    const volScalarField fres(this->singleMixturePtr_->fres(fuelI));
+    pc =
+        min
+        (
+            C_*c,
+            scalar(1)
+        );
 
-    this->wFuel_ == mgft*pc*omegaFuelBar;
+
+    // --------------------------------------------------------------------- //
+    // Final FSD source
+    // --------------------------------------------------------------------- //
+
+    this->wFuel_ =
+        max
+        (
+            mgft
+           *max(pc, scalar(0))
+           *max
+            (
+                omegaFuelBar,
+                dimensionedScalar
+                (
+                    "zeroOmegaFuelBar",
+                    omegaFuelBar.dimensions(),
+                    0.0
+                )
+            ),
+            dimensionedScalar
+            (
+                "zeroWFuel",
+                this->wFuel_.dimensions(),
+                0.0
+            )
+        );
 }
 
+
+// * * * * * * * * * * * * * * * * Correct * * * * * * * * * * * * * * * * * //
 
 template<class ReactionThermo, class ThermoType>
 void FSD<ReactionThermo, ThermoType>::correct()
@@ -316,23 +763,44 @@ void FSD<ReactionThermo, ThermoType>::correct()
 }
 
 
+// * * * * * * * * * * * * * * * * Read * * * * * * * * * * * * * * * * * * //
+
 template<class ReactionThermo, class ThermoType>
 bool FSD<ReactionThermo, ThermoType>::read()
 {
-    if (singleStepCombustion<ReactionThermo, ThermoType>::read())
+    if
+    (
+        singleStepCombustion
+        <
+            ReactionThermo,
+            ThermoType
+        >::read()
+    )
     {
         this->coeffs().readEntry("Cv", Cv_);
-        this->coeffs().readEntry("ftVarMin", ftVarMin_);
-        reactionRateFlameArea_->read(this->coeffs());
+
+        this->coeffs().readEntry
+        (
+            "ftVarMin",
+            ftVarMin_
+        );
+
+        reactionRateFlameArea_->read
+        (
+            this->coeffs()
+        );
+
         return true;
     }
 
     return false;
 }
 
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace combustionModels
 } // End namespace Foam
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ************************************************************************* //

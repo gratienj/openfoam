@@ -97,7 +97,12 @@ void Foam::combustionModels::EDC<ReactionThermo>::correct()
 
         tmp<volScalarField> trho(this->rho());
         const auto& rho = trho();
+        //epsilon.write();
+        //k.write();
+        const scalar kMinEDC = 1e-6;
 
+        const scalar tauStarMax = 1e-3;
+        label nTauCapped = 0 ;
         scalarField tauStar(epsilon.size(), Zero);
 
         if (version_ == EDCversions::v2016)
@@ -107,6 +112,7 @@ void Foam::combustionModels::EDC<ReactionThermo>::correct()
 
             forAll(tauStar, i)
             {
+#ifdef REF
                 const scalar nu = mu[i]/(rho[i] + SMALL);
 
                 const scalar Da = clamp
@@ -125,6 +131,47 @@ void Foam::combustionModels::EDC<ReactionThermo>::correct()
                     CgammaI*pow025(nu*epsilon[i]/(sqr(k[i]) + SMALL));
 
                 tauStar[i] = CtauI*sqrt(nu/(epsilon[i] + SMALL));
+#else
+                const scalar nu = mu[i]/(rho[i] + SMALL);
+
+                const scalar Da = clamp
+                (
+                    sqrt(nu/(epsilon[i] + SMALL))/tc[i],
+                    scalar(1e-10),
+                    scalar(10)
+                );
+
+                // EDC lower bound for turbulent kinetic energy
+                const scalar kEDC =
+                    max(k[i], kMinEDC);
+
+                const scalar ReT =
+                    sqr(kEDC)/(nu*epsilon[i] + SMALL);
+
+                const scalar CtauI =
+                    min(C1_/(Da*sqrt(ReT + 1)), 2.1377);
+
+                const scalar CgammaI =
+                    clamp
+                    (
+                        C2_*sqrt(Da*(ReT + 1)),
+                        scalar(0.4082),
+                        scalar(5)
+                    );
+
+                const scalar gammaL =
+                    CgammaI
+                   *pow025
+                    (
+                        nu*epsilon[i]/(sqr(kEDC) + SMALL)
+                    );
+
+                tauStar[i] =
+                    CtauI*sqrt(nu/(epsilon[i] + SMALL));
+#endif
+                if(tauStar[i] > tauStarMax)
+                	++nTauCapped ;
+                tauStar[i] = min(tauStar[i], tauStarMax);
 
                 if (gammaL >= 1)
                 {
@@ -181,8 +228,81 @@ void Foam::combustionModels::EDC<ReactionThermo>::correct()
         }
 
         auto limits = gMinMax(tauStar);
+
         Info<< "Chemistry time solved min/max : "
             << limits.min() << ", " << limits.max() << endl;
+
+        Info<< "EDC DEBUG:" << nl
+            << "    rho min/max     = " << gMinMax(rho) << nl
+            << "    mu min/max      = " << gMinMax(mu) << nl
+            << "    kRaw min/max    = " << gMinMax(k) << nl
+            << "    kMin EDC        = "
+            << kMinEDC << nl
+            << "    epsilon min/max = " << gMinMax(epsilon) << nl
+            << "    tauStar min/max = " << gMinMax(tauStar) << nl
+            << endl;
+
+        reduce(nTauCapped, sumOp<label>());
+
+        Info<< "EDC: tauStar capped cells = "
+            << nTauCapped << endl;
+
+        /*
+            << returnReduce
+               (
+                   sum
+                   (
+                       pos(1e-10 - epsilon)
+                   ),
+                   sumOp<label>()
+               )
+            << endl;*/
+        /*
+        volScalarField kEDC
+        (
+            IOobject
+            (
+                "k_EDC",
+                this->mesh().time().timeName(),
+                this->mesh(),
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            k
+        );*/
+        //kEDC.write();
+        /*
+        volScalarField epsilonEDC
+        (
+            IOobject
+            (
+                "epsilon_EDC",
+                this->mesh().time().timeName(),
+                this->mesh(),
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            epsilon
+        );*/
+        //epsilonEDC.write();
+        /*
+        volScalarField tauStarField
+        (
+            IOobject
+            (
+                "tauStar",
+                this->mesh().time().timeName(),
+                this->mesh(),
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            this->mesh(),
+            dimensionedScalar("tauStar", dimTime, 0)
+        );
+        tauStarField.primitiveFieldRef() = tauStar;
+        tauStarField.correctBoundaryConditions();
+        */
+        //tauStarField.write();
 
         this->chemistryPtr_->solve(tauStar);
     }

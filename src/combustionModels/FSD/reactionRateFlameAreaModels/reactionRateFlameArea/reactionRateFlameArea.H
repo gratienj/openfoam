@@ -1,38 +1,14 @@
-/*---------------------------------------------------------------------------*\
+/*---------------------------------------------------------------------------*\\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
+    \\  /    A nd           |
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2011-2016 OpenFOAM Foundation
--------------------------------------------------------------------------------
-License
-    This file is part of OpenFOAM.
+    Abstract reaction-rate-per-flame-area model for the FSD combustion model.
 
-    OpenFOAM is free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-    for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-
-Class
-    Foam::reactionRateFlameArea
-
-Description
-    Abstract class for reaction rate per flame area unit
-
-SourceFiles
-    reactionRateFlameArea.C
-    reactionRateFlameAreaNew.C
-
+    This version initializes FSDomega if it is not present at time 0 and
+    contains the run-time selector implementation used by the derived models.
 \*---------------------------------------------------------------------------*/
 
 #ifndef reactionRateFlameArea_H
@@ -44,24 +20,22 @@ SourceFiles
 #include "volFields.H"
 #include "combustionModel.H"
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 namespace Foam
 {
+
 class fvMesh;
 
-/*---------------------------------------------------------------------------*\
-                           Class reactionRateFlameArea Declaration
+/*---------------------------------------------------------------------------*\\
+                            Class reactionRateFlameArea Declaration
 \*---------------------------------------------------------------------------*/
 
 class reactionRateFlameArea
 {
-
 protected:
 
     // Protected data
 
-        //- Dictionary
+        //- Dictionary containing the model coefficients
         dictionary coeffDict_;
 
         //- Mesh reference
@@ -73,7 +47,7 @@ protected:
         //- Fuel name
         word fuel_;
 
-        //- Fuel consumption rate per unit of flame area
+        //- Fuel consumption rate per unit flame area [kg m^-2 s^-1]
         volScalarField omega_;
 
 
@@ -81,10 +55,10 @@ private:
 
     // Private member functions
 
-         //- No copy construct
+        //- No copy construct
         reactionRateFlameArea(const reactionRateFlameArea&) = delete;
 
-         //- No copy assignment
+        //- No copy assignment
         void operator=(const reactionRateFlameArea&) = delete;
 
 
@@ -140,28 +114,20 @@ public:
 
     // Member functions
 
-        //- Access functions
+        //- Return fuel consumption rate per unit flame area
+        const volScalarField& omega() const
+        {
+            return omega_;
+        }
 
-            //- Return omega
-            const volScalarField& omega() const
-            {
-                return omega_;
-            }
-
-
-        //- Correct omega
+        //- Correct omega from the local strain-rate field
         virtual void correct(const volScalarField& sigma) = 0;
 
         //- Update from dictionary
         virtual bool read(const dictionary& dictProperties);
 };
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif
 
