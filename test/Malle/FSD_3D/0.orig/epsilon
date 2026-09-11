@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      epsilon;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -3 0 0 0 0];
+
+internalField   uniform 100;
+
+boundaryField
+{
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform 100;
+        value           uniform 100;
+    }
+
+    coflowInletBottom
+    {
+        type            turbulentMixingLengthDissipationRateInlet;
+        mixingLength    0.000735;
+        phi             phi;
+        k               k;
+        value           uniform 1;
+    }
+
+    coflowInletTop
+    {
+        type            turbulentMixingLengthDissipationRateInlet;
+        mixingLength    0.000735;
+        phi             phi;
+        k               k;
+        value           uniform 1;
+    }
+
+    bottomWall
+    {
+        type            epsilonWallFunction;
+        Cmu             0.09;
+        kappa           0.41;
+        E               9.8;
+        value           uniform 100;
+    }
+
+    topWall
+    {
+        type            epsilonWallFunction;
+        Cmu             0.09;
+        kappa           0.41;
+        E               9.8;
+        value           uniform 100;
+    }
+
+    jetInlet
+    {
+        type            turbulentMixingLengthDissipationRateInlet;
+        mixingLength    0.000504;
+        phi             phi;
+        k               k;
+        value           uniform 1;
+    }
+
+    front
+    {
+        type            cyclic;
+    }
+
+    back
+    {
+        type            cyclic;
+    }
+
+}
+
+
+// ************************************************************************* //

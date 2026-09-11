@@ -188,6 +188,11 @@ tmp<fv::convectionScheme<scalar>> mvConvection
              *     Gamma_i = mu/Sc_i
              * ========================================================
              */
+            const tmp<volScalarField> tDiffusionFactor =
+                reaction->diffusionFactor();
+
+            const volScalarField& diffusionFactor =
+                tDiffusionFactor();
 
             volScalarField GammaYi
             (
@@ -199,12 +204,14 @@ tmp<fv::convectionScheme<scalar>> mvConvection
                     IOobject::NO_READ,
                     IOobject::NO_WRITE
                 ),
+                diffusionFactor*
                 turbulence->mu()/ScYi
             );
 
 
             Info<< "Species " << Yi.name()
                 << " : Sc = " << ScYi
+                << ", minmax(diffusion) = " << gMinMax(diffusionFactor)
                 << ", min(Gamma) = " << gMin(GammaYi)
                 << ", max(Gamma) = " << gMax(GammaYi)
                 << endl;

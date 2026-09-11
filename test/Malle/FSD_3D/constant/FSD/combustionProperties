@@ -1,0 +1,42 @@
+/*--------------------------------*- C++ -*----------------------------------*\\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+combustionModel  FSD;
+active           true;
+
+FSDCoeffs
+{
+    // H2 is the fuel used by the single-step FSD source construction.
+    fuel        H2;
+
+    // Existing FSD model parameters.
+    Cv          0.1;
+    ftVarMin    1e-4;
+
+    // Direct lookup of the Cantera flamelet omega(K) table.
+    reactionRateFlameArea  flameletTable;
+
+    flameletTableCoeffs
+    {
+        tableFile  FSD_H2_flameletTable;
+
+        // Physical lower bound for the consumption rate.
+        omegaMin   0.0;
+
+        // The Cantera table starts at K=177.285279 1/s.
+        // Below that range, use the first physical flamelet value.
+        belowMin   clamp;
+
+        // The last computed point is K=25221.05 1/s.
+        // No zero omega point was computed before the continuation stopped,
+        // so do NOT invent an extinction extrapolation here.
+        aboveMax   clamp;
+    }
+}
+
+// ************************************************************************* //

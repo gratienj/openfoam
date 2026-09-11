@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /    A nd          |
-  \\/     M anipulation     |
+    \\/     M anipulation   |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2019 OpenCFD Ltd.
@@ -36,7 +36,6 @@ namespace Foam
 namespace combustionModels
 {
 
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class ReactionThermo, class ThermoType>
@@ -55,7 +54,6 @@ FSD<ReactionThermo, ThermoType>::FSD
         turb,
         combustionProperties
     ),
-
     reactionRateFlameArea_
     (
         reactionRateFlameArea::New
@@ -65,7 +63,20 @@ FSD<ReactionThermo, ThermoType>::FSD
             *this
         )
     ),
-
+    ftRaw_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("ftRaw"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless, Zero)
+    ),
     ft_
     (
         IOobject
@@ -80,7 +91,6 @@ FSD<ReactionThermo, ThermoType>::FSD
         this->mesh(),
         dimensionedScalar(dimless, Zero)
     ),
-
     YFuelFuelStream_
     (
         dimensionedScalar
@@ -90,7 +100,6 @@ FSD<ReactionThermo, ThermoType>::FSD
             1.0
         )
     ),
-
     YO2OxiStream_
     (
         dimensionedScalar
@@ -100,23 +109,144 @@ FSD<ReactionThermo, ThermoType>::FSD
             0.23
         )
     ),
-
     Cv_
     (
         this->coeffs().getScalar("Cv")
     ),
-
-    C_(5.0),
-
+    //C_(5.0),
+    C_(1.0),
     ftMin_(0.0),
-
     ftMax_(1.0),
-
     ftDim_(300),
-
     ftVarMin_
     (
         this->coeffs().getScalar("ftVarMin")
+    ),
+    Pc_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("Pc"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless, Zero)
+    ),
+    c_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("Pc"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless, Zero)
+    ),
+    omegaFuelBar_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("omegaFuelBar"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+         ),
+         this->mesh(),
+         dimensionedScalar
+         (
+            dimensionSet(1, -2, -1, 0, 0, 0, 0),
+            Zero
+          )
+    ),
+    F0_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("F0"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless, Zero)
+    ),
+    flameSensor_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("flameSensor"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless, Zero)
+    ),
+    FTFM_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("FTFM"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless, 1.0)
+    ),
+    deltaFlame_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("deltaFlame"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimLength, Zero)
+    ),
+    deltaL_
+    (
+        this->coeffs().getScalar("deltaL")
+    ),
+    Ncell_
+    (
+        this->coeffs().getScalar("Ncell")
+    ),
+    Cs_
+    (
+        this->coeffs().getScalar("Cs")
+    ),
+    Fmax_
+    (
+        this->coeffs().getScalar("Fmax")
+    ),
+    EColin_
+    (
+        this->coeffs().template getOrDefault<scalar>("EColin", 1.0)
+    ),
+    TFM_
+    (
+        this->coeffs().template getOrDefault<bool>("TFM", false)
     )
 {}
 
@@ -155,7 +285,8 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
     // Mixture fraction
     // --------------------------------------------------------------------- //
 
-    const volScalarField ftRaw
+    //const volScalarField ftRaw
+    ftRaw_ =
     (
         (
             s*YFuel
@@ -181,7 +312,7 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
         (
             max
             (
-                ftRaw,
+                ftRaw_,
                 scalar(0)
             ),
             scalar(1)
@@ -294,7 +425,7 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
     // --------------------------------------------------------------------- //
     // Local fields
     // --------------------------------------------------------------------- //
-
+    /*
     auto tPc =
         volScalarField::New
         (
@@ -321,7 +452,10 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
         );
 
     auto& omegaFuelBar = tomegaFuel.ref();
+    */
 
+    auto& pc = Pc_;
+    auto& omegaFuelBar = omegaFuelBar_;
 
     // --------------------------------------------------------------------- //
     // LES filter width
@@ -336,7 +470,26 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
     const volScalarField& delta =
         lesModel.delta();
 
+    F0_ = min
+            (
+                max
+                (
+                    Ncell_*delta
+                  / dimensionedScalar
+                    (
+                        "deltaL",
+                        dimLength,
+                        deltaL_
+                    ),
+                    scalar(1)
+                ),
+                Fmax_
+            ) ;
 
+    Info<< "FDC DEBUG:" << nl
+        << "    delta min/max     = " << gMinMax(delta) << nl
+        << "    F0   min/max      = " << gMinMax(F0_) << nl
+        << endl;
     // --------------------------------------------------------------------- //
     // Sub-grid mixture-fraction variance
     // --------------------------------------------------------------------- //
@@ -394,7 +547,6 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
             scalar(1)
         )
     );
-
 
     // --------------------------------------------------------------------- //
     // Numerical integration of the mixture fraction PDF
@@ -490,7 +642,7 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
                 const scalar sigmaFt =
                     0.01*max
                     (
-                        omegaF[celli],
+                            omegaF[celli],
                         scalar(1)
                     );
 
@@ -517,7 +669,7 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
 
                     omegaIntegral +=
                         omegaFuel[celli]
-                       /max(omegaF[celli], scalar(1))
+                       /max(    omegaF[celli], scalar(1))
                        *gaussian
                        *pdf
                        *deltaFt;
@@ -540,7 +692,7 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
                 const scalar sigmaFt =
                     0.01*max
                     (
-                        omegaF[celli],
+                            omegaF[celli],
                         scalar(1)
                     );
 
@@ -548,7 +700,7 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
                     omegaFuel[celli]
                    /max
                     (
-                        omegaF[celli],
+                            omegaF[celli],
                         scalar(1)
                     )
                    *exp
@@ -568,6 +720,9 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
         }
     }
 
+    Info<< "FDC DEBUG:" << nl
+        << "    Pc min/max     = " << gMinMax(pc) << nl
+        << endl;
 
     // --------------------------------------------------------------------- //
     // Progress variable probability
@@ -581,7 +736,7 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
      * The original code used List<label>(2).  Using one product is safer
      * for the present four-species mechanism.
      */
-    List<label> productsIndex(2, label(-1));
+    List<label> productsIndex(1, label(-1));
 
     {
         label i = 0;
@@ -631,8 +786,29 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
 
 
     // --------------------------------------------------------------------- //
-    // Flamelet probability
+    // Flame probability from mixture fraction
     // --------------------------------------------------------------------- //
+
+    /*
+     * Pc is deliberately kept as a purely geometrical/mixing quantity.
+     * It is NOT overwritten by the progress variable.
+     *
+     * Triangular flame-probability function:
+     *
+     *              ft
+     * Pc = -----------------------------   for ft <= ftStoich
+     *           ftStoich
+     *
+     *              1-ft
+     * Pc = -----------------------------   for ft > ftStoich
+     *           1-ftStoich
+     *
+     * Hence:
+     *
+     *     Pc(0) = 0
+     *     Pc(ftStoich) = 1
+     *     Pc(1) = 0
+     */
 
     const scalar ftStoichSafe =
         min
@@ -643,19 +819,17 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
 
     forAll(ft_, celli)
     {
-        if (ft_[celli] < ftStoichSafe)
+        const scalar ftCell = ft_[celli];
+
+        if (ftCell <= ftStoichSafe)
         {
             pc[celli] =
-                ft_[celli]
-               *YprodTotal
-               /ftStoichSafe;
+                ftCell/ftStoichSafe;
         }
         else
         {
             pc[celli] =
-                (1.0 - ft_[celli])
-               *YprodTotal
-               /(1.0 - ftStoichSafe);
+                (1.0 - ftCell)/(1.0 - ftStoichSafe);
         }
 
         pc[celli] =
@@ -665,6 +839,12 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
                 scalar(1)
             );
     }
+
+    Info<< "FDC DEBUG:" << nl
+        << "    ftStoich      = " << ftStoichSafe << nl
+        << "    ft            min/max = " << gMinMax(ft_) << nl
+        << "    Pc triangular min/max = " << gMinMax(pc) << nl
+        << endl;
 
 
     // --------------------------------------------------------------------- //
@@ -698,33 +878,146 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
 
 
     // --------------------------------------------------------------------- //
-    // Combustion progress
+    // Progress variable: diagnostic only
     // --------------------------------------------------------------------- //
 
-    const volScalarField c
-    (
-        max
+    // --------------------------------------------------------------------- //
+    // Normalised combustion progress
+    // --------------------------------------------------------------------- //
+    const scalar ftStoichValue =
+        YO2OxiStream_.value()
+       /
         (
-            scalar(1)
-          - products/max(pc, scalar(1e-5)),
-            scalar(0)
-        )
-    );
-
-
-    pc =
-        min
-        (
-            C_*c,
-            scalar(1)
+            s.value()*YFuelFuelStream_.value()
+          + YO2OxiStream_.value()
         );
 
+    const scalar YprodBurnt =
+        scalar(9.0)
+       *ftStoichValue
+       *YFuelFuelStream_.value();
+
+    const scalar YprodBurntSafe =
+        max(YprodBurnt, scalar(1e-12));
+
+    auto& c = c_;
+    c =
+    (
+        min
+        (
+            max
+            (
+                products/YprodBurntSafe,
+                scalar(0)
+            ),
+            scalar(1)
+        )
+    );
+    Info<< "FDC DEBUG:" << nl
+        << "    YFuelFuelStream = "
+        << YFuelFuelStream_.value() << nl
+        << "    YO2OxiStream    = "
+        << YO2OxiStream_.value() << nl
+        << "    s               = "
+        << s.value() << nl
+        << "    YprodBurnt(calc) = "
+        << YprodBurnt
+        << nl
+        << endl;
+
+    Info<< "FDC DEBUG:" << nl
+        << "    products      min/max = " << gMinMax(products) << nl
+        << "    c diagnostic  min/max = " << gMinMax(c) << nl
+        << endl;
+
+
+    // --------------------------------------------------------------------- //
+    // Flame sensor
+    // --------------------------------------------------------------------- //
+
+    /*
+     * Pc is maximum at the stoichiometric mixture fraction and decreases
+     * linearly away from it.  The previous sensor
+     *
+     *     tanh(Cs*Pc*(1-Pc))
+     *
+     * was zero at Pc=0 AND Pc=1 and therefore artificially suppressed the
+     * centre of the flame, where Pc=1.
+     *
+     * The present sensor is a Gaussian centred on ftStoich:
+     *
+     *     S_f = exp[-(Cs*(ft-ftStoich))^2]
+     *
+     * With Cs=16, the sensor is close to one around the stoichiometric
+     * mixture fraction and decays rapidly away from the flame region.
+     *
+     * The sensor is therefore independent of the CFD product field and does
+     * not suffer from the circular Pc -> c -> Pc operation of the previous
+     * implementation.
+     */
+    // --------------------------------------------------------------------- //
+    // Flame sensor
+    // --------------------------------------------------------------------- //
+
+    flameSensor_ =
+        min
+        (
+            max
+            (
+                scalar(4.0)*c*(scalar(1.0) - c)*pc,
+                scalar(0)
+            ),
+            scalar(1)
+        );
+    Info<< "FDC DEBUG:" << nl
+        << "    flameSensor  min/max = " << gMinMax(flameSensor_) << nl
+        << endl;
+
+
+    // --------------------------------------------------------------------- //
+    // Thickening factor
+    // --------------------------------------------------------------------- //
+    if(TFM_)
+    {
+        FTFM_ =
+        (
+            scalar(1)
+          + flameSensor_*(F0_ - scalar(1))
+        );
+
+
+        deltaFlame_ =
+        (
+            FTFM_
+          * dimensionedScalar
+            (
+                "deltaL",
+                dimLength,
+                deltaL_
+            )
+        );
+    }
+    /*
+    else
+    {
+        FTFM_ = 1. ;
+        deltaFlame_ = deltaL_;
+    }*/
+
+    Info<< "FDC DEBUG:" << nl
+        << "    YprodBurnt = " << YprodBurnt << nl
+        << "    products   min/max = " << gMinMax(products) << nl
+        << "    c          min/max = " << gMinMax(c) << nl
+        << "    Pc         min/max = " << gMinMax(pc) << nl
+        << "    flameSensor min/max = " << gMinMax(flameSensor_) << nl
+        << "    FTFM       min/max = " << gMinMax(FTFM_) << nl
+        << "    deltaFlame    min/max = " << gMinMax(deltaFlame_) << nl
+        << endl;
 
     // --------------------------------------------------------------------- //
     // Final FSD source
     // --------------------------------------------------------------------- //
-
-    this->wFuel_ =
+    const volScalarField wFuelFSD =
         max
         (
             mgft
@@ -746,15 +1039,29 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
                 0.0
             )
         );
+
+    if (TFM_)
+    {
+        this->wFuel_ =  EColin_ / FTFM_ * wFuelFSD;
+    }
+    else
+    {
+        this->wFuel_ = wFuelFSD;
+    }
 }
 
-
+template<class ReactionThermo, class ThermoType>
+Foam::tmp<Foam::volScalarField>
+Foam::combustionModels::FSD<ReactionThermo, ThermoType>::diffusionFactor() const
+{
+    return EColin_*FTFM_;
+}
 // * * * * * * * * * * * * * * * * Correct * * * * * * * * * * * * * * * * * //
 
 template<class ReactionThermo, class ThermoType>
 void FSD<ReactionThermo, ThermoType>::correct()
 {
-    this->wFuel_ == Zero;
+    this->wFuel_ = Zero;
 
     if (this->active())
     {
@@ -784,6 +1091,8 @@ bool FSD<ReactionThermo, ThermoType>::read()
             "ftVarMin",
             ftVarMin_
         );
+
+        this->coeffs().readEntry("TFM", TFM_);
 
         reactionRateFlameArea_->read
         (

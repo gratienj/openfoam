@@ -1,0 +1,29 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      refineMeshDict;
+}
+
+set             refineBox;
+
+// Which of the coordinate-system directions (defined below) to actually
+// split cells along. tan1/tan2 = x and y -> each selected cell splits into
+// 4 (2x in x, 2x in y). Add "normal" to this list if you also want z
+// refined (not requested here).
+directions      (tan1 tan2);
+
+coordinateSystem global;
+
+globalCoeffs
+{
+    tan1        (1 0 0);   // x
+    tan2        (0 1 0);   // y
+}
+
+useHexTopology  yes;
+geometricCut    no;
+writeMesh       no;
+
+// ************************************************************************* //

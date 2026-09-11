@@ -93,6 +93,7 @@ class FSD
         autoPtr<reactionRateFlameArea> reactionRateFlameArea_;
 
         //- Mixture fraction
+        volScalarField ftRaw_;
         volScalarField ft_;
 
         //- Fuel mass concentration on the fuel stream
@@ -118,6 +119,22 @@ class FSD
 
         //- Minimum mixture fraction variance to calculate pdf
         scalar ftVarMin_;
+
+        volScalarField Pc_ ;
+        volScalarField c_ ;
+        volScalarField omegaFuelBar_ ;
+        volScalarField F0_;
+        volScalarField flameSensor_;
+        volScalarField FTFM_;
+        volScalarField deltaFlame_;
+
+        scalar deltaL_;
+        scalar Ncell_;
+        scalar Cs_;
+        scalar Fmax_;
+        scalar EColin_;
+
+        bool TFM_;
 
 
     // Private Member Functions
@@ -161,6 +178,13 @@ public:
 
         //- Update properties
         virtual bool read();
+
+        scalar EColin() const
+        {
+            return EColin_;
+        }
+
+        virtual tmp<volScalarField> diffusionFactor() const override;
 };
 
 

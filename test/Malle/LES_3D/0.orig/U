@@ -1,0 +1,103 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    outlet
+    {
+        type            pressureInletOutletVelocity;
+        value           $internalField;
+    }
+
+    coflowInletBottom
+    {
+        type            fixedValue;
+        value           uniform (3.6 0 0);
+	/*
+	// U=11.4 m/s, I=0.0628 -> u'=0.72 m/s -> R_diag=0.51
+        type            turbulentDFSEMInlet;
+        delta           0.00525;
+        R               uniform (0.51 0 0  0.51 0  0.51);
+        U               uniform (0 0 11.4);
+        value           uniform (0 0 11.4);
+	*/
+    }
+
+    coflowInletTop
+    {
+        type            fixedValue;
+        value           uniform (3.6 0 0);
+        /*
+        // U=11.4 m/s, I=0.0628 -> u'=0.72 m/s -> R_diag=0.51
+        type            turbulentDFSEMInlet;
+        delta           0.00525;
+        R               uniform (0.51 0 0  0.51 0  0.51);
+        U               uniform (0 0 11.4);
+        value           uniform (0 0 11.4);
+        */
+    }
+
+    bottomWall
+    {
+        type            slip;
+        //type            noSlip;
+    }
+
+    topWall
+    {
+        type            slip;
+        //type            noSlip;
+    }
+
+    jetInlet
+    {
+        type            turbulentDFSEMInlet;
+
+        // Characteristic length of the inlet/domain
+        delta           0.002;
+
+        // Reynolds-stress tensor
+        // u' = 2.4 m/s
+        // u'^2 = 5.76 m2/s2
+        // isotropic turbulence
+        R               uniform (5.76 0 0 5.76 0 5.76);
+
+        // Mean velocity
+        U               uniform (24 0 0);
+
+        // Integral length scale
+        L               uniform 0.002;
+
+        value           uniform (24 0 0);
+    }
+
+    front
+    {
+        type            cyclic;
+    }
+
+    back
+    {
+        type            cyclic;
+    }
+}
+
+
+// ************************************************************************* //

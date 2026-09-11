@@ -97,6 +97,27 @@ Foam::combustionModel::~combustionModel()
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+Foam::tmp<Foam::volScalarField>
+Foam::combustionModel::diffusionFactor() const
+{
+    return
+        tmp<volScalarField>
+        (
+            new volScalarField
+            (
+                IOobject
+                (
+                    "diffusionFactor",
+                    mesh_.time().timeName(),
+                    mesh_,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh_,
+                dimensionedScalar(dimless, 1.0)
+            )
+        );
+}
 
 bool Foam::combustionModel::read()
 {

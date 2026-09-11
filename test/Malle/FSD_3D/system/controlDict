@@ -1,0 +1,71 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2606                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    object          controlDict;
+}
+
+application     reactingFoamDY;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+//endTime         0.05;
+endTime         0.001;
+
+deltaT          1e-07;
+
+adjustTimeStep  yes;
+
+maxCo           0.2;
+
+maxDeltaT       1e-06;
+
+
+writeControl    timeStep;
+
+writeInterval   100;
+
+//writeControl    runTime;
+
+//writeInterval   0.0001;
+
+purgeWrite      0;
+
+writeFormat     binary;
+
+writePrecision  10;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+/*
+functions
+{
+    writeTurbulenceFields
+    {
+        type            writeObjects;
+        libs            (utilityFunctionObjects);
+        objects         (k epsilon);
+        writeControl    timeStep;
+    }
+}*/
+
+// ************************************************************************* //

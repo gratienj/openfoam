@@ -1,0 +1,23 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+
+// Selects exactly the 52 x 32 mm inlet window (full z-depth) for refinement.
+// H=8mm jet + 12mm coflow each side => |y|<16mm, matches the earlier spec.
+actions
+(
+    {
+        name        refineBox;
+        type        cellSet;
+        action      new;
+        source      boxToCell;
+        //box         (0 -0.016 -0.008) (0.052 0.016 0.008);
+        box         (0 -0.016 -0.008) (0.056 0.016 0.008);
+    }
+);
+
+// ************************************************************************* //

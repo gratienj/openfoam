@@ -1,0 +1,115 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "rho.*"
+    {
+        solver          diagonal;
+    }
+
+    p
+    {
+        solver          GAMG;
+        tolerance       1e-9;
+        relTol          0.01;
+	smoother        GaussSeidel;
+    }
+
+    pFinal
+    {
+        $p;
+	tolerance       1e-10;
+        relTol          0;
+    }
+
+    "(U|h|Yi)"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-9;
+        relTol          0.01;
+    }
+
+    "(U|h|k|Yi)Final"
+    {
+        $U;
+	tolerance       1e-10;
+        relTol          0;
+    }
+
+    G
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-5;
+        relTol          0.1;
+    }
+
+    GFinal
+    {
+        $G;
+        relTol          0;
+    }
+}
+
+PIMPLE
+{
+    momentumPredictor   yes;
+    nOuterCorrectors    2;
+    nCorrectors         2;
+    nNonOrthogonalCorrectors 0;
+    maxCo               0.2;
+
+    /*
+    maxDeltaT           1e-4;
+    maxCo               0.15;
+    alphaTemp           0.05;
+    alphaY              0.05;
+    Yref
+    {
+        O2                  0.1;
+        CH4                 0.1;
+    }
+    rDeltaTSmoothingCoeff   0.025;
+    rDeltaTDampingCoeff     1;
+    */
+    /*
+    residualControl
+    {
+        "(U|h|Yi)"
+        {
+            tolerance 1e-6;
+            relTol    0;
+        }
+        p
+        {
+            tolerance 1e-6;
+            relTol    0;
+        }
+    }*/
+}
+
+relaxationFactors
+{
+    equations
+    {
+        ".*"            1;
+    }
+}
+
+
+// ************************************************************************* //

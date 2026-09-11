@@ -155,6 +155,9 @@ public:
         //- Fuel consumption rate matrix, i.e. source term for fuel equation
         virtual tmp<fvScalarMatrix> R(volScalarField& Y) const = 0;
 
+        //- Diffusion multiplier for species equations
+        virtual tmp<volScalarField> diffusionFactor() const;
+
         //- Heat release rate [kg/m/s3]
         virtual tmp<volScalarField> Qdot() const = 0;
 

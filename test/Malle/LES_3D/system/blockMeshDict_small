@@ -1,0 +1,152 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  Slot burner geometry, Fig. 2 of Malé, Lapeyre & Noiray (2024), arXiv:2408.16709
+  Case: phi_g = 0.5  ->  Lx = 52 mm, Ly = 32 mm, Lz = 16 mm, H = 8 mm
+
+  Layout in y (bottom to top), x=0 (inlet) face split accordingly:
+    [0,        y1]        bottom coflow  (burnt gas inlet)
+    [y1,       y1+lip]    bottom burner lip (wall, thickness H/20)
+    [y1+lip,   y1+lip+H]  central jet    (fresh premixed H2-air inlet)
+    [y2,       y2+lip]    top burner lip (wall, thickness H/20)
+    [y2+lip,   Ly]        top coflow     (burnt gas inlet)
+
+  y=0 and y=Ly (outer faces) = adiabatic walls, as stated in the paper.
+  z is periodic (cyclic).  x=Lx is the outlet.
+
+\*-----------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+
+convertToMeters 1;
+
+Lx      0.052;
+Ly      0.032;
+Lz      0.016;
+H       0.008;      // central jet slot height
+
+y1      0.012;
+y2      0.020;
+
+// derived y-coordinates (bottom to top)
+y0      0.0;
+yTop    #calc "$Ly";
+
+nx      50;     // full-DNS: 520
+nz      25;     // full-DNS: 160
+nyCoB   15;     // bottom coflow, full-DNS: 116
+nyJet   10;     // central jet,  full-DNS: 80
+nyCoT   15;     // top coflow,   full-DNS: 116
+
+vertices
+(
+    // block 0: bottom coflow            (0-3 bottom face, 4-7 top face)
+    (0    $y0        0)      // (0)
+    ($Lx  $y0        0)      // (1)
+    (0    $y1        0)      // (2)
+    ($Lx  $y1        0)      // (3)
+    (0    $y0        $Lz)    // (4)
+    ($Lx  $y0        $Lz)    // (5)
+    (0    $y1        $Lz)    // (6)
+    ($Lx  $y1        $Lz)    // (7)
+
+    // block 1: central jet
+    (0    $y2        0)      // (8)
+    ($Lx  $y2        0)      // (9)
+    (0    $y2        $Lz)    // (10)
+    ($Lx  $y2        $Lz)    // (11)
+
+    // block 1: top coflow
+    (0    $yTop      0)      // (12)
+    ($Lx  $yTop      0)      // (13)
+    (0    $yTop      $Lz)    // (14)
+    ($Lx  $yTop      $Lz)    // (15)
+);
+
+blocks
+(
+    hex (0  1  3  2  4  5  7  6)   ($nx $nyCoB  $nz) simpleGrading (1 1 1)
+    hex (2  3  9  8  6  7 11 10)   ($nx $nyJet  $nz) simpleGrading (1 1 1)
+    hex (8  9 13 12 10 11 15 14)   ($nx $nyCoT  $nz) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+boundary
+(
+    coflowInletBottom
+    {
+        type patch;
+        faces ( (0 4 6 2) );
+    }
+
+    jetInlet
+    {
+        type patch;
+        faces ( (2 6 10 8) );
+    }
+
+    coflowInletTop
+    {
+        type patch;
+        faces ( (8 10 14 12) );
+    }
+
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (1 3 7 5)
+            (3 9 11 7)
+            (9 13 15 11)
+        );
+    }
+
+    bottomWall
+    {
+        type wall;
+        faces ( (0 1 5 4) );
+    }
+
+    topWall
+    {
+        type wall;
+        faces ( (12 13 15 14) );
+    }
+
+    front
+    {
+        type cyclic;
+        neighbourPatch back;
+        faces
+        (
+            (4 5 7 6)
+            (6 7 11 10)
+            (10 11 15 14)
+        );
+    }
+
+    back
+    {
+        type cyclic;
+        neighbourPatch front;
+        faces
+        (
+            (0 1 3 2)
+            (2 3 9 8)
+            (8 9 13 12)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //
