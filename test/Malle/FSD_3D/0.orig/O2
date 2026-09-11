@@ -16,14 +16,14 @@ FoamFile
 
 dimensions      [0 0 0 0 0 0 0];
 
-internalField   uniform 0.23;
+internalField   uniform 0.232;
 
 boundaryField
 {
     jetInlet
     {
         type            fixedValue;
-        value           uniform 0.23;   // phi_g=0.5 fresh mixture
+        value           uniform 0.232;   // phi_g=0.5 fresh mixture
     }
 
     bottomWall

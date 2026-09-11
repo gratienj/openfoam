@@ -6,8 +6,11 @@ This is OpenFOAM v2606 (API 2606), a large C++ CFD codebase. It uses its own bui
 
 Every build or run command requires the OpenFOAM environment first:
 
+**Compilation set up** (from repo root):
 ```bash
-source $WM_PROJECT_DIR/etc/bashrc
+#source $WM_PROJECT_DIR/etc/bashrc
+source $PWD/eb-r11-foss2025b.env
+source $PWD/prefs.opt.sh
 ```
 
 Without this, `wmake`, `wclean`, `lnInclude`, and all `FOAM_*`/`WM_*` variables are undefined.

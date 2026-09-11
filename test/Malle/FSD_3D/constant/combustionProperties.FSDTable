@@ -5,7 +5,14 @@
 |   \\  /    A nd           |                                                 |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
-
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      combustionProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 combustionModel  FSD;
 active           true;
 
@@ -14,9 +21,22 @@ FSDCoeffs
     // H2 is the fuel used by the single-step FSD source construction.
     fuel        H2;
 
+    semiImplicit false;
+
     // Existing FSD model parameters.
     Cv          0.1;
     ftVarMin    1e-4;
+
+    deltaL      4.7497534e-4;
+    Ncell       6.0;
+    Cs          16.0;
+    Fmax        10.0;
+
+     // Colin et al. (2000) thickened-flame efficiency
+    //EColin      1.44;
+    EColin      1.;
+
+    TFM false;
 
     // Direct lookup of the Cantera flamelet omega(K) table.
     reactionRateFlameArea  flameletTable;

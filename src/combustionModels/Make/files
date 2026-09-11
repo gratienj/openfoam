@@ -19,6 +19,7 @@ FSD/reactionRateFlameAreaModels/flameletTable/flameletTable.C
 FSD/reactionRateFlameAreaModels/relaxation/relaxation.C
 FSD/FSDs.C
 
+FSDUnet/FSDUnets.C
 
 diffusionMulticomponent/diffusionMulticomponents.C
 

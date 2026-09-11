@@ -16,25 +16,25 @@ FoamFile
 combustionModel  FSDUnet;
 active           true;
 
-FSDUnetCoeffs
+FSDCoeffs
 {
     // H2 is the fuel used by the single-step FSD source construction.
-    fuel         H2;
+    fuel        H2;
 
     semiImplicit false;
 
     // Existing FSD model parameters.
-    Cv           0.1;
-    ftVarMin     1e-4;
+    Cv          0.1;
+    ftVarMin    1e-4;
 
-    deltaL       4.7497534e-4;
-    Ncell        6.0;
-    Cs           16.0;
-    Fmax         10.0;
+    deltaL      4.7497534e-4;
+    Ncell       6.0;
+    Cs          16.0;
+    Fmax        10.0;
 
-    EColin       1.;
+    EColin      1.;
 
-    TFM          false;
+    TFM false;
 }
 
 // ************************************************************************* //
