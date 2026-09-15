@@ -52,7 +52,7 @@ boundaryField
     jetInlet
     {
         type            fixedValue;
-        value           uniform 0.11;
+        value           uniform 0.02956;
     }
 
     front

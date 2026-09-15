@@ -23,19 +23,19 @@ boundaryField
     jetInlet
     {
         type            fixedValue;
-        value           uniform 0.75;   // phi_g=0.5, both fresh and burnt
+        value           uniform 0.69076;   // phi_g=0.5, both fresh and burnt
     }
 
     coflowInletBottom
     {
         type            fixedValue;
-        value           uniform 0.756;
+        value           uniform 0.71513;
     }
 
     coflowInletTop
     {
         type            fixedValue;
-        value           uniform 0.756;
+        value           uniform 0.71513;
     }
 
     outlet
