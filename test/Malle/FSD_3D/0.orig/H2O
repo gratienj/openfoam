@@ -23,20 +23,20 @@ boundaryField
     outlet
     {
         type            inletOutlet;
-        inletValue      uniform 0.17894;
-        value           uniform 0.17894;
+        inletValue      uniform 0.13;
+        value           uniform 0.13;
     }
 
     coflowInletBottom
     {
         type            fixedValue;
-        value           uniform 0.17894;   // phi_g=0.5 burnt-gas product
+        value           uniform 0.13;   // phi_g=0.5 burnt-gas product
     }
 
     coflowInletTop
     {
         type            fixedValue;
-        value           uniform 0.17894;   // phi_g=0.5 burnt-gas product
+        value           uniform 0.13;   // phi_g=0.5 burnt-gas product
     }
 
     bottomWall

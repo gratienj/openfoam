@@ -23,7 +23,7 @@ boundaryField
     jetInlet
     {
         type            fixedValue;
-        value           uniform 0.27968;   // phi_g=0.5 fresh mixture
+        value           uniform 0.232;   // phi_g=0.5 fresh mixture
     }
 
     bottomWall
@@ -39,20 +39,20 @@ boundaryField
     coflowInletBottom
     {
         type            fixedValue;
-        value           uniform  0.10593;   // phi_g=0.5 burnt (excess O2)
+        value           uniform  0.11;   // phi_g=0.5 burnt (excess O2)
     }
 
     coflowInletTop
     {
         type            fixedValue;
-        value           uniform  0.10593;   // phi_g=0.5 burnt (excess O2)
+        value           uniform  0.11;   // phi_g=0.5 burnt (excess O2)
     }
 
     outlet
     {
         type            inletOutlet;
-        inletValue      uniform 0.10593;
-        value           uniform 0.10593;
+        inletValue      uniform 0.11;
+        value           uniform 0.11;
     }
 
     front
