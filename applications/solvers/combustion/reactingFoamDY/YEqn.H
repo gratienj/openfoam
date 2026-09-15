@@ -48,6 +48,9 @@ tmp<fv::convectionScheme<scalar>> mvConvection
     Y[inertIndex].clamp_min(0);
 }
 #else
+#include "HashSet.H"
+#include "IOdictionary.H"
+
 tmp<fv::convectionScheme<scalar>> mvConvection
 (
     fv::convectionScheme<scalar>::New
@@ -58,76 +61,81 @@ tmp<fv::convectionScheme<scalar>> mvConvection
         mesh.divScheme("div(phi,Yi_h)")
     )
 );
-
 {
+
     reaction->correct();
     Qdot = reaction->Qdot();
 
     /*
      * ================================================================
      * Molecular Schmidt numbers
+     *
+     *     Gamma_i = rho*D_i
+     *
+     * with
+     *
+     *     D_i = nu/Sc_i
+     *
+     * and
+     *
+     *     nu = mu/rho
+     *
+     * therefore
+     *
+     *     Gamma_i = mu/Sc_i
      * ================================================================
      */
 
-    const scalar ScH2  = 0.23;
-    const scalar ScO2  = 0.80;
-    const scalar ScH2O = 0.58;
-    const scalar ScN2  = 0.91;
+    //- Default Schmidt number for species without a prescribed value
+    const scalar ScDefault = 1.0;
 
 
     /*
      * ================================================================
-     * Identify species from their names
+     * Read the species Schmidt numbers from the "SchmidtNumber"
+     * sub-dictionary of thermophysicalProperties (optional).
+     *
+     * The "importantSpecies" list is read from chemistryProperties:
+     * it identifies the species for which the differential-diffusion
+     * treatment is applied. The inert species (inertSpecie below) is
+     * also treated individually. Any other active species uses the
+     * default Schmidt number.
      * ================================================================
      */
 
-    if
+    const dictionary chemistryDict
     (
-        !composition.species().found("H2")
-     || !composition.species().found("O2")
-     || !composition.species().found("H2O")
-     || !composition.species().found("N2")
-    )
-    {
-        FatalErrorInFunction
-            << "The reactingFoamH2Air solver requires exactly the "
-            << "following species:"
-            << nl
-            << "    H2"
-            << nl
-            << "    O2"
-            << nl
-            << "    H2O"
-            << nl
-            << "    N2"
-            << nl
-            << "Available species: "
-            << composition.species()
-            << exit(FatalError);
-    }
+        IOdictionary
+        (
+            IOobject
+            (
+                "chemistryProperties",
+                runTime.constant(),
+                mesh,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE,
+                false
+            )
+        )
+    );
 
-    const label H2Index =
-        composition.species().find("H2");
+    const wordHashSet importantSpecies
+    (
+        chemistryDict.found("importantSpecies")
+      ? wordHashSet(chemistryDict.subDict("importantSpecies").toc())
+      : wordHashSet()
+    );
 
-    const label O2Index =
-        composition.species().find("O2");
-
-    const label H2OIndex =
-        composition.species().find("H2O");
-
-    const label N2Index =
-        composition.species().find("N2");
+    //- Schmidt numbers for the important/inert species, if prescribed
+    const dictionary* SchmidtNumberDictPtr = thermo.findDict("SchmidtNumber");
 
 
     /*
      * ================================================================
-     * Solve ALL FOUR species equations.
+     * Solve ALL species equations.
      *
-     * N2 is no longer reconstructed from:
-     *
-     *     YN2 = 1 - YH2 - YO2 - YH2O
-     *
-     * This is necessary to give N2 its own Schmidt number.
+     * No species is reconstructed from unity (sum of mass fractions);
+     * each active species is transported with its own Schmidt number.
      * ================================================================
      */
 
@@ -135,38 +143,26 @@ tmp<fv::convectionScheme<scalar>> mvConvection
     {
         if (composition.active(i))
         {
-            volScalarField& Yi = Y[i];
+            const word& specieName = composition.species()[i];
 
-            scalar ScYi;
+            volScalarField& Yi = Y[i];
 
 
             /*
              * Species-dependent Schmidt number
              */
 
-            if (i == H2Index)
-            {
-                ScYi = ScH2;
-            }
-            else if (i == O2Index)
-            {
-                ScYi = ScO2;
-            }
-            else if (i == H2OIndex)
-            {
-                ScYi = ScH2O;
-            }
-            else if (i == N2Index)
-            {
-                ScYi = ScN2;
-            }
-            else
-            {
-                FatalErrorInFunction
-                    << "No Schmidt number defined for species "
-                    << composition.species()[i]
-                    << exit(FatalError);
-            }
+            const scalar ScYi
+            (
+                (
+                    importantSpecies.found(specieName)
+                 || specieName == inertSpecie
+                )
+             && SchmidtNumberDictPtr
+              ? SchmidtNumberDictPtr->
+                    getOrDefault<scalar>(specieName, ScDefault)
+              : ScDefault
+            );
 
 
             /*
@@ -188,11 +184,6 @@ tmp<fv::convectionScheme<scalar>> mvConvection
              *     Gamma_i = mu/Sc_i
              * ========================================================
              */
-            const tmp<volScalarField> tDiffusionFactor =
-                reaction->diffusionFactor();
-
-            const volScalarField& diffusionFactor =
-                tDiffusionFactor();
 
             volScalarField GammaYi
             (
@@ -204,14 +195,12 @@ tmp<fv::convectionScheme<scalar>> mvConvection
                     IOobject::NO_READ,
                     IOobject::NO_WRITE
                 ),
-                diffusionFactor*
                 turbulence->mu()/ScYi
             );
 
 
             Info<< "Species " << Yi.name()
                 << " : Sc = " << ScYi
-                << ", minmax(diffusion) = " << gMinMax(diffusionFactor)
                 << ", min(Gamma) = " << gMin(GammaYi)
                 << ", max(Gamma) = " << gMax(GammaYi)
                 << endl;
@@ -253,7 +242,7 @@ tmp<fv::convectionScheme<scalar>> mvConvection
 
     /*
      * ================================================================
-     * Normalization of the four mass fractions
+     * Normalization of the mass fractions
      *
      *     sum(Yi) = 1
      *
@@ -287,7 +276,7 @@ tmp<fv::convectionScheme<scalar>> mvConvection
 
 
     /*
-     * Normalize all four species.
+     * Normalize all species.
      */
 
     forAll(Y, i)
