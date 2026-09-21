@@ -1,0 +1,306 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  Cartesian, periodic-slice DNS conversion of the Sandia Flame D burner
+  geometry (axisymmetric jet + pilot + coflow), following the same pattern as
+  the H2-air slot-burner DNS case built earlier in this thread.
+
+  ---------------------------------------------------------------------------
+  GEOMETRIC APPROXIMATIONS -- read before using this mesh for anything
+  ---------------------------------------------------------------------------
+  1. AXISYMMETRIC -> PLANAR: the real jet/pilot/coflow are concentric annuli
+     around an axis (radius r). Here, r is mapped onto a single cross-stream
+     Cartesian coordinate y, with a SYMMETRY PLANE at y=0 standing in for the
+     jet centerline (r=0). This discards the true axisymmetric radial
+     spreading of a round jet -- the flow will behave like a planar
+     (2D-periodic) jet/pilot/coflow arrangement, not a round one. This is an
+     accepted modeling choice for a periodic-slice DNS, not a detail to fix.
+
+  2. RADIAL STATIONS carried over directly from system/blockMeshDict of the
+     real SandiaD_LTS tutorial (fetched earlier in this thread):
+       R_jet    = 3.6  mm  (fuel/premixed jet radius)
+       R_jetOut = 3.85 mm  (outer face of the fuel-tube wall)
+       R_pilot  = 9.1  mm  (outer face of the pilot annulus)
+     The original tutorial's fuel-tube wall (3.6-3.85mm) is meshed as a real
+     finite-thickness band (0.25mm), same treatment as this file's "wallTube".
+
+  3. OUTER RIM (pilot/coflow interface, r=9.1mm in the original): the real
+     axisymmetric mesh has ZERO radial thickness there (a single shared face
+     tagged wall, no separate solid band) -- not meshable as a wall in a
+     finite-volume Cartesian DNS. A small nominal finite thickness (tRim,
+     default 0.1mm) is introduced here instead, same trick as the fuel-tube
+     wall. Tune tRim if you have a physical rim thickness to match.
+
+  4. DOMAIN TRUNCATION:
+     - Radial (y) extent: the original tutorial's far-field/coflow region
+       extends to r=150mm (needed for a RANS entrainment far-field). A DNS
+       slice at that outer radius would mesh an enormous, essentially
+       quiescent region for no benefit -- Ly is truncated to 30mm by default
+       (closer in spirit to the paper's own slot-burner domain, Ly=32mm).
+       Increase Ly if you specifically need to capture more entrainment.
+     - Streamwise (x) extent: the original tutorial's nozzle-interior region
+       (z=-100 to 0mm in their axial coordinate) is dropped entirely -- as in
+       the paper's own slot burner, this case starts AT the burner exit plane
+       (x=0) with inlet conditions imposed directly, not resolving the
+       internal nozzle flow. Lx defaults to 100mm (vs. the tutorial's 500mm
+       downstream extent) purely for DNS cost -- a real flame brush will need
+       checking against this and probably needs Lx increased.
+
+  5. PERIODIC SLICE THICKNESS (Lz, your "tranche DZ"): not present in the
+     original axisymmetric geometry at all (it had an azimuthal wedge
+     instead). Set here as a free parameter, defaulted to ~2x the jet radius
+     as a generic periodic-DNS heuristic -- tune based on the turbulence
+     integral scale you expect, same consideration as l_t in the paper's own
+     slot burner (l_t=2mm there, jet half-height H=8mm, i.e. Lz/l_t ratios of
+     that order are a reasonable starting point).
+  ---------------------------------------------------------------------------
+\*-----------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+
+convertToMeters 1;
+
+// ---- Radial stations carried over from the real SandiaD_LTS geometry ----
+Rjet        0.0036;     // fuel/premixed jet half-width (radius -> half-width)
+Rwall       0.00385;    // outer face of the fuel-tube wall (0.25mm thickness)
+Rpilot      0.0091;     // outer face of the pilot annulus
+tRim        0.0001;     // NOMINAL outer-rim thickness (zero in the real mesh,
+                        // see note 3 above) -- TUNE
+
+// ---- Domain extents (TRUNCATED vs. the real tutorial, see note 4) ----
+Ly          0.03;       // cross-stream half-height (radial truncation)
+Lx          0.1;        // streamwise length (downstream of burner exit only)
+Lz          0.0072;     // periodic slice thickness ("DZ"), ~2x Rjet -- TUNE
+
+// derived y-coordinates (bottom to top): jet | wallTube | pilot | wallRim | coflow
+y0          0.0;
+y1          #calc "$Rjet";
+y2          #calc "$Rwall";
+y3          #calc "$Rpilot";
+y4          #calc "$Rpilot + $tRim";
+y5          #calc "$Ly";
+
+// ---- Mesh resolution: single uniform target cell size everywhere ----
+// delta below is the ONE target Cartesian cell size applied to x, y, and z
+// alike -- consistent with true DNS practice (the paper's own mesh is
+// Delta_x=0.1mm uniform in all 3 directions, Section 2.3.1). All n* counts
+// below are DERIVED from delta and the real band widths (round(width/delta)),
+// not chosen ad hoc per band as in an earlier version of this file.
+delta       0.0002;  // 0.2mm target uniform cell size -- TUNE (paper used 0.1mm)
+
+//nx          500;     // Lx/delta   = 100mm/0.2mm
+//nz          36;      // Lz/delta   = 7.2mm/0.2mm
+//nyJet       18;       // Rjet/delta          = 3.6mm/0.2mm
+nx          50;     // Lx/delta   = 100mm/0.2mm
+nz          10;      // Lz/delta   = 7.2mm/0.2mm
+nyJet       5;       // Rjet/delta          = 3.6mm/0.2mm
+nyWall      1;        // (Rwall-Rjet)/delta  = 0.25mm/0.2mm -> rounds to 1
+                       // (EXCEPTION: band thinner than delta forces a
+                       // slightly coarser local Delta=0.25mm here -- an
+                       // unavoidable consequence of a real 0.25mm-thick
+                       // feature vs. a 0.2mm target, not an arbitrary choice)
+//nyPilot     26;        // (Rpilot-Rwall)/delta = 5.25mm/0.2mm -> local Delta=0.202mm
+nyPilot     6;        // (Rpilot-Rwall)/delta = 5.25mm/0.2mm -> local Delta=0.202mm
+nyRim       1;         // tRim/delta = 0.1mm/0.2mm -> rounds to 1 (same kind of
+                       // exception as nyWall: local Delta=0.1mm here, finer
+                       // than the 0.2mm target since a whole cell can't be
+                       // smaller than the band itself)
+//nyCoflow    104;       // (Ly-Rpilot-tRim)/delta = 20.8mm/0.2mm, exact
+nyCoflow    25;       // (Ly-Rpilot-tRim)/delta = 20.8mm/0.2mm, exact
+
+vertices
+(
+    // block 0: jet (0 <= y <= Rjet)
+    (0    $y0  0)      // 0
+    ($Lx  $y0  0)      // 1
+    ($Lx  $y1  0)      // 2
+    (0    $y1  0)      // 3
+    (0    $y0  $Lz)    // 4
+    ($Lx  $y0  $Lz)    // 5
+    ($Lx  $y1  $Lz)    // 6
+    (0    $y1  $Lz)    // 7
+
+    // block 1: fuel-tube wall band (Rjet <= y <= Rwall)
+    (0    $y1  0)      // 8
+    ($Lx  $y1  0)      // 9
+    ($Lx  $y2  0)      // 10
+    (0    $y2  0)      // 11
+    (0    $y1  $Lz)    // 12
+    ($Lx  $y1  $Lz)    // 13
+    ($Lx  $y2  $Lz)    // 14
+    (0    $y2  $Lz)    // 15
+
+    // block 2: pilot (Rwall <= y <= Rpilot)
+    (0    $y2  0)      // 16
+    ($Lx  $y2  0)      // 17
+    ($Lx  $y3  0)      // 18
+    (0    $y3  0)      // 19
+    (0    $y2  $Lz)    // 20
+    ($Lx  $y2  $Lz)    // 21
+    ($Lx  $y3  $Lz)    // 22
+    (0    $y3  $Lz)    // 23
+
+    // block 3: outer-rim band (Rpilot <= y <= Rpilot+tRim)
+    (0    $y3  0)      // 24
+    ($Lx  $y3  0)      // 25
+    ($Lx  $y4  0)      // 26
+    (0    $y4  0)      // 27
+    (0    $y3  $Lz)    // 28
+    ($Lx  $y3  $Lz)    // 29
+    ($Lx  $y4  $Lz)    // 30
+    (0    $y4  $Lz)    // 31
+
+    // block 4: coflow (Rpilot+tRim <= y <= Ly)
+    (0    $y4  0)      // 32
+    ($Lx  $y4  0)      // 33
+    ($Lx  $y5  0)      // 34
+    (0    $y5  0)      // 35
+    (0    $y4  $Lz)    // 36
+    ($Lx  $y4  $Lz)    // 37
+    ($Lx  $y5  $Lz)    // 38
+    (0    $y5  $Lz)    // 39
+);
+
+blocks
+(
+    hex (0  1  2  3  4  5  6  7)    ($nx $nyJet    $nz) simpleGrading (1 1 1)
+    hex (8  9  10 11 12 13 14 15)   ($nx $nyWall   $nz) simpleGrading (1 1 1)
+    hex (16 17 18 19 20 21 22 23)   ($nx $nyPilot  $nz) simpleGrading (1 1 1)
+    hex (24 25 26 27 28 29 30 31)   ($nx $nyRim    $nz) simpleGrading (1 1 1)
+    hex (32 33 34 35 36 37 38 39)   ($nx $nyCoflow $nz) simpleGrading (1 1 1)
+    // Uniform in all directions, same as every other block -- no grading.
+    // An earlier version of this file stretched cells towards the outer
+    // wall here (rationale: that region is far less dynamically active),
+    // but that's a RANS/axisymmetric-far-field habit, not a DNS one: DNS
+    // means resolving all scales you care about UNIFORMLY, and there is no
+    // physical "radial" justification for de-refining part of the domain in
+    // this planar, periodic-z slot-burner-type configuration (unlike a true
+    // axisymmetric RANS mesh, there's no radial spreading/far-field decay
+    // argument here to lean on). If the truncated coflow band (9.2-30mm) is
+    // too expensive at full resolution, reduce Ly directly instead of
+    // grading around the cost -- that keeps Delta_x honestly uniform
+    // everywhere, consistent with the paper's own DNS mesh (Section 2.3.1).
+);
+
+edges
+(
+);
+
+boundary
+(
+    inletCH4
+    {
+        type patch;
+        faces 
+	( 
+	  (0 4 7 3) 
+	);
+    }
+
+    wallOutside
+    {
+        // matches the original tutorial's "wallOutside" far-field wall
+        type wall;
+        faces 
+        ( 
+	   (35 34 38 39) 
+	);
+    }
+
+    wallTube
+    {
+        type wall;
+        faces 
+	( 
+	   (8 12 15 11) 
+	);
+    }
+
+    wallRim
+    {
+        type wall;
+        faces 
+	( 
+	   (24 28 31 27) 
+	);
+    }
+
+    inletPilot
+    {
+        type patch;
+        faces 
+	( 
+	   (16 20 23 19) 
+	);
+    }
+
+    inletAir
+    {
+        type patch;
+        faces 
+	( 
+	  (32 36 39 35) 
+	);
+    }
+
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (1 2 6 5)
+            (9 10 14 13)
+            (17 18 22 21)
+            (25 26 30 29)
+            (33 34 38 37)
+        );
+    }
+
+    axis
+    {
+        // stands in for the jet centerline (r=0) of the original
+        // axisymmetric geometry -- see note 1 above
+        type symmetryPlane;
+        faces 
+	( 
+	   (0 1 5 4) 
+	);
+    }
+
+    front
+    {
+        type cyclic;
+        neighbourPatch back;
+        faces
+        (
+            (4 5 6 7)
+            (12 13 14 15)
+            (20 21 22 23)
+            (28 29 30 31)
+            (36 37 38 39)
+        );
+    }
+
+    back
+    {
+        type cyclic;
+        neighbourPatch front;
+        faces
+        (
+            (0 3 2 1)
+            (8 11 10 9)
+            (16 19 18 17)
+            (24 27 26 25)
+            (32 35 34 33)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2606                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    object          combustionProperties;
+}
+
+combustionModel EDC;
+
+active          true;
+
+EDCCoeffs
+{
+    version         v2016;
+    fuel            H2;
+    semiImplicit    false;
+    MultiStep       false;
+    Cv              0.1;
+    ftVarMin        0.0001;
+    deltaL          0.000474975;
+    Ncell           6;
+    Cs              16;
+    Fmax            10;
+    EColin          1;
+    TFM             false;
+    CantaraTable    true;
+    reactionRateFlameArea flameletTableCSV;
+    flameletTableCSVCoeffs
+    {
+        tableFile       "H2_FSD_V11_flamelet.csv";
+        KColumn         "K";
+        omegaColumn     "omega0_H2";
+        omegaMin        0;
+        //belowMin        clamp;
+        belowMin        zero;
+        aboveMax        clamp;
+    }
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,10 @@
+// Replace EACH species' transport sub-dict in thermo.compressibleGasH2AirOF
+// (H2, H, O, O2, OH, H2O, HO2, H2O2, N2, AR) with this SAME block -- the
+// paper specifies mu/kappa at the mixture level (single power law for the
+// whole gas), not per-species, so every species carries the identical fit:
+
+transport
+{
+    muLogCoeffs<8>      ( -14.899560  0.700000  0  0  0  0  0  0 );
+    kappaLogCoeffs<8>   (  -6.287165  0.201029  0.047866  0  0  0  0  0 );
+}

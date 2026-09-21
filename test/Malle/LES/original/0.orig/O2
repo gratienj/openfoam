@@ -1,0 +1,70 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      O2;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   uniform 0.23;
+
+boundaryField
+{
+    jetInlet
+    {
+        type            fixedValue;
+        value           uniform 0.2294;   // phi_g=0.5 fresh mixture
+    }
+
+    bottomWall
+    {
+        type            zeroGradient;
+    }
+
+    topWall
+    {
+        type            zeroGradient;
+    }
+
+    coflowInletBottom
+    {
+        type            fixedValue;
+        value           uniform  0.11471349780577;   // phi_g=0.5 burnt (excess O2)
+    }
+
+    coflowInletTop
+    {
+        type            fixedValue;
+        value           uniform  0.11471349780577;   // phi_g=0.5 burnt (excess O2)
+    }
+
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform 0.11471349780577;
+        value           uniform 0.11471349780577;
+    }
+
+    front
+    {
+        type            cyclic;
+    }
+
+    back
+    {
+        type            cyclic;
+    }
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,53 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// IMPORTANT: changing "transport" here is NOT sufficient on its own.
+// thermo.compressibleGasH2AirOF (referenced below) currently stores each
+// species' transport data as Sutherland "As"/"Ts" pairs -- logPolynomial
+// expects "muLogCoeffs<8>"/"kappaLogCoeffs<8>" instead. Both files must be
+// updated together or you will hit an "entry not found"/"wrong token type"
+// error identical to earlier ones in this thread. See the accompanying
+// updated thermo file for the matching per-species transport blocks
+// (currently the SAME fit applied to every species, since the paper itself
+// specifies mu/kappa at the MIXTURE level, not per-species -- consistent
+// with the single global power-law philosophy already established).
+//
+// Also unresolved: logPolynomialTransport.H's own documentation is
+// internally contradictory about whether mu = exp(sum(a_i*ln(T)^i)) or
+// mu = sum(a_i*ln(T)^i) directly (no exponentiation). The coefficients
+// provided assume the exponentiated form -- verify with the quick test
+// described earlier (muLogCoeffs<8> (0 1 0 0 0 0 0 0), check mu() at a
+// known T) before trusting results from a real run.
+
+thermoType
+{
+    type            hePsiThermo;
+    mixture         reactingMixture;
+    transport       logPolynomial;
+    thermo          janaf;
+    energy          sensibleEnthalpy;
+    equationOfState perfectGas;
+    specie          specie;
+}
+
+inertSpecie N2;
+
+chemistryReader foamChemistryReader;
+foamChemistryFile "<constant>/reactionsH2AirOF";
+foamChemistryThermoFile "<constant>/thermo.compressibleGasH2AirOF";
+
+
+// ************************************************************************* //

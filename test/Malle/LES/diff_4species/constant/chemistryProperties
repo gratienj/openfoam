@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2606                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    object          chemistryProperties;
+}
+
+chemistryType
+{
+    solver          ode;
+    method          standard;
+}
+
+chemistry       off;
+
+importantSpecies
+{
+    H2O             ;
+    H2              ;
+    O2              ;
+}
+
+initialChemicalTimeStep 1e-06;
+
+odeCoeffs
+{
+    solver          seulex;
+    absTol          1e-08;
+    relTol          0.0001;
+}
+
+reduction
+{
+    active          off;
+    log             on;
+    tolerance       0.0001;
+    method          DAC;
+    initialSet
+    {
+        H2O             ;
+        H2              ;
+        O2              ;
+    }
+    automaticSIS    off;
+    fuelSpecies
+    {
+        H2              1;
+    }
+}
+
+tabulation
+{
+    active          off;
+    log             on;
+    printProportion off;
+    printNumRetrieve off;
+    tolerance       0.003;
+    method          ISAT;
+    scaleFactor
+    {
+        otherSpecies    1;
+        Temperature     1000;
+        Pressure        100000;
+        deltaT          1e-05;
+    }
+    maxNLeafs       5000;
+    chPMaxLifeTime  1000;
+    maxGrowth       100;
+    checkEntireTreeInterval 500;
+    maxDepthFactor  2;
+    minBalanceThreshold 30;
+    MRURetrieve     false;
+    maxMRUSize      0;
+    growPoints      true;
+    maxNumNewDim    10;
+}
+
+
+// ************************************************************************* //

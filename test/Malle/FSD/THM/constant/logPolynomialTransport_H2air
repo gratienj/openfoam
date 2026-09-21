@@ -1,0 +1,26 @@
+// thermophysicalProperties -- transport dict entry for logPolynomialTransport
+//
+// IMPORTANT: this assumes Interpretation A of logPolynomialTransport.H's
+// (self-contradictory) documentation, i.e. mu = exp(sum(a_i * ln(T)^i)),
+// which is what makes muLogCoeffs<8> reproduce a true power law with just
+// 2 nonzero terms. RUN THE VERIFICATION TEST described above (a trivial
+// case with muLogCoeffs<8> (0 1 0 0 0 0 0 0) and check mu() at a known T)
+// BEFORE trusting these numbers -- if it turns out to be Interpretation B
+// instead, come back and I will refit accordingly (the fitting numbers
+// above would need re-deriving under the non-exponentiated form).
+//
+// mu(T) = 1.716e-5 * (T/273)^0.7  [Pa.s] -- classic Poinsot & Veynante /
+//   AVBP-family default for air, NOT verified as Male et al.'s exact value
+//   (not given explicitly in the paper text available in this thread) --
+//   a reasonable, well-known starting point given H2 is a small mass
+//   fraction diluting mostly N2/O2.
+//
+// kappa(T) = mu(T)*Cp(T)/Pr, Pr=0.66 (real value, paper Section 2.3.1),
+//   Cp(T) from representative air data (same simplification as above),
+//   fit as a quadratic in ln(T) (fit error <0.7% over 300-1600K).
+
+transport
+{
+    muLogCoeffs<8>      ( -14.899560  0.700000  0  0  0  0  0  0 );
+    kappaLogCoeffs<8>   (  -6.287165  0.201029  0.047866  0  0  0  0  0 );
+}

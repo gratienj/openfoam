@@ -1,0 +1,53 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+thermoType
+{
+    type            hePsiThermo;
+    //mixture         reactingMixture;
+    mixture         singleStepReactingMixture;
+    transport       sutherland;
+    thermo          janaf;
+    energy          sensibleEnthalpy;
+    equationOfState perfectGas;
+    specie          specie;
+}
+
+inertSpecie N2;
+
+SchmidtNumber
+{
+    H2   0.23;
+    O2   0.80;
+    H2O  0.58;
+    N2   0.91;
+}
+
+LewisNumber
+{
+  H2	0.34;
+  O2	1.20;
+  H2O	0.88;
+  N2	1.37;
+}
+
+
+chemistryReader foamChemistryReader;
+foamChemistryFile "<constant>/reactionsH2AirOF4";
+foamChemistryThermoFile "<constant>/thermo.compressibleGasH2AirOF4";
+
+
+// ************************************************************************* //

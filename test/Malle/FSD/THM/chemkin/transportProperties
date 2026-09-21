@@ -1,0 +1,78 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version: 2606                                   |
+|   \\  /    A nd           | Website: https://www.openfoam.com               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "chemkin";
+    object      transportProperties;
+}
+
+// This file is the OpenFOAM transport dictionary expected by chemkinToFoam.
+// Species retained from thermo4.dat:
+//     H2, O2, H2O, N2
+//
+// IMPORTANT:
+// thermo4.dat contains NASA thermodynamic coefficients only; it does NOT
+// contain Sutherland transport coefficients. Therefore the As/Ts values
+// below are transport-model values and are not derived from thermo4.dat.
+//
+// For the first chemkinToFoam conversion, these values only need to provide
+// a valid OpenFOAM transport dictionary. They should be revisited before
+// quantitative validation of the Malé et al. DNS, because the paper uses
+// species-dependent diffusion (Sc_H2=0.23, Sc_O2=0.80, Sc_H2O=0.58,
+// Sc_N2=0.91).
+
+".*"
+{
+    transport
+    {
+        As      1.67212e-6;
+        Ts      170.672;
+    }
+}
+
+"H2"
+{
+    transport
+    {
+        As      6.362e-7;
+        Ts      72.0;
+    }
+}
+
+"O2"
+{
+    transport
+    {
+        As      1.58e-6;
+        Ts      127.0;
+    }
+}
+
+"H2O"
+{
+    transport
+    {
+        As      1.30e-7;
+        Ts      1064.0;
+    }
+}
+
+"N2"
+{
+    transport
+    {
+        As      1.406e-6;
+        Ts      111.0;
+    }
+}
+
+// ************************************************************************* //

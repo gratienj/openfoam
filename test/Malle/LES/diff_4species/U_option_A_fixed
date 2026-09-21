@@ -1,0 +1,109 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   #codeStream
+{
+    codeInclude
+    #{
+        #include "fvCFD.H"
+    #};
+
+    codeOptions
+    #{
+        -I$(LIB_SRC)/finiteVolume/lnInclude \
+        -I$(LIB_SRC)/meshTools/lnInclude
+    #};
+
+    codeLibs
+    #{
+        -lfiniteVolume \
+        -lmeshTools
+    #};
+
+    code
+    #{
+        const IOdictionary& d = static_cast<const IOdictionary&>(dict);
+        const fvMesh& mesh = refCast<const fvMesh>(d.db());
+
+        vectorField U(mesh.nCells(), vector(0, 0, 0.9));
+
+        Random rndGen(1234);
+
+        const scalar Rdiag = 0.0018;
+        const scalar sigma = Foam::sqrt(Rdiag);
+
+        forAll(U, celli)
+        {
+            U[celli].x() += sigma*rndGen.GaussNormal<scalar>();
+            U[celli].y() += sigma*rndGen.GaussNormal<scalar>();
+            U[celli].z() += sigma*rndGen.GaussNormal<scalar>();
+        }
+
+        U.writeEntry("", os);
+    #};
+};
+
+boundaryField
+{
+    inletH2
+    {
+        type            turbulentDFSEMInlet;
+        delta           0.0036;
+        R               uniform (5.16 0 0  5.16 0  5.16);
+        U               uniform (0 0 49.6);
+        value           uniform (0 0 49.6);
+    }
+
+    inletPilot
+    {
+        type            turbulentDFSEMInlet;
+        delta           0.00525;
+        R               uniform (0.51 0 0  0.51 0  0.51);
+        U               uniform (0 0 11.4);
+        value           uniform (0 0 11.4);
+    }
+
+    inletAir
+    {
+        type            fixedValue;
+        value           uniform (0 0 0.9);
+    }
+
+    wallTube
+    {
+        type            noSlip;
+    }
+    wallOutside
+    {
+        type            noSlip;
+    }
+
+    outlet
+    {
+        type            pressureInletOutletVelocity;
+        value           uniform (0 0 0.9);
+    }
+
+    axis
+    {
+        type            symmetryPlane;
+    }
+    front
+    {
+        type            cyclic;
+    }
+    back
+    {
+        type            cyclic;
+    }
+}
+
+// ************************************************************************* //
