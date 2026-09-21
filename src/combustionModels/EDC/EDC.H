@@ -101,6 +101,8 @@ SourceFiles
 #ifndef EDC_H
 #define EDC_H
 
+#include "singleStepCombustion.H"
+#include "../FSD/FSD.H"
 #include "../laminar/laminar.H"
 #include "Enum.H"
 
@@ -136,8 +138,12 @@ class EDC
     public laminar<ReactionThermo>
 {
     // Private data
+        using thermo_type = sutherlandTransport<species::thermo<janafThermo<perfectGas<Foam::specie> >, sensibleEnthalpy> >;
+        using ss_comb_model = singleStepCombustion <ReactionThermo, thermo_type> ; 
 
-        //- The selected model version
+        ss_comb_model* singleStepCombustionPtr_ = nullptr;
+        bool MultiStep_ = true;
+                //- The selected model version
         EDCversions version_;
 
         scalar C1_;
@@ -149,6 +155,12 @@ class EDC
 
         //- Mixing parameter
         volScalarField kappa_;
+        
+        scalar tauStarMax_;
+        volScalarField tauStar_;
+
+        // R(Y) for H2 specie
+        mutable volScalarField Qdot_;
 
 
     // Private Member Functions

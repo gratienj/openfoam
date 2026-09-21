@@ -91,6 +91,20 @@ FSD<ReactionThermo, ThermoType>::FSD
         this->mesh(),
         dimensionedScalar(dimless, Zero)
     ),
+    mgft_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("mgft"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimensionSet(0, -1, 0, 0, 0, 0, 0), Zero)
+    ),
     YFuelFuelStream_
     (
         dimensionedScalar
@@ -167,6 +181,24 @@ FSD<ReactionThermo, ThermoType>::FSD
             dimensionSet(1, -2, -1, 0, 0, 0, 0),
             Zero
           )
+    ),
+    UseCantaraTable_
+    (
+        this->coeffs().template getOrDefault<bool>("CantaraTable", false)
+    ),
+    Kflamelet_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("Kflamelet"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless/dimTime, Zero)
     ),
     F0_
     (
@@ -263,6 +295,7 @@ FSD<ReactionThermo, ThermoType>::~FSD()
 template<class ReactionThermo, class ThermoType>
 void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
 {
+    Info<< "FSD: calculateSourceNorm()" << endl;
     /*
      * Update the fresh mixture composition.
      */
@@ -398,16 +431,57 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
         )
     );
 
+    const volVectorField& U =
+        YO2.db().lookupObject<volVectorField>("U");
+
+    const volTensorField gradU
+    (
+        fvc::grad(U)
+    );
+
+    // --------------------------------------------------------------------- //
+    // Flamelet strain-rate K
+    //
+    // Definition compatible with the Cantera twin-flame analysis:
+    //
+    //     K = | n . grad(U) . n |
+    //
+    // In a 1-D normal strain field:
+    //
+    //     K = |du/dx|
+    //
+    // --------------------------------------------------------------------- //
+
+    Kflamelet_ =
+    (
+        pos(YFuel) *
+        mag
+        (
+            nft
+          & gradU
+          & nft
+        )
+    );
+
 
     // --------------------------------------------------------------------- //
     // Consumption speed per unit flame area
     // --------------------------------------------------------------------- //
-
-    reactionRateFlameArea_->correct(sigma);
+    if(UseCantaraTable_)
+    {
+        Info <<"Use Kflamelet with Cantara Table  for reactionRateFlameArea"<<endl ;
+        reactionRateFlameArea_->correct(Kflamelet_);
+    }
+    else
+    {
+        Info <<"Use standard Sigma for reactionRateFlameArea"<<endl ;
+        reactionRateFlameArea_->correct(sigma);
+    }
 
     const volScalarField& omegaFuel =
         reactionRateFlameArea_->omega();
 
+    Info << "  omegaFuel   min/max  = " << gMinMax(omegaFuel) <<endl;
 
     // --------------------------------------------------------------------- //
     // Stoichiometric mixture fraction
@@ -1005,18 +1079,19 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
     }*/
 
     Info<< "FDC DEBUG:" << nl
-        << "    YprodBurnt = " << YprodBurnt << nl
-        << "    products   min/max = " << gMinMax(products) << nl
-        << "    c          min/max = " << gMinMax(c) << nl
-        << "    Pc         min/max = " << gMinMax(pc) << nl
+        << "    YprodBurnt          = " << YprodBurnt << nl
+        << "    products   min/max  = " << gMinMax(products) << nl
+        << "    c          min/max  = " << gMinMax(c) << nl
+        << "    Pc         min/max  = " << gMinMax(pc) << nl
         << "    flameSensor min/max = " << gMinMax(flameSensor_) << nl
-        << "    FTFM       min/max = " << gMinMax(FTFM_) << nl
-        << "    deltaFlame    min/max = " << gMinMax(deltaFlame_) << nl
+        << "    FTFM       min/max  = " << gMinMax(FTFM_) << nl
+        << "    deltaFlame min/max  = " << gMinMax(deltaFlame_) << nl
         << endl;
 
     // --------------------------------------------------------------------- //
     // Final FSD source
     // --------------------------------------------------------------------- //
+    mgft_ = mgft ;
     const volScalarField wFuelFSD =
         max
         (
@@ -1039,6 +1114,8 @@ void FSD<ReactionThermo, ThermoType>::calculateSourceNorm()
                 0.0
             )
         );
+    
+    Info << "    wFuelFSD   min/max  = " << gMinMax(wFuelFSD) <<endl;
 
     if (TFM_)
     {
@@ -1061,10 +1138,12 @@ Foam::combustionModels::FSD<ReactionThermo, ThermoType>::diffusionFactor() const
 template<class ReactionThermo, class ThermoType>
 void FSD<ReactionThermo, ThermoType>::correct()
 {
+    Info<< "FSD: correct()" << endl;
     this->wFuel_ = Zero;
 
     if (this->active())
     {
+        Info<< "FSD: model active" << endl;
         calculateSourceNorm();
     }
 }
@@ -1093,6 +1172,8 @@ bool FSD<ReactionThermo, ThermoType>::read()
         );
 
         this->coeffs().readEntry("TFM", TFM_);
+
+        this->coeffs().readEntry("CantaraTable", UseCantaraTable_);
 
         reactionRateFlameArea_->read
         (

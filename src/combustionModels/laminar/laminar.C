@@ -51,6 +51,20 @@ Foam::combustionModels::laminar<ReactionThermo>::laminar
     integrateReactionRate_
     (
         this->coeffs().getOrDefault("integrateReactionRate", true)
+    ),
+    R_H2_
+    (
+        IOobject
+        (
+            this->thermo().phaseScopedName(typeName, "R_H2"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
     )
 {
     if (integrateReactionRate_)
@@ -132,6 +146,12 @@ Foam::combustionModels::laminar<ReactionThermo>::R(volScalarField& Y) const
             this->thermo().composition().species().find(Y.member());
 
         Su += this->chemistryPtr_->RR(specieI);
+    }
+
+    if(Y.member()=="H2")
+    {
+        R_H2_.primitiveFieldRef() = Su.source() ;
+        Info<<" Laminar::R_H2 min/max : "<<gMinMax(R_H2_)<<endl ;
     }
 
     return tSu;

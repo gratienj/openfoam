@@ -5,18 +5,14 @@
     \\  /    A nd           |
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Direct lookup/interpolation of a Cantera CSV flamelet table.
+    Direct lookup/interpolation of a CSV flamelet omega(K) table.
 
-    Expected CSV columns:
-        K
-        omega0_H2
+    The CSV file is read from:
 
-    Other CSV columns are allowed and ignored.
+        <case>/constant/<tableFile>
 
-    Example:
-        K,Uin,mdot,omega0_H2,Sc_H2,Sc_heat,Tmax,...
-        177.285279,2.363..., ...,7.03596e-03,...
-        ...
+    This is compatible with parallel runs since the path is resolved
+    from the global case directory rather than processorN/constant/.
 \*---------------------------------------------------------------------------*/
 
 #ifndef flameletTableCSV_H
@@ -26,6 +22,10 @@
 #include "scalarList.H"
 #include "word.H"
 #include "fileName.H"
+
+#include <string>
+#include <vector>
+
 
 namespace Foam
 {
@@ -38,44 +38,63 @@ class flameletTableCSV
 {
     // Private data
 
-        //- Flamelet abscissa: K [s^-1]
+        //- Strain-rate / flamelet coordinate
         scalarList K_;
 
-        //- H2 consumption rate: omega0_H2 [kg/m2/s]
+        //- Flame consumption rate corresponding to K_
         scalarList omegaTable_;
 
         //- Minimum allowed omega
         scalar omegaMin_;
 
-        //- Behaviour below first table value
+        //- Maximum allowed omega
+        scalar omegaMax_;
+
+        //- Behaviour below minimum K
         word belowMin_;
 
-        //- Behaviour above last table value
+        //- Behaviour above maximum K
         word aboveMax_;
 
-        //- CSV file name
+        //- CSV file name, relative to <case>/constant/
         fileName tableFile_;
 
-        //- CSV column names
+        //- Name of the K column in CSV
         word KColumn_;
+
+        //- Name of the omega column in CSV
         word omegaColumn_;
 
 
     // Private Member Functions
 
-        //- Read CSV flamelet table
+        //- Read the CSV flamelet table
         void readTable();
 
         //- Interpolate omega(K)
         scalar interpolate(const scalar K) const;
 
-        //- Trim whitespace from a string
-        static std::string trim(const std::string& s);
+        //- Split one CSV line into fields
+        static std::vector<std::string> splitCSV
+        (
+            const std::string& line
+        );
 
-        //- Split one CSV line
-        static std::vector<std::string> splitCSV(const std::string& line);
+        //- Remove leading/trailing spaces
+        static std::string trim
+        (
+            const std::string& value
+        );
 
-        //- Find a column in CSV header
+        //- Convert string to scalar
+        static scalar readScalar
+        (
+            const std::string& value,
+            const label lineNumber,
+            const word& columnName
+        );
+
+        //- Find a column in the CSV header
         static label findColumn
         (
             const std::vector<std::string>& header,
@@ -91,6 +110,7 @@ public:
 
     // Constructors
 
+        //- Construct from dictionary
         flameletTableCSV
         (
             const word modelType,
@@ -106,16 +126,21 @@ public:
 
     // Member Functions
 
-        //- Correct reaction rate flame area
-        virtual void correct(const volScalarField& sigma);
+        //- Correct reaction-rate flame area correlation
+        virtual void correct
+        (
+            const volScalarField& sigma
+        );
 
-        //- Read model dictionary
-        virtual bool read(const dictionary& dict);
+        //- Read dictionary
+        virtual bool read
+        (
+            const dictionary& dict
+        );
 };
+
 
 } // End namespace reactionRateFlameAreaModels
 } // End namespace Foam
 
 #endif
-
-// ************************************************************************* //

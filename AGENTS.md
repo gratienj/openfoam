@@ -10,7 +10,7 @@ Every build or run command requires the OpenFOAM environment first:
 ```bash
 #source $WM_PROJECT_DIR/etc/bashrc
 source $PWD/eb-r11-foss2025b.env
-source $PWD/prefs.opt.sh
+source $PWD/prefs-opt.sh
 ```
 
 Without this, `wmake`, `wclean`, `lnInclude`, and all `FOAM_*`/`WM_*` variables are undefined.
@@ -116,3 +116,11 @@ Format: `TAG: context: imperative message` (≤72 chars title, blank second line
 - Use `community-contributions` MR template for contributions
 - Do not force-push after review; use `SQUASH` prefix commits instead
 - Fork-based workflow: fork → branch → MR to upstream `develop`
+
+## Règles de modification de fichiers
+
+- **Demande de confirmation obligatoire :** Tu ne dois JAMAIS modifier, créer ou supprimer un fichier sans avoir au préalable demandé l'autorisation explicite de l'utilisateur.
+- **Présentation des changements :** Avant toute modification, détaille précisément :
+  1. Le chemin exact du fichier concerné.
+  2. Un résumé clair des modifications proposées (ou un diff).
+- **Attente de validation :** Attends systématiquement la réponse ("oui", "validé", etc.) avant d'exécuter l'action de modification.

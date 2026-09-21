@@ -64,6 +64,8 @@ class laminar
         //  using the selected ODE solver
         bool integrateReactionRate_;
 
+        mutable volScalarField R_H2_ ;
+
 protected:
 
     // Protected Member Functions

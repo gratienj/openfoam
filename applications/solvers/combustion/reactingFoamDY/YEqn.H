@@ -66,6 +66,8 @@ tmp<fv::convectionScheme<scalar>> mvConvection
     reaction->correct();
     Qdot = reaction->Qdot();
 
+    Info<< " min(Qdot) = " << gMinMax(Qdot) << endl;
+
     /*
      * ================================================================
      * Molecular Schmidt numbers

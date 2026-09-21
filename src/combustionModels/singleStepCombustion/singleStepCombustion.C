@@ -55,7 +55,36 @@ singleStepCombustion<ReactionThermo, ThermoType>::singleStepCombustion
             this->mesh().time().timeName(),
             this->mesh(),
             IOobject::NO_READ,
-            IOobject::NO_WRITE
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
+    ),
+    Qdot_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("SSCQdot"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
+    ),
+    R_H2_
+    (
+        IOobject
+        (
+            this->thermo().phasePropertyName("SSCR_H2"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
         ),
         this->mesh(),
         dimensionedScalar(dimMass/dimVolume/dimTime, Zero)
@@ -108,6 +137,8 @@ tmp<fvScalarMatrix> singleStepCombustion<ReactionThermo, ThermoType>::R
     const label specieI =
         this->thermo().composition().species().find(Y.member());
 
+    
+
     volScalarField wSpecie
     (
         wFuel_*singleMixturePtr_->specieStoichCoeffs()[specieI]
@@ -122,6 +153,13 @@ tmp<fvScalarMatrix> singleStepCombustion<ReactionThermo, ThermoType>::R
         return -fNorm*wSpecie*fres + scalar(fNorm)*fvm::Sp(wSpecie, Y);
     }
 
+    if(Y.member() =="H2")
+    {
+      R_H2_ = wSpecie ;
+      Info <<"SingleStepCombustion::R(Y) :"<<Y.member()<<" speStoi "<<singleMixturePtr_->specieStoichCoeffs()[specieI]<<nl 
+           <<"              R_H2 min/max :"<<gMinMax(wSpecie)<<endl;
+    }
+
     return wSpecie + fvm::Sp(0.0*wSpecie, Y);
 }
 
@@ -133,7 +171,11 @@ singleStepCombustion<ReactionThermo, ThermoType>::Qdot() const
     const label fuelI = singleMixturePtr_->fuelIndex();
     volScalarField& YFuel = this->thermo().composition().Y(fuelI).constCast();
 
-    return -singleMixturePtr_->qFuel()*(R(YFuel) & YFuel);
+    //return -singleMixturePtr_->qFuel()*(R(YFuel) & YFuel);
+    Qdot_ = -singleMixturePtr_->qFuel()*(R(YFuel) & YFuel);
+    Info << "singleMixture::Qdot min/max  : "<<gMinMax(Qdot_)<< nl
+         << "               qFuel         : "<<singleMixturePtr_->qFuel()<<endl ;
+    return Qdot_ ;
 }
 
 

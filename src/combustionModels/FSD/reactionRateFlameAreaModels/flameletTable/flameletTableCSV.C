@@ -5,27 +5,45 @@
     \\  /    A nd           |
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Direct lookup/interpolation of a Cantera CSV flamelet omega(K) table.
+    Direct lookup/interpolation of a CSV flamelet omega(K) table.
+
+    CSV file:
+
+        <case>/constant/H2_FSD_V11_flamelet.csv
+
+    Expected columns by default:
+
+        K
+        omega0_H2
+
+    Other columns are ignored.
 \*---------------------------------------------------------------------------*/
 
 #include "flameletTableCSV.H"
 #include "addToRunTimeSelectionTable.H"
-#include "IFstream.H"
-#include "IOobject.H"
+#include "error.H"
 
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <algorithm>
+#include <cmath>
 #include <cctype>
+
+#include "Pstream.H"
+#include "mathematicalConstants.H"
+
+#include <fstream>
+#include <sstream>
 #include <cstdlib>
+#include <cerrno>
+#include <cmath>
+
 
 namespace Foam
 {
 namespace reactionRateFlameAreaModels
 {
-
     defineTypeNameAndDebug(flameletTableCSV, 0);
 
     addToRunTimeSelectionTable
@@ -38,30 +56,31 @@ namespace reactionRateFlameAreaModels
 }
 
 
-// * * * * * * * * * * * * * Private Functions  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Private functions * * * * * * * * * * * * * //
+
 
 std::string
 Foam::reactionRateFlameAreaModels::flameletTableCSV::trim
 (
-    const std::string& s
+    const std::string& value
 )
 {
-    const std::string whitespace = " \t\r\n";
+    const std::string whitespace(" \t\r\n");
 
-    const std::size_t first = s.find_first_not_of(whitespace);
+    const std::string::size_type first =
+        value.find_first_not_of(whitespace);
 
     if (first == std::string::npos)
     {
-        return "";
+        return std::string();
     }
 
-    const std::size_t last = s.find_last_not_of(whitespace);
+    const std::string::size_type last =
+        value.find_last_not_of(whitespace);
 
-    return s.substr(first, last - first + 1);
+    return value.substr(first, last - first + 1);
 }
 
-
-// ************************************************************************* //
 
 std::vector<std::string>
 Foam::reactionRateFlameAreaModels::flameletTableCSV::splitCSV
@@ -71,25 +90,33 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::splitCSV
 {
     std::vector<std::string> fields;
 
-    std::stringstream ss(line);
     std::string field;
+    bool insideQuotes = false;
 
-    while (std::getline(ss, field, ','))
+    for (std::string::size_type i = 0; i < line.size(); ++i)
     {
-        fields.push_back(trim(field));
+        const char c = line[i];
+
+        if (c == '"')
+        {
+            insideQuotes = !insideQuotes;
+        }
+        else if (c == ',' && !insideQuotes)
+        {
+            fields.push_back(trim(field));
+            field.clear();
+        }
+        else
+        {
+            field += c;
+        }
     }
 
-    // Handle a trailing comma
-    if (!line.empty() && line.back() == ',')
-    {
-        fields.push_back("");
-    }
+    fields.push_back(trim(field));
 
     return fields;
 }
 
-
-// ************************************************************************* //
 
 Foam::label
 Foam::reactionRateFlameAreaModels::flameletTableCSV::findColumn
@@ -98,18 +125,18 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::findColumn
     const word& columnName
 )
 {
-    const std::string target = columnName.c_str();
+    const std::string target(columnName.c_str());
 
     for
     (
-        std::size_t i = 0;
-        i < header.size();
+        label i = 0;
+        i < static_cast<label>(header.size());
         ++i
     )
     {
-        if (header[i] == target)
+        if (trim(header[i]) == target)
         {
-            return static_cast<label>(i);
+            return i;
         }
     }
 
@@ -117,7 +144,52 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::findColumn
 }
 
 
-// ************************************************************************* //
+Foam::scalar
+Foam::reactionRateFlameAreaModels::flameletTableCSV::readScalar
+(
+    const std::string& value,
+    const label lineNumber,
+    const word& columnName
+)
+{
+    const std::string cleaned = trim(value);
+
+    if (cleaned.empty())
+    {
+        FatalErrorInFunction
+            << "Empty value in column '" << columnName
+            << "' at CSV line " << lineNumber
+            << exit(FatalError);
+    }
+
+    char* endPtr = nullptr;
+
+    errno = 0;
+
+    const double result =
+        std::strtod(cleaned.c_str(), &endPtr);
+
+    if
+    (
+        endPtr == cleaned.c_str()
+     || *endPtr != '\0'
+     || errno == ERANGE
+     || !std::isfinite(result)
+    )
+    {
+        FatalErrorInFunction
+            << "Invalid numerical value '" << cleaned
+            << "' in column '" << columnName
+            << "' at CSV line " << lineNumber
+            << exit(FatalError);
+    }
+
+    return scalar(result);
+}
+
+
+// * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
+
 
 Foam::reactionRateFlameAreaModels::flameletTableCSV::flameletTableCSV
 (
@@ -127,7 +199,13 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::flameletTableCSV
     const combustionModel& combModel
 )
 :
-    reactionRateFlameArea(modelType, dict, mesh, combModel),
+    reactionRateFlameArea
+    (
+        modelType,
+        dict,
+        mesh,
+        combModel
+    ),
 
     K_(),
     omegaTable_(),
@@ -190,156 +268,126 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::flameletTableCSV
 }
 
 
-// ************************************************************************* //
-
 Foam::reactionRateFlameAreaModels::flameletTableCSV::~flameletTableCSV()
 {}
 
 
-// * * * * * * * * * * * * * Table Reading  * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Read CSV table * * * * * * * * * * * * * * * //
 
-void
-Foam::reactionRateFlameAreaModels::flameletTableCSV::readTable()
+
+void Foam::reactionRateFlameAreaModels::flameletTableCSV::readTable()
 {
-    K_.clear();
-    omegaTable_.clear();
+    const fileName csvPath =
+        mesh_.time().globalPath() / "constant" / tableFile_;
 
-
-    // ---------------------------------------------------------------------
-    // Locate CSV in constant/
-    // ---------------------------------------------------------------------
-
-    IOobject tableIO
-    (
-        tableFile_,
-        mesh_.time().constant(),
-        mesh_,
-        IOobject::MUST_READ,
-        IOobject::NO_WRITE,
-        false
-    );
-
-    const fileName csvPath = tableIO.objectPath();
-
-    Info<< "flameletTableCSV: reading CSV file "
-        << csvPath << nl;
-
-
-    // ---------------------------------------------------------------------
-    // Open CSV
-    // ---------------------------------------------------------------------
+    Info<< "flameletTableCSV: reading table from \""
+        << csvPath << "\"" << nl
+        << "    K column       = " << KColumn_ << nl
+        << "    omega column   = " << omegaColumn_ << nl;
 
     std::ifstream csv(csvPath.c_str());
 
     if (!csv.good())
     {
-        FatalIOErrorInFunction(csvPath)
+        FatalErrorInFunction
             << "Cannot open flamelet CSV file: "
-            << csvPath
-            << exit(FatalIOError);
+            << csvPath << nl
+            << exit(FatalError);
     }
 
+    std::string line;
 
     // ---------------------------------------------------------------------
     // Read header
     // ---------------------------------------------------------------------
 
-    std::string line;
+    if (!std::getline(csv, line))
+    {
+        FatalErrorInFunction
+            << "Cannot read header from CSV file: "
+            << csvPath << nl
+            << exit(FatalError);
+    }
 
-    bool headerFound = false;
+    // Remove possible UTF-8 BOM
+    if (line.size() >= 3
+     && static_cast<unsigned char>(line[0]) == 0xEF
+     && static_cast<unsigned char>(line[1]) == 0xBB
+     && static_cast<unsigned char>(line[2]) == 0xBF)
+    {
+        line.erase(0, 3);
+    }
+
+    // ---------------------------------------------------------------------
+    // Split header
+    // ---------------------------------------------------------------------
 
     std::vector<std::string> header;
 
-    while (std::getline(csv, line))
     {
-        line = trim(line);
+        std::stringstream ss(line);
+        std::string field;
 
-        if (line.empty())
+        while (std::getline(ss, field, ','))
         {
-            continue;
+            // trim
+            while (!field.empty()
+                && std::isspace(static_cast<unsigned char>(field.front())))
+            {
+                field.erase(field.begin());
+            }
+
+            while (!field.empty()
+                && std::isspace(static_cast<unsigned char>(field.back())))
+            {
+                field.pop_back();
+            }
+
+            header.push_back(field);
         }
-
-        // Skip comments
-        if (line[0] == '#')
-        {
-            continue;
-        }
-
-        header = splitCSV(line);
-        headerFound = true;
-
-        break;
     }
 
-    if (!headerFound)
+    label KIndex = -1;
+    label omegaIndex = -1;
+
+    for (label i = 0; i < static_cast<label>(header.size()); ++i)
     {
-        FatalIOErrorInFunction(csvPath)
-            << "The flamelet CSV file '" << csvPath
-            << "' contains no header."
-            << exit(FatalIOError);
+        if (header[i] == KColumn_)
+        {
+            KIndex = i;
+        }
+
+        if (header[i] == omegaColumn_)
+        {
+            omegaIndex = i;
+        }
     }
-
-
-    // ---------------------------------------------------------------------
-    // Find requested columns
-    // ---------------------------------------------------------------------
-
-    const label KIndex =
-        findColumn(header, KColumn_);
-
-    const label omegaIndex =
-        findColumn(header, omegaColumn_);
-
 
     if (KIndex < 0)
     {
-        FatalIOErrorInFunction(csvPath)
-            << "Column '" << KColumn_
-            << "' was not found in flamelet CSV file '"
-            << csvPath << "'."
-            << nl
-            << "Available columns:" << nl;
-
-        forAll(header, i)
-        {
-            FatalIOErrorInFunction(csvPath)
-                << "    [" << i << "] "
-                << header[i] << nl;
-        }
-
-        exit(FatalIOError);
+        FatalErrorInFunction
+            << "Column \"" << KColumn_
+            << "\" not found in CSV header." << nl
+            << exit(FatalError);
     }
-
 
     if (omegaIndex < 0)
     {
-        FatalIOErrorInFunction(csvPath)
-            << "Column '" << omegaColumn_
-            << "' was not found in flamelet CSV file '"
-            << csvPath << "'."
-            << nl
-            << "Available columns:" << nl;
-
-        forAll(header, i)
-        {
-            FatalIOErrorInFunction(csvPath)
-                << "    [" << i << "] "
-                << header[i] << nl;
-        }
-
-        exit(FatalIOError);
+        FatalErrorInFunction
+            << "Column \"" << omegaColumn_
+            << "\" not found in CSV header." << nl
+            << exit(FatalError);
     }
 
-
-    Info<< "    K column       = " << KColumn_
-        << " [" << KIndex << "]" << nl
-        << "    omega column   = " << omegaColumn_
-        << " [" << omegaIndex << "]" << nl;
-
+    Info<< "    K index         = " << KIndex << nl
+        << "    omega index     = " << omegaIndex << nl;
 
     // ---------------------------------------------------------------------
     // Read data
     // ---------------------------------------------------------------------
+
+    std::vector<scalar> Kvalues;
+    std::vector<scalar> omegaValues;
 
     label lineNumber = 1;
 
@@ -347,215 +395,117 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::readTable()
     {
         ++lineNumber;
 
-        line = trim(line);
-
+        // Skip empty lines
         if (line.empty())
         {
             continue;
         }
 
-        // Skip comments
-        if (line[0] == '#')
+        std::stringstream ss(line);
+        std::string field;
+
+        std::vector<std::string> fields;
+
+        while (std::getline(ss, field, ','))
         {
-            continue;
+            fields.push_back(field);
         }
 
-        const std::vector<std::string> fields = splitCSV(line);
+        const label nFields = fields.size();
 
-        const label nFields =
-            static_cast<label>(fields.size());
-
-        if
-        (
-            KIndex >= nFields
-         || omegaIndex >= nFields
-        )
+        if (KIndex >= nFields || omegaIndex >= nFields)
         {
             WarningInFunction
-                << "Skipping CSV line " << lineNumber
-                << ": not enough fields."
-                << nl;
+                << "Skipping malformed CSV line "
+                << lineNumber << ": " << line << nl;
 
             continue;
         }
 
-
-        const std::string& KString =
-            fields[KIndex];
-
-        const std::string& omegaString =
-            fields[omegaIndex];
-
-
-        // -------------------------------------------------------------
-        // Ignore non-numeric / NaN rows
-        // -------------------------------------------------------------
-
-        if
-        (
-            KString.empty()
-         || omegaString.empty()
-         || KString == "nan"
-         || KString == "NaN"
-         || KString == "NAN"
-         || omegaString == "nan"
-         || omegaString == "NaN"
-         || omegaString == "NAN"
-        )
+        try
         {
-            continue;
+            const scalar K =
+                std::stod(fields[KIndex]);
+
+            const scalar omega =
+                std::stod(fields[omegaIndex]);
+
+            if (!std::isfinite(K) || !std::isfinite(omega))
+            {
+                WarningInFunction
+                    << "Skipping non-finite CSV line "
+                    << lineNumber << ": " << line << nl;
+
+                continue;
+            }
+
+            Kvalues.push_back(K);
+            omegaValues.push_back(omega);
         }
-
-
-        char* KEnd = nullptr;
-        char* omegaEnd = nullptr;
-
-        const scalar K =
-            std::strtod
-            (
-                KString.c_str(),
-                &KEnd
-            );
-
-        const scalar omega =
-            std::strtod
-            (
-                omegaString.c_str(),
-                &omegaEnd
-            );
-
-
-        // Check conversion
-        if
-        (
-            KEnd == KString.c_str()
-         || omegaEnd == omegaString.c_str()
-        )
+        catch (...)
         {
             WarningInFunction
                 << "Skipping non-numeric CSV line "
-                << lineNumber << "."
-                << nl;
+                << lineNumber << ": " << line << nl;
 
             continue;
         }
-
-
-        // -------------------------------------------------------------
-        // Validate K
-        // -------------------------------------------------------------
-
-        if (K <= 0.0)
-        {
-            FatalIOErrorInFunction(csvPath)
-                << "Invalid K at CSV line "
-                << lineNumber
-                << ": K = " << K
-                << " s^-1."
-                << exit(FatalIOError);
-        }
-
-
-        // -------------------------------------------------------------
-        // Check monotonicity
-        // -------------------------------------------------------------
-
-        if
-        (
-            !K_.empty()
-         && K <= K_.last()
-        )
-        {
-            FatalIOErrorInFunction(csvPath)
-                << "K values must be strictly increasing."
-                << nl
-                << "At CSV line " << lineNumber
-                << ": previous K = " << K_.last()
-                << ", current K = " << K
-                << exit(FatalIOError);
-        }
-
-
-        K_.append(K);
-
-        omegaTable_.append
-        (
-            max(omega, omegaMin_)
-        );
     }
 
-
     csv.close();
-
 
     // ---------------------------------------------------------------------
     // Check table
     // ---------------------------------------------------------------------
 
-    if (K_.size() < 2)
+    if (Kvalues.size() < 2)
     {
-        FatalIOErrorInFunction(csvPath)
-            << "The flamelet CSV table '" << csvPath
-            << "' must contain at least two valid "
-            << "(K, omega0_H2) entries."
-            << exit(FatalIOError);
+        FatalErrorInFunction
+            << "CSV table contains fewer than 2 valid data points." << nl
+            << "File: " << csvPath << nl
+            << exit(FatalError);
     }
 
-
-    // ---------------------------------------------------------------------
-    // Check extrapolation behaviour
-    // ---------------------------------------------------------------------
-
-    if
-    (
-        belowMin_ != "clamp"
-     && belowMin_ != "zero"
-    )
+    for (label i = 1; i < static_cast<label>(Kvalues.size()); ++i)
     {
-        FatalIOErrorInFunction(csvPath)
-            << "belowMin must be 'clamp' or 'zero', but is '"
-            << belowMin_ << "'."
-            << exit(FatalIOError);
+        if (Kvalues[i] <= Kvalues[i-1])
+        {
+            FatalErrorInFunction
+                << "K column is not strictly increasing." << nl
+                << "At CSV line " << i + 2 << ":" << nl
+                << "    K[" << i-1 << "] = " << Kvalues[i-1] << nl
+                << "    K[" << i   << "] = " << Kvalues[i] << nl
+                << exit(FatalError);
+        }
     }
 
+    // ---------------------------------------------------------------------
+    // Transfer to OpenFOAM containers
+    // ---------------------------------------------------------------------
 
-    if
-    (
-        aboveMax_ != "clamp"
-     && aboveMax_ != "zero"
-    )
+    K_.setSize(Kvalues.size());
+    omegaTable_.setSize(omegaValues.size());
+
+    for (label i = 0; i < static_cast<label>(Kvalues.size()); ++i)
     {
-        FatalIOErrorInFunction(csvPath)
-            << "aboveMax must be 'clamp' or 'zero', but is '"
-            << aboveMax_ << "'."
-            << exit(FatalIOError);
+        K_[i] = Kvalues[i];
+        omegaTable_[i] = omegaValues[i];
     }
 
+    omegaMin_ = gMin(omegaTable_);
+    omegaMax_ = gMax(omegaTable_);
 
-    // ---------------------------------------------------------------------
-    // Information
-    // ---------------------------------------------------------------------
-
-    Info<< "flameletTableCSV: successfully read "
-        << K_.size()
-        << " Cantera flamelet points from "
-        << csvPath << nl
-        << "    K range       = "
-        << K_.first() << " .. "
-        << K_.last()
-        << " s^-1" << nl
-        << "    omega range   = "
-        << min(omegaTable_) << " .. "
-        << max(omegaTable_)
-        << " kg/m2/s" << nl
-        << "    belowMin      = "
-        << belowMin_ << nl
-        << "    aboveMax      = "
-        << aboveMax_ << nl;
+    Info<< "    Number of points = " << K_.size() << nl
+        << "    K min            = " << K_.first() << nl
+        << "    K max            = " << K_.last() << nl
+        << "    omega min        = " << omegaMin_ << nl
+        << "    omega max        = " << omegaMax_ << nl
+        << endl;
 }
 
 
-// * * * * * * * * * * * * * Interpolation  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Interpolation * * * * * * * * * * * * * * * //
+
 
 Foam::scalar
 Foam::reactionRateFlameAreaModels::flameletTableCSV::interpolate
@@ -563,38 +513,48 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::interpolate
     const scalar K
 ) const
 {
+    // ---------------------------------------------------------------------
     // Below table
+    // ---------------------------------------------------------------------
+
     if (K <= K_.first())
     {
-        return
-        (
-            belowMin_ == "zero"
-          ? 0.0
-          : omegaTable_.first()
-        );
+        if (belowMin_ == "zero")
+        {
+            return 0.0;
+        }
+
+        return max(omegaTable_.first(), omegaMin_);
     }
 
 
+    // ---------------------------------------------------------------------
     // Above table
+    // ---------------------------------------------------------------------
+
     if (K >= K_.last())
     {
-        return
-        (
-            aboveMax_ == "zero"
-          ? 0.0
-          : omegaTable_.last()
-        );
+        if (aboveMax_ == "zero")
+        {
+            return 0.0;
+        }
+
+        return max(omegaTable_.last(), omegaMin_);
     }
 
 
+    // ---------------------------------------------------------------------
     // Binary search
+    // ---------------------------------------------------------------------
+
     label lo = 0;
     label hi = K_.size() - 1;
 
+
     while (hi - lo > 1)
     {
-        const label mid =
-            (lo + hi)/2;
+        const label mid = (lo + hi)/2;
+
 
         if (K_[mid] <= K)
         {
@@ -610,6 +570,7 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::interpolate
     const scalar dK =
         K_[hi] - K_[lo];
 
+
     const scalar f =
         (K - K_[lo])/dK;
 
@@ -623,7 +584,8 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::interpolate
 }
 
 
-// * * * * * * * * * * * * * Correct  * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Correct * * * * * * * * * * * * * * * * * * //
+
 
 void
 Foam::reactionRateFlameAreaModels::flameletTableCSV::correct
@@ -633,19 +595,29 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::correct
 {
     volScalarField::Internal& iOmega = omega_;
 
+
+    // ---------------------------------------------------------------------
+    // Internal cells
+    // ---------------------------------------------------------------------
+
     forAll(iOmega, celli)
     {
-        iOmega[celli] =
-            interpolate
+        const scalar K =
+            max
             (
-                max
-                (
-                    sigma[celli],
-                    scalar(0)
-                )
+                sigma[celli],
+                scalar(0)
             );
+
+
+        iOmega[celli] =
+            interpolate(K);
     }
 
+
+    // ---------------------------------------------------------------------
+    // Boundary faces
+    // ---------------------------------------------------------------------
 
     volScalarField::Boundary& bOmega =
         omega_.boundaryFieldRef();
@@ -655,21 +627,23 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::correct
     {
         forAll(bOmega[patchi], facei)
         {
-            bOmega[patchi][facei] =
-                interpolate
+            const scalar K =
+                max
                 (
-                    max
-                    (
-                        sigma.boundaryField()[patchi][facei],
-                        scalar(0)
-                    )
+                    sigma.boundaryField()[patchi][facei],
+                    scalar(0)
                 );
+
+
+            bOmega[patchi][facei] =
+                interpolate(K);
         }
     }
 }
 
 
-// * * * * * * * * * * * * * Read  * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Read dictionary * * * * * * * * * * * * * * //
+
 
 bool
 Foam::reactionRateFlameAreaModels::flameletTableCSV::read
@@ -696,11 +670,13 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::read
         omegaMin_
     );
 
+
     coeffDict_.readIfPresent
     (
         "belowMin",
         belowMin_
     );
+
 
     coeffDict_.readIfPresent
     (
@@ -708,17 +684,20 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::read
         aboveMax_
     );
 
+
     coeffDict_.readIfPresent
     (
         "tableFile",
         tableFile_
     );
 
+
     coeffDict_.readIfPresent
     (
         "KColumn",
         KColumn_
     );
+
 
     coeffDict_.readIfPresent
     (
@@ -728,6 +707,7 @@ Foam::reactionRateFlameAreaModels::flameletTableCSV::read
 
 
     readTable();
+
 
     return true;
 }

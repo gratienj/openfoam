@@ -79,6 +79,9 @@ protected:
         //- Fuel consumption rate
         volScalarField wFuel_;
 
+        mutable volScalarField Qdot_;
+        mutable volScalarField R_H2_ ;
+
         //- Semi-implicit (true) or explicit (false) treatment
         bool semiImplicit_;
 

@@ -83,3 +83,9 @@ doc/Doxygen/DTAGS
 
 # Ignore the test directory
 /tutorialsTest
+/keyapi.sh
+/test/*/processor*
+/test/*/log.*
+/test/Malle/FSD_3D/0.0*
+
+/test/Malle/LES_3D/processor*

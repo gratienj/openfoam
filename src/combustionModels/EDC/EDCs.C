@@ -27,6 +27,8 @@ License
 
 #include "makeCombustionTypes.H"
 
+#include "thermoPhysicsTypes.H"
+
 #include "psiReactionThermo.H"
 #include "rhoReactionThermo.H"
 #include "EDC.H"

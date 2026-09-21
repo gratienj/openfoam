@@ -68,8 +68,59 @@ Foam::combustionModels::EDC<ReactionThermo>::EDC
         ),
         this->mesh(),
         dimensionedScalar(dimless, Zero)
+    ),
+    tauStarMax_(this->coeffs().getOrDefault("tauStarMax", 1e-3)),
+    tauStar_
+    (
+        IOobject
+        (
+            this->thermo().phaseScopedName(typeName, "tauStar"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimless, Zero)
+    ),
+    Qdot_
+    (
+        IOobject
+        (
+            this->thermo().phaseScopedName(typeName, "EDCQdot"),
+            this->mesh().time().timeName(),
+            this->mesh(),
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE,
+            IOobject::REGISTER
+        ),
+        this->mesh(),
+        dimensionedScalar(dimEnergy/dimVolume/dimTime, Zero)
+    ),
+    MultiStep_
+    (
+        this->coeffs().getOrDefault("MultiStep", true)
     )
-{}
+{
+    if(not MultiStep_)
+    {
+        Info<< "EDC: SingleStep" << endl;
+        singleStepCombustionPtr_ =
+            new FSD<ReactionThermo, thermo_type>
+            (
+                modelType,
+                thermo,
+                turb,
+                combustionProperties
+            );
+    }
+    else
+    {
+        Info<< "EDC: MultiStep" << endl;
+    }
+
+}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -84,7 +135,7 @@ Foam::combustionModels::EDC<ReactionThermo>::~EDC()
 template<class ReactionThermo>
 void Foam::combustionModels::EDC<ReactionThermo>::correct()
 {
-    if (this->active())
+    if (this->active() && MultiStep_)
     {
         tmp<volScalarField> tepsilon(this->turbulence().epsilon());
         const auto& epsilon = tepsilon();
@@ -97,11 +148,10 @@ void Foam::combustionModels::EDC<ReactionThermo>::correct()
 
         tmp<volScalarField> trho(this->rho());
         const auto& rho = trho();
-        //epsilon.write();
-        //k.write();
+
         const scalar kMinEDC = 1e-6;
 
-        const scalar tauStarMax = 1e-3;
+        const scalar tauStarMax = tauStarMax_;
         label nTauCapped = 0 ;
         scalarField tauStar(epsilon.size(), Zero);
 
@@ -172,6 +222,7 @@ void Foam::combustionModels::EDC<ReactionThermo>::correct()
                 if(tauStar[i] > tauStarMax)
                 	++nTauCapped ;
                 tauStar[i] = min(tauStar[i], tauStarMax);
+                tauStar_[i] = tauStar[i] ;
 
                 if (gammaL >= 1)
                 {
@@ -247,64 +298,127 @@ void Foam::combustionModels::EDC<ReactionThermo>::correct()
         Info<< "EDC: tauStar capped cells = "
             << nTauCapped << endl;
 
-        /*
-            << returnReduce
-               (
-                   sum
-                   (
-                       pos(1e-10 - epsilon)
-                   ),
-                   sumOp<label>()
-               )
-            << endl;*/
-        /*
-        volScalarField kEDC
-        (
-            IOobject
-            (
-                "k_EDC",
-                this->mesh().time().timeName(),
-                this->mesh(),
-                IOobject::NO_READ,
-                IOobject::AUTO_WRITE
-            ),
-            k
-        );*/
-        //kEDC.write();
-        /*
-        volScalarField epsilonEDC
-        (
-            IOobject
-            (
-                "epsilon_EDC",
-                this->mesh().time().timeName(),
-                this->mesh(),
-                IOobject::NO_READ,
-                IOobject::AUTO_WRITE
-            ),
-            epsilon
-        );*/
-        //epsilonEDC.write();
-        /*
-        volScalarField tauStarField
-        (
-            IOobject
-            (
-                "tauStar",
-                this->mesh().time().timeName(),
-                this->mesh(),
-                IOobject::NO_READ,
-                IOobject::AUTO_WRITE
-            ),
-            this->mesh(),
-            dimensionedScalar("tauStar", dimTime, 0)
-        );
-        tauStarField.primitiveFieldRef() = tauStar;
-        tauStarField.correctBoundaryConditions();
-        */
-        //tauStarField.write();
-
         this->chemistryPtr_->solve(tauStar);
+    }
+    else
+    {
+        Info<< "EDC: SingleStep" << endl;
+        tmp<volScalarField> tepsilon(this->turbulence().epsilon());
+        const auto& epsilon = tepsilon();
+
+        tmp<volScalarField> tmu(this->turbulence().mu());
+        const auto& mu = tmu();
+
+        tmp<volScalarField> tk(this->turbulence().k());
+        const auto& k = tk();
+
+        tmp<volScalarField> trho(this->rho());
+        const auto& rho = trho();
+        //epsilon.write();
+        //k.write();
+        const scalar kMinEDC = 1e-6;
+
+        const scalar tauStarMax = tauStarMax_;
+        label nTauCapped = 0 ;
+        scalarField tauStar(epsilon.size(), Zero);
+
+        forAll(tauStar, i)
+        {
+
+            const scalar nu = mu[i]/(rho[i] + SMALL);
+
+            const scalar Da = clamp
+            (
+                sqrt(nu/(epsilon[i] + SMALL))/1.,
+                scalar(1e-10),
+                scalar(10)
+            );
+
+            // EDC lower bound for turbulent kinetic energy
+            const scalar kEDC =
+                max(k[i], kMinEDC);
+
+            const scalar ReT =
+                sqr(kEDC)/(nu*epsilon[i] + SMALL);
+
+            const scalar CtauI =
+                min(C1_/(Da*sqrt(ReT + 1)), 2.1377);
+
+            const scalar CgammaI =
+                clamp
+                (
+                    C2_*sqrt(Da*(ReT + 1)),
+                    scalar(0.4082),
+                    scalar(5)
+                );
+
+            const scalar gammaL =
+                CgammaI
+                *pow025
+                (
+                    nu*epsilon[i]/(sqr(kEDC) + SMALL)
+                );
+
+            tauStar[i] =
+                CtauI*sqrt(nu/(epsilon[i] + SMALL));
+                
+            if(tauStar[i] > tauStarMax)
+                ++nTauCapped ;
+            tauStar[i] = min(tauStar[i], tauStarMax);
+            tauStar_[i] = tauStar[i] ;
+
+            if (gammaL >= 1)
+            {
+                kappa_[i] = 1;
+            }
+            else
+            {
+                kappa_[i] =
+                    max
+                    (
+                        min
+                        (
+                            pow(gammaL, exp1_)/(1 - pow(gammaL, exp2_)),
+                            1
+                        ),
+                        0
+                    );
+            }
+        }
+
+        // Evaluate bcs
+        kappa_.correctBoundaryConditions();
+
+        auto limits = gMinMax(tauStar);
+
+        Info<< "Chemistry time solved min/max : "
+            << limits.min() << ", " << limits.max() << endl;
+
+        Info<< "EDC DEBUG:" << nl
+            << "    rho min/max     = " << gMinMax(rho) << nl
+            << "    mu min/max      = " << gMinMax(mu) << nl
+            << "    kRaw min/max    = " << gMinMax(k) << nl
+            << "    kMin EDC        = "
+            << kMinEDC << nl
+            << "    epsilon min/max = " << gMinMax(epsilon) << nl
+            << "    tauStar min/max = " << gMinMax(tauStar) << nl
+            << endl;
+
+        reduce(nTauCapped, sumOp<label>());
+
+        Info<< "EDC: tauStar capped cells = "
+            << nTauCapped << endl;
+
+
+        if(singleStepCombustionPtr_ && singleStepCombustionPtr_->active())
+        {
+            Info<< "EDC: singleStepCombustion model active" << endl;
+            singleStepCombustionPtr_->correct();
+        }
+        else
+        {
+            Info<< "EDC: singleStepCombustion model inactive" << endl;
+        }
     }
 }
 
@@ -313,7 +427,10 @@ template<class ReactionThermo>
 Foam::tmp<Foam::fvScalarMatrix>
 Foam::combustionModels::EDC<ReactionThermo>::R(volScalarField& Y) const
 {
-    return kappa_*laminar<ReactionThermo>::R(Y);
+    if (MultiStep_)
+        return kappa_*laminar<ReactionThermo>::R(Y);
+    else
+        return kappa_*singleStepCombustionPtr_->R(Y);
 }
 
 
@@ -321,6 +438,7 @@ template<class ReactionThermo>
 Foam::tmp<Foam::volScalarField>
 Foam::combustionModels::EDC<ReactionThermo>::Qdot() const
 {
+#ifdef REF
     auto tQdot = volScalarField::New
     (
         this->thermo().phaseScopedName(typeName, "Qdot"),
@@ -335,6 +453,18 @@ Foam::combustionModels::EDC<ReactionThermo>::Qdot() const
     }
 
     return tQdot;
+#else
+    if (this->active() && MultiStep_)
+    {
+        Qdot_ = kappa_*this->chemistryPtr_->Qdot();
+    }
+    else
+    {
+        Qdot_ = kappa_*singleStepCombustionPtr_->Qdot();
+    }
+
+    return Qdot_;
+#endif
 }
 
 

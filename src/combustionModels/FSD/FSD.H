@@ -120,9 +120,13 @@ class FSD
         //- Minimum mixture fraction variance to calculate pdf
         scalar ftVarMin_;
 
+        bool UseCantaraTable_;
+
+        volScalarField mgft_ ;
         volScalarField Pc_ ;
         volScalarField c_ ;
         volScalarField omegaFuelBar_ ;
+        volScalarField Kflamelet_;
         volScalarField F0_;
         volScalarField flameSensor_;
         volScalarField FTFM_;

@@ -33,6 +33,7 @@ License
 template<class ThermoType>
 void Foam::singleStepReactingMixture<ThermoType>::calculateqFuel()
 {
+    Info << "Calculate QFUEL"<<endl ;
     const Reaction<ThermoType>& reaction = this->operator[](0);
     const scalar Wu = this->speciesData()[fuelIndex_].W();
 
@@ -208,6 +209,7 @@ Foam::singleStepReactingMixture<ThermoType>::singleStepReactingMixture
     fuelIndex_(this->species().find(thermoDict.get<word>("fuel"))),
     specieProd_(Yprod0_.size(), 1)
 {
+    Info << "SingleReactingMixture::Constructor "<<this->size()<<endl ;
     if (this->size() == 1)
     {
         forAll(fres_, fresI)

@@ -1,5 +1,0 @@
-export OPENAI_API_KEY=
-export IFPEN_API_KEY=
-export OPENROUTER_API_KEY=
-export SILICONFLOW_API_KEY=
-
